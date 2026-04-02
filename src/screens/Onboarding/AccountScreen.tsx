@@ -1,27 +1,74 @@
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { OnboardingParamList } from "../../navigation/onboardingTypes";
+import {
+  buildLocalAccount,
+  saveLocalAccount,
+  saveOnboardingProfile,
+  setOnboardingComplete,
+  type AuthProvider,
+} from "../../storage/localStore";
+import { useAppDispatch } from "../../store/hooks";
+import { setCurrentUser } from "../../store/userSlice";
+import { DB } from "../../store/DB";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "Account">;
 
 const AccountScreen = ({ navigation, route }: Props) => {
+  const dispatch = useAppDispatch();
+
+  const handleCreateLocalAccount = async (provider: AuthProvider) => {
+    try {
+      const account = buildLocalAccount(provider);
+      await saveLocalAccount(account);
+      await saveOnboardingProfile(route.params.onboarding);
+      await setOnboardingComplete(true);
+
+      await DB.addUser({
+        externalId: account.id,
+        provider: account.provider,
+        displayName: account.displayName,
+      });
+
+      const user = await DB.getUser();
+      dispatch(setCurrentUser(user));
+
+      navigation.navigate("Success", { onboarding: route.params.onboarding });
+    } catch {
+      Alert.alert("Could not save account", "Please try again.");
+    }
+  };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Save your data</Text>
-      <Text style={styles.subtitle}>Sync your plan and progress across devices in seconds.</Text>
+      <Text style={styles.title}>Create local account</Text>
+      <Text style={styles.subtitle}>
+        Everything is stored only on this device for now.
+      </Text>
 
-      <TouchableOpacity style={styles.providerButton} onPress={() => navigation.navigate("Success", { fuelPlan: route.params.fuelPlan })}>
+      <TouchableOpacity
+        style={styles.providerButton}
+        onPress={() => void handleCreateLocalAccount("google")}
+      >
         <Text style={styles.providerText}>Continue with Google</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.providerButton} onPress={() => navigation.navigate("Success", { fuelPlan: route.params.fuelPlan })}>
+      <TouchableOpacity
+        style={styles.providerButton}
+        onPress={() => void handleCreateLocalAccount("apple")}
+      >
         <Text style={styles.providerText}>Continue with Apple</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.providerButton} onPress={() => navigation.navigate("Success", { fuelPlan: route.params.fuelPlan })}>
+      <TouchableOpacity
+        style={styles.providerButton}
+        onPress={() => void handleCreateLocalAccount("email")}
+      >
         <Text style={styles.providerText}>Continue with Email</Text>
       </TouchableOpacity>
 
-      <Text style={styles.footnote}>No spam. Just gains.</Text>
+      <Text style={styles.footnote}>
+        No cloud sync yet. Local first, all gains.
+      </Text>
     </View>
   );
 };

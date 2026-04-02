@@ -16,8 +16,8 @@ const SuccessScreen = ({ onFinish, route }: Props) => {
       <Text style={styles.subtitle}>PR your consistency today. Your cockpit is ready.</Text>
 
       <View style={styles.card}>
-        <Text style={styles.metric}>Today calories: {route.params.fuelPlan.calories} kcal</Text>
-        <Text style={styles.metric}>Protein target: {route.params.fuelPlan.protein} g</Text>
+        <Text style={styles.metric}>Today calories: {route.params.onboarding.fuelPlan.calories} kcal</Text>
+        <Text style={styles.metric}>Protein target: {route.params.onboarding.fuelPlan.protein} g</Text>
       </View>
 
       <TouchableOpacity style={styles.button} onPress={onFinish}>

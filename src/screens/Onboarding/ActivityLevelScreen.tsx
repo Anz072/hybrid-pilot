@@ -7,7 +7,7 @@ import type { ActivityLevel, OnboardingParamList } from "../../navigation/onboar
 type Props = NativeStackScreenProps<OnboardingParamList, "Activity">;
 
 const ActivityLevelScreen = ({ navigation, route }: Props) => {
-  const levels: { label: string; value: ActivityLevel }[] = [
+  const levels: { label: string; value: ActivityLevel }[] = [ 
     { label: "Desk mode", value: "sedentary" },
     { label: "Light movement", value: "lightly_active" },
     { label: "Regular training", value: "moderately_active" },

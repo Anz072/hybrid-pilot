@@ -28,6 +28,14 @@ export type FuelPlan = {
   fats: number;
 };
 
+export type OnboardingProfile = {
+  goal: GoalType;
+  bodyData: BodyData;
+  activity: ActivityLevel;
+  training: TrainingType;
+  fuelPlan: FuelPlan;
+};
+
 export type OnboardingParamList = {
   Welcome: undefined;
   Goal: undefined;
@@ -40,6 +48,6 @@ export type OnboardingParamList = {
     activity: ActivityLevel;
     training: TrainingType;
   };
-  Account: { fuelPlan: FuelPlan; goal: GoalType };
-  Success: { fuelPlan: FuelPlan };
+  Account: { onboarding: OnboardingProfile };
+  Success: { onboarding: OnboardingProfile };
 };

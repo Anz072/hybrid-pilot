@@ -2,7 +2,13 @@ import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { ForkKnifeIcon } from "phosphor-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { ActivityLevel, FuelPlan, GoalType, OnboardingParamList } from "../../navigation/onboardingTypes";
+import type {
+  ActivityLevel,
+  FuelPlan,
+  GoalType,
+  OnboardingParamList,
+  OnboardingProfile,
+} from "../../navigation/onboardingTypes";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "FuelPlan">;
 
@@ -48,8 +54,16 @@ const buildFuelPlan = ({
 };
 
 const FuelPlanScreen = ({ navigation, route }: Props) => {
-  const { goal, bodyData, activity } = route.params;
+  const { goal, bodyData, activity, training } = route.params;
   const fuelPlan = buildFuelPlan({ ...bodyData, activity, goal });
+
+  const onboarding: OnboardingProfile = {
+    goal,
+    bodyData,
+    activity,
+    training,
+    fuelPlan,
+  };
 
   return (
     <View style={styles.container}>
@@ -64,10 +78,7 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
         <Text style={styles.metric}>Fats: {fuelPlan.fats} g</Text>
       </View>
 
-      <TouchableOpacity
-        style={styles.primaryButton}
-        onPress={() => navigation.navigate("Account", { fuelPlan, goal })}
-      >
+      <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate("Account", { onboarding })}>
         <Text style={styles.primaryButtonText}>Looks good</Text>
       </TouchableOpacity>
       <Text style={styles.helper}>Fine tuning can be added later in settings.</Text>

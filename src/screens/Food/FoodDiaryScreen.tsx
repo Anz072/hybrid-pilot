@@ -528,7 +528,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#EA580C",
     borderRadius: 10,
     paddingHorizontal: 12,
-    paddingVertical: 9,
+    paddingVertical: 10,
   },
   primaryButtonText: { color: "#FFFFFF", fontWeight: "800" },
   secondaryButton: {
@@ -536,7 +536,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#CBD5E1",
     paddingHorizontal: 12,
-    paddingVertical: 9,
+    paddingVertical: 10,
     backgroundColor: "#FFFFFF",
   },
   secondaryButtonText: { color: "#0F172A", fontWeight: "700" },

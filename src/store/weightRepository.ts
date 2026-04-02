@@ -1,21 +1,6 @@
 import { initDb, getDb } from "../storage/sqlite";
-import type {
-  AddWeightLogInput,
-  DBWeightLog,
-  DBWeightLogRow,
-} from "./DB_TYPES";
+import type { AddWeightLogInput, DBWeightLog } from "./DB_TYPES";
 import { DB } from "./DB";
-
-const rowToWeightLog = (row: DBWeightLogRow): DBWeightLog => {
-  return {
-    id: row.id,
-    userExternalId: row.user_external_id,
-    weightKg: row.weight_kg,
-    note: row.note,
-    loggedAt: row.logged_at,
-    createdAt: row.created_at,
-  };
-};
 
 export const addWeightLog = async (input: AddWeightLogInput): Promise<void> => {
   await initDb();
@@ -42,9 +27,15 @@ export const getRecentWeightLogs = async (
   await initDb();
   const db = await getDb();
 
-  const rows = await db.getAllAsync<DBWeightLogRow>(
+  const rows = await db.getAllAsync<DBWeightLog>(
     `
-    SELECT id, user_external_id, weight_kg, note, logged_at, created_at
+    SELECT
+      id,
+      user_external_id AS userExternalId,
+      weight_kg AS weightKg,
+      note,
+      logged_at AS loggedAt,
+      created_at AS createdAt
     FROM weight_logs
     WHERE user_external_id = ?
     ORDER BY datetime(logged_at) DESC
@@ -54,5 +45,5 @@ export const getRecentWeightLogs = async (
     limit,
   );
 
-  return rows.map(rowToWeightLog);
+  return rows;
 };

@@ -2,15 +2,21 @@ import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import HomeScreen from "../screens/Home/HomeScreen";
 import WeightScreen from "../screens/Weight/WeightScreen";
-import FoodScreen from "../screens/Food/FoodScreen";
 import SettingsScreen from "../screens/Settings/SettingsScreen";
-import { DotsThreeCircleIcon, FireIcon, ForkKnifeIcon, GearIcon, HouseSimpleIcon } from "phosphor-react-native";
+import FoodNavigator from "./FoodNavigator";
+import {
+  DotsThreeCircleIcon,
+  FireIcon,
+  ForkKnifeIcon,
+  HouseSimpleIcon,
+} from "phosphor-react-native";
 
 export type MainTabParamList = {
   Home: undefined;
   Weight: undefined;
   Food: undefined;
   More: undefined;
+  Debug: undefined;
 };
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -29,7 +35,7 @@ const MainTabNavigator = () => {
       />
       <Tab.Screen
         name="Food"
-        component={FoodScreen}
+        component={FoodNavigator}
         options={{
           tabBarIcon: ({ focused }) => (
             <ForkKnifeIcon size={24} color={focused ? "#007AFF" : "#222"} />
@@ -50,7 +56,22 @@ const MainTabNavigator = () => {
         component={SettingsScreen}
         options={{
           tabBarIcon: ({ focused }) => (
-            <DotsThreeCircleIcon size={24} color={focused ? "#007AFF" : "#222"} />
+            <DotsThreeCircleIcon
+              size={24}
+              color={focused ? "#007AFF" : "#222"}
+            />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Debug"
+        component={SettingsScreen}
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <DotsThreeCircleIcon
+              size={24}
+              color={focused ? "#007AFF" : "#222"}
+            />
           ),
         }}
       />

@@ -122,6 +122,38 @@ const migrations: Migration[] = [
     `);
     },
   },
+  {
+    version: 4,
+    name: "user_macro_targets",
+    up: async (db) => {
+      await db.execAsync(`
+      ALTER TABLE users ADD COLUMN proteinG REAL;
+      ALTER TABLE users ADD COLUMN carbsG REAL;
+      ALTER TABLE users ADD COLUMN fatG REAL;
+    `);
+    },
+  },
+  {
+    version: 5,
+    name: "food_favorites_and_custom_meals",
+    up: async (db) => {
+      await db.execAsync(`
+      ALTER TABLE food_items ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0;
+
+      CREATE TABLE IF NOT EXISTS custom_meals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_external_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        UNIQUE(user_external_id, name),
+        FOREIGN KEY(user_external_id) REFERENCES users(external_id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_custom_meals_user_name
+      ON custom_meals(user_external_id, name);
+    `);
+    },
+  },
 ];
 
 const trackedTables = [
@@ -132,6 +164,7 @@ const trackedTables = [
   "food_items",
   "user_food_log",
   "activities",
+  "custom_meals",
 ] as const;
 
 export const getDb = async (): Promise<SQLite.SQLiteDatabase> => {
@@ -289,6 +322,7 @@ export const resetDb = async (): Promise<void> => {
     DROP TABLE IF EXISTS migration_history;
     DROP TABLE IF EXISTS activities;
     DROP TABLE IF EXISTS user_food_log;
+    DROP TABLE IF EXISTS custom_meals;
     DROP TABLE IF EXISTS food_items;
     DROP TABLE IF EXISTS weight_logs;
     DROP TABLE IF EXISTS users;

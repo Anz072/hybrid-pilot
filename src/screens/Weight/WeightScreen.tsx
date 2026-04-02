@@ -53,9 +53,18 @@ const WeightScreen = () => {
 
   const handleSave = async () => {
     const parsed = Number(value.replace(",", "."));
+    const MIN_WEIGHT = 20;
+    const MAX_WEIGHT = 500;
 
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      Alert.alert("Invalid weight", "Enter a valid number in kg.");
+    if (
+      !Number.isFinite(parsed) ||
+      parsed < MIN_WEIGHT ||
+      parsed > MAX_WEIGHT
+    ) {
+      Alert.alert(
+        "Invalid weight",
+        `Enter a valid number between ${MIN_WEIGHT} and ${MAX_WEIGHT} kg.`,
+      );
       return;
     }
 

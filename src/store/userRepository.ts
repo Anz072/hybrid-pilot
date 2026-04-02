@@ -1,31 +1,9 @@
 import { getDb, initDb } from "../storage/sqlite";
-import type { DBUser, DBUserRow } from "./DB_TYPES";
+import type { DBUser } from "./DB_TYPES";
 
-const rowToUser = (row: DBUserRow): DBUser => {
-  return {
-    id: row.id,
-    externalId: row.external_id ?? row.externalId ?? "",
-    provider: row.provider,
-    displayName: row.display_name ?? row.displayName ?? null,
-    createdAt: row.created_at ?? row.createdAt ?? "",
-    email: row.email,
-    birthdate: row.birthdate,
-    gender: (row.gender as DBUser["gender"]) ?? null,
-    heightCm: row.height_cm ?? row.heightCm ?? null,
-    activityLevel: row.activity_level ?? row.activityLevel ?? null,
-    goal: row.goal,
-    calorieAllowance: row.calorieAllowance,
-  };
-};
-
-export const upsertUser = async (input: DBUserRow): Promise<void> => {
+export const upsertUser = async (input: DBUser): Promise<void> => {
   await initDb();
   const db = await getDb();
-
-  const externalId = input.external_id ?? input.externalId;
-  if (!externalId) {
-    throw new Error("upsertUser requires external_id or externalId");
-  }
 
   await db.runAsync(
     `
@@ -40,9 +18,12 @@ export const upsertUser = async (input: DBUserRow): Promise<void> => {
       height_cm,
       activity_level,
       goal,
-      calorieAllowance
+      calorieAllowance,
+      proteinG,
+      carbsG,
+      fatG
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(external_id) DO UPDATE SET
       provider = excluded.provider,
       display_name = excluded.display_name,
@@ -52,19 +33,25 @@ export const upsertUser = async (input: DBUserRow): Promise<void> => {
       height_cm = excluded.height_cm,
       activity_level = excluded.activity_level,
       goal = excluded.goal,
-      calorieAllowance = excluded.calorieAllowance
+      calorieAllowance = excluded.calorieAllowance,
+      proteinG = excluded.proteinG,
+      carbsG = excluded.carbsG,
+      fatG = excluded.fatG
     `,
-    externalId,
+    input.externalId,
     input.provider,
-    input.display_name ?? input.displayName ?? null,
-    input.created_at ?? input.createdAt ?? new Date().toISOString(),
+    input.displayName,
+    input.createdAt,
     input.email,
     input.birthdate,
     input.gender,
-    input.height_cm ?? input.heightCm ?? null,
-    input.activity_level ?? input.activityLevel ?? null,
+    input.heightCm,
+    input.activityLevel,
     input.goal,
     input.calorieAllowance,
+    input.proteinG,
+    input.carbsG,
+    input.fatG,
   );
 };
 
@@ -72,14 +59,40 @@ export const getFirstUser = async (): Promise<DBUser | null> => {
   await initDb();
   const db = await getDb();
 
-  const row = await db.getFirstAsync<DBUserRow>(
+  const row = await db.getFirstAsync<DBUser>(
     `
-    SELECT id, external_id, provider, display_name, created_at, email, birthdate, gender, height_cm, activity_level, goal, calorieAllowance
+    SELECT
+      id,
+      external_id AS externalId,
+      provider,
+      display_name AS displayName,
+      created_at AS createdAt,
+      email,
+      birthdate,
+      gender,
+      height_cm AS heightCm,
+      activity_level AS activityLevel,
+      goal,
+      calorieAllowance,
+      proteinG,
+      carbsG,
+      fatG
     FROM users
     ORDER BY id ASC
     LIMIT 1
     `,
   );
 
-  return row ? rowToUser(row) : null;
+  if (!row) {
+    return null;
+  }
+
+  return {
+    ...row,
+    gender: (row.gender as DBUser["gender"]) ?? null,
+    calorieAllowance: row.calorieAllowance ?? null,
+    proteinG: row.proteinG ?? null,
+    carbsG: row.carbsG ?? null,
+    fatG: row.fatG ?? null,
+  };
 };

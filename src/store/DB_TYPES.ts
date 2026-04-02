@@ -16,29 +16,12 @@ export type DBUser = {
   activityLevel: string | null;
   goal: string | null;
   calorieAllowance: number | null;
+  proteinG: number | null;
+  carbsG: number | null;
+  fatG: number | null;
 };
 
-export type DBUserRow = {
-  id: number;
-  external_id?: string;
-  externalId?: string;
-  provider: string;
-  display_name?: string | null;
-  displayName?: string | null;
-  created_at?: string;
-  createdAt?: string;
-  email: string | null;
-  birthdate: string | null;
-  gender: string | null;
-  height_cm?: number | null;
-  heightCm?: number | null;
-  activity_level?: string | null;
-  activityLevel?: string | null;
-  goal: string | null;
-  calorieAllowance: number | null;
-};
-
-export type UpsertUserInput = DBUserRow;
+export type UpsertUserInput = DBUser;
 
 export type DBWeightLog = {
   id: number;
@@ -47,15 +30,6 @@ export type DBWeightLog = {
   note: string | null;
   loggedAt: DBIsoDateString;
   createdAt: DBIsoDateString;
-};
-
-export type DBWeightLogRow = {
-  id: number;
-  user_external_id: string;
-  weight_kg: number;
-  note: string | null;
-  logged_at: string;
-  created_at: string;
 };
 
 export type AddWeightLogInput = {
@@ -74,19 +48,19 @@ export type DBFoodItem = {
   carbsG: number;
   fatG: number;
   fiberG: number | null;
+  isFavorite: boolean;
   createdAt: DBIsoDateString;
 };
 
-export type DBFoodItemRow = {
-  id: number;
+export type AddFoodItemInput = {
   name: string;
-  serving_size: number;
+  servingSize: number;
   calories: number;
-  protein_g: number;
-  carbs_g: number;
-  fat_g: number;
-  fiber_g: number | null;
-  created_at: string;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  fiberG?: number | null;
+  isFavorite?: boolean;
 };
 
 export type DBUserFoodLog = {
@@ -99,14 +73,39 @@ export type DBUserFoodLog = {
   createdAt: DBIsoDateString;
 };
 
-export type DBUserFoodLogRow = {
-  id: number;
-  user_external_id: string;
-  food_id: number;
+export type AddUserFoodLogInput = {
+  userExternalId: string;
+  foodId: number;
   date: string;
-  quantity_g: number;
-  meal_type: string | null;
-  created_at: string;
+  quantityG: number;
+  mealType?: string | null;
+};
+
+export type UpdateUserFoodLogInput = {
+  id: number;
+  quantityG: number;
+  mealType?: string | null;
+};
+
+export type DBUserFoodLogEntry = DBUserFoodLog & {
+  foodName: string;
+  servingSize: number;
+  calories: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+};
+
+export type DBCustomMeal = {
+  id: number;
+  userExternalId: string;
+  name: string;
+  createdAt: DBIsoDateString;
+};
+
+export type AddCustomMealInput = {
+  userExternalId: string;
+  name: string;
 };
 
 export type DBActivity = {
@@ -117,14 +116,4 @@ export type DBActivity = {
   caloriesBurned: number | null;
   date: string;
   createdAt: DBIsoDateString;
-};
-
-export type DBActivityRow = {
-  id: number;
-  user_external_id: string;
-  type: string;
-  duration_min: number | null;
-  calories_burned: number | null;
-  date: string;
-  created_at: string;
 };

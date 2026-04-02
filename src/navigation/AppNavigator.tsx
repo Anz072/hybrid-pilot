@@ -1,4 +1,4 @@
-import React from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -21,10 +21,10 @@ const AppNavigator = () => {
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.user.currentUser);
   const userHydrated = useAppSelector((state) => state.user.hydrated);
-  const [isBootstrapping, setIsBootstrapping] = React.useState(true);
-  const [hasCompletedOnboarding, setHasCompletedOnboarding] = React.useState(false);
+  const [isBootstrapping, setIsBootstrapping] = useState(true);
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
 
-  const hydrateLocalSession = React.useCallback(async () => {
+  const hydrateLocalSession = useCallback(async () => {
     const onboardingDone = await getOnboardingComplete();
     setHasCompletedOnboarding(onboardingDone);
 
@@ -32,7 +32,7 @@ const AppNavigator = () => {
     setIsBootstrapping(false);
   }, [dispatch]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     void hydrateLocalSession();
   }, [hydrateLocalSession]);
 
@@ -52,7 +52,11 @@ const AppNavigator = () => {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!hasCompletedOnboarding ? (
           <Stack.Screen name="Onboarding">
-            {() => <OnboardingNavigator onFinish={() => void hydrateLocalSession()} />}
+            {() => (
+              <OnboardingNavigator
+                onFinish={() => void hydrateLocalSession()}
+              />
+            )}
           </Stack.Screen>
         ) : isLoggedIn ? (
           <Stack.Screen name="Main" component={MainTabNavigator} />

@@ -81,17 +81,20 @@ const AccountScreen = ({ navigation, route }: Props) => {
 
       await DB.addUser({
         id: 0,
-        external_id: account.id,
+        externalId: account.id,
         provider: account.provider,
-        display_name: account.displayName,
-        created_at: account.createdAt,
+        displayName: account.displayName,
+        createdAt: account.createdAt,
         email: account.email,
         birthdate: account.birthdate,
         gender: route.params.onboarding.bodyData.sex,
-        height_cm: route.params.onboarding.bodyData.heightCm,
-        activity_level: route.params.onboarding.activity,
+        heightCm: route.params.onboarding.bodyData.heightCm,
+        activityLevel: route.params.onboarding.activity,
         goal: route.params.onboarding.goal,
         calorieAllowance: route.params.onboarding.fuelPlan.calories,
+        proteinG: route.params.onboarding.fuelPlan.protein,
+        carbsG: route.params.onboarding.fuelPlan.carbs,
+        fatG: route.params.onboarding.fuelPlan.fats,
       });
 
       const user = await DB.getUser();

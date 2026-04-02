@@ -18,11 +18,13 @@ import {
   resetDb,
   seedDebugData,
   type TableCount,
-} from "../../storage/sqlite";
+} from "../../storage/sqlite";
+import { useAppSelector } from "../../store/hooks";
 
 const SettingsScreen = () => {
+  const user = useAppSelector((state) => state.user.currentUser);
   const [counts, setCounts] = React.useState<TableCount[]>([]);
-  const [busy, setBusy] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
 
   const handleRefresh = async () => {
     setBusy(true);
@@ -137,6 +139,64 @@ const SettingsScreen = () => {
           ))
         )}
       </View>
+
+      {/*
+          id: number;
+          externalId: string;
+          provider: DBUserProvider | string;
+          displayName: string | null;
+          createdAt: DBIsoDateString;
+          email: string | null;
+          birthdate: DBIsoDateString | null;
+          gender: DBUserGender;
+          heightCm: number | null;
+          activityLevel: string | null;
+          goal: string | null;
+        */}
+
+      <View style={{ ...styles.card, marginTop: 16 }}>
+        <Text style={styles.cardTitle}>User Info</Text>
+        {user ? (
+          <View>
+            <View style={styles.row}>
+              <Text style={styles.count}>ID: {user.id}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.count}>Provider: {user.provider}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.count}>Display Name: {user.displayName}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.count}>Email: {user.email}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.count}>Birthdate: {user.birthdate}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.count}>Gender: {user.gender}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.count}>Height: {user.heightCm} cm</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.count}>
+                Activity Level: {user.activityLevel}
+              </Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.count}>Goal: {user.goal}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.count}>
+                Calorie Allowance: {user.calorieAllowance}
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <Text style={styles.empty}>No user data.</Text>
+        )}
+      </View>
     </ScrollView>
   );
 };
@@ -221,5 +281,3 @@ const styles = StyleSheet.create({
 });
 
 export default SettingsScreen;
-
-

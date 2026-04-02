@@ -15,27 +15,30 @@ export type DBUser = {
   heightCm: number | null;
   activityLevel: string | null;
   goal: string | null;
+  calorieAllowance: number | null;
 };
 
 export type DBUserRow = {
   id: number;
-  external_id: string;
+  external_id?: string;
+  externalId?: string;
   provider: string;
-  display_name: string | null;
-  created_at: string;
+  display_name?: string | null;
+  displayName?: string | null;
+  created_at?: string;
+  createdAt?: string;
   email: string | null;
   birthdate: string | null;
   gender: string | null;
-  height_cm: number | null;
-  activity_level: string | null;
+  height_cm?: number | null;
+  heightCm?: number | null;
+  activity_level?: string | null;
+  activityLevel?: string | null;
   goal: string | null;
+  calorieAllowance: number | null;
 };
 
-export type UpsertUserInput = {
-  externalId: string;
-  provider: DBUserProvider | string;
-  displayName?: string;
-};
+export type UpsertUserInput = DBUserRow;
 
 export type DBWeightLog = {
   id: number;

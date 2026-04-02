@@ -5,7 +5,7 @@ const KEY_ONBOARDING_COMPLETE = "onboardingComplete";
 const KEY_LOCAL_ACCOUNT = "localAccount";
 const KEY_ONBOARDING_PROFILE = "onboardingProfile";
 
-export type AuthProvider = "google" | "apple" | "email";
+export type AuthProvider = "local";
 
 export type OnboardingProfile = {
   goal: GoalType;
@@ -19,7 +19,15 @@ export type LocalAccount = {
   id: string;
   provider: AuthProvider;
   displayName: string;
+  email: string | null;
+  birthdate: string | null;
   createdAt: string;
+};
+
+export type BuildLocalAccountInput = {
+  displayName: string;
+  email?: string | null;
+  birthdate?: string | null;
 };
 
 const safeParse = <T>(raw: string | null): T | null => {
@@ -88,13 +96,15 @@ export const getOnboardingProfile = async (): Promise<OnboardingProfile | null> 
   return safeParse<OnboardingProfile>(value);
 };
 
-export const buildLocalAccount = (provider: AuthProvider): LocalAccount => {
+export const buildLocalAccount = (input: BuildLocalAccountInput): LocalAccount => {
   const timestamp = Date.now();
 
   return {
     id: `local-${timestamp}`,
-    provider,
-    displayName: "Local Athlete",
+    provider: "local",
+    displayName: input.displayName,
+    email: input.email ?? null,
+    birthdate: input.birthdate ?? null,
     createdAt: new Date(timestamp).toISOString(),
   };
 };

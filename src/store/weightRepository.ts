@@ -22,12 +22,6 @@ export const addWeightLog = async (input: AddWeightLogInput): Promise<void> => {
   const db = await getDb();
   const now = new Date().toISOString();
 
-  await DB.addUser({
-    externalId: input.userExternalId,
-    provider: "local",
-    displayName: "Local Athlete",
-  });
-
   await db.runAsync(
     `
     INSERT INTO weight_logs (user_external_id, weight_kg, note, logged_at, created_at)

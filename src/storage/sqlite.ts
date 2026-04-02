@@ -113,6 +113,15 @@ const migrations: Migration[] = [
     `);
     },
   },
+  {
+    version: 3,
+    name: "user_profile_expansion",
+    up: async (db) => {
+      await db.execAsync(`
+      ALTER TABLE users ADD COLUMN calorieAllowance INTEGER;
+    `);
+    },
+  },
 ];
 
 const trackedTables = [
@@ -133,7 +142,9 @@ export const getDb = async (): Promise<SQLite.SQLiteDatabase> => {
   return dbPromise;
 };
 
-const ensureMigrationMetaTables = async (db: SQLite.SQLiteDatabase): Promise<void> => {
+const ensureMigrationMetaTables = async (
+  db: SQLite.SQLiteDatabase,
+): Promise<void> => {
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS migration_history (
       version INTEGER PRIMARY KEY,
@@ -144,11 +155,16 @@ const ensureMigrationMetaTables = async (db: SQLite.SQLiteDatabase): Promise<voi
 };
 
 const getUserVersion = async (db: SQLite.SQLiteDatabase): Promise<number> => {
-  const row = await db.getFirstAsync<{ user_version: number }>("PRAGMA user_version;");
+  const row = await db.getFirstAsync<{ user_version: number }>(
+    "PRAGMA user_version;",
+  );
   return row?.user_version ?? 0;
 };
 
-const recordMigration = async (db: SQLite.SQLiteDatabase, migration: Migration): Promise<void> => {
+const recordMigration = async (
+  db: SQLite.SQLiteDatabase,
+  migration: Migration,
+): Promise<void> => {
   await db.runAsync(
     `
     INSERT OR IGNORE INTO migration_history (version, name, applied_at)
@@ -160,8 +176,13 @@ const recordMigration = async (db: SQLite.SQLiteDatabase, migration: Migration):
   );
 };
 
-const backfillMigrationHistory = async (db: SQLite.SQLiteDatabase, currentVersion: number): Promise<void> => {
-  const alreadyApplied = migrations.filter((migration) => migration.version <= currentVersion);
+const backfillMigrationHistory = async (
+  db: SQLite.SQLiteDatabase,
+  currentVersion: number,
+): Promise<void> => {
+  const alreadyApplied = migrations.filter(
+    (migration) => migration.version <= currentVersion,
+  );
 
   for (const migration of alreadyApplied) {
     await recordMigration(db, migration);
@@ -205,7 +226,9 @@ export const getDebugTableCounts = async (): Promise<TableCount[]> => {
   const result: TableCount[] = [];
 
   for (const table of trackedTables) {
-    const row = await db.getFirstAsync<{ count: number }>(`SELECT COUNT(*) as count FROM ${table};`);
+    const row = await db.getFirstAsync<{ count: number }>(
+      `SELECT COUNT(*) as count FROM ${table};`,
+    );
     result.push({ table, count: row?.count ?? 0 });
   }
 
@@ -214,7 +237,9 @@ export const getDebugTableCounts = async (): Promise<TableCount[]> => {
 
 export const seedDebugData = async (): Promise<void> => {
   if (!__DEV__) {
-    throw new Error("seedDebugData is debug-only and cannot run in production.");
+    throw new Error(
+      "seedDebugData is debug-only and cannot run in production.",
+    );
   }
 
   await initDb();

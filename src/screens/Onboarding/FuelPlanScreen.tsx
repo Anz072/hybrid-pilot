@@ -168,7 +168,6 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: "#FFFFFF",
-    borderWidth: 1,
     borderRadius: 6,
     padding: 14,
     marginBottom: 14,
@@ -191,7 +190,6 @@ const styles = StyleSheet.create({
   },
   chartCard: {
     backgroundColor: "#FFFFFF",
-    borderWidth: 1,
     borderRadius: 6,
     padding: 14,
     marginBottom: 18,

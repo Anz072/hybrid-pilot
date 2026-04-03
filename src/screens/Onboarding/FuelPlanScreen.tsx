@@ -9,6 +9,7 @@ import type {
   OnboardingProfile,
 } from "../../navigation/onboardingTypes";
 import { Pie, PolarChart } from "victory-native";
+import { buildFuelPlan } from "./initialCalculations";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "FuelPlan">;
 
@@ -60,7 +61,7 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
       <Text style={styles.eyebrow}>Fuel Strategy</Text>
       <View style={styles.titleRow}>
         <ForkKnifeIcon size={26} color="#0F766E" weight="fill" />
-        <Text style={styles.title}>Your daily plan is here</Text>
+        <Text style={styles.title}>Initial Plan</Text>
       </View>
       <Text style={styles.subtitle}>
         Auto-generated from your body data, activity, and goals.
@@ -168,8 +169,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 14,
+    borderRadius: 6,
     padding: 14,
     marginBottom: 14,
     gap: 8,
@@ -192,8 +192,7 @@ const styles = StyleSheet.create({
   chartCard: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 14,
+    borderRadius: 6,
     padding: 14,
     marginBottom: 18,
   },

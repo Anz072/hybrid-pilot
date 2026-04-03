@@ -1,4 +1,7 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -25,13 +28,24 @@ import { setCurrentUser } from "../../store/userSlice";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "Account">;
 
+const formatDateToYmd = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 const AccountScreen = ({ navigation, route }: Props) => {
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [birthdate, setBirthdate] = useState("");
+  const [selectedBirthdate, setSelectedBirthdate] = useState(
+    new Date(1998, 0, 1),
+  );
   const [isSaving, setIsSaving] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const normalizedEmail = email.trim();
   const normalizedBirthdate = birthdate.trim();
@@ -39,6 +53,9 @@ const AccountScreen = ({ navigation, route }: Props) => {
     displayName.trim().length > 0 &&
     normalizedEmail.length > 0 &&
     normalizedBirthdate.length > 0;
+
+  const minBirthdate = useMemo(() => new Date(1900, 0, 1), []);
+  const maxBirthdate = useMemo(() => new Date(), []);
 
   const parseBirthdateToIso = (value: string): string | null => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
@@ -51,6 +68,23 @@ const AccountScreen = ({ navigation, route }: Props) => {
     }
 
     return date.toISOString();
+  };
+
+  const openDatePicker = () => {
+    setShowDatePicker(true);
+  };
+
+  const handleDateChange = (event: DateTimePickerEvent, date?: Date) => {
+    if (Platform.OS === "android") {
+      setShowDatePicker(false);
+    }
+
+    if (event.type !== "set" || !date) {
+      return;
+    }
+
+    setSelectedBirthdate(date);
+    setBirthdate(formatDateToYmd(date));
   };
 
   const handleCreateLocalAccount = async () => {
@@ -148,13 +182,36 @@ const AccountScreen = ({ navigation, route }: Props) => {
           />
 
           <Text style={styles.label}>Birthdate</Text>
-          <TextInput
-            value={birthdate}
-            onChangeText={setBirthdate}
-            placeholder="YYYY-MM-DD"
-            autoCapitalize="none"
-            style={styles.input}
-          />
+          <Pressable onPress={openDatePicker} style={styles.input}>
+            <Text
+              style={
+                birthdate ? styles.birthdateText : styles.birthdatePlaceholder
+              }
+            >
+              {birthdate || "Select your birthdate"}
+            </Text>
+          </Pressable>
+
+          {showDatePicker ? (
+            <View style={styles.pickerWrap}>
+              <DateTimePicker
+                value={selectedBirthdate}
+                mode="date"
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                maximumDate={maxBirthdate}
+                minimumDate={minBirthdate}
+                onChange={handleDateChange}
+              />
+              {Platform.OS === "ios" ? (
+                <Pressable
+                  onPress={() => setShowDatePicker(false)}
+                  style={styles.pickerDoneButton}
+                >
+                  <Text style={styles.pickerDoneText}>Done</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
 
           <Pressable
             style={({ pressed }) => [
@@ -214,10 +271,8 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: 6,
     padding: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
   },
   label: {
     marginTop: 12,
@@ -240,12 +295,40 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
     fontWeight: "600",
   },
+  birthdateText: {
+    color: "#0F172A",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  birthdatePlaceholder: {
+    color: "#94A3B8",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  pickerWrap: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    paddingVertical: 8,
+  },
+  pickerDoneButton: {
+    alignSelf: "flex-end",
+    marginRight: 12,
+    marginTop: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  pickerDoneText: {
+    color: "#0F172A",
+    fontWeight: "700",
+  },
   primaryButton: {
     backgroundColor: "#0F172A",
     borderRadius: 14,
     paddingVertical: 15,
     alignItems: "center",
-    marginTop: 20,
+    marginTop: 48,
   },
   primaryButtonDisabled: {
     opacity: 0.5,

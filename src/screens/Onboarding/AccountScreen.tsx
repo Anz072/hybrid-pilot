@@ -3,12 +3,14 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { OnboardingParamList } from "../../navigation/onboardingTypes";
 import {
@@ -17,13 +19,14 @@ import {
   saveOnboardingProfile,
   setOnboardingComplete,
 } from "../../storage/localStore";
+import { DB } from "../../store/DB";
 import { useAppDispatch } from "../../store/hooks";
 import { setCurrentUser } from "../../store/userSlice";
-import { DB } from "../../store/DB";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "Account">;
 
 const AccountScreen = ({ navigation, route }: Props) => {
+  const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -42,7 +45,7 @@ const AccountScreen = ({ navigation, route }: Props) => {
       return null;
     }
 
-    const date = new Date(`${value}T00:00:00.000Z`);
+    const date = new Date(value + "T00:00:00.000Z");
     if (Number.isNaN(date.getTime())) {
       return null;
     }
@@ -111,55 +114,65 @@ const AccountScreen = ({ navigation, route }: Props) => {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
+      enabled
       style={styles.container}
     >
-      <View style={styles.card}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
+        <Text style={styles.eyebrow}>Final Step</Text>
         <Text style={styles.title}>Create local account</Text>
         <Text style={styles.subtitle}>Saved only on this device for now.</Text>
 
-        <Text style={styles.label}>Username</Text>
-        <TextInput
-          value={displayName}
-          onChangeText={setDisplayName}
-          placeholder="Your display name"
-          autoCapitalize="words"
-          style={styles.input}
-        />
+        <View style={styles.card}>
+          <Text style={styles.label}>Username</Text>
+          <TextInput
+            value={displayName}
+            onChangeText={setDisplayName}
+            placeholder="Your display name"
+            autoCapitalize="words"
+            style={styles.input}
+          />
 
-        <Text style={styles.label}>Email</Text>
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          placeholder="name@email.com"
-          autoCapitalize="none"
-          keyboardType="email-address"
-          style={styles.input}
-        />
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            placeholder="name@email.com"
+            autoCapitalize="none"
+            keyboardType="email-address"
+            style={styles.input}
+          />
 
-        <Text style={styles.label}>Birthdate</Text>
-        <TextInput
-          value={birthdate}
-          onChangeText={setBirthdate}
-          placeholder="YYYY-MM-DD"
-          autoCapitalize="none"
-          style={styles.input}
-        />
+          <Text style={styles.label}>Birthdate</Text>
+          <TextInput
+            value={birthdate}
+            onChangeText={setBirthdate}
+            placeholder="YYYY-MM-DD"
+            autoCapitalize="none"
+            style={styles.input}
+          />
 
-        <TouchableOpacity
-          style={[
-            styles.primaryButton,
-            (!canSubmit || isSaving) && styles.primaryButtonDisabled,
-          ]}
-          disabled={!canSubmit || isSaving}
-          onPress={() => void handleCreateLocalAccount()}
-        >
-          <Text style={styles.primaryText}>
-            {isSaving ? "Saving..." : "Create local account"}
-          </Text>
-        </TouchableOpacity>
+          <Pressable
+            style={({ pressed }) => [
+              styles.primaryButton,
+              (!canSubmit || isSaving) && styles.primaryButtonDisabled,
+              pressed && canSubmit && !isSaving && styles.primaryButtonPressed,
+            ]}
+            disabled={!canSubmit || isSaving}
+            onPress={() => void handleCreateLocalAccount()}
+          >
+            <Text style={styles.primaryButtonText}>
+              {isSaving ? "Saving..." : "Create local account"}
+            </Text>
+          </Pressable>
+        </View>
 
-        <Text style={styles.footnote}>Local first, all gains.</Text>
-      </View>
+        <Text style={styles.footnote}>Shabbat Shalom</Text>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 };
@@ -167,61 +180,90 @@ const AccountScreen = ({ navigation, route }: Props) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    padding: 20,
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#F8FAFC",
   },
-  card: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
+  scrollContent: {
+    paddingHorizontal: 22,
+    paddingTop: 36,
+    paddingBottom: 26,
+    flexGrow: 1,
+  },
+  eyebrow: {
+    alignSelf: "flex-start",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    color: "#9A3412",
+    backgroundColor: "#FFEDD5",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    marginBottom: 12,
   },
   title: {
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: "800",
-    color: "#0f172a",
+    color: "#0F172A",
     marginBottom: 6,
   },
   subtitle: {
     fontSize: 14,
     color: "#475569",
-    marginBottom: 16,
+    marginBottom: 14,
+  },
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
   },
   label: {
-    fontSize: 13,
+    marginTop: 12,
+    marginBottom: 2,
+    fontSize: 12,
     fontWeight: "700",
-    color: "#334155",
-    marginBottom: 6,
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    color: "#64748B",
   },
   input: {
     borderWidth: 1,
-    borderColor: "#cbd5e1",
-    borderRadius: 10,
+    borderColor: "#383838",
+    borderRadius: 6,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 12,
-    backgroundColor: "#ffffff",
-    color: "#0f172a",
+    paddingVertical: 14,
+    backgroundColor: "#FFFFFF",
+    color: "#0F172A",
+    fontSize: 16,
+    letterSpacing: 0.2,
+    fontWeight: "600",
   },
   primaryButton: {
-    marginTop: 6,
-    borderRadius: 10,
-    paddingVertical: 14,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#0F172A",
+    borderRadius: 14,
+    paddingVertical: 15,
     alignItems: "center",
+    marginTop: 20,
   },
   primaryButtonDisabled: {
     opacity: 0.5,
   },
-  primaryText: {
-    color: "#ffffff",
-    fontWeight: "700",
+  primaryButtonPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.99 }],
+  },
+  primaryButtonText: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    letterSpacing: 2,
+    fontWeight: "800",
+    paddingVertical: 6,
   },
   footnote: {
     marginTop: 12,
-    color: "#64748b",
+    color: "#64748B",
     textAlign: "center",
   },
 });

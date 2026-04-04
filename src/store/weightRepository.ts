@@ -9,34 +9,16 @@ import type {
   WeightEntryGoal,
 } from "./DB_TYPES";
 
-type RawWeightEntryRow = Omit<DBWeightEntry, "tags"> & {
-  tags: string | null;
-};
-
 type ListWeightEntriesOptions = {
   includeDeleted?: boolean;
   limit?: number;
 };
 
-const safeParseTags = (raw: string | null): string[] => {
-  if (!raw) {
-    return [];
-  }
-
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed)
-      ? parsed.filter((item): item is string => typeof item === "string")
-      : [];
-  } catch {
-    return [];
-  }
-};
+type RawWeightEntryRow = DBWeightEntry;
 
 const mapWeightEntryRow = (row: RawWeightEntryRow): DBWeightEntry => ({
   ...row,
   unitOriginal: "kg",
-  tags: safeParseTags(row.tags),
 });
 
 const getWeightEntryById = async (
@@ -59,7 +41,6 @@ const getWeightEntryById = async (
       unit_original AS unitOriginal,
       source,
       notes,
-      tags,
       client_generated_id AS clientGeneratedId,
       device_id AS deviceId,
       created_at AS createdAt,
@@ -85,69 +66,90 @@ export const saveWeightEntry = async (
   await initDb();
   const db = await getDb();
   const now = new Date().toISOString();
+  const localDateKey = input.measuredAtLocalIso.slice(0, 10);
 
-  await db.runAsync(
-    `
-    INSERT INTO weight_entries (
-      id,
-      user_external_id,
-      measured_at,
-      measured_at_local_iso,
-      zone_offset_minutes,
-      value_kg,
-      value_original,
-      unit_original,
-      source,
-      notes,
-      tags,
-      client_generated_id,
-      device_id,
-      created_at,
-      updated_at,
-      deleted_at,
-      version,
-      sync_status,
-      sync_error
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(id) DO UPDATE SET
-      measured_at = excluded.measured_at,
-      measured_at_local_iso = excluded.measured_at_local_iso,
-      zone_offset_minutes = excluded.zone_offset_minutes,
-      value_kg = excluded.value_kg,
-      value_original = excluded.value_original,
-      unit_original = excluded.unit_original,
-      source = excluded.source,
-      notes = excluded.notes,
-      tags = excluded.tags,
-      client_generated_id = excluded.client_generated_id,
-      device_id = excluded.device_id,
-      updated_at = excluded.updated_at,
-      deleted_at = NULL,
-      version = weight_entries.version + 1,
-      sync_status = 'pending',
-      sync_error = NULL
-    `,
-    input.id,
-    input.userExternalId,
-    input.measuredAt,
-    input.measuredAtLocalIso,
-    input.zoneOffsetMinutes,
-    input.valueKg,
-    input.valueOriginal,
-    "kg",
-    input.source,
-    input.notes ?? null,
-    JSON.stringify(input.tags ?? []),
-    input.clientGeneratedId,
-    input.deviceId ?? null,
-    now,
-    now,
-    null,
-    1,
-    "pending",
-    null,
-  );
+  await db.withTransactionAsync(async () => {
+    await db.runAsync(
+      `
+      UPDATE weight_entries
+      SET
+        deleted_at = ?,
+        updated_at = ?,
+        version = version + 1,
+        sync_status = 'pending',
+        sync_error = NULL
+      WHERE user_external_id = ?
+        AND id != ?
+        AND deleted_at IS NULL
+        AND substr(measured_at_local_iso, 1, 10) = ?
+      `,
+      now,
+      now,
+      input.userExternalId,
+      input.id,
+      localDateKey,
+    );
+
+    await db.runAsync(
+      `
+      INSERT INTO weight_entries (
+        id,
+        user_external_id,
+        measured_at,
+        measured_at_local_iso,
+        zone_offset_minutes,
+        value_kg,
+        value_original,
+        unit_original,
+        source,
+        notes,
+        client_generated_id,
+        device_id,
+        created_at,
+        updated_at,
+        deleted_at,
+        version,
+        sync_status,
+        sync_error
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        measured_at = excluded.measured_at,
+        measured_at_local_iso = excluded.measured_at_local_iso,
+        zone_offset_minutes = excluded.zone_offset_minutes,
+        value_kg = excluded.value_kg,
+        value_original = excluded.value_original,
+        unit_original = excluded.unit_original,
+        source = excluded.source,
+        notes = excluded.notes,
+        client_generated_id = excluded.client_generated_id,
+        device_id = excluded.device_id,
+        updated_at = excluded.updated_at,
+        deleted_at = NULL,
+        version = weight_entries.version + 1,
+        sync_status = 'pending',
+        sync_error = NULL
+      `,
+      input.id,
+      input.userExternalId,
+      input.measuredAt,
+      input.measuredAtLocalIso,
+      input.zoneOffsetMinutes,
+      input.valueKg,
+      input.valueOriginal,
+      "kg",
+      input.source,
+      input.notes ?? null,
+      input.clientGeneratedId,
+      input.deviceId ?? null,
+      now,
+      now,
+      null,
+      1,
+      "pending",
+      null,
+    );
+  });
 
   const saved = await getWeightEntryById(input.id, input.userExternalId);
   if (!saved) {
@@ -179,7 +181,6 @@ export const listWeightEntries = async (
       unit_original AS unitOriginal,
       source,
       notes,
-      tags,
       client_generated_id AS clientGeneratedId,
       device_id AS deviceId,
       created_at AS createdAt,
@@ -337,7 +338,6 @@ export const addWeightLog = async (input: AddWeightLogInput): Promise<void> => {
     unitOriginal: "kg",
     source: "manual",
     notes: input.note ?? null,
-    tags: [],
     clientGeneratedId: createLegacyWeightEntryId(),
   });
 };

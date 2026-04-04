@@ -1,32 +1,12 @@
 import type {
   DBWeightEntry,
   WeightEntryGoal,
-  WeightEntrySource,
 } from "../../store/DB_TYPES";
 
-export type WeightRangeKey = "1W" | "1M" | "3M" | "1Y";
-export type WeightTimeOfDay = "all" | "morning" | "afternoon" | "evening" | "night";
+export type WeightRangeKey = "1W" | "1M" | "3M" | "1Y" | "ALL";
 
-export const WEIGHT_RANGE_LABELS: WeightRangeKey[] = ["1W", "1M", "3M", "1Y"];
+export const WEIGHT_RANGE_LABELS: WeightRangeKey[] = ["1W", "1M", "3M", "1Y", "ALL"];
 export const DEFAULT_GOAL_BAND_KG = 0.3;
-export const WEIGHT_SOURCE_OPTIONS: Array<WeightEntrySource | "all"> = [
-  "all",
-  "manual",
-  "import",
-  "smart_scale",
-  "healthkit",
-  "health_connect",
-  "google_fit",
-  "csv",
-];
-export const TIME_OF_DAY_OPTIONS: WeightTimeOfDay[] = [
-  "all",
-  "morning",
-  "afternoon",
-  "evening",
-  "night",
-];
-export const PRESET_TAGS = ["morning", "fasted", "post-workout"] as const;
 
 export const roundWeightKg = (value: number): number =>
   Math.round(value * 1000) / 1000;
@@ -88,6 +68,10 @@ export const getRangeStartDate = (range: WeightRangeKey): Date => {
   const now = new Date();
   const next = new Date(now);
 
+  if (range === "ALL") {
+    return new Date(0);
+  }
+
   if (range === "1W") {
     next.setDate(next.getDate() - 7);
     return next;
@@ -123,27 +107,6 @@ export const formatLocalDateTimeLabel = (localIso: string): string =>
     hour: "numeric",
     minute: "2-digit",
   });
-
-export const deriveTimeOfDay = (localIso: string): Exclude<WeightTimeOfDay, "all"> => {
-  const hour = Number(localIso.slice(11, 13));
-
-  if (hour >= 5 && hour < 12) {
-    return "morning";
-  }
-
-  if (hour >= 12 && hour < 17) {
-    return "afternoon";
-  }
-
-  if (hour >= 17 && hour < 22) {
-    return "evening";
-  }
-
-  return "night";
-};
-
-export const getMinutesBetween = (leftIso: string, rightIso: string): number =>
-  Math.abs(new Date(leftIso).getTime() - new Date(rightIso).getTime()) / 60000;
 
 export const computeEmaSeries = (
   entries: DBWeightEntry[],
@@ -212,10 +175,26 @@ export const computeGoalProgress = (
 
 export const computeWeeklyPaceToGoal = (
   currentWeightKg: number,
+  startWeightKg: number,
   goal: WeightEntryGoal | null,
 ): string | null => {
   if (!goal?.targetDate) {
     return null;
+  }
+
+  const goalDirection = goal.targetWeightKg - startWeightKg;
+  const remainingDelta = goal.targetWeightKg - currentWeightKg;
+  const epsilon = 0.001;
+
+  if (Math.abs(remainingDelta) < epsilon || Math.abs(goalDirection) < epsilon) {
+    return "Goal already reached.";
+  }
+
+  if (
+    (goalDirection < 0 && currentWeightKg <= goal.targetWeightKg + epsilon) ||
+    (goalDirection > 0 && currentWeightKg >= goal.targetWeightKg - epsilon)
+  ) {
+    return "Goal already reached.";
   }
 
   const targetDate = parseDateOnly(goal.targetDate);
@@ -224,11 +203,12 @@ export const computeWeeklyPaceToGoal = (
     (targetDate.getTime() - now.getTime()) / (7 * 24 * 60 * 60 * 1000);
 
   if (!Number.isFinite(weeksRemaining) || weeksRemaining <= 0) {
-    return null;
+    return "Target date has passed.";
   }
 
-  const weeklyDelta = Math.abs(goal.targetWeightKg - currentWeightKg) / weeksRemaining;
-  return `~${formatWeightKg(roundWeightKg(weeklyDelta))} kg/week to hit by date`;
+  const weeklyDelta = Math.abs(remainingDelta) / weeksRemaining;
+  const action = goalDirection < 0 ? "lose" : "gain";
+  return `~${formatWeightKg(roundWeightKg(weeklyDelta))} kg/week to ${action}`;
 };
 
 export const groupEntriesByLocalDate = (entries: DBWeightEntry[]) => {
@@ -260,6 +240,10 @@ export const filterEntriesByRange = (
   entries: DBWeightEntry[],
   range: WeightRangeKey,
 ): DBWeightEntry[] => {
+  if (range === "ALL") {
+    return entries;
+  }
+
   const start = getRangeStartDate(range).getTime();
   return entries.filter((entry) => new Date(entry.measuredAt).getTime() >= start);
 };

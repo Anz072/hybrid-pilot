@@ -6,11 +6,11 @@ import {
   Text,
   View,
 } from "react-native";
-import Svg, { Circle, Line, Path, Rect } from "react-native-svg";
+import Svg, { Circle, Line, Path, Rect, Text as SvgText } from "react-native-svg";
 import type { DBWeightEntry, WeightEntryGoal } from "../../store/DB_TYPES";
 import {
   computeEmaSeries,
-  formatLocalDateTimeLabel,
+  formatLocalDateLabel,
   formatWeightKg,
   WEIGHT_RANGE_LABELS,
   type WeightRangeKey,
@@ -20,9 +20,7 @@ type WeightTrendChartProps = {
   entries: DBWeightEntry[];
   goal: WeightEntryGoal | null;
   range: WeightRangeKey;
-  selectedEntryId: string | null;
   onChangeRange: (range: WeightRangeKey) => void;
-  onSelectEntry: (entry: DBWeightEntry) => void;
 };
 
 type ChartPoint = {
@@ -32,7 +30,20 @@ type ChartPoint = {
 };
 
 const CHART_HEIGHT = 220;
-const CHART_PADDING = 18;
+const CHART_LEFT_PADDING = 46;
+const CHART_RIGHT_PADDING = 18;
+const CHART_TOP_PADDING = 18;
+const CHART_BOTTOM_PADDING = 30;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const TREND_LINE_COLOR = "#1E3A8A";
+const TREND_HALO_COLOR = "#C7D2FE";
+const DAILY_LINE_COLOR = "#64748B";
+const DAILY_POINT_STROKE = "#94A3B8";
+const DAILY_POINT_FILL = "#FFFFFF";
+const SELECTED_POINT_FILL = "#1E3A8A";
+const SELECTED_GUIDE_COLOR = "#A5B4FC";
+const GOAL_BAND_FILL = "#DBEAFE";
+const GOAL_LINE_COLOR = "#60A5FA";
 
 const buildLinePath = (points: Array<{ x: number; y: number }>): string =>
   points
@@ -41,19 +52,106 @@ const buildLinePath = (points: Array<{ x: number; y: number }>): string =>
     )
     .join(" ");
 
+const formatAxisDateLabel = (timestamp: number, range: WeightRangeKey): string => {
+  const date = new Date(timestamp);
+
+  if (range === "1Y" || range === "ALL") {
+    return date.toLocaleDateString(undefined, {
+      month: "short",
+      year: "2-digit",
+    });
+  }
+
+  return formatLocalDateLabel(date.toISOString());
+};
+
+const getBucketSpanDays = (
+  range: WeightRangeKey,
+  totalSpanDays: number,
+  entryCount: number,
+): number => {
+  switch (range) {
+    case "1W":
+      return 1;
+    case "1M":
+      return 1;
+    case "3M":
+      return 3;
+    case "1Y":
+      return 7;
+    case "ALL":
+      if (entryCount <= 40) {
+        return 1;
+      }
+
+      if (totalSpanDays > 730) {
+        return 30;
+      }
+
+      if (totalSpanDays > 365) {
+        return 14;
+      }
+
+      if (totalSpanDays > 180) {
+        return 10;
+      }
+
+      return 7;
+    default:
+      return 1;
+  }
+};
+
+const buildDisplayEntries = (
+  entries: DBWeightEntry[],
+  range: WeightRangeKey,
+): DBWeightEntry[] => {
+  if (entries.length <= 2) {
+    return entries;
+  }
+
+  const firstTime = new Date(entries[0].measuredAt).getTime();
+  const lastTime = new Date(entries[entries.length - 1].measuredAt).getTime();
+  const totalSpanDays = Math.max(1, Math.ceil((lastTime - firstTime) / DAY_MS));
+  const bucketSpanDays = getBucketSpanDays(range, totalSpanDays, entries.length);
+  if (bucketSpanDays <= 1) {
+    return entries;
+  }
+
+  const buckets: DBWeightEntry[][] = [];
+
+  for (const entry of entries) {
+    const timestamp = new Date(entry.measuredAt).getTime();
+    const bucketIndex = Math.floor(
+      Math.max(0, timestamp - firstTime) / (bucketSpanDays * DAY_MS),
+    );
+    const bucket = buckets[bucketIndex] ?? [];
+    bucket.push(entry);
+    buckets[bucketIndex] = bucket;
+  }
+
+  return buckets
+    .filter((bucket): bucket is DBWeightEntry[] => bucket.length > 0)
+    .map((bucket, index, allBuckets) => {
+      if (index === 0) {
+        return bucket[0];
+      }
+
+      if (index === allBuckets.length - 1) {
+        return bucket[bucket.length - 1];
+      }
+
+      return bucket[Math.floor(bucket.length / 2)];
+    });
+};
+
 const WeightTrendChart = ({
   entries,
   goal,
   range,
-  selectedEntryId,
   onChangeRange,
-  onSelectEntry,
 }: WeightTrendChartProps) => {
   const [chartWidth, setChartWidth] = React.useState(0);
-  const gestureState = React.useRef<{ startX: number; moved: boolean }>({
-    startX: 0,
-    moved: false,
-  });
 
   const sortedEntries = React.useMemo(
     () =>
@@ -64,25 +162,81 @@ const WeightTrendChart = ({
     [entries],
   );
 
-  const selectedEntry =
-    sortedEntries.find((entry) => entry.id === selectedEntryId) ??
-    sortedEntries[sortedEntries.length - 1] ??
-    null;
-
-  const emaSeries = React.useMemo(
-    () => (sortedEntries.length >= 3 ? computeEmaSeries(sortedEntries) : []),
-    [sortedEntries],
+  const displayEntries = React.useMemo(
+    () => buildDisplayEntries(sortedEntries, range),
+    [range, sortedEntries],
   );
 
+  const latestEntry = sortedEntries[sortedEntries.length - 1] ?? null;
+
+  const emaSeries = React.useMemo(
+    () => (displayEntries.length >= 3 ? computeEmaSeries(displayEntries) : []),
+    [displayEntries],
+  );
+
+  const pointMetrics = React.useMemo(() => {
+    if (displayEntries.length <= 7) {
+      return {
+        pointRadius: 3.5,
+        selectedRadius: 5.5,
+        lineWidth: 2,
+        trendWidth: 3.1,
+        trendHaloWidth: 6.5,
+        dailyLineOpacity: 0.7,
+        pointOpacity: 0.96,
+      };
+    }
+
+    if (displayEntries.length <= 18) {
+      return {
+        pointRadius: 3,
+        selectedRadius: 5,
+        lineWidth: 1.8,
+        trendWidth: 2.8,
+        trendHaloWidth: 5.8,
+        dailyLineOpacity: 0.62,
+        pointOpacity: 0.84,
+      };
+    }
+
+    return {
+      pointRadius: 2.5,
+      selectedRadius: 4.5,
+      lineWidth: 1.5,
+      trendWidth: 2.5,
+      trendHaloWidth: 5,
+      dailyLineOpacity: 0.48,
+      pointOpacity: 0.72,
+    };
+  }, [displayEntries.length]);
+
+  const helperText = React.useMemo(() => {
+    if (sortedEntries.length < 3) {
+      return "Trend needs more data.";
+    }
+
+    if (displayEntries.length < sortedEntries.length) {
+      if (range === "ALL") {
+        return "Showing representative snapshots for your full history.";
+      }
+
+      return range === "1Y"
+        ? "Showing weekly snapshots for a clearer long-range view."
+        : "Showing 3-day snapshots for a clearer 3-month view.";
+    }
+
+    return "Daily fluctuations are normal. Focus on the trend line.";
+  }, [displayEntries.length, range, sortedEntries.length]);
+
   const chartData = React.useMemo(() => {
-    if (sortedEntries.length === 0 || chartWidth === 0) {
+    if (displayEntries.length === 0 || chartWidth === 0) {
       return null;
     }
 
-    const timestamps = sortedEntries.map((entry) =>
+    const timestamps = displayEntries.map((entry) =>
       new Date(entry.measuredAt).getTime(),
     );
-    const values = sortedEntries.map((entry) => entry.valueKg);
+    const values = displayEntries.map((entry) => entry.valueKg);
 
     if (goal) {
       values.push(goal.targetWeightKg);
@@ -97,71 +251,76 @@ const WeightTrendChart = ({
     const valueRange = Math.max(0.5, maxValue - minValue);
     const yMin = minValue - valueRange * 0.15;
     const yMax = maxValue + valueRange * 0.15;
-    const usableWidth = chartWidth - CHART_PADDING * 2;
-    const usableHeight = CHART_HEIGHT - CHART_PADDING * 2;
+    const usableWidth = chartWidth - CHART_LEFT_PADDING - CHART_RIGHT_PADDING;
+    const usableHeight = CHART_HEIGHT - CHART_TOP_PADDING - CHART_BOTTOM_PADDING;
 
     const scaleX = (timestamp: number) => {
       if (maxTime === minTime) {
-        return CHART_PADDING + usableWidth / 2;
+        return CHART_LEFT_PADDING + usableWidth / 2;
       }
 
       return (
-        CHART_PADDING +
+        CHART_LEFT_PADDING +
         ((timestamp - minTime) / (maxTime - minTime)) * usableWidth
       );
     };
 
     const scaleY = (value: number) =>
-      CHART_PADDING + ((yMax - value) / (yMax - yMin)) * usableHeight;
+      CHART_TOP_PADDING + ((yMax - value) / (yMax - yMin)) * usableHeight;
 
-    const points: ChartPoint[] = sortedEntries.map((entry) => ({
+    const points: ChartPoint[] = displayEntries.map((entry) => ({
       entry,
       x: scaleX(new Date(entry.measuredAt).getTime()),
       y: scaleY(entry.valueKg),
     }));
 
     const trendPoints = emaSeries.map((item, index) => ({
-      x: points[index]?.x ?? CHART_PADDING,
+      x: points[index]?.x ?? CHART_LEFT_PADDING,
       y: scaleY(item.value),
+    }));
+
+    const yTicks = [yMax, (yMax + yMin) / 2, yMin].map((value) => ({
+      label: formatWeightKg(value),
+      y: scaleY(value),
+    }));
+
+    const xTickTimes =
+      minTime === maxTime ? [minTime] : [minTime, minTime + (maxTime - minTime) / 2, maxTime];
+    const xTicks = xTickTimes.map((timestamp, index) => ({
+      label: formatAxisDateLabel(timestamp, range),
+      x: scaleX(timestamp),
+      anchor: (
+        xTickTimes.length === 1
+          ? "middle"
+          : index === 0
+            ? "start"
+            : index === xTickTimes.length - 1
+              ? "end"
+              : "middle"
+      ) as "start" | "middle" | "end",
     }));
 
     return {
       scaleY,
+      yTicks,
+      xTicks,
       points,
       trendPoints,
-      selectedPoint:
-        points.find((point) => point.entry.id === selectedEntry?.id) ?? null,
+      currentPoint: points[points.length - 1] ?? null,
     };
-  }, [chartWidth, emaSeries, goal, selectedEntry?.id, sortedEntries]);
+  }, [chartWidth, displayEntries, emaSeries, goal, range]);
 
   const handleLayout = (event: LayoutChangeEvent) => {
     setChartWidth(event.nativeEvent.layout.width);
   };
 
-  const selectFromTouch = (locationX: number) => {
-    if (!chartData || chartData.points.length === 0) {
-      return;
-    }
-
-    const next = [...chartData.points].reduce((closest, candidate) =>
-      Math.abs(candidate.x - locationX) < Math.abs(closest.x - locationX)
-        ? candidate
-        : closest,
-    );
-
-    onSelectEntry(next.entry);
-  };
-
-  const selectedSummary = selectedEntry
-    ? `Selected: ${formatLocalDateTimeLabel(selectedEntry.measuredAtLocalIso)} | ${formatWeightKg(
-        selectedEntry.valueKg,
-      )} kg`
+  const chartSummary = latestEntry
+    ? `${sortedEntries.length} logs`
     : "Add entries to see your trend.";
 
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
-        <Text style={styles.title}>Trend</Text>
         <View style={styles.rangeRow}>
           {WEIGHT_RANGE_LABELS.map((item) => {
             const selected = item === range;
@@ -189,112 +348,100 @@ const WeightTrendChart = ({
           })}
         </View>
       </View>
-      <Text style={styles.selectionText}>{selectedSummary}</Text>
-      {sortedEntries.length < 3 ? (
-        <Text style={styles.helperText}>Trend needs more data.</Text>
-      ) : (
-        <Text style={styles.helperText}>
-          Daily fluctuations are normal. Focus on the trend line.
-        </Text>
-      )}
+      <Text style={styles.selectionText}>{chartSummary}</Text>
+      <Text style={styles.helperText}>{helperText}</Text>
 
       <View
         style={styles.chartFrame}
         onLayout={handleLayout}
-        onStartShouldSetResponder={() => true}
-        onMoveShouldSetResponder={() => true}
-        onResponderGrant={(event) => {
-          gestureState.current = {
-            startX: event.nativeEvent.locationX,
-            moved: false,
-          };
-          selectFromTouch(event.nativeEvent.locationX);
-        }}
-        onResponderMove={(event) => {
-          if (
-            Math.abs(event.nativeEvent.locationX - gestureState.current.startX) > 6
-          ) {
-            gestureState.current.moved = true;
-          }
-          selectFromTouch(event.nativeEvent.locationX);
-        }}
-        onResponderRelease={() => {
-          gestureState.current = {
-            startX: 0,
-            moved: false,
-          };
-        }}
         accessible
-        accessibilityLabel={selectedSummary}
+        accessibilityLabel={chartSummary}
       >
         <Svg width="100%" height={CHART_HEIGHT}>
           {chartData ? (
             <>
-              {[0.2, 0.5, 0.8].map((fraction) => (
+              {chartData.yTicks.map((tick) => (
                 <Line
-                  key={fraction}
-                  x1={CHART_PADDING}
-                  x2={chartWidth - CHART_PADDING}
-                  y1={CHART_PADDING + (CHART_HEIGHT - CHART_PADDING * 2) * fraction}
-                  y2={CHART_PADDING + (CHART_HEIGHT - CHART_PADDING * 2) * fraction}
+                  key={`grid-${tick.label}`}
+                  x1={CHART_LEFT_PADDING}
+                  x2={chartWidth - CHART_RIGHT_PADDING}
+                  y1={tick.y}
+                  y2={tick.y}
                   stroke="#E2E8F0"
                   strokeWidth={1}
                 />
               ))}
+              {chartData.yTicks.map((tick) => (
+                <SvgText
+                  key={`y-label-${tick.label}`}
+                  x={CHART_LEFT_PADDING - 8}
+                  y={tick.y + 4}
+                  fill="#64748B"
+                  fontSize="11"
+                  fontWeight="600"
+                  textAnchor="end"
+                >
+                  {tick.label}
+                </SvgText>
+              ))}
               {goal ? (
                 <>
                   <Rect
-                    x={CHART_PADDING}
+                    x={CHART_LEFT_PADDING}
                     y={chartData.scaleY(goal.targetWeightKg + (goal.goalBandKg ?? 0.3))}
-                    width={Math.max(0, chartWidth - CHART_PADDING * 2)}
+                    width={Math.max(
+                      0,
+                      chartWidth - CHART_LEFT_PADDING - CHART_RIGHT_PADDING,
+                    )}
                     height={Math.abs(
                       chartData.scaleY(goal.targetWeightKg - (goal.goalBandKg ?? 0.3)) -
                         chartData.scaleY(goal.targetWeightKg + (goal.goalBandKg ?? 0.3)),
                     )}
-                    fill="#DBEAFE"
-                    opacity={0.45}
+                    fill={GOAL_BAND_FILL}
+                    opacity={0.3}
                   />
                   <Line
-                    x1={CHART_PADDING}
-                    x2={chartWidth - CHART_PADDING}
+                    x1={CHART_LEFT_PADDING}
+                    x2={chartWidth - CHART_RIGHT_PADDING}
                     y1={chartData.scaleY(goal.targetWeightKg)}
                     y2={chartData.scaleY(goal.targetWeightKg)}
-                    stroke="#1D4ED8"
+                    stroke={GOAL_LINE_COLOR}
                     strokeWidth={1.5}
                     strokeDasharray="4 4"
+                    opacity={0.85}
                   />
                 </>
-              ) : null}
-              {chartData.trendPoints.length >= 3 ? (
-                <Path
-                  d={buildLinePath(chartData.trendPoints)}
-                  stroke="#0F766E"
-                  strokeWidth={3}
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeDasharray="6 4"
-                />
               ) : null}
               {chartData.points.length >= 2 ? (
                 <Path
                   d={buildLinePath(chartData.points)}
-                  stroke="#0F172A"
-                  strokeWidth={3}
+                  stroke={DAILY_LINE_COLOR}
+                  strokeWidth={pointMetrics.lineWidth}
                   fill="none"
                   strokeLinecap="round"
                   strokeLinejoin="round"
+                  opacity={pointMetrics.dailyLineOpacity}
                 />
               ) : null}
-              {chartData.selectedPoint ? (
-                <Line
-                  x1={chartData.selectedPoint.x}
-                  x2={chartData.selectedPoint.x}
-                  y1={CHART_PADDING}
-                  y2={CHART_HEIGHT - CHART_PADDING}
-                  stroke="#94A3B8"
-                  strokeWidth={1}
-                  strokeDasharray="4 4"
+              {chartData.trendPoints.length >= 3 ? (
+                <Path
+                  d={buildLinePath(chartData.trendPoints)}
+                  stroke={TREND_HALO_COLOR}
+                  strokeWidth={pointMetrics.trendHaloWidth}
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  opacity={0.55}
+                />
+              ) : null}
+              {chartData.trendPoints.length >= 3 ? (
+                <Path
+                  d={buildLinePath(chartData.trendPoints)}
+                  stroke={TREND_LINE_COLOR}
+                  strokeWidth={pointMetrics.trendWidth}
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
               ) : null}
               {chartData.points.map((point) => (
@@ -302,11 +449,53 @@ const WeightTrendChart = ({
                   key={point.entry.id}
                   cx={point.x}
                   cy={point.y}
-                  r={point.entry.id === selectedEntry?.id ? 5 : 4}
-                  fill={point.entry.id === selectedEntry?.id ? "#0F766E" : "#FFFFFF"}
-                  stroke="#0F172A"
-                  strokeWidth={2}
+                  r={pointMetrics.pointRadius}
+                  fill={DAILY_POINT_FILL}
+                  fillOpacity={0.96}
+                  stroke={DAILY_POINT_STROKE}
+                  strokeWidth={1.5}
+                  opacity={pointMetrics.pointOpacity}
                 />
+              ))}
+              {chartData.currentPoint ? (
+                <>
+                  <Circle
+                    cx={chartData.currentPoint.x}
+                    cy={chartData.currentPoint.y}
+                    r={pointMetrics.selectedRadius + 3}
+                    fill={TREND_HALO_COLOR}
+                    opacity={0.55}
+                  />
+                  <Circle
+                    cx={chartData.currentPoint.x}
+                    cy={chartData.currentPoint.y}
+                    r={pointMetrics.selectedRadius}
+                    fill={SELECTED_POINT_FILL}
+                    stroke="#FFFFFF"
+                    strokeWidth={2.5}
+                  />
+                </>
+              ) : null}
+              <Line
+                x1={CHART_LEFT_PADDING}
+                x2={chartWidth - CHART_RIGHT_PADDING}
+                y1={CHART_HEIGHT - CHART_BOTTOM_PADDING}
+                y2={CHART_HEIGHT - CHART_BOTTOM_PADDING}
+                stroke="#CBD5E1"
+                strokeWidth={1}
+              />
+              {chartData.xTicks.map((tick, index) => (
+                <SvgText
+                  key={`x-label-${index}-${tick.label}`}
+                  x={tick.x}
+                  y={CHART_HEIGHT - 8}
+                  fill="#64748B"
+                  fontSize="11"
+                  fontWeight="600"
+                  textAnchor={tick.anchor}
+                >
+                  {tick.label}
+                </SvgText>
               ))}
             </>
           ) : null}
@@ -341,7 +530,7 @@ const styles = StyleSheet.create({
   selectionText: {
     color: "#0F172A",
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "800",
   },
   helperText: {
     color: "#64748B",
@@ -354,8 +543,12 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: "#F8FAFC",
     overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
   },
   rangeRow: {
+    marginTop: 6,
+    marginBottom: 6,
     flexDirection: "row",
     gap: 8,
     flexWrap: "wrap",

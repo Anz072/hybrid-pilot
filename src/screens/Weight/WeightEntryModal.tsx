@@ -15,11 +15,10 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ClockIcon, TagIcon, XIcon } from "phosphor-react-native";
+import { ClockIcon, XIcon } from "phosphor-react-native";
 import type { DBWeightEntry } from "../../store/DB_TYPES";
 import OnboardingPrimaryButton from "../Onboarding/OnboardingPrimaryButton";
 import {
-  PRESET_TAGS,
   formatWeightKg,
   getZoneOffsetMinutes,
   parseLocalizedWeight,
@@ -32,7 +31,6 @@ export type WeightEntryDraft = {
   measuredAtLocalIso: string;
   zoneOffsetMinutes: number;
   notes: string | null;
-  tags: string[];
   source: "manual";
 };
 
@@ -49,16 +47,12 @@ const serializeDraft = (draft: {
   value: string;
   measuredAt: string;
   notes: string;
-  tags: string[];
 }) =>
   JSON.stringify({
     value: draft.value,
     measuredAt: draft.measuredAt,
     notes: draft.notes.trim(),
-    tags: [...draft.tags].sort(),
   });
-
-const isPresetTag = (tag: string): boolean => PRESET_TAGS.some((preset) => preset === tag);
 
 const WeightEntryModal = ({
   visible,
@@ -78,8 +72,6 @@ const WeightEntryModal = ({
   );
   const [measuredAtDate, setMeasuredAtDate] = React.useState(initialDate);
   const [notes, setNotes] = React.useState(initialEntry?.notes ?? "");
-  const [tags, setTags] = React.useState<string[]>(initialEntry?.tags ?? []);
-  const [customTag, setCustomTag] = React.useState("");
   const [showDatePicker, setShowDatePicker] = React.useState(false);
   const [showTimePicker, setShowTimePicker] = React.useState(false);
 
@@ -92,8 +84,6 @@ const WeightEntryModal = ({
     setValue(initialEntry ? formatWeightKg(initialEntry.valueOriginal) : "");
     setMeasuredAtDate(nextDate);
     setNotes(initialEntry?.notes ?? "");
-    setTags(initialEntry?.tags ?? []);
-    setCustomTag("");
     setShowDatePicker(false);
     setShowTimePicker(false);
   }, [initialEntry, visible]);
@@ -104,7 +94,6 @@ const WeightEntryModal = ({
         value: initialEntry ? formatWeightKg(initialEntry.valueOriginal) : "",
         measuredAt: initialDate.toISOString(),
         notes: initialEntry?.notes ?? "",
-        tags: initialEntry?.tags ?? [],
       }),
     [initialDate, initialEntry],
   );
@@ -113,7 +102,6 @@ const WeightEntryModal = ({
     value,
     measuredAt: measuredAtDate.toISOString(),
     notes,
-    tags,
   });
   const isDirty = currentSnapshot !== initialSnapshot;
 
@@ -127,26 +115,6 @@ const WeightEntryModal = ({
       { text: "Keep editing", style: "cancel" },
       { text: "Discard", style: "destructive", onPress: onClose },
     ]);
-  };
-
-  const toggleTag = (tag: string) => {
-    setTags((current) =>
-      current.includes(tag)
-        ? current.filter((item) => item !== tag)
-        : [...current, tag],
-    );
-  };
-
-  const handleAddCustomTag = () => {
-    const trimmed = customTag.trim().toLowerCase();
-    if (trimmed.length === 0) {
-      return;
-    }
-
-    if (!tags.includes(trimmed)) {
-      setTags((current) => [...current, trimmed]);
-    }
-    setCustomTag("");
   };
 
   const handleDateChange = (event: DateTimePickerEvent, nextDate?: Date) => {
@@ -191,7 +159,6 @@ const WeightEntryModal = ({
       measuredAtLocalIso: toLocalIsoWithOffset(measuredAtDate),
       zoneOffsetMinutes: getZoneOffsetMinutes(measuredAtDate),
       notes: notes.trim().length > 0 ? notes.trim() : null,
-      tags,
       source: "manual",
     });
   };
@@ -298,77 +265,6 @@ const WeightEntryModal = ({
                 display={Platform.OS === "ios" ? "spinner" : "default"}
                 onChange={handleTimeChange}
               />
-            ) : null}
-
-            <Text style={styles.label}>Tags</Text>
-            <View style={styles.tagRow}>
-              {PRESET_TAGS.map((tag) => {
-                const selected = tags.includes(tag);
-                return (
-                  <Pressable
-                    key={tag}
-                    onPress={() => toggleTag(tag)}
-                    style={({ pressed }) => [
-                      styles.tagChip,
-                      selected && styles.tagChipSelected,
-                      pressed && styles.tagChipPressed,
-                    ]}
-                    accessibilityLabel={`Toggle tag ${tag}`}
-                  >
-                    <TagIcon
-                      size={14}
-                      color={selected ? "#FFFFFF" : "#475569"}
-                      weight="fill"
-                    />
-                    <Text
-                      style={[
-                        styles.tagChipText,
-                        selected && styles.tagChipTextSelected,
-                      ]}
-                    >
-                      {tag}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-            <View style={styles.customTagRow}>
-              <TextInput
-                value={customTag}
-                onChangeText={setCustomTag}
-                placeholder="Custom tag"
-                placeholderTextColor="#94A3B8"
-                style={styles.customTagInput}
-                accessibilityLabel="Custom tag"
-              />
-              <Pressable
-                onPress={handleAddCustomTag}
-                style={({ pressed }) => [
-                  styles.customTagButton,
-                  pressed && styles.customTagButtonPressed,
-                ]}
-                accessibilityLabel="Add custom tag"
-              >
-                <Text style={styles.customTagButtonText}>Add</Text>
-              </Pressable>
-            </View>
-            {tags.filter((tag) => !isPresetTag(tag)).length > 0 ? (
-              <View style={styles.customTagList}>
-                {tags
-                  .filter((tag) => !isPresetTag(tag))
-                  .map((tag) => (
-                    <Pressable
-                      key={tag}
-                      onPress={() => toggleTag(tag)}
-                      style={({ pressed }) => [
-                        styles.customTagChip,
-                        pressed && styles.tagChipPressed,
-                      ]}
-                    >
-                      <Text style={styles.customTagChipText}>{tag}</Text>
-                    </Pressable>
-                  ))}
-              </View>
             ) : null}
 
             <Text style={styles.label}>Notes</Text>
@@ -525,81 +421,6 @@ const styles = StyleSheet.create({
   dateButtonText: {
     color: "#0F172A",
     fontSize: 14,
-    fontWeight: "700",
-  },
-  tagRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  tagChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: "#F8FAFC",
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
-  },
-  tagChipSelected: {
-    backgroundColor: "#0F172A",
-    borderColor: "#0F172A",
-  },
-  tagChipPressed: {
-    opacity: 0.9,
-  },
-  tagChipText: {
-    color: "#475569",
-    fontWeight: "700",
-  },
-  tagChipTextSelected: {
-    color: "#FFFFFF",
-  },
-  customTagRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 10,
-  },
-  customTagInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    color: "#0F172A",
-    fontSize: 15,
-    backgroundColor: "#FFFFFF",
-  },
-  customTagButton: {
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    justifyContent: "center",
-    backgroundColor: "#E2E8F0",
-  },
-  customTagButtonPressed: {
-    opacity: 0.9,
-  },
-  customTagButtonText: {
-    color: "#0F172A",
-    fontWeight: "800",
-  },
-  customTagList: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 10,
-  },
-  customTagChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: "#E0F2FE",
-  },
-  customTagChipText: {
-    color: "#075985",
     fontWeight: "700",
   },
   notesInput: {

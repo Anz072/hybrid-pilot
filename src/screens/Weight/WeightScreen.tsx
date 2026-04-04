@@ -42,19 +42,16 @@ import WeightEntryModal, { type WeightEntryDraft } from "./WeightEntryModal";
 import WeightTrendChart from "./WeightTrendChart";
 import {
   DEFAULT_GOAL_BAND_KG,
-  TIME_OF_DAY_OPTIONS,
   type WeightRangeKey,
-  type WeightTimeOfDay,
   computeGoalProgress,
   computeMovingAverage,
   computeWeeklyPaceToGoal,
-  deriveTimeOfDay,
   filterEntriesByRange,
   formatDateOnly,
   formatLocalDateTimeLabel,
   formatWeightKg,
   generateUuid,
-  getMinutesBetween,
+  getLocalDateKey,
   groupEntriesByLocalDate,
   parseDateOnly,
   parseLocalizedWeight,
@@ -65,19 +62,11 @@ const FALLBACK_USER_ID = "guest-local";
 const SOFT_MIN_WEIGHT_KG = 20;
 const SOFT_MAX_WEIGHT_KG = 300;
 const FUTURE_GRACE_MINUTES = 5;
-const DUPLICATE_WINDOW_MINUTES = 5;
-const DUPLICATE_DELTA_KG = 0.05;
 
 type SnackbarState = {
   message: string;
   actionLabel?: string;
   onAction?: () => void;
-};
-
-type FilterState = {
-  source: "all" | "manual";
-  tag: string | "all";
-  timeOfDay: WeightTimeOfDay;
 };
 
 type InsightCardProps = {
@@ -91,16 +80,6 @@ type HistorySection = {
   title: string;
   key: string;
   data: DBWeightEntry[];
-};
-
-const SOURCE_OPTIONS: Array<FilterState["source"]> = ["all", "manual"];
-
-const TIME_OF_DAY_LABELS: Record<WeightTimeOfDay, string> = {
-  all: "All day",
-  morning: "Morning",
-  afternoon: "Afternoon",
-  evening: "Evening",
-  night: "Night",
 };
 
 const confirmAsync = (
@@ -128,7 +107,6 @@ const toSaveWeightEntryInput = (
   unitOriginal: "kg",
   source: entry.source,
   notes: entry.notes,
-  tags: entry.tags,
   clientGeneratedId: entry.clientGeneratedId,
   deviceId: entry.deviceId,
 });
@@ -158,11 +136,6 @@ const WeightScreen = () => {
   const [allEntries, setAllEntries] = React.useState<DBWeightEntry[]>([]);
   const [goal, setGoal] = React.useState<WeightEntryGoal | null>(null);
   const [range, setRange] = React.useState<WeightRangeKey>("1M");
-  const [filters, setFilters] = React.useState<FilterState>({
-    source: "all",
-    tag: "all",
-    timeOfDay: "all",
-  });
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
   const [selectedEntryId, setSelectedEntryId] = React.useState<string | null>(
@@ -183,7 +156,7 @@ const WeightScreen = () => {
   const [goalSaving, setGoalSaving] = React.useState(false);
   const [goalModalVisible, setGoalModalVisible] = React.useState(false);
   const [hideInsights, setHideInsights] = React.useState(true);
-  const [hideFilters, setHideFilters] = React.useState(true);
+  const [hideHistory, setHideHistory] = React.useState(true);
 
   const loadWeightState = React.useCallback(async (currentUserId: string) => {
     const [entries, nextGoal] = await Promise.all([
@@ -255,62 +228,12 @@ const WeightScreen = () => {
     [allEntries],
   );
 
-  const availableTags = React.useMemo(
-    () =>
-      Array.from(
-        new Set(
-          activeEntries.flatMap((entry) =>
-            entry.tags.map((tag) => tag.toLowerCase()),
-          ),
-        ),
-      ).sort(),
-    [activeEntries],
+  const historyEntries = activeEntries;
+
+  const chartEntries = React.useMemo(
+    () => filterEntriesByRange(activeEntries, range),
+    [activeEntries, range],
   );
-
-  const filteredEntries = React.useMemo(() => {
-    const ranged = filterEntriesByRange(activeEntries, range);
-
-    return ranged.filter((entry) => {
-      if (filters.source !== "all" && entry.source !== filters.source) {
-        return false;
-      }
-
-      if (filters.tag !== "all" && !entry.tags.includes(filters.tag)) {
-        return false;
-      }
-
-      if (
-        filters.timeOfDay !== "all" &&
-        deriveTimeOfDay(entry.measuredAtLocalIso) !== filters.timeOfDay
-      ) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [activeEntries, filters, range]);
-
-  const chartEntries = React.useMemo(() => {
-    if (range === "1W") {
-      return filteredEntries;
-    }
-
-    return filterEntriesByRange(filteredEntries, "1M");
-  }, [filteredEntries, range]);
-
-  React.useEffect(() => {
-    if (filteredEntries.length === 0) {
-      setSelectedEntryId(null);
-      return;
-    }
-
-    if (
-      !selectedEntryId ||
-      !filteredEntries.some((entry) => entry.id === selectedEntryId)
-    ) {
-      setSelectedEntryId(filteredEntries[0]?.id ?? null);
-    }
-  }, [filteredEntries, selectedEntryId]);
 
   const currentEntry = activeEntries[0] ?? null;
   const startEntry = activeEntries[activeEntries.length - 1] ?? null;
@@ -338,12 +261,21 @@ const WeightScreen = () => {
       : goal;
   const goalPaceText =
     currentEntry != null
-      ? computeWeeklyPaceToGoal(currentEntry.valueKg, previewGoal)
+      ? computeWeeklyPaceToGoal(
+          currentEntry.valueKg,
+          startEntry?.valueKg ?? currentEntry.valueKg,
+          previewGoal,
+        )
       : null;
   const historySections = React.useMemo<HistorySection[]>(
-    () => groupEntriesByLocalDate(filteredEntries),
-    [filteredEntries],
+    () => groupEntriesByLocalDate(historyEntries),
+    [historyEntries],
   );
+  const visibleHistorySections = hideHistory ? [] : historySections;
+  const collapsedHistoryText =
+    historyEntries.length > 0
+      ? `History is hidden. Expand to browse ${historyEntries.length} entries in your full log.`
+      : "History is hidden. Log your first weight entry to build a timeline.";
 
   const consistencyPerWeek = React.useMemo(() => {
     const recent = filterEntriesByRange(activeEntries, "1M");
@@ -401,11 +333,6 @@ const WeightScreen = () => {
     pendingCount > 0
       ? `Offline | ${pendingCount} pending`
       : "Offline | Local only";
-  const isViewFiltered =
-    range !== "1M" ||
-    filters.source !== "all" ||
-    filters.tag !== "all" ||
-    filters.timeOfDay !== "all";
 
   const openCreateModal = () => {
     setEditingEntry(null);
@@ -445,6 +372,16 @@ const WeightScreen = () => {
     setAllEntries((current) => upsertEntry(current, entry));
   };
 
+  const replaceLocalEntries = (entries: DBWeightEntry[]) => {
+    setAllEntries((current) => {
+      const nextIds = new Set(entries.map((entry) => entry.id));
+      return sortEntriesDesc([
+        ...entries,
+        ...current.filter((entry) => !nextIds.has(entry.id)),
+      ]);
+    });
+  };
+
   const showUndoSnackbar = (
     message: string,
     onAction: () => void | Promise<void>,
@@ -459,14 +396,7 @@ const WeightScreen = () => {
     });
   };
 
-  const finalizeSave = async (
-    draft: WeightEntryDraft,
-    options?: {
-      replaceEntry?: DBWeightEntry | null;
-      existingEntry?: DBWeightEntry | null;
-      skipDuplicatePrompt?: boolean;
-    },
-  ) => {
+  const finalizeSave = async (draft: WeightEntryDraft) => {
     const measuredAtMs = new Date(draft.measuredAt).getTime();
     if (measuredAtMs > Date.now() + FUTURE_GRACE_MINUTES * 60 * 1000) {
       const confirmed = await confirmAsync(
@@ -493,59 +423,17 @@ const WeightScreen = () => {
       }
     }
 
-    const entryToReplace = options?.skipDuplicatePrompt
-      ? (options?.replaceEntry ?? null)
-      : (options?.replaceEntry ??
-        activeEntries.find((entry) => {
-          if (entry.id === options?.existingEntry?.id) {
-            return false;
-          }
-
-          return (
-            getMinutesBetween(entry.measuredAt, draft.measuredAt) <=
-              DUPLICATE_WINDOW_MINUTES &&
-            Math.abs(entry.valueKg - draft.valueOriginal) <= DUPLICATE_DELTA_KG
-          );
-        }) ??
-        null);
-
-    if (
-      !options?.skipDuplicatePrompt &&
-      entryToReplace &&
-      entryToReplace.id !== options?.existingEntry?.id
-    ) {
-      Alert.alert(
-        "Possible duplicate",
-        "A similar entry already exists nearby in time. Replace it or keep both?",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Keep both",
-            onPress: () => {
-              void finalizeSave(draft, {
-                replaceEntry: null,
-                existingEntry: options?.existingEntry ?? null,
-                skipDuplicatePrompt: true,
-              });
-            },
-          },
-          {
-            text: "Replace",
-            onPress: () => {
-              void finalizeSave(draft, {
-                replaceEntry: entryToReplace,
-                existingEntry: entryToReplace,
-                skipDuplicatePrompt: true,
-              });
-            },
-          },
-        ],
-      );
-      return;
-    }
-
-    const baseEntry = options?.existingEntry ?? editingEntry ?? null;
-    const targetEntry = options?.replaceEntry ?? baseEntry;
+    const baseEntry = editingEntry ?? null;
+    const localDateKey = getLocalDateKey(draft.measuredAtLocalIso);
+    const sameDayEntries = activeEntries.filter(
+      (entry) =>
+        entry.id !== baseEntry?.id &&
+        getLocalDateKey(entry.measuredAtLocalIso) === localDateKey,
+    );
+    const targetEntry = baseEntry ?? sameDayEntries[0] ?? null;
+    const overwrittenEntries = baseEntry
+      ? sameDayEntries
+      : sameDayEntries.filter((entry) => entry.id !== targetEntry?.id);
     const now = new Date().toISOString();
     const optimisticEntry: DBWeightEntry = {
       id: targetEntry?.id ?? generateUuid(),
@@ -558,7 +446,6 @@ const WeightScreen = () => {
       unitOriginal: "kg",
       source: draft.source,
       notes: draft.notes ?? null,
-      tags: draft.tags,
       clientGeneratedId: targetEntry?.clientGeneratedId ?? generateUuid(),
       deviceId: targetEntry?.deviceId ?? null,
       createdAt: targetEntry?.createdAt ?? now,
@@ -569,32 +456,25 @@ const WeightScreen = () => {
       syncError: null,
     };
 
-    const previousEntry = targetEntry;
-    replaceLocalEntry(optimisticEntry);
+    const optimisticDeletedEntries = overwrittenEntries.map((entry) => ({
+      ...entry,
+      deletedAt: now,
+      updatedAt: now,
+      version: entry.version + 1,
+      syncStatus: "pending" as const,
+      syncError: null,
+    }));
+
+    replaceLocalEntries([optimisticEntry, ...optimisticDeletedEntries]);
     setSelectedEntryId(optimisticEntry.id);
     closeModal();
-
-    showUndoSnackbar("Saved", async () => {
-      try {
-        if (!previousEntry) {
-          const deleted = await DB.softDeleteWeightEntry({
-            id: optimisticEntry.id,
-            userExternalId: userId,
-          });
-          if (deleted) {
-            replaceLocalEntry(deleted);
-          }
-          return;
-        }
-
-        const restored = await DB.saveWeightEntry(
-          toSaveWeightEntryInput(previousEntry),
-        );
-        replaceLocalEntry(restored);
-        setSelectedEntryId(restored.id);
-      } catch {
-        Alert.alert("Undo failed", "Please try editing the entry again.");
-      }
+    setSnackbar({
+      message:
+        sameDayEntries.length > 0
+          ? "Daily entry updated"
+          : baseEntry
+            ? "Entry updated"
+            : "Saved",
     });
 
     try {
@@ -609,20 +489,14 @@ const WeightScreen = () => {
         unitOriginal: "kg",
         source: optimisticEntry.source,
         notes: optimisticEntry.notes,
-        tags: optimisticEntry.tags,
         clientGeneratedId: optimisticEntry.clientGeneratedId,
         deviceId: optimisticEntry.deviceId,
       });
-      replaceLocalEntry(saved);
+      replaceLocalEntries([saved, ...optimisticDeletedEntries]);
+      setSelectedEntryId(saved.id);
     } catch {
       setSnackbar(null);
-      if (previousEntry) {
-        replaceLocalEntry(previousEntry);
-      } else {
-        setAllEntries((current) =>
-          current.filter((entry) => entry.id !== optimisticEntry.id),
-        );
-      }
+      await hydrate({ silent: true });
       Alert.alert("Could not save entry", "Please try again.");
     }
   };
@@ -766,15 +640,6 @@ const WeightScreen = () => {
         ? `${pendingCount} changes are stored locally and marked pending. They stay editable while offline.`
         : "All visible entries are stored locally. Sync support can reconcile them when connected.";
     Alert.alert("Sync status", message);
-  };
-
-  const resetView = () => {
-    setRange("1M");
-    setFilters({
-      source: "all",
-      tag: "all",
-      timeOfDay: "all",
-    });
   };
 
   const insightCards: InsightCardProps[] = [
@@ -929,7 +794,8 @@ const WeightScreen = () => {
         </View>
       </View>
 
-      {pendingCount > 0 || syncErrorCount > 0 ? (
+      {/* Temporarily disabled for debug */}
+      {/* {pendingCount > 0 || syncErrorCount > 0 ? (
         <View style={[styles.card, styles.warningCard]}>
           <View style={styles.warningRow}>
             <WarningCircleIcon size={18} color="#92400E" weight="fill" />
@@ -945,15 +811,13 @@ const WeightScreen = () => {
             </View>
           </View>
         </View>
-      ) : null}
+      ) : null} */}
 
       <WeightTrendChart
         entries={chartEntries}
         goal={goal}
         range={range}
-        selectedEntryId={selectedEntryId}
         onChangeRange={setRange}
-        onSelectEntry={(entry) => setSelectedEntryId(entry.id)}
       />
 
       <Pressable
@@ -983,8 +847,11 @@ const WeightScreen = () => {
               <Text style={styles.panelLabel}>Pace helper</Text>
               <Text style={styles.panelText}>
                 {currentEntry != null
-                  ? (computeWeeklyPaceToGoal(currentEntry.valueKg, goal) ??
-                    "Add a date to estimate weekly pace.")
+                  ? (computeWeeklyPaceToGoal(
+                      currentEntry.valueKg,
+                      startEntry?.valueKg ?? currentEntry.valueKg,
+                      goal,
+                    ) ?? "Add a date to estimate weekly pace.")
                   : "Add a current entry to estimate weekly pace."}
               </Text>
             </View>
@@ -1027,17 +894,22 @@ const WeightScreen = () => {
         <Pressable
           onPress={() => {
             animateQuickLayout();
-            setHideFilters((current) => !current);
+            setHideHistory((current) => !current);
           }}
           style={({ pressed }) => [pressed && styles.cardPressed]}
         >
           <View style={styles.rowBetween}>
             <View style={styles.flexOne1}>
               <View style={{ maxWidth: "80%", marginBottom: 6 }}>
-                <Text style={styles.sectionTitle}>Filters</Text>
+                <Text style={styles.sectionTitle}>History</Text>
+                <Text style={styles.subtleText}>
+                  {historyEntries.length > 0
+                    ? `${historyEntries.length} entries in your log.`
+                    : "Your weight history will appear here once you log an entry."}
+                </Text>
               </View>
               <View style={styles.expandInsightLike}>
-                {hideFilters ? (
+                {hideHistory ? (
                   <CaretDownIcon size={32} />
                 ) : (
                   <CaretUpIcon size={32} />
@@ -1045,148 +917,13 @@ const WeightScreen = () => {
               </View>
             </View>
           </View>
-          <Text style={{ ...styles.subtleText, fontSize: 10 }}>
-            {isViewFiltered
-              ? "Filters are hidden. The current view still uses your active filter selections."
-              : "Filters are hidden. Expand this card any time to narrow the view."}
-          </Text>
         </Pressable>
 
-        {hideFilters ? (
-          <></>
-        ) : (
-          <>
-            {isViewFiltered ? (
-              <Pressable
-                onPress={resetView}
-                style={({ pressed }) => [
-                  styles.pill,
-                  styles.resetViewPill,
-                  pressed && styles.cardPressed,
-                ]}
-              >
-                <Text style={styles.pillText}>Reset view</Text>
-              </Pressable>
-            ) : null}
-
-            <Text style={styles.label}>Source</Text>
-            <View style={styles.wrapRow}>
-              {SOURCE_OPTIONS.map((source) => {
-                const selected = filters.source === source;
-                return (
-                  <Pressable
-                    key={source}
-                    onPress={() =>
-                      setFilters((current) => ({ ...current, source }))
-                    }
-                    style={({ pressed }) => [
-                      styles.filterChip,
-                      selected && styles.filterChipActive,
-                      pressed && styles.cardPressed,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.filterChipText,
-                        selected && styles.filterChipTextActive,
-                      ]}
-                    >
-                      {source === "all" ? "All" : "Manual"}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            <Text style={styles.label}>Tags</Text>
-            <View style={styles.wrapRow}>
-              <Pressable
-                onPress={() =>
-                  setFilters((current) => ({ ...current, tag: "all" }))
-                }
-                style={({ pressed }) => [
-                  styles.filterChip,
-                  filters.tag === "all" && styles.filterChipActive,
-                  pressed && styles.cardPressed,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    filters.tag === "all" && styles.filterChipTextActive,
-                  ]}
-                >
-                  All
-                </Text>
-              </Pressable>
-              {availableTags.map((tag) => {
-                const selected = filters.tag === tag;
-                return (
-                  <Pressable
-                    key={tag}
-                    onPress={() =>
-                      setFilters((current) => ({ ...current, tag }))
-                    }
-                    style={({ pressed }) => [
-                      styles.filterChip,
-                      selected && styles.filterChipActive,
-                      pressed && styles.cardPressed,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.filterChipText,
-                        selected && styles.filterChipTextActive,
-                      ]}
-                    >
-                      {toTitleCase(tag)}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            <Text style={styles.label}>Time of day</Text>
-            <View style={styles.wrapRow}>
-              {TIME_OF_DAY_OPTIONS.map((timeOfDay) => {
-                const selected = filters.timeOfDay === timeOfDay;
-                return (
-                  <Pressable
-                    key={timeOfDay}
-                    onPress={() =>
-                      setFilters((current) => ({ ...current, timeOfDay }))
-                    }
-                    style={({ pressed }) => [
-                      styles.filterChip,
-                      selected && styles.filterChipActive,
-                      pressed && styles.cardPressed,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.filterChipText,
-                        selected && styles.filterChipTextActive,
-                      ]}
-                    >
-                      {TIME_OF_DAY_LABELS[timeOfDay]}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </>
-        )}
-      </View>
-
-      <View style={styles.historyIntro}>
-        <Text style={styles.sectionTitle}>History</Text>
-        <Text style={styles.subtleText}>
-          {filteredEntries.length > 0
-            ? `${filteredEntries.length} entries in this view. Tap a row to edit or swipe to delete.`
-            : activeEntries.length > 0
-              ? "No entries match the current range or filters."
-              : "Your weight history will appear here once you log an entry."}
-        </Text>
+        {hideHistory ? (
+          <Text style={{ ...styles.subtleText, fontSize: 10 }}>
+            {collapsedHistoryText}
+          </Text>
+        ) : null}
       </View>
     </View>
   );
@@ -1202,9 +939,9 @@ const WeightScreen = () => {
   return (
     <View style={styles.screen}>
       <SectionList
-        sections={historySections}
+        sections={visibleHistorySections}
         keyExtractor={(item) => item.id}
-        stickySectionHeadersEnabled
+        stickySectionHeadersEnabled={!hideHistory}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -1217,30 +954,16 @@ const WeightScreen = () => {
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={listHeader}
         ListEmptyComponent={
-          <View style={[styles.card, styles.emptyCard]}>
-            <ChartLineIcon size={28} color="#0F766E" weight="bold" />
-            <Text style={styles.sectionTitle}>
-              {activeEntries.length === 0
-                ? "Log your first weigh-in"
-                : "No entries match this view"}
-            </Text>
-            <Text style={styles.subtleText}>
-              {activeEntries.length === 0
-                ? "Add your first weight entry to unlock trend lines, goal progress, and history."
-                : "Try a wider range or reset the filters to bring entries back into view."}
-            </Text>
-            {activeEntries.length > 0 && isViewFiltered ? (
-              <Pressable
-                onPress={resetView}
-                style={({ pressed }) => [
-                  styles.pill,
-                  pressed && styles.cardPressed,
-                ]}
-              >
-                <Text style={styles.pillText}>Reset view</Text>
-              </Pressable>
-            ) : null}
-          </View>
+          hideHistory ? null : (
+            <View style={[styles.card, styles.emptyCard]}>
+              <ChartLineIcon size={28} color="#0F766E" weight="bold" />
+              <Text style={styles.sectionTitle}>Log your first weigh-in</Text>
+              <Text style={styles.subtleText}>
+                Add your first weight entry to unlock trend lines, goal
+                progress, and history.
+              </Text>
+            </View>
+          )
         }
         renderSectionHeader={({ section }) => (
           <View style={styles.stickyHeader}>
@@ -1255,6 +978,14 @@ const WeightScreen = () => {
               : item.syncStatus === "pending"
                 ? "Pending"
                 : null;
+          const compactMeta = [
+            formatLocalDateTimeLabel(item.measuredAtLocalIso),
+            toTitleCase(item.source),
+          ];
+
+          if (item.notes) {
+            compactMeta.push(item.notes);
+          }
 
           return (
             <Swipeable
@@ -1283,64 +1014,51 @@ const WeightScreen = () => {
               >
                 <View style={styles.rowBetween}>
                   <View style={styles.flexOne}>
-                    <Text style={styles.historyValue}>
-                      {formatWeightKg(item.valueKg)} kg
-                    </Text>
-                    <Text style={styles.historyMeta}>
-                      {formatLocalDateTimeLabel(item.measuredAtLocalIso)} |{" "}
-                      {toTitleCase(item.source)}
+                    <View style={styles.historyPrimaryRow}>
+                      <Text style={styles.historyValue}>
+                        {formatWeightKg(item.valueKg)} kg
+                      </Text>
+                      {statusLabel ? (
+                        <View
+                          style={[
+                            styles.statusChip,
+                            item.syncStatus === "error" &&
+                              styles.statusChipWarning,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.statusChipText,
+                              item.syncStatus === "error" &&
+                                styles.statusChipTextWarning,
+                            ]}
+                          >
+                            {statusLabel}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    <Text style={styles.historyMeta} numberOfLines={1}>
+                      {compactMeta.join("  |  ")}
                     </Text>
                   </View>
                   <View style={styles.rowAction}>
-                    {statusLabel ? (
-                      <View
-                        style={[
-                          styles.statusChip,
-                          item.syncStatus === "error" &&
-                            styles.statusChipWarning,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.statusChipText,
-                            item.syncStatus === "error" &&
-                              styles.statusChipTextWarning,
-                          ]}
-                        >
-                          {statusLabel}
-                        </Text>
-                      </View>
-                    ) : null}
                     <PencilSimpleIcon size={18} color="#475569" weight="bold" />
                   </View>
                 </View>
 
-                {item.tags.length > 0 ? (
-                  <View style={styles.wrapRow}>
-                    {item.tags.map((tag) => (
-                      <View key={tag} style={styles.tagPill}>
-                        <Text style={styles.tagPillText}>
-                          {toTitleCase(tag)}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : null}
-
-                {item.notes ? (
-                  <Text style={styles.noteText}>{item.notes}</Text>
-                ) : null}
-
                 {item.syncError ? (
-                  <View style={styles.warningRow}>
-                    <WarningCircleIcon
-                      size={14}
-                      color="#B45309"
-                      weight="fill"
-                    />
-                    <Text style={styles.warningText}>
-                      Sync error. Edit and retry.
-                    </Text>
+                  <View style={styles.historySupplementalRow}>
+                    <View style={styles.historyInlineWarning}>
+                      <WarningCircleIcon
+                        size={12}
+                        color="#B45309"
+                        weight="fill"
+                      />
+                      <Text style={styles.historyInlineWarningText}>
+                        Edit and retry sync
+                      </Text>
+                    </View>
                   </View>
                 ) : null}
               </Pressable>
@@ -1659,10 +1377,6 @@ const styles = StyleSheet.create({
     maxWidth: "100%",
   },
   expandInsightLike: {},
-  resetViewPill: {
-    alignSelf: "flex-start",
-    marginBottom: 12,
-  },
   pillText: {
     color: "#0F172A",
     fontSize: 13,
@@ -1679,28 +1393,6 @@ const styles = StyleSheet.create({
     color: "#E2E8F0",
     fontSize: 13,
     fontWeight: "800",
-  },
-  segment: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
-    backgroundColor: "#F8FAFC",
-    paddingVertical: 11,
-  },
-  segmentActive: {
-    backgroundColor: "#0F172A",
-    borderColor: "#0F172A",
-  },
-  segmentText: {
-    color: "#475569",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  segmentTextActive: {
-    color: "#FFFFFF",
   },
   metric: {
     color: "#0F172A",
@@ -1893,34 +1585,6 @@ const styles = StyleSheet.create({
   stack: {
     gap: 10,
   },
-  wrapRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  filterChip: {
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    backgroundColor: "#F8FAFC",
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
-  },
-  filterChipActive: {
-    backgroundColor: "#0F172A",
-    borderColor: "#0F172A",
-  },
-  filterChipText: {
-    color: "#475569",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  filterChipTextActive: {
-    color: "#FFFFFF",
-  },
-  historyIntro: {
-    marginBottom: 8,
-  },
   stickyHeader: {
     backgroundColor: "#F8FAFC",
     paddingHorizontal: 20,
@@ -1941,7 +1605,7 @@ const styles = StyleSheet.create({
   deleteSwipe: {
     width: 108,
     marginRight: 20,
-    marginBottom: 12,
+    marginBottom: 8,
     borderRadius: 16,
     backgroundColor: "#B91C1C",
     alignItems: "center",
@@ -1955,65 +1619,77 @@ const styles = StyleSheet.create({
   },
   historyRow: {
     marginHorizontal: 20,
-    marginBottom: 12,
+    marginBottom: 8,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E2E8F0",
     borderRadius: 16,
-    padding: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   historyRowActive: {
-    borderColor: "#0F766E",
+    borderColor: "#A5B4FC",
+    backgroundColor: "#F8FAFF",
+  },
+  historyPrimaryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 3,
   },
   historyValue: {
     color: "#0F172A",
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: "800",
-    marginBottom: 4,
   },
   historyMeta: {
     color: "#64748B",
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  historySupplementalRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 8,
   },
   rowAction: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
+    paddingTop: 2,
   },
   statusChip: {
     borderRadius: 999,
     backgroundColor: "#E2E8F0",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   statusChipWarning: {
     backgroundColor: "#FEF3C7",
   },
   statusChipText: {
     color: "#334155",
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "800",
   },
   statusChipTextWarning: {
     color: "#92400E",
   },
-  tagPill: {
+  historyInlineWarning: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     borderRadius: 999,
-    backgroundColor: "#F1F5F9",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    backgroundColor: "#FEF3C7",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
-  tagPillText: {
-    color: "#334155",
-    fontSize: 12,
+  historyInlineWarningText: {
+    color: "#92400E",
+    fontSize: 11,
     fontWeight: "700",
-  },
-  noteText: {
-    color: "#475569",
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 10,
   },
   fabWrap: {
     position: "absolute",

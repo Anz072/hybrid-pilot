@@ -25,6 +25,11 @@ import {
 import { DB } from "../../store/DB";
 import { useAppDispatch } from "../../store/hooks";
 import { setCurrentUser } from "../../store/userSlice";
+import {
+  generateUuid,
+  getZoneOffsetMinutes,
+  toLocalIsoWithOffset,
+} from "../Weight/weightUtils";
 import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
 import OnboardingReviewCard from "./OnboardingReviewCard";
 import OnboardingTopBar from "./OnboardingTopBar";
@@ -142,6 +147,26 @@ const AccountScreen = ({ navigation, route }: Props) => {
         proteinG: route.params.onboarding.fuelPlan.protein,
         carbsG: route.params.onboarding.fuelPlan.carbs,
         fatG: route.params.onboarding.fuelPlan.fats,
+      });
+
+      const initialWeightDate = new Date();
+      const initialWeightEntryId = `${account.id}-initial-weight`;
+      const initialWeightKg = route.params.onboarding.bodyData.weightKg;
+
+      await DB.saveWeightEntry({
+        id: initialWeightEntryId,
+        userExternalId: account.id,
+        measuredAt: initialWeightDate.toISOString(),
+        measuredAtLocalIso: toLocalIsoWithOffset(initialWeightDate),
+        zoneOffsetMinutes: getZoneOffsetMinutes(initialWeightDate),
+        valueKg: initialWeightKg,
+        valueOriginal: initialWeightKg,
+        unitOriginal: "kg",
+        source: "manual",
+        notes: null,
+        tags: [],
+        clientGeneratedId: initialWeightEntryId,
+        deviceId: generateUuid(),
       });
 
       const user = await DB.getUser();

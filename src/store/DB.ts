@@ -1,4 +1,14 @@
-import { addWeightLog, getRecentWeightLogs } from "./weightRepository";
+import {
+  addWeightLog,
+  clearAllWeightData,
+  clearWeightGoal,
+  getRecentWeightLogs,
+  getWeightGoal,
+  listWeightEntries,
+  saveWeightEntry,
+  saveWeightGoal,
+  softDeleteWeightEntry,
+} from "./weightRepository";
 import { getFirstUser, upsertUser } from "./userRepository";
 import {
   addFoodItem,
@@ -24,6 +34,13 @@ export const DB = {
   getUser: getFirstUser,
   addWeightLog,
   getRecentWeightLogs,
+  listWeightEntries,
+  saveWeightEntry,
+  softDeleteWeightEntry,
+  clearAllWeightData,
+  getWeightGoal,
+  saveWeightGoal,
+  clearWeightGoal,
   addFoodItem,
   searchFoodItems,
   getFavoriteFoodItems,

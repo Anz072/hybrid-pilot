@@ -19,7 +19,56 @@ import {
   seedDebugData,
   type TableCount,
 } from "../../storage/sqlite";
+import { DB } from "../../store/DB";
 import { useAppSelector } from "../../store/hooks";
+import {
+  generateUuid,
+  getZoneOffsetMinutes,
+  roundWeightKg,
+  toLocalIsoWithOffset,
+} from "../Weight/weightUtils";
+
+type WeightSeedPreset = "down" | "up" | "maintain";
+
+const clamp = (value: number, min: number, max: number): number =>
+  Math.min(max, Math.max(min, value));
+
+const createWeightPresetValues = (preset: WeightSeedPreset): number[] =>
+  Array.from({ length: 60 }, (_, index) => {
+    const progress = index / 59;
+
+    if (preset === "down") {
+      const base = 74.7 - progress * 9.1;
+      const drift = Math.sin(progress * 8) * 0.18;
+      const noise = (Math.random() - 0.5) * 0.34;
+      return roundWeightKg(clamp(base + drift + noise, 65, 75));
+    }
+
+    if (preset === "up") {
+      const base = 65.3 + progress * 9.0;
+      const drift = Math.cos(progress * 7) * 0.16;
+      const noise = (Math.random() - 0.5) * 0.34;
+      return roundWeightKg(clamp(base + drift + noise, 65, 75));
+    }
+
+    const base = 70 + Math.sin(progress * 11) * 0.45;
+    const drift = Math.cos(progress * 5) * 0.18;
+    const noise = (Math.random() - 0.5) * 0.52;
+    return roundWeightKg(clamp(base + drift + noise, 65, 75));
+  });
+
+const getPresetLabel = (preset: WeightSeedPreset): string => {
+  switch (preset) {
+    case "down":
+      return "trend down";
+    case "up":
+      return "trend up";
+    case "maintain":
+      return "maintain-ish";
+    default:
+      return preset;
+  }
+};
 
 const SettingsScreen = () => {
   const user = useAppSelector((state) => state.user.currentUser);
@@ -82,6 +131,78 @@ const SettingsScreen = () => {
     ]);
   };
 
+  const runWeightPreset = async (preset: WeightSeedPreset) => {
+    if (!user?.externalId) {
+      Alert.alert(
+        "No active user",
+        "Create or load a local account first so the seeded weight history has somewhere to go.",
+      );
+      return;
+    }
+
+    setBusy(true);
+
+    try {
+      await DB.clearAllWeightData(user.externalId);
+
+      const values = createWeightPresetValues(preset);
+      const now = new Date();
+
+      for (let index = 0; index < values.length; index += 1) {
+        const measuredAtDate = new Date(now);
+        measuredAtDate.setDate(now.getDate() - (values.length - 1 - index));
+        measuredAtDate.setHours(7 + (index % 3), 10 + ((index * 7) % 45), 0, 0);
+
+        const entryId = `debug-weight-${preset}-${index}-${generateUuid()}`;
+
+        await DB.saveWeightEntry({
+          id: entryId,
+          userExternalId: user.externalId,
+          measuredAt: measuredAtDate.toISOString(),
+          measuredAtLocalIso: toLocalIsoWithOffset(measuredAtDate),
+          zoneOffsetMinutes: getZoneOffsetMinutes(measuredAtDate),
+          valueKg: values[index],
+          valueOriginal: values[index],
+          unitOriginal: "kg",
+          source: "manual",
+          notes: `Debug preset: ${getPresetLabel(preset)}`,
+          tags: ["debug", preset],
+          clientGeneratedId: entryId,
+        });
+      }
+
+      await handleRefresh();
+      Alert.alert(
+        "Weight history ready",
+        `Added 60 ${getPresetLabel(preset)} entries and cleared previous weight data.`,
+      );
+    } catch (error) {
+      Alert.alert(
+        "Could not seed weight history",
+        error instanceof Error ? error.message : "Unknown error",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleSeedWeightPreset = (preset: WeightSeedPreset) => {
+    Alert.alert(
+      `Generate ${getPresetLabel(preset)} history?`,
+      "This will remove current weight entries and weight goal for the active user, then add 60 fresh debug entries.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Generate",
+          style: "destructive",
+          onPress: () => {
+            void runWeightPreset(preset);
+          },
+        },
+      ],
+    );
+  };
+
   React.useEffect(() => {
     void handleRefresh();
   }, []);
@@ -127,6 +248,40 @@ const SettingsScreen = () => {
       </View>
 
       <View style={styles.card}>
+        <Text style={styles.cardTitle}>Weight Debug Presets</Text>
+        <Text style={styles.empty}>
+          Each preset clears the current user&apos;s weight entries and goal,
+          then adds 60 fresh kg entries for chart testing.
+        </Text>
+
+        <View style={styles.seedGroup}>
+          <TouchableOpacity
+            style={[styles.button, styles.weightDownButton]}
+            onPress={() => handleSeedWeightPreset("down")}
+            disabled={busy}
+          >
+            <Text style={styles.buttonText}>Generate Trend Down</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.weightUpButton]}
+            onPress={() => handleSeedWeightPreset("up")}
+            disabled={busy}
+          >
+            <Text style={styles.buttonText}>Generate Trend Up</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.weightMaintainButton]}
+            onPress={() => handleSeedWeightPreset("maintain")}
+            disabled={busy}
+          >
+            <Text style={styles.buttonText}>Generate Maintain-ish</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={{ ...styles.card, marginTop: 16 }}>
         <Text style={styles.cardTitle}>Table Row Counts</Text>
         {counts.length === 0 ? (
           <Text style={styles.empty}>No data yet.</Text>
@@ -140,7 +295,7 @@ const SettingsScreen = () => {
         )}
       </View>
 
-      {/*
+      {/* 
           id: number;
           externalId: string;
           provider: DBUserProvider | string;
@@ -245,6 +400,15 @@ const styles = StyleSheet.create({
   seedButton: {
     backgroundColor: "#166534",
   },
+  weightDownButton: {
+    backgroundColor: "#0f766e",
+  },
+  weightUpButton: {
+    backgroundColor: "#1d4ed8",
+  },
+  weightMaintainButton: {
+    backgroundColor: "#7c3aed",
+  },
   resetButton: {
     backgroundColor: "#991b1b",
   },
@@ -258,6 +422,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     backgroundColor: "#f8fafc",
+  },
+  seedGroup: {
+    marginTop: 12,
+    gap: 10,
   },
   cardTitle: {
     fontSize: 16,

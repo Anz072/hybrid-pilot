@@ -40,6 +40,76 @@ export type AddWeightLogInput = {
   loggedAt?: DBIsoDateString;
 };
 
+export type WeightEntrySource =
+  | "manual"
+  | "import"
+  | "smart_scale"
+  | "healthkit"
+  | "health_connect"
+  | "google_fit"
+  | "csv";
+
+export type WeightEntrySyncStatus = "pending" | "synced" | "error";
+
+export type DBWeightEntry = {
+  id: string;
+  userExternalId: string;
+  measuredAt: DBIsoDateString;
+  measuredAtLocalIso: string;
+  zoneOffsetMinutes: number;
+  valueKg: number;
+  valueOriginal: number;
+  unitOriginal: "kg";
+  source: WeightEntrySource;
+  notes: string | null;
+  tags: string[];
+  clientGeneratedId: string;
+  deviceId: string | null;
+  createdAt: DBIsoDateString;
+  updatedAt: DBIsoDateString;
+  deletedAt: DBIsoDateString | null;
+  version: number;
+  syncStatus: WeightEntrySyncStatus;
+  syncError: string | null;
+};
+
+export type SaveWeightEntryInput = {
+  id: string;
+  userExternalId: string;
+  measuredAt: DBIsoDateString;
+  measuredAtLocalIso: string;
+  zoneOffsetMinutes: number;
+  valueKg: number;
+  valueOriginal: number;
+  unitOriginal: "kg";
+  source: WeightEntrySource;
+  notes?: string | null;
+  tags?: string[];
+  clientGeneratedId: string;
+  deviceId?: string | null;
+};
+
+export type SoftDeleteWeightEntryInput = {
+  id: string;
+  userExternalId: string;
+};
+
+export type WeightEntryGoal = {
+  userExternalId: string;
+  targetWeightKg: number;
+  targetDate: string | null;
+  goalBandKg: number | null;
+  createdAt: DBIsoDateString;
+  updatedAt: DBIsoDateString;
+};
+
+export type SaveWeightGoalInput = {
+  userExternalId: string;
+  targetWeightKg: number;
+  targetDate?: string | null;
+  goalBandKg?: number | null;
+};
+
 export type DBFoodItem = {
   id: number;
   name: string;

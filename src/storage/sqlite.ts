@@ -163,12 +163,115 @@ const migrations: Migration[] = [
     `);
     },
   },
+  {
+    version: 7,
+    name: "weight_entries_v2",
+    up: async (db) => {
+      await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS weight_entries (
+        id TEXT PRIMARY KEY,
+        user_external_id TEXT NOT NULL,
+        measured_at TEXT NOT NULL,
+        measured_at_local_iso TEXT NOT NULL,
+        zone_offset_minutes INTEGER NOT NULL,
+        value_kg REAL NOT NULL,
+        value_original REAL NOT NULL,
+        unit_original TEXT NOT NULL,
+        source TEXT NOT NULL,
+        notes TEXT,
+        tags TEXT NOT NULL DEFAULT '[]',
+        client_generated_id TEXT NOT NULL,
+        device_id TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        deleted_at TEXT,
+        version INTEGER NOT NULL DEFAULT 1,
+        sync_status TEXT NOT NULL DEFAULT 'pending',
+        sync_error TEXT,
+        FOREIGN KEY(user_external_id) REFERENCES users(external_id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_weight_entries_user_measured_at
+      ON weight_entries(user_external_id, measured_at DESC);
+
+      CREATE INDEX IF NOT EXISTS idx_weight_entries_user_deleted_at
+      ON weight_entries(user_external_id, deleted_at);
+
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_weight_entries_user_client_generated_id
+      ON weight_entries(user_external_id, client_generated_id);
+
+      INSERT INTO weight_entries (
+        id,
+        user_external_id,
+        measured_at,
+        measured_at_local_iso,
+        zone_offset_minutes,
+        value_kg,
+        value_original,
+        unit_original,
+        source,
+        notes,
+        tags,
+        client_generated_id,
+        created_at,
+        updated_at,
+        deleted_at,
+        version,
+        sync_status,
+        sync_error
+      )
+      SELECT
+        lower(hex(randomblob(16))),
+        user_external_id,
+        logged_at,
+        logged_at,
+        0,
+        round(weight_kg, 3),
+        round(weight_kg, 3),
+        'kg',
+        'manual',
+        note,
+        '[]',
+        'legacy-' || id,
+        created_at,
+        created_at,
+        NULL,
+        1,
+        'synced',
+        NULL
+      FROM weight_logs
+      WHERE NOT EXISTS (
+        SELECT 1 FROM weight_entries existing
+        WHERE existing.user_external_id = weight_logs.user_external_id
+      );
+    `);
+    },
+  },
+  {
+    version: 8,
+    name: "weight_goals",
+    up: async (db) => {
+      await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS weight_goals (
+        user_external_id TEXT PRIMARY KEY,
+        target_weight_kg REAL NOT NULL,
+        target_date TEXT,
+        goal_band_kg REAL DEFAULT 0.3,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY(user_external_id) REFERENCES users(external_id)
+      );
+    `);
+    },
+  },
 ];
 
 const trackedTables = [
   "migration_history",
   "users",
   "weight_logs",
+  "weight_entries",
+  "weight_goals",
   "app_kv",
   "food_items",
   "user_food_log",
@@ -306,14 +409,46 @@ export const seedDebugData = async (): Promise<void> => {
     const ts = new Date(now - i * 86400000).toISOString();
     await db.runAsync(
       `
-      INSERT INTO weight_logs (user_external_id, weight_kg, note, logged_at, created_at)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO weight_entries (
+        id,
+        user_external_id,
+        measured_at,
+        measured_at_local_iso,
+        zone_offset_minutes,
+        value_kg,
+        value_original,
+        unit_original,
+        source,
+        notes,
+        tags,
+        client_generated_id,
+        created_at,
+        updated_at,
+        deleted_at,
+        version,
+        sync_status,
+        sync_error
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
+      `debug-entry-${i}`,
       userId,
+      ts,
+      ts,
+      0,
       logs[i],
+      logs[i],
+      "kg",
+      "manual",
       "debug-seed",
+      "[]",
+      `debug-entry-${i}`,
       ts,
       ts,
+      null,
+      1,
+      "synced",
+      null,
     );
   }
 };
@@ -333,6 +468,8 @@ export const resetDb = async (): Promise<void> => {
     DROP TABLE IF EXISTS user_food_log;
     DROP TABLE IF EXISTS custom_meals;
     DROP TABLE IF EXISTS food_items;
+    DROP TABLE IF EXISTS weight_goals;
+    DROP TABLE IF EXISTS weight_entries;
     DROP TABLE IF EXISTS weight_logs;
     DROP TABLE IF EXISTS users;
     DROP TABLE IF EXISTS app_kv;

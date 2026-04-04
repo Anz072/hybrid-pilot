@@ -189,6 +189,11 @@ const SettingsScreen = () => {
             </View>
             <View style={styles.row}>
               <Text style={styles.count}>
+                Training: {user.trainingTypes?.join(", ") || "None"}
+              </Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.count}>
                 Calorie Allowance: {user.calorieAllowance}
               </Text>
             </View>

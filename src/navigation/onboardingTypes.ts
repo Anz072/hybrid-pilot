@@ -1,5 +1,7 @@
 export type GoalType = "lose_fat" | "maintain" | "build_muscle";
 
+export type GoalRatePace = number | null;
+
 export type BodyData = {
   age: number;
   sex: "female" | "male" | "other";
@@ -21,6 +23,8 @@ export type TrainingType =
   | "cycling"
   | "other";
 
+export type TrainingSelection = TrainingType[];
+
 export type FuelPlan = {
   calories: number;
   protein: number;
@@ -30,23 +34,36 @@ export type FuelPlan = {
 
 export type OnboardingProfile = {
   goal: GoalType;
+  goalRateKgPerWeek: GoalRatePace;
   bodyData: BodyData;
   activity: ActivityLevel;
-  training: TrainingType;
+  training: TrainingSelection;
   fuelPlan: FuelPlan;
 };
 
 export type OnboardingParamList = {
   Welcome: undefined;
   Goal: undefined;
-  BodyData: { goal: GoalType };
-  Activity: { goal: GoalType; bodyData: BodyData };
-  Training: { goal: GoalType; bodyData: BodyData; activity: ActivityLevel };
-  FuelPlan: {
+  GoalRate: { goal: GoalType };
+  BodyData: { goal: GoalType; goalRateKgPerWeek: GoalRatePace };
+  Activity: {
     goal: GoalType;
+    goalRateKgPerWeek: GoalRatePace;
+    bodyData: BodyData;
+  };
+  Training: {
+    goal: GoalType;
+    goalRateKgPerWeek: GoalRatePace;
     bodyData: BodyData;
     activity: ActivityLevel;
-    training: TrainingType;
+    training?: TrainingSelection;
+  };
+  FuelPlan: {
+    goal: GoalType;
+    goalRateKgPerWeek: GoalRatePace;
+    bodyData: BodyData;
+    activity: ActivityLevel;
+    training: TrainingSelection;
   };
   Account: { onboarding: OnboardingProfile };
   Success: { onboarding: OnboardingProfile };

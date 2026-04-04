@@ -6,7 +6,10 @@ export type OnboardingButtonProps = {
   value: string;
   valueKey?: string;
   borderColor: string;
-  navigation?: { navigate: (screen: string, params?: unknown) => void };
+  navigation?: {
+    push?: (...args: any[]) => void;
+    navigate?: (...args: any[]) => void;
+  };
   navGoal: string;
   dataToSend: any;
   icon?: any;
@@ -19,7 +22,11 @@ const OnboardingButton = (props: OnboardingButtonProps) => {
 
   return (
     <Pressable
-      onPress={() => props.navigation?.navigate(props.navGoal, params)}
+      onPress={() =>
+        props.navigation?.push
+          ? props.navigation.push(props.navGoal, params)
+          : props.navigation?.navigate?.(props.navGoal, params)
+      }
       style={({ pressed }) => [
         styles.option2,
         pressed && styles.optionPressed,

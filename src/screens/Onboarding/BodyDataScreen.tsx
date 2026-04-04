@@ -1,5 +1,6 @@
 import React from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -15,6 +16,9 @@ import type {
   BodyData,
   OnboardingParamList,
 } from "../../navigation/onboardingTypes";
+import { formatGoalRateKg } from "./initialCalculations";
+import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
+import OnboardingTopBar from "./OnboardingTopBar";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "BodyData">;
 
@@ -26,14 +30,37 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
   const [sex, setSex] = React.useState<BodyData["sex"]>("female");
 
   const handleNext = () => {
+    const parsedAge = Number(age);
+    const parsedHeight = Number(heightCm);
+    const parsedWeight = Number(weightKg);
+
+    if (!Number.isFinite(parsedAge) || parsedAge < 13 || parsedAge > 100) {
+      Alert.alert("Check your age", "Enter an age between 13 and 100.");
+      return;
+    }
+
+    if (!Number.isFinite(parsedHeight) || parsedHeight < 120 || parsedHeight > 250) {
+      Alert.alert("Check your height", "Enter a height between 120 and 250 cm.");
+      return;
+    }
+
+    if (!Number.isFinite(parsedWeight) || parsedWeight < 35 || parsedWeight > 300) {
+      Alert.alert("Check your weight", "Enter a weight between 35 and 300 kg.");
+      return;
+    }
+
     const bodyData: BodyData = {
-      age: Number(age) || 0,
-      heightCm: Number(heightCm) || 0,
-      weightKg: Number(weightKg) || 0,
+      age: parsedAge,
+      heightCm: parsedHeight,
+      weightKg: parsedWeight,
       sex,
     };
 
-    navigation.navigate("Activity", { goal: route.params.goal, bodyData });
+    navigation.push("Activity", {
+      goal: route.params.goal,
+      goalRateKgPerWeek: route.params.goalRateKgPerWeek,
+      bodyData,
+    });
   };
 
   return (
@@ -45,6 +72,10 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
       <View style={styles.bgOrbBottom} />
 
       <View style={styles.content}>
+        <OnboardingTopBar
+          onBack={() => navigation.goBack()}
+          stepLabel="Body Data"
+        />
         <View style={styles.headerWrap}>
           <View style={styles.headerRow}>
             <RulerIcon size={22} color="#0369A1" weight="fill" />
@@ -54,6 +85,11 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
           <Text style={styles.subtitle}>
             Quick setup for a better TDEE estimate.
           </Text>
+          {route.params.goalRateKgPerWeek != null ? (
+            <Text style={styles.contextNote}>
+              Target pace selected: {formatGoalRateKg(route.params.goalRateKgPerWeek)} kg per week.
+            </Text>
+          ) : null}
         </View>
 
         <View style={styles.formCard}>
@@ -92,7 +128,7 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
           </View>
           <Text style={styles.sectionLabel}>Sex</Text>
           <View style={styles.sexRow}>
-            {(["female", "male"] as const).map((value) => (
+            {(["female", "male", "other"] as const).map((value) => (
               <Pressable
                 key={value}
                 style={({ pressed }) => [
@@ -117,15 +153,7 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
       </View>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 6 }]}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.button,
-            pressed && styles.buttonPressed,
-          ]}
-          onPress={handleNext}
-        >
-          <Text style={styles.buttonText}>Next</Text>
-        </Pressable>
+        <OnboardingPrimaryButton label="Next" onPress={handleNext} />
       </View>
     </KeyboardAvoidingView>
   );
@@ -196,6 +224,13 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: "#475569",
   },
+  contextNote: {
+    marginTop: 10,
+    fontSize: 13,
+    lineHeight: 19,
+    color: "#0F766E",
+    fontWeight: "700",
+  },
   formCard: {
     backgroundColor: "#FFFFFF",
     borderColor: "#383838",
@@ -259,23 +294,6 @@ const styles = StyleSheet.create({
   },
   sexChipTextActive: {
     color: "#FFFFFF",
-  },
-  button: {
-    backgroundColor: "#0F172A",
-    borderRadius: 14,
-    paddingVertical: 15,
-    alignItems: "center",
-  },
-  buttonPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.99 }],
-  },
-  buttonText: {
-    color: "#FFFFFF",
-    fontSize: 18,
-    letterSpacing: 2,
-    fontWeight: "800",
-    paddingVertical: 6,
   },
 });
 

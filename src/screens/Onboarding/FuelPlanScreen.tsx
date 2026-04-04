@@ -1,15 +1,23 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ForkKnifeIcon } from "phosphor-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type {
-  ActivityLevel,
-  GoalType,
   OnboardingParamList,
   OnboardingProfile,
 } from "../../navigation/onboardingTypes";
 import { Pie, PolarChart } from "victory-native";
-import { buildFuelPlan } from "./initialCalculations";
+import { buildFuelPlan, getGoalRateLabel } from "./initialCalculations";
+import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
+import OnboardingReviewCard from "./OnboardingReviewCard";
+import OnboardingTopBar from "./OnboardingTopBar";
+import {
+  formatActivitySummary,
+  formatBodySummary,
+  formatGoalSummary,
+  formatTrainingSummary,
+} from "./onboardingSummary";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "FuelPlan">;
 
@@ -21,11 +29,19 @@ type MacroChartDatum = {
 };
 
 const FuelPlanScreen = ({ navigation, route }: Props) => {
-  const { goal, bodyData, activity, training } = route.params;
-  const fuelPlan = buildFuelPlan({ ...bodyData, activity, goal });
+  const insets = useSafeAreaInsets();
+  const { goal, goalRateKgPerWeek, bodyData, activity, training } = route.params;
+  const fuelPlan = buildFuelPlan({
+    ...bodyData,
+    activity,
+    goal,
+    goalRateKgPerWeek,
+  });
+  const goalRateLabel = getGoalRateLabel(goal, goalRateKgPerWeek);
 
   const onboarding: OnboardingProfile = {
     goal,
+    goalRateKgPerWeek,
     bodyData,
     activity,
     training,
@@ -57,7 +73,16 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
   );
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 },
+      ]}
+      contentInsetAdjustmentBehavior="automatic"
+      showsVerticalScrollIndicator={false}
+    >
+      <OnboardingTopBar onBack={() => navigation.goBack()} stepLabel="Fuel Plan" />
       <Text style={styles.eyebrow}>Fuel Strategy</Text>
       <View style={styles.titleRow}>
         <ForkKnifeIcon size={26} color="#0F766E" weight="fill" />
@@ -66,6 +91,52 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
       <Text style={styles.subtitle}>
         Auto-generated from your body data, activity, and goals.
       </Text>
+      {goalRateLabel ? (
+        <View style={styles.pacePill}>
+          <Text style={styles.pacePillText}>{goalRateLabel}</Text>
+        </View>
+      ) : null}
+
+      <OnboardingReviewCard
+        items={[
+          {
+            label: "Goal",
+            value: formatGoalSummary(goal, goalRateKgPerWeek),
+            onEdit: () => navigation.push("Goal"),
+          },
+          {
+            label: "Body data",
+            value: formatBodySummary(bodyData),
+            onEdit: () =>
+              navigation.push("BodyData", {
+                goal,
+                goalRateKgPerWeek,
+              }),
+          },
+          {
+            label: "Activity",
+            value: formatActivitySummary(activity),
+            onEdit: () =>
+              navigation.push("Activity", {
+                goal,
+                goalRateKgPerWeek,
+                bodyData,
+              }),
+          },
+          {
+            label: "Training",
+            value: formatTrainingSummary(training),
+            onEdit: () =>
+              navigation.push("Training", {
+                goal,
+                goalRateKgPerWeek,
+                bodyData,
+                activity,
+                training,
+              }),
+          },
+        ]}
+      />
 
       <View style={styles.chartCard}>
         <Text style={styles.chartTitle}>Macro Split</Text>
@@ -100,6 +171,10 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
 
       <View style={styles.card}>
         <View style={styles.metricRow}>
+          <Text style={styles.metricLabel}>Daily calories</Text>
+          <Text style={styles.metricValue}>{fuelPlan.calories} kcal</Text>
+        </View>
+        <View style={styles.metricRow}>
           <Text style={styles.metricLabel}>Protein</Text>
           <Text style={styles.metricValue}>{fuelPlan.protein} g</Text>
         </View>
@@ -112,29 +187,26 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
           <Text style={styles.metricValue}>{fuelPlan.fats} g</Text>
         </View>
       </View>
-      <Pressable
-        style={({ pressed }) => [
-          styles.primaryButton,
-          pressed && styles.primaryButtonPressed,
-        ]}
-        onPress={() => navigation.navigate("Account", { onboarding })}
-      >
-        <Text style={styles.primaryButtonText}>Looks good</Text>
-      </Pressable>
+      <OnboardingPrimaryButton
+        label="Looks good"
+        style={styles.primaryButton}
+        onPress={() => navigation.push("Account", { onboarding })}
+      />
       <Text style={styles.helper}>
-        Fine tuning can be added later in settings.
+        Use this as a starting point and review progress after 2-3 consistent weeks.
       </Text>
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 22,
-    paddingTop: 36,
-    paddingBottom: 24,
     backgroundColor: "#F8FAFC",
+  },
+  content: {
+    paddingHorizontal: 22,
+    flexGrow: 1,
   },
   eyebrow: {
     alignSelf: "flex-start",
@@ -164,7 +236,22 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 15,
     color: "#475569",
+    marginBottom: 10,
+  },
+  pacePill: {
+    alignSelf: "flex-start",
+    backgroundColor: "#DBEAFE",
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     marginBottom: 16,
+  },
+  pacePillText: {
+    color: "#1D4ED8",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
   },
   card: {
     backgroundColor: "#FFFFFF",
@@ -232,6 +319,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     flexDirection: "row",
     justifyContent: "center",
+    flexWrap: "wrap",
     gap: 12,
   },
   legendItem: {
@@ -250,22 +338,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   primaryButton: {
-    backgroundColor: "#0F172A",
-    borderRadius: 14,
-    paddingVertical: 15,
-    alignItems: "center",
     marginTop: 20,
-  },
-  primaryButtonPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.99 }],
-  },
-  primaryButtonText: {
-    color: "#FFFFFF",
-    fontSize: 18,
-    letterSpacing: 2,
-    fontWeight: "800",
-    paddingVertical: 6,
   },
   helper: {
     marginTop: 10,

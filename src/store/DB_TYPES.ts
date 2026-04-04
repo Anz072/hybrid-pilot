@@ -15,6 +15,7 @@ export type DBUser = {
   heightCm: number | null;
   activityLevel: string | null;
   goal: string | null;
+  trainingTypes: string[] | null;
   calorieAllowance: number | null;
   proteinG: number | null;
   carbsG: number | null;

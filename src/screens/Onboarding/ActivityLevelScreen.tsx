@@ -1,5 +1,6 @@
 import React from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GaugeIcon } from "phosphor-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type {
@@ -7,10 +8,17 @@ import type {
   OnboardingParamList,
 } from "../../navigation/onboardingTypes";
 import OnboardingButton from "./onboardingButton";
+import OnboardingReviewCard from "./OnboardingReviewCard";
+import OnboardingTopBar from "./OnboardingTopBar";
+import {
+  formatBodySummary,
+  formatGoalSummary,
+} from "./onboardingSummary";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "Activity">;
 
 const ActivityLevelScreen = ({ navigation, route }: Props) => {
+  const insets = useSafeAreaInsets();
   const levels: {
     label: string;
     value: ActivityLevel;
@@ -62,9 +70,21 @@ const ActivityLevelScreen = ({ navigation, route }: Props) => {
   ];
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 },
+      ]}
+      contentInsetAdjustmentBehavior="automatic"
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.bgOrbTop} />
       <View style={styles.bgOrbBottom} />
+      <OnboardingTopBar
+        onBack={() => navigation.goBack()}
+        stepLabel="Activity"
+      />
 
       <View style={styles.headerWrap}>
         <View style={styles.headerRow}>
@@ -77,6 +97,28 @@ const ActivityLevelScreen = ({ navigation, route }: Props) => {
         </Text>
       </View>
 
+      <OnboardingReviewCard
+        items={[
+          {
+            label: "Goal",
+            value: formatGoalSummary(
+              route.params.goal,
+              route.params.goalRateKgPerWeek,
+            ),
+            onEdit: () => navigation.push("Goal"),
+          },
+          {
+            label: "Body data",
+            value: formatBodySummary(route.params.bodyData),
+            onEdit: () =>
+              navigation.push("BodyData", {
+                goal: route.params.goal,
+                goalRateKgPerWeek: route.params.goalRateKgPerWeek,
+              }),
+          },
+        ]}
+      />
+
       <View style={styles.listWrap}>
         {levels.map((item) => (
           <View key={item.value}>
@@ -85,6 +127,7 @@ const ActivityLevelScreen = ({ navigation, route }: Props) => {
               subtitle={item.note}
               dataToSend={{
                 goal: route.params.goal,
+                goalRateKgPerWeek: route.params.goalRateKgPerWeek,
                 bodyData: route.params.bodyData,
                 activity: item.value,
               }}
@@ -103,10 +146,11 @@ const ActivityLevelScreen = ({ navigation, route }: Props) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 22,
-    paddingTop: 34,
-    paddingBottom: 24,
     backgroundColor: "#F8FAFC",
+  },
+  content: {
+    paddingHorizontal: 22,
+    flexGrow: 1,
   },
   bgOrbTop: {
     position: "absolute",

@@ -1,8 +1,10 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   BarbellIcon,
   BicycleIcon,
+  CheckIcon,
   SneakerMoveIcon,
 } from "phosphor-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -10,83 +12,189 @@ import type {
   OnboardingParamList,
   TrainingType,
 } from "../../navigation/onboardingTypes";
-import OnboardingButton from "./onboardingButton";
+import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
+import OnboardingReviewCard from "./OnboardingReviewCard";
+import OnboardingTopBar from "./OnboardingTopBar";
+import {
+  formatActivitySummary,
+  formatBodySummary,
+  formatGoalSummary,
+} from "./onboardingSummary";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "Training">;
 
 const TrainingProfileScreen = ({ navigation, route }: Props) => {
+  const insets = useSafeAreaInsets();
+  const [selectedTraining, setSelectedTraining] = React.useState<TrainingType[]>(
+    route.params.training ?? [],
+  );
+
   const options: {
     label: string;
     value: TrainingType;
     icon: React.ReactNode;
-    note?: string;
+    note: string;
   }[] = [
     {
       label: "Running",
       value: "running",
-      icon: <SneakerMoveIcon size={36} color="#353535ad" weight="fill" />,
+      icon: <SneakerMoveIcon size={30} color="#0F172A" weight="fill" />,
+      note: "Useful for endurance-focused fueling and recovery.",
     },
     {
       label: "Cycling",
       value: "cycling",
-      icon: <BicycleIcon size={36} color="#353535ad" weight="fill" />,
+      icon: <BicycleIcon size={30} color="#0F172A" weight="fill" />,
+      note: "Great if riding volume changes your energy demands.",
     },
     {
       label: "Gym / Bodybuilding",
       value: "bodybuilding",
-      icon: <BarbellIcon size={36} color="#353535ad" weight="fill" />,
+      icon: <BarbellIcon size={30} color="#0F172A" weight="fill" />,
+      note: "Helps bias the plan toward performance and muscle retention.",
     },
     {
       label: "CrossFit",
       value: "crossfit",
-      icon: <BarbellIcon size={36} color="#353535ad" weight="fill" />,
+      icon: <BarbellIcon size={30} color="#0F172A" weight="fill" />,
+      note: "Useful when training mixes strength and conditioning demands.",
     },
     {
       label: "Other",
       value: "other",
-      icon: <BarbellIcon size={36} color="#353535ad" weight="fill" />,
+      icon: <BarbellIcon size={30} color="#0F172A" weight="fill" />,
+      note: "Pick this if your main training mode is something else.",
     },
   ];
 
+  const toggleTraining = (value: TrainingType) => {
+    setSelectedTraining((current) =>
+      current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value],
+    );
+  };
+
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 },
+      ]}
+      contentInsetAdjustmentBehavior="automatic"
+      showsVerticalScrollIndicator={false}
+    >
+      <OnboardingTopBar
+        onBack={() => navigation.goBack()}
+        stepLabel="Training"
+      />
       <Text style={styles.eyebrow}>Training Profile</Text>
       <Text style={styles.title}>What do you train?</Text>
       <Text style={styles.subtitle}>
-        This helps us connect fueling with performance trends.
+        Select all that apply so the plan reflects your real training mix.
       </Text>
 
+      <OnboardingReviewCard
+        items={[
+          {
+            label: "Goal",
+            value: formatGoalSummary(
+              route.params.goal,
+              route.params.goalRateKgPerWeek,
+            ),
+            onEdit: () => navigation.push("Goal"),
+          },
+          {
+            label: "Body data",
+            value: formatBodySummary(route.params.bodyData),
+            onEdit: () =>
+              navigation.push("BodyData", {
+                goal: route.params.goal,
+                goalRateKgPerWeek: route.params.goalRateKgPerWeek,
+              }),
+          },
+          {
+            label: "Activity",
+            value: formatActivitySummary(route.params.activity),
+            onEdit: () =>
+              navigation.push("Activity", {
+                goal: route.params.goal,
+                goalRateKgPerWeek: route.params.goalRateKgPerWeek,
+                bodyData: route.params.bodyData,
+              }),
+          },
+        ]}
+      />
+
       <View style={styles.listWrap}>
-        {options.map((option) => (
-          <OnboardingButton
-            key={option.value}
-            label={option.label}
-            subtitle={option.note ?? " "}
-            value={option.value}
-            borderColor="#383838"
-            navigation={navigation}
-            navGoal="FuelPlan"
-            dataToSend={{
-              goal: route.params.goal,
-              bodyData: route.params.bodyData,
-              activity: route.params.activity,
-              training: option.value,
-            }}
-            icon={option.icon}
-          />
-        ))}
+        {options.map((option) => {
+          const isSelected = selectedTraining.includes(option.value);
+
+          return (
+            <Pressable
+              key={option.value}
+              onPress={() => toggleTraining(option.value)}
+              style={({ pressed }) => [
+                styles.option,
+                isSelected && styles.optionSelected,
+                pressed && styles.optionPressed,
+              ]}
+            >
+              <View style={styles.optionRow}>
+                <View style={styles.optionTextWrap}>
+                  <Text style={styles.optionText}>{option.label}</Text>
+                  <Text style={styles.optionNote}>{option.note}</Text>
+                </View>
+                <View style={styles.optionMeta}>
+                  <View style={styles.iconBadge}>{option.icon}</View>
+                  <View
+                    style={[
+                      styles.checkBadge,
+                      isSelected && styles.checkBadgeSelected,
+                    ]}
+                  >
+                    {isSelected ? (
+                      <CheckIcon size={14} color="#FFFFFF" weight="bold" />
+                    ) : null}
+                  </View>
+                </View>
+              </View>
+            </Pressable>
+          );
+        })}
       </View>
-    </View>
+
+      <Text style={styles.helper}>
+        Pick at least one. You can come back later and adjust this mix.
+      </Text>
+
+      <OnboardingPrimaryButton
+        label="Continue"
+        disabled={selectedTraining.length === 0}
+        style={styles.primaryButton}
+        onPress={() =>
+          navigation.push("FuelPlan", {
+            goal: route.params.goal,
+            goalRateKgPerWeek: route.params.goalRateKgPerWeek,
+            bodyData: route.params.bodyData,
+            activity: route.params.activity,
+            training: selectedTraining,
+          })
+        }
+      />
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 22,
-    paddingTop: 36,
-    paddingBottom: 24,
     backgroundColor: "#F8FAFC",
+  },
+  content: {
+    paddingHorizontal: 22,
+    flexGrow: 1,
   },
   eyebrow: {
     alignSelf: "flex-start",
@@ -116,28 +224,24 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   option: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 6,
-    padding: 12,
+    borderColor: "#CBD5E1",
+    borderRadius: 12,
+    padding: 14,
+  },
+  optionSelected: {
+    borderColor: "#0F172A",
+    backgroundColor: "#F8FAFC",
   },
   optionPressed: {
     opacity: 0.95,
     transform: [{ scale: 0.99 }],
   },
-  iconBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    backgroundColor: "#F8FAFC",
+  optionRow: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 12,
   },
   optionTextWrap: {
     flex: 1,
@@ -145,12 +249,48 @@ const styles = StyleSheet.create({
   optionText: {
     color: "#0F172A",
     fontWeight: "800",
-    fontSize: 15,
+    fontSize: 17,
+    marginBottom: 4,
   },
   optionNote: {
-    marginTop: 2,
-    color: "#9A3412",
-    fontSize: 12,
+    color: "#64748B",
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  optionMeta: {
+    alignItems: "center",
+    gap: 8,
+  },
+  iconBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 999,
+    backgroundColor: "#F1F5F9",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkBadgeSelected: {
+    backgroundColor: "#0F172A",
+    borderColor: "#0F172A",
+  },
+  helper: {
+    marginTop: 12,
+    color: "#475569",
+    fontSize: 13,
+    textAlign: "center",
+  },
+  primaryButton: {
+    marginTop: 18,
   },
 });
 

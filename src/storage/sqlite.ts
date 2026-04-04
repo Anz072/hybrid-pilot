@@ -154,6 +154,15 @@ const migrations: Migration[] = [
     `);
     },
   },
+  {
+    version: 6,
+    name: "user_training_types",
+    up: async (db) => {
+      await db.execAsync(`
+      ALTER TABLE users ADD COLUMN training_types TEXT;
+    `);
+    },
+  },
 ];
 
 const trackedTables = [

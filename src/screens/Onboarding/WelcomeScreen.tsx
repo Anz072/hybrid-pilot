@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { BarbellIcon, RocketLaunchIcon } from "phosphor-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { OnboardingParamList } from "../../navigation/onboardingTypes";
+import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "Welcome">;
 
@@ -28,15 +29,11 @@ const WelcomeScreen = ({ navigation }: Props) => {
         progress tracking.
       </Text>
 
-      <Pressable
-        style={({ pressed }) => [
-          styles.primaryButton,
-          pressed && styles.primaryButtonPressed,
-        ]}
+      <OnboardingPrimaryButton
+        label="Get Started"
         onPress={() => navigation.navigate("Goal")}
-      >
-        <Text style={styles.primaryButtonText}>Get Started</Text>
-      </Pressable>
+        style={styles.primaryButton}
+      />
 
       <Pressable
         style={({ pressed }) => [
@@ -136,22 +133,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   primaryButton: {
-    backgroundColor: "#0F172A",
-    borderRadius: 14,
-    paddingVertical: 15,
-    alignItems: "center",
     marginBottom: 10,
-  },
-  primaryButtonPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.99 }],
-  },
-  primaryButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "800",
-    fontSize: 18,
-    letterSpacing: 2,
-    paddingVertical: 6,
   },
   secondaryButton: {
     paddingVertical: 11,

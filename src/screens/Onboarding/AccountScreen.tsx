@@ -25,6 +25,15 @@ import {
 import { DB } from "../../store/DB";
 import { useAppDispatch } from "../../store/hooks";
 import { setCurrentUser } from "../../store/userSlice";
+import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
+import OnboardingReviewCard from "./OnboardingReviewCard";
+import OnboardingTopBar from "./OnboardingTopBar";
+import {
+  formatActivitySummary,
+  formatBodySummary,
+  formatGoalSummary,
+  formatTrainingSummary,
+} from "./onboardingSummary";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "Account">;
 
@@ -128,6 +137,7 @@ const AccountScreen = ({ navigation, route }: Props) => {
         heightCm: route.params.onboarding.bodyData.heightCm,
         activityLevel: route.params.onboarding.activity,
         goal: route.params.onboarding.goal,
+        trainingTypes: route.params.onboarding.training,
         calorieAllowance: route.params.onboarding.fuelPlan.calories,
         proteinG: route.params.onboarding.fuelPlan.protein,
         carbsG: route.params.onboarding.fuelPlan.carbs,
@@ -137,7 +147,7 @@ const AccountScreen = ({ navigation, route }: Props) => {
       const user = await DB.getUser();
       dispatch(setCurrentUser(user));
 
-      navigation.navigate("Success", { onboarding: route.params.onboarding });
+      navigation.push("Success", { onboarding: route.params.onboarding });
     } catch {
       Alert.alert("Could not save account", "Please try again.");
     } finally {
@@ -157,9 +167,60 @@ const AccountScreen = ({ navigation, route }: Props) => {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
       >
+        <OnboardingTopBar
+          onBack={() => navigation.goBack()}
+          stepLabel="Account"
+        />
         <Text style={styles.eyebrow}>Final Step</Text>
         <Text style={styles.title}>Create local account</Text>
-        <Text style={styles.subtitle}>Saved only on this device for now.</Text>
+        <Text style={styles.subtitle}>
+          Saved only on this device for now so your onboarding progress stays local.
+        </Text>
+
+        <OnboardingReviewCard
+          title="Review onboarding"
+          items={[
+            {
+              label: "Goal",
+              value: formatGoalSummary(
+                route.params.onboarding.goal,
+                route.params.onboarding.goalRateKgPerWeek,
+              ),
+              onEdit: () => navigation.push("Goal"),
+            },
+            {
+              label: "Body data",
+              value: formatBodySummary(route.params.onboarding.bodyData),
+              onEdit: () =>
+                navigation.push("BodyData", {
+                  goal: route.params.onboarding.goal,
+                  goalRateKgPerWeek: route.params.onboarding.goalRateKgPerWeek,
+                }),
+            },
+            {
+              label: "Activity",
+              value: formatActivitySummary(route.params.onboarding.activity),
+              onEdit: () =>
+                navigation.push("Activity", {
+                  goal: route.params.onboarding.goal,
+                  goalRateKgPerWeek: route.params.onboarding.goalRateKgPerWeek,
+                  bodyData: route.params.onboarding.bodyData,
+                }),
+            },
+            {
+              label: "Training",
+              value: formatTrainingSummary(route.params.onboarding.training),
+              onEdit: () =>
+                navigation.push("Training", {
+                  goal: route.params.onboarding.goal,
+                  goalRateKgPerWeek: route.params.onboarding.goalRateKgPerWeek,
+                  bodyData: route.params.onboarding.bodyData,
+                  activity: route.params.onboarding.activity,
+                  training: route.params.onboarding.training,
+                }),
+            },
+          ]}
+        />
 
         <View style={styles.card}>
           <Text style={styles.label}>Username</Text>
@@ -213,22 +274,13 @@ const AccountScreen = ({ navigation, route }: Props) => {
             </View>
           ) : null}
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.primaryButton,
-              (!canSubmit || isSaving) && styles.primaryButtonDisabled,
-              pressed && canSubmit && !isSaving && styles.primaryButtonPressed,
-            ]}
+          <OnboardingPrimaryButton
+            label={isSaving ? "Saving..." : "Create local account"}
             disabled={!canSubmit || isSaving}
+            style={styles.primaryButton}
             onPress={() => void handleCreateLocalAccount()}
-          >
-            <Text style={styles.primaryButtonText}>
-              {isSaving ? "Saving..." : "Create local account"}
-            </Text>
-          </Pressable>
+          />
         </View>
-
-        <Text style={styles.footnote}>Shabbat Shalom</Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -324,30 +376,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   primaryButton: {
-    backgroundColor: "#0F172A",
-    borderRadius: 14,
-    paddingVertical: 15,
-    alignItems: "center",
     marginTop: 48,
-  },
-  primaryButtonDisabled: {
-    opacity: 0.5,
-  },
-  primaryButtonPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.99 }],
-  },
-  primaryButtonText: {
-    color: "#FFFFFF",
-    fontSize: 18,
-    letterSpacing: 2,
-    fontWeight: "800",
-    paddingVertical: 6,
-  },
-  footnote: {
-    marginTop: 12,
-    color: "#64748B",
-    textAlign: "center",
   },
 });
 

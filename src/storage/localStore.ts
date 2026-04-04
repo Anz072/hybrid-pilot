@@ -1,4 +1,10 @@
-import type { ActivityLevel, BodyData, FuelPlan, GoalType, TrainingType } from "../navigation/onboardingTypes";
+import type {
+  ActivityLevel,
+  BodyData,
+  FuelPlan,
+  GoalType,
+  TrainingSelection,
+} from "../navigation/onboardingTypes";
 import { getDb, initDb } from "./sqlite";
 
 const KEY_ONBOARDING_COMPLETE = "onboardingComplete";
@@ -9,9 +15,10 @@ export type AuthProvider = "local";
 
 export type OnboardingProfile = {
   goal: GoalType;
+  goalRateKgPerWeek: number | null;
   bodyData: BodyData;
   activity: ActivityLevel;
-  training: TrainingType;
+  training: TrainingSelection;
   fuelPlan: FuelPlan;
 };
 

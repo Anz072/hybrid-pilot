@@ -2,6 +2,7 @@ import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import WelcomeScreen from "../screens/Onboarding/WelcomeScreen";
 import GoalScreen from "../screens/Onboarding/GoalScreen";
+import GoalRateScreen from "../screens/Onboarding/GoalRateScreen";
 import BodyDataScreen from "../screens/Onboarding/BodyDataScreen";
 import ActivityLevelScreen from "../screens/Onboarding/ActivityLevelScreen";
 import TrainingProfileScreen from "../screens/Onboarding/TrainingProfileScreen";
@@ -21,6 +22,7 @@ const OnboardingNavigator = ({ onFinish }: OnboardingNavigatorProps) => {
     <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Welcome">
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
       <Stack.Screen name="Goal" component={GoalScreen} />
+      <Stack.Screen name="GoalRate" component={GoalRateScreen} />
       <Stack.Screen name="BodyData" component={BodyDataScreen} />
       <Stack.Screen name="Activity" component={ActivityLevelScreen} />
       <Stack.Screen name="Training" component={TrainingProfileScreen} />

@@ -359,6 +359,22 @@ const migrations: Migration[] = [
     `);
     },
   },
+  {
+    version: 12,
+    name: "user_food_log_logged_at",
+    up: async (db) => {
+      await db.execAsync(`
+      ALTER TABLE user_food_log ADD COLUMN logged_at TEXT;
+
+      UPDATE user_food_log
+      SET logged_at = COALESCE(logged_at, created_at, date || 'T12:00:00.000Z')
+      WHERE logged_at IS NULL;
+
+      CREATE INDEX IF NOT EXISTS idx_user_food_log_user_date_logged_at
+      ON user_food_log(user_external_id, date DESC, logged_at ASC);
+    `);
+    },
+  },
 ];
 
 const trackedTables = [
@@ -561,6 +577,7 @@ export const resetDb = async (): Promise<void> => {
 
     DROP TABLE IF EXISTS migration_history;
     DROP TABLE IF EXISTS activities;
+    DROP TABLE IF EXISTS user_food_favorites;
     DROP TABLE IF EXISTS user_food_log;
     DROP TABLE IF EXISTS custom_meals;
     DROP TABLE IF EXISTS food_items;

@@ -172,6 +172,7 @@ export type DBUserFoodLog = {
   userExternalId: string;
   foodId: number;
   date: string;
+  loggedAt: DBIsoDateString;
   quantityG: number;
   mealType: string | null;
   createdAt: DBIsoDateString;
@@ -181,12 +182,14 @@ export type AddUserFoodLogInput = {
   userExternalId: string;
   foodId: number;
   date: string;
+  loggedAt?: DBIsoDateString;
   quantityG: number;
   mealType?: string | null;
 };
 
 export type UpdateUserFoodLogInput = {
   id: number;
+  loggedAt?: DBIsoDateString | null;
   quantityG: number;
   mealType?: string | null;
 };

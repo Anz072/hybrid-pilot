@@ -130,6 +130,13 @@ const upsertEntry = (
 const toTitleCase = (value: string): string =>
   value.replace(/_/g, " ").replace(/\b\w/g, (match) => match.toUpperCase());
 
+const formatHeaderDateLabel = (value: string) =>
+  new Date(value).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
 const WeightScreen = () => {
   const insets = useSafeAreaInsets();
   const [userId, setUserId] = React.useState(FALLBACK_USER_ID);
@@ -333,6 +340,34 @@ const WeightScreen = () => {
     pendingCount > 0
       ? `Offline | ${pendingCount} pending`
       : "Offline | Local only";
+  const chartOldestEntry = chartEntries[chartEntries.length - 1] ?? null;
+  const chartNewestEntry = chartEntries[0] ?? null;
+  const averageWeightText =
+    chartEntries.length > 0
+      ? formatWeightKg(
+          roundWeightKg(
+            chartEntries.reduce((sum, entry) => sum + entry.valueKg, 0) /
+              chartEntries.length,
+          ),
+        )
+      : "--";
+  const visibleDifference = React.useMemo(() => {
+    if (!chartOldestEntry || !chartNewestEntry) {
+      return null;
+    }
+
+    return roundWeightKg(chartNewestEntry.valueKg - chartOldestEntry.valueKg);
+  }, [chartNewestEntry, chartOldestEntry]);
+  const visibleDifferenceText =
+    visibleDifference != null
+      ? `${visibleDifference > 0 ? "+" : ""}${formatWeightKg(visibleDifference)}`
+      : "--";
+  const chartPeriodText =
+    chartOldestEntry && chartNewestEntry
+      ? `${formatHeaderDateLabel(chartOldestEntry.measuredAt)} - ${formatHeaderDateLabel(
+          chartNewestEntry.measuredAt,
+        )}`
+      : "Log your first entry to build a trend";
 
   const openCreateModal = () => {
     setEditingEntry(null);
@@ -722,40 +757,42 @@ const WeightScreen = () => {
             pressed && styles.cardPressed,
           ]}
         >
-          <View style={styles.rowBetween}>
-            <View style={styles.flexOne}>
+          <View style={styles.insightTopRow}>
+            <View style={styles.insightHeaderCopy}>
               <Text style={styles.insightTitle}>{title}</Text>
-              <Text style={styles.insightValue}>{value}</Text>
+              <Text style={styles.insightDetail}>{detail}</Text>
             </View>
-
-            <View
-              style={[
-                styles.insightToggleChip,
-                expanded && styles.insightToggleChipExpanded,
-              ]}
-            >
-              <Text
+            <View style={styles.insightMetaSide}>
+              <Text style={styles.insightValue}>{value}</Text>
+              <View
                 style={[
-                  styles.insightToggleText,
-                  expanded && styles.insightToggleTextExpanded,
+                  styles.insightToggleChip,
+                  expanded && styles.insightToggleChipExpanded,
                 ]}
               >
-                {expanded ? "Hide" : "More"}
-              </Text>
-              {expanded ? (
-                <CaretUpIcon size={14} color="#0F172A" weight="bold" />
-              ) : (
-                <CaretDownIcon size={14} color="#64748B" weight="bold" />
-              )}
+                <Text
+                  style={[
+                    styles.insightToggleText,
+                    expanded && styles.insightToggleTextExpanded,
+                  ]}
+                >
+                  {expanded ? "Hide" : "Open"}
+                </Text>
+                {expanded ? (
+                  <CaretUpIcon size={14} color="#4C4360" weight="bold" />
+                ) : (
+                  <CaretDownIcon size={14} color="#7A718B" weight="bold" />
+                )}
+              </View>
             </View>
           </View>
 
-          <Text style={styles.insightDetail}>{detail}</Text>
+          <View style={styles.insightAccentLine} />
 
           {expanded ? (
             <View style={styles.insightExpandedBody}>
               <Text style={styles.insightExpandedLabel}>How calculated</Text>
-              <Text style={styles.insightExpandedText}>{explanation}</Text>
+              <Text style={[styles.insightExpandedText]}>{explanation}</Text>
             </View>
           ) : null}
         </Pressable>
@@ -764,69 +801,75 @@ const WeightScreen = () => {
 
   const listHeader = (
     <View style={[styles.content, { paddingTop: insets.top + 16 }]}>
-      <View style={styles.card}>
-        <View style={[styles.rowBetween, styles.heroHeaderRow]}>
-          <View style={styles.flexOne}>
-            <Text style={styles.eyebrow}>Weight</Text>
-          </View>
+      <View style={styles.heroCard}>
+        <View style={styles.heroTopBar}>
+          <Text style={styles.heroTitle}>Weight Trend</Text>
           <Pressable
             onPress={handleSyncPillPress}
             style={({ pressed }) => [
-              styles.pill,
-              styles.syncPill,
+              styles.heroSyncButton,
               pressed && styles.cardPressed,
             ]}
+            accessibilityLabel="Open sync status"
           >
-            <ArrowsClockwiseIcon size={16} color="#0F172A" weight="bold" />
-            <Text style={styles.pillText}>{syncPillText}</Text>
+            <ArrowsClockwiseIcon size={18} color="#4B4360" weight="bold" />
           </Pressable>
         </View>
-        <Text style={{ ...styles.metric, marginTop: 12 }}>
-          {currentWeightText}
-          <Text style={styles.metricUnit}> kg</Text>
-        </Text>
-        <View style={styles.metricRow}>
-          <Text style={styles.subtleText}>{deltaText}</Text>
-          <View style={styles.goalChip}>
-            <TargetIcon size={14} color="#0F172A" weight="bold" />
-            <Text style={styles.goalChipText}>{goalChipText}</Text>
+
+        <View style={styles.heroStatRow}>
+          <View style={styles.heroStatBlock}>
+            <Text style={styles.heroStatLabel}>Average</Text>
+            <Text style={styles.heroStatValue}>
+              {averageWeightText}
+              <Text style={styles.heroStatUnit}> kg</Text>
+            </Text>
+            <Text style={styles.heroStatCaption}>{chartPeriodText}</Text>
+          </View>
+          <View style={styles.heroStatDivider} />
+          <View style={styles.heroStatBlock}>
+            <Text style={styles.heroStatLabel}>Difference</Text>
+            <Text style={styles.heroStatValue}>
+              {visibleDifferenceText}
+              <Text style={styles.heroStatUnit}> kg</Text>
+            </Text>
+            <Text style={styles.heroStatCaption}>
+              {currentEntry
+                ? `Latest ${formatHeaderDateLabel(currentEntry.measuredAt)}`
+                : "Need at least one entry"}
+            </Text>
           </View>
         </View>
+
+        <View style={styles.heroMetaRow}>
+          <View style={styles.heroInfoPill}>
+            <Text style={styles.heroInfoLabel}>Current</Text>
+            <Text style={styles.heroInfoValue}>{currentWeightText} kg</Text>
+          </View>
+          <View style={styles.heroInfoPill}>
+            <TargetIcon size={13} color="#6D28D9" weight="bold" />
+            <Text style={styles.heroInfoGoalText}>{goalChipText}</Text>
+          </View>
+        </View>
+
+        <WeightTrendChart
+          entries={chartEntries}
+          goal={goal}
+          range={range}
+          onChangeRange={setRange}
+        />
       </View>
-
-      {/* Temporarily disabled for debug */}
-      {/* {pendingCount > 0 || syncErrorCount > 0 ? (
-        <View style={[styles.card, styles.warningCard]}>
-          <View style={styles.warningRow}>
-            <WarningCircleIcon size={18} color="#92400E" weight="fill" />
-            <View style={styles.flexOne}>
-              <Text style={styles.warningTitle}>
-                Some history is not synced yet
-              </Text>
-              <Text style={styles.warningText}>
-                {syncErrorCount > 0
-                  ? `${syncErrorCount} entries need attention. Edit them and retry.`
-                  : `${pendingCount} local changes are waiting and still fully usable offline.`}
-              </Text>
-            </View>
-          </View>
-        </View>
-      ) : null} */}
-
-      <WeightTrendChart
-        entries={chartEntries}
-        goal={goal}
-        range={range}
-        onChangeRange={setRange}
-      />
 
       <Pressable
         onPress={openGoalModal}
-        style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+        style={({ pressed }) => [
+          styles.card,
+          styles.goalCard,
+          pressed && styles.cardPressed,
+        ]}
       >
         <View style={styles.rowBetween}>
           <View style={styles.flexOne}>
-            <Text style={styles.sectionTitle}>Goal</Text>
+            <Text style={styles.dashboardSectionTitle}>Goal & Target</Text>
             <Text style={styles.subtleText}>{goalSummaryText}</Text>
           </View>
           <View style={[styles.pill, styles.goalLauncherPill]}>
@@ -863,26 +906,23 @@ const WeightScreen = () => {
         onPress={() => setHideInsights((current) => !current)}
         style={({ pressed }) => [pressed && styles.cardPressed]}
       >
-        <View style={styles.card}>
-          <View style={styles.rowBetween}>
-            <View style={styles.flexOne1}>
-              <View style={{ maxWidth: "80%", marginBottom: 6 }}>
-                <Text style={styles.sectionTitle}>Insights</Text>
-              </View>
-              <View style={styles.expandInsightLike}>
-                {hideInsights ? (
-                  <CaretDownIcon size={32} />
-                ) : (
-                  <CaretUpIcon size={32} />
-                )}
-              </View>
+        <View style={[styles.card, styles.sectionCard]}>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.flexOne}>
+              <Text style={styles.dashboardSectionTitle}>Insights & Data</Text>
+              <Text style={styles.sectionCaption}>
+                Trend and logging quality, in a calmer summary layout.
+              </Text>
+            </View>
+            <View style={styles.sectionToggle}>
+              {hideInsights ? (
+                <CaretDownIcon size={18} color="#6D667C" weight="bold" />
+              ) : (
+                <CaretUpIcon size={18} color="#6D667C" weight="bold" />
+              )}
             </View>
           </View>
-          {hideInsights ? (
-            <Text style={{ ...styles.subtleText, fontSize: 10 }}>
-              Insights are hidden. You can turn them back on at any time.
-            </Text>
-          ) : (
+          {!hideInsights && (
             <View style={styles.stack}>
               {insightCards.map((item) => renderInsightCard(item))}
             </View>
@@ -898,29 +938,27 @@ const WeightScreen = () => {
           }}
           style={({ pressed }) => [pressed && styles.cardPressed]}
         >
-          <View style={styles.rowBetween}>
-            <View style={styles.flexOne1}>
-              <View style={{ maxWidth: "80%", marginBottom: 6 }}>
-                <Text style={styles.sectionTitle}>History</Text>
-                <Text style={styles.subtleText}>
-                  {historyEntries.length > 0
-                    ? `${historyEntries.length} entries in your log.`
-                    : "Your weight history will appear here once you log an entry."}
-                </Text>
-              </View>
-              <View style={styles.expandInsightLike}>
-                {hideHistory ? (
-                  <CaretDownIcon size={32} />
-                ) : (
-                  <CaretUpIcon size={32} />
-                )}
-              </View>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.flexOne}>
+              <Text style={styles.dashboardSectionTitle}>History</Text>
+              <Text style={styles.sectionCaption}>
+                {historyEntries.length > 0
+                  ? `${historyEntries.length} entries in your log.`
+                  : "Your weight history will appear here once you log an entry."}
+              </Text>
+            </View>
+            <View style={styles.sectionToggle}>
+              {hideHistory ? (
+                <CaretDownIcon size={18} color="#6D667C" weight="bold" />
+              ) : (
+                <CaretUpIcon size={18} color="#6D667C" weight="bold" />
+              )}
             </View>
           </View>
         </Pressable>
 
         {hideHistory ? (
-          <Text style={{ ...styles.subtleText, fontSize: 10 }}>
+          <Text style={styles.collapsedSectionText}>
             {collapsedHistoryText}
           </Text>
         ) : null}
@@ -1303,33 +1341,140 @@ const styles = StyleSheet.create({
   },
   screen: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#F4F1F8",
   },
   centerState: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#F4F1F8",
   },
   content: {
     paddingHorizontal: 20,
   },
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 18,
+    shadowColor: "#8F84A9",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 2,
   },
   cardPressed: {
     opacity: 0.92,
   },
   rowBetween: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
+  },
+  heroCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
+    paddingVertical: 20,
+    paddingHorizontal: 6,
+    marginBottom: 18,
+  },
+  heroTopBar: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44,
+    marginBottom: 18,
+  },
+  heroSyncButton: {
+    position: "absolute",
+    right: 0,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F1EDF7",
+  },
+  heroStatRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  heroStatBlock: {
+    flex: 1,
+  },
+  heroStatDivider: {
+    width: 1,
+    marginHorizontal: 14,
+    backgroundColor: "#EEE8F5",
+  },
+  heroStatLabel: {
+    color: "#877D98",
+    fontSize: 13,
+    fontWeight: "700",
+    marginBottom: 6,
+  },
+  heroStatValue: {
+    color: "#221C2D",
+    fontSize: 26,
+    lineHeight: 30,
+    fontWeight: "800",
+    marginBottom: 6,
+  },
+  heroStatUnit: {
+    color: "#6D667C",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  heroStatCaption: {
+    color: "#8F859F",
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  heroMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flexWrap: "wrap",
+    marginBottom: 10,
+    paddingLeft: 8,
+  },
+  heroInfoPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 999,
+    backgroundColor: "#F6F2FB",
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  heroInfoLabel: {
+    color: "#8A8199",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  heroInfoValue: {
+    color: "#2F283C",
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  heroInfoGoalText: {
+    color: "#5E3DB3",
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  heroStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    flexWrap: "wrap",
+  },
+  heroStatusText: {
+    color: "#8C839C",
+    fontSize: 12,
+    lineHeight: 17,
   },
   heroHeaderRow: {
     flexWrap: "wrap",
@@ -1356,19 +1501,18 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   heroTitle: {
-    fontSize: 28,
-    lineHeight: 32,
+    color: "#221C2D",
+    fontSize: 24,
+    lineHeight: 28,
     fontWeight: "800",
-    color: "#0F172A",
+    textAlign: "center",
   },
   pill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     borderRadius: 999,
-    backgroundColor: "#F8FAFC",
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
+    backgroundColor: "#F2EDF8",
     paddingHorizontal: 12,
     paddingVertical: 9,
   },
@@ -1378,7 +1522,7 @@ const styles = StyleSheet.create({
   },
   expandInsightLike: {},
   pillText: {
-    color: "#0F172A",
+    color: "#2C2537",
     fontSize: 13,
     fontWeight: "700",
     flexShrink: 1,
@@ -1401,9 +1545,13 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     marginBottom: 12,
   },
+  title: {
+    display: "flex",
+    justifyContent: "center",
+    fontSize: 20,
+  },
   metricUnit: {
-    fontSize: 24,
-    fontWeight: "800",
+    fontSize: 20,
     color: "#334155",
   },
   metricRow: {
@@ -1414,21 +1562,27 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   subtleText: {
-    color: "#64748B",
+    color: "#877E96",
     fontSize: 14,
     lineHeight: 20,
+  },
+  sectionCaption: {
+    color: "#958CA3",
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 4,
   },
   goalChip: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     borderRadius: 999,
-    backgroundColor: "#DBEAFE",
+    backgroundColor: "#EEE7FA",
     paddingHorizontal: 12,
     paddingVertical: 9,
   },
   goalChipText: {
-    color: "#0F172A",
+    color: "#5A35B0",
     fontSize: 13,
     fontWeight: "800",
   },
@@ -1464,10 +1618,16 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   sectionTitle: {
-    color: "#0F172A",
+    color: "#221C2D",
     fontSize: 20,
     fontWeight: "800",
-    marginBottom: 4,
+    marginBottom: 2,
+  },
+  dashboardSectionTitle: {
+    color: "#221C2D",
+    fontSize: 28,
+    fontWeight: "800",
+    marginBottom: 2,
   },
   label: {
     color: "#64748B",
@@ -1583,7 +1743,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   stack: {
-    gap: 10,
+    gap: 12,
   },
   stickyHeader: {
     backgroundColor: "#F8FAFC",
@@ -1621,15 +1781,12 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginBottom: 8,
     backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 16,
+    borderRadius: 18,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
   historyRowActive: {
-    borderColor: "#A5B4FC",
-    backgroundColor: "#F8FAFF",
+    backgroundColor: "#F8F4FE",
   },
   historyPrimaryRow: {
     flexDirection: "row",
@@ -1699,11 +1856,11 @@ const styles = StyleSheet.create({
   fabHalo: {
     padding: 6,
     borderRadius: 999,
-    backgroundColor: "rgba(148, 163, 184, 0.16)",
+    backgroundColor: "rgba(168, 143, 214, 0.18)",
   },
   goalModalScreen: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#F4F1F8",
   },
   goalModalHeader: {
     paddingHorizontal: 20,
@@ -1753,34 +1910,54 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   insightCard: {
-    backgroundColor: "#F8FAFC",
-    borderRadius: 14,
+    backgroundColor: "#FBF9FE",
+    borderRadius: 6,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: "#EEE8F5",
   },
   insightCardExpanded: {
-    backgroundColor: "#FDFEFF",
-    borderColor: "#CBD5E1",
+    backgroundColor: "#F7F2FD",
+    borderColor: "#E1D6F3",
+  },
+  insightTopRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  insightHeaderCopy: {
+    flex: 1,
+  },
+  insightMetaSide: {
+    alignItems: "flex-end",
+    gap: 10,
   },
   insightTitle: {
-    color: "#64748B",
+    color: "#3F384D",
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.8,
-    marginBottom: 6,
-  },
-  insightValue: {
-    color: "#0F172A",
-    fontSize: 22,
-    fontWeight: "900",
     marginBottom: 4,
   },
+  insightValue: {
+    color: "#5B33B5",
+    fontSize: 22,
+    fontWeight: "900",
+  },
   insightDetail: {
-    color: "#475569",
+    color: "#857B95",
     fontSize: 13,
     lineHeight: 18,
+  },
+  insightAccentLine: {
+    width: 38,
+    height: 3,
+    borderRadius: 999,
+    backgroundColor: "#B28AF5",
+    marginTop: 12,
+    marginBottom: 2,
   },
   insightToggleChip: {
     flexDirection: "row",
@@ -1789,40 +1966,66 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: "#F1EDF7",
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: "#E6DEF1",
   },
   insightToggleChipExpanded: {
-    backgroundColor: "#E2E8F0",
-    borderColor: "#CBD5E1",
+    backgroundColor: "#E8E0F4",
+    borderColor: "#D8CAE9",
   },
   insightToggleText: {
-    color: "#64748B",
+    color: "#7B718B",
     fontSize: 12,
     fontWeight: "700",
   },
   insightToggleTextExpanded: {
-    color: "#0F172A",
+    color: "#443C53",
   },
   insightExpandedBody: {
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: "#E2E8F0",
+    borderTopColor: "#E5DDF0",
     gap: 6,
   },
   insightExpandedLabel: {
-    color: "#64748B",
+    color: "#7E748F",
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
     letterSpacing: 0.8,
   },
   insightExpandedText: {
-    color: "#334155",
+    color: "#554C64",
     fontSize: 13,
     lineHeight: 19,
+  },
+  goalCard: {
+    backgroundColor: "#FFFFFF",
+  },
+  sectionCard: {
+    backgroundColor: "#FFFFFF",
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 8,
+  },
+  sectionToggle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F3EEF8",
+  },
+  collapsedSectionText: {
+    color: "#958CA3",
+    fontSize: 12,
+    lineHeight: 18,
   },
 });
 

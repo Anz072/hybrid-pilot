@@ -399,6 +399,37 @@ export const getFoodItemByBarcode = async (
   return getFoodItemByBarcodeWithDb(db, barcode);
 };
 
+export const deleteFoodItem = async (foodId: number): Promise<void> => {
+  await initDb();
+  const db = await getDb();
+
+  await db.withTransactionAsync(async () => {
+    await db.runAsync(
+      `
+      DELETE FROM user_food_favorites
+      WHERE food_id = ?
+      `,
+      foodId,
+    );
+
+    await db.runAsync(
+      `
+      DELETE FROM user_food_log
+      WHERE food_id = ?
+      `,
+      foodId,
+    );
+
+    await db.runAsync(
+      `
+      DELETE FROM food_items
+      WHERE id = ?
+      `,
+      foodId,
+    );
+  });
+};
+
 export const setFoodItemFavorite = async (
   userExternalId: string,
   foodId: number,

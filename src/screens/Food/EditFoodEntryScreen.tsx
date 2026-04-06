@@ -10,16 +10,25 @@ import {
   TextInput,
   View,
 } from "react-native";
+import DateTimePicker, {
+  type DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { ForkKnifeIcon, PencilSimpleIcon, TrashIcon } from "phosphor-react-native";
+import {
+  ClockIcon,
+  ForkKnifeIcon,
+  PencilSimpleIcon,
+  TrashIcon,
+} from "phosphor-react-native";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
 import { DB } from "../../store/DB";
 import type { DBUserFoodLogEntry } from "../../store/DB_TYPES";
 import FoodScreenHeader from "./FoodScreenHeader";
 import {
-  DEFAULT_MEALS,
   calculateLoggedNutrition,
+  formatFoodLoggedTime,
   formatFoodServing,
+  formatFoodShortDate,
   formatMacroLine,
 } from "./foodUtils";
 
@@ -29,13 +38,16 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
   const [entry, setEntry] = React.useState<DBUserFoodLogEntry | null>(null);
   const [quantityG, setQuantityG] = React.useState("");
   const [mealType, setMealType] = React.useState("");
+  const [loggedAt, setLoggedAt] = React.useState<Date | null>(null);
+  const [showTimePicker, setShowTimePicker] = React.useState(false);
 
   React.useEffect(() => {
     const load = async () => {
       const data = await DB.getUserFoodLogEntryById(route.params.entryId);
       setEntry(data);
       setQuantityG(String(data?.quantityG ?? ""));
-      setMealType(data?.mealType ?? "Snacks");
+      setMealType(data?.mealType ?? "");
+      setLoggedAt(data ? new Date(data.loggedAt ?? data.createdAt) : null);
     };
 
     void load();
@@ -53,17 +65,6 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
     });
   }, [entry, quantity]);
 
-  const mealOptions = React.useMemo(() => {
-    const base = [...DEFAULT_MEALS];
-    const normalized = mealType.trim();
-
-    if (normalized.length > 0 && !base.includes(normalized as (typeof DEFAULT_MEALS)[number])) {
-      base.push(normalized);
-    }
-
-    return base;
-  }, [mealType]);
-
   const handleSave = async () => {
     if (!entry || !Number.isFinite(quantity) || quantity <= 0) {
       Alert.alert("Invalid quantity", "Enter a valid quantity in grams.");
@@ -72,6 +73,7 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
 
     await DB.updateUserFoodLog({
       id: entry.id,
+      loggedAt: loggedAt?.toISOString() ?? entry.loggedAt,
       quantityG: quantity,
       mealType: mealType.trim() || null,
     });
@@ -97,6 +99,21 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
     ]);
   };
 
+  const handleTimeChange = (
+    event: DateTimePickerEvent,
+    selectedDate?: Date,
+  ) => {
+    if (Platform.OS === "android") {
+      setShowTimePicker(false);
+    }
+
+    if (event.type === "dismissed" || !selectedDate) {
+      return;
+    }
+
+    setLoggedAt(selectedDate);
+  };
+
   if (!entry) {
     return (
       <View style={styles.screen}>
@@ -111,6 +128,8 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
     );
   }
 
+  const resolvedLoggedAt = loggedAt ?? new Date(entry.loggedAt ?? entry.createdAt);
+
   return (
     <View style={styles.screen}>
       <View style={styles.bgOrbTop} />
@@ -124,14 +143,28 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
           <FoodScreenHeader
             eyebrow="Food Entry"
             title="Edit entry"
-            subtitle="Refine the amount or move this item to a different meal section."
+            subtitle="Refine the amount, time, or optional label for this log."
             onBack={() => navigation.goBack()}
           />
 
           <View style={styles.heroCard}>
-            <View style={styles.heroPill}>
-              <ForkKnifeIcon size={14} color="#9A3412" weight="fill" />
-              <Text style={styles.heroPillText}>{mealType.trim() || "Snacks"}</Text>
+            <View style={styles.heroPillRow}>
+              <View style={styles.heroPill}>
+                <ForkKnifeIcon size={14} color="#9A3412" weight="fill" />
+                <Text style={styles.heroPillText}>
+                  {formatFoodLoggedTime(resolvedLoggedAt.toISOString())}
+                </Text>
+              </View>
+              <View style={styles.heroPill}>
+                <Text style={styles.heroPillText}>
+                  {formatFoodShortDate(resolvedLoggedAt)}
+                </Text>
+              </View>
+              {mealType.trim() ? (
+                <View style={styles.heroPill}>
+                  <Text style={styles.heroPillText}>{mealType.trim()}</Text>
+                </View>
+              ) : null}
             </View>
             <Text style={styles.heroTitle}>{entry.foodName}</Text>
             <Text style={styles.heroSubtitle}>
@@ -169,40 +202,37 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Meal section</Text>
+            <Text style={styles.sectionTitle}>Logged time</Text>
             <Text style={styles.sectionSubtitle}>
-              Pick a common section or keep using your own custom label.
+              Keep the diary ordered by when you actually ate it.
             </Text>
-            <View style={styles.chipRow}>
-              {mealOptions.map((meal) => {
-                const selected = mealType.trim() === meal;
-                return (
-                  <Pressable
-                    key={meal}
-                    onPress={() => setMealType(meal)}
-                    style={({ pressed }) => [
-                      styles.mealChip,
-                      selected && styles.mealChipActive,
-                      pressed && styles.cardPressed,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.mealChipText,
-                        selected && styles.mealChipTextActive,
-                      ]}
-                    >
-                      {meal}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <Pressable
+              style={({ pressed }) => [styles.timeButton, pressed && styles.cardPressed]}
+              onPress={() => setShowTimePicker(true)}
+            >
+              <View style={styles.timeButtonCopy}>
+                <ClockIcon size={18} color="#9A3412" weight="bold" />
+                <View>
+                  <Text style={styles.timeButtonLabel}>Time</Text>
+                  <Text style={styles.timeButtonValue}>
+                    {formatFoodLoggedTime(resolvedLoggedAt.toISOString())}
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.timeButtonAction}>Change</Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Optional label</Text>
+            <Text style={styles.sectionSubtitle}>
+              Keep a short label only if it helps you remember the context.
+            </Text>
             <TextInput
               style={styles.input}
               value={mealType}
               onChangeText={setMealType}
-              placeholder="Custom meal label"
+              placeholder="Post-workout, cafe, office..."
               placeholderTextColor="#9CA3AF"
             />
           </View>
@@ -240,16 +270,32 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
             </View>
           </View>
 
-          <Pressable style={({ pressed }) => [styles.primaryButton, pressed && styles.cardPressed]} onPress={() => void handleSave()}>
+          <Pressable
+            style={({ pressed }) => [styles.primaryButton, pressed && styles.cardPressed]}
+            onPress={() => void handleSave()}
+          >
             <PencilSimpleIcon size={16} color="#FFFFFF" weight="bold" />
             <Text style={styles.primaryButtonText}>Save changes</Text>
           </Pressable>
-          <Pressable style={({ pressed }) => [styles.deleteButton, pressed && styles.cardPressed]} onPress={() => void handleDelete()}>
+          <Pressable
+            style={({ pressed }) => [styles.deleteButton, pressed && styles.cardPressed]}
+            onPress={() => void handleDelete()}
+          >
             <TrashIcon size={16} color="#B91C1C" weight="bold" />
             <Text style={styles.deleteButtonText}>Delete entry</Text>
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {showTimePicker ? (
+        <DateTimePicker
+          value={resolvedLoggedAt}
+          mode="time"
+          display={Platform.OS === "ios" ? "spinner" : "default"}
+          is24Hour
+          onChange={handleTimeChange}
+        />
+      ) : null}
     </View>
   );
 };
@@ -291,6 +337,12 @@ const styles = StyleSheet.create({
     padding: 18,
     marginBottom: 16,
   },
+  heroPillRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 12,
+  },
   heroPill: {
     alignSelf: "flex-start",
     flexDirection: "row",
@@ -302,7 +354,6 @@ const styles = StyleSheet.create({
     borderColor: "#FDBA74",
     paddingHorizontal: 10,
     paddingVertical: 7,
-    marginBottom: 12,
   },
   heroPillText: {
     color: "#9A3412",
@@ -387,31 +438,40 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
   },
-  chipRow: {
+  timeButton: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 12,
-  },
-  mealChip: {
-    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    borderRadius: 18,
     backgroundColor: "#FFF7ED",
     borderWidth: 1,
-    borderColor: "#FDBA74",
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    borderColor: "#FED7AA",
+    paddingHorizontal: 14,
+    paddingVertical: 14,
   },
-  mealChipActive: {
-    backgroundColor: "#111827",
-    borderColor: "#111827",
+  timeButtonCopy: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
-  mealChipText: {
+  timeButtonLabel: {
+    color: "#9A3412",
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    marginBottom: 2,
+  },
+  timeButtonValue: {
+    color: "#111827",
+    fontSize: 17,
+    fontWeight: "900",
+  },
+  timeButtonAction: {
     color: "#9A3412",
     fontSize: 13,
     fontWeight: "800",
-  },
-  mealChipTextActive: {
-    color: "#FFFFFF",
   },
   nutritionGrid: {
     flexDirection: "row",

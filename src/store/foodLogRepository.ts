@@ -7,21 +7,37 @@ import type {
   UpdateUserFoodLogInput,
 } from "./DB_TYPES";
 
+const combineDateKeyWithTime = (dateKey: string, timeSource: string) => {
+  const source = new Date(timeSource);
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return new Date(
+    year,
+    (month || 1) - 1,
+    day || 1,
+    source.getHours(),
+    source.getMinutes(),
+    source.getSeconds(),
+    source.getMilliseconds(),
+  ).toISOString();
+};
+
 export const addUserFoodLog = async (
   input: AddUserFoodLogInput,
 ): Promise<void> => {
   await initDb();
   const db = await getDb();
   const now = new Date().toISOString();
+  const loggedAt = input.loggedAt ?? now;
 
   await db.runAsync(
     `
-    INSERT INTO user_food_log (user_external_id, food_id, date, quantity_g, meal_type, created_at)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO user_food_log (user_external_id, food_id, date, logged_at, quantity_g, meal_type, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
     `,
     input.userExternalId,
     input.foodId,
     input.date,
+    loggedAt,
     input.quantityG,
     input.mealType ?? null,
     now,
@@ -37,11 +53,12 @@ export const updateUserFoodLog = async (
   await db.runAsync(
     `
     UPDATE user_food_log
-    SET quantity_g = ?, meal_type = ?
+    SET quantity_g = ?, meal_type = ?, logged_at = COALESCE(?, logged_at)
     WHERE id = ?
     `,
     input.quantityG,
     input.mealType ?? null,
+    input.loggedAt ?? null,
     input.id,
   );
 };
@@ -66,6 +83,7 @@ export const getUserFoodLogEntryById = async (
       l.user_external_id AS userExternalId,
       l.food_id AS foodId,
       l.date,
+      l.logged_at AS loggedAt,
       l.quantity_g AS quantityG,
       l.meal_type AS mealType,
       l.created_at AS createdAt,
@@ -99,6 +117,7 @@ export const getUserFoodLogEntriesByDate = async (
       l.user_external_id AS userExternalId,
       l.food_id AS foodId,
       l.date,
+      l.logged_at AS loggedAt,
       l.quantity_g AS quantityG,
       l.meal_type AS mealType,
       l.created_at AS createdAt,
@@ -112,7 +131,7 @@ export const getUserFoodLogEntriesByDate = async (
     FROM user_food_log l
     JOIN food_items f ON f.id = l.food_id
     WHERE l.user_external_id = ? AND l.date = ?
-    ORDER BY datetime(l.created_at) ASC
+    ORDER BY datetime(COALESCE(l.logged_at, l.created_at)) ASC
     `,
     userExternalId,
     date,
@@ -126,20 +145,46 @@ export const copyFoodLogsFromDate = async (
 ): Promise<void> => {
   await initDb();
   const db = await getDb();
-  const now = new Date().toISOString();
-
-  await db.runAsync(
+  const sourceEntries = await db.getAllAsync<{
+    foodId: number;
+    quantityG: number;
+    mealType: string | null;
+    loggedAt: string | null;
+    createdAt: string;
+  }>(
     `
-    INSERT INTO user_food_log (user_external_id, food_id, date, quantity_g, meal_type, created_at)
-    SELECT user_external_id, food_id, ?, quantity_g, meal_type, ?
+    SELECT
+      food_id AS foodId,
+      quantity_g AS quantityG,
+      meal_type AS mealType,
+      logged_at AS loggedAt,
+      created_at AS createdAt
     FROM user_food_log
     WHERE user_external_id = ? AND date = ?
+    ORDER BY datetime(COALESCE(logged_at, created_at)) ASC
     `,
-    toDate,
-    now,
     userExternalId,
     fromDate,
   );
+
+  for (const entry of sourceEntries) {
+    const now = new Date().toISOString();
+    const sourceTime = entry.loggedAt ?? entry.createdAt;
+
+    await db.runAsync(
+      `
+      INSERT INTO user_food_log (user_external_id, food_id, date, logged_at, quantity_g, meal_type, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      `,
+      userExternalId,
+      entry.foodId,
+      toDate,
+      combineDateKeyWithTime(toDate, sourceTime),
+      entry.quantityG,
+      entry.mealType,
+      now,
+    );
+  }
 };
 
 export const getCustomMeals = async (

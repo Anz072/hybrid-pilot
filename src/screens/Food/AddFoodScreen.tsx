@@ -18,7 +18,9 @@ import type { FoodStackParamList } from "../../navigation/foodTypes";
 import FoodScreenHeader from "./FoodScreenHeader";
 import FoodBarcodeScannerModal from "./FoodBarcodeScannerModal";
 import {
+  buildFoodLoggedAt,
   formatFoodItemServing,
+  formatFoodLoggedTime,
   formatFoodMacro,
   formatFoodNumber,
   formatFoodShortDate,
@@ -33,7 +35,7 @@ const AddFoodScreen = () => {
   const route = useRoute<AddFoodRoute>();
   const navigation = useNavigation<AddFoodNav>();
 
-  const { date, mealType } = route.params;
+  const { contextLabel, date, loggedAt, mealType } = route.params;
 
   const [user, setUser] = useState<DBUser | null>(null);
   const [query, setQuery] = useState("");
@@ -92,6 +94,24 @@ const AddFoodScreen = () => {
     [favorites],
   );
 
+  const resolvedLoggedAt = useMemo(() => {
+    if (loggedAt) {
+      return loggedAt;
+    }
+
+    const now = new Date();
+    return buildFoodLoggedAt(date, now.getHours(), now.getMinutes());
+  }, [date, loggedAt]);
+
+  const resolvedContextLabel = useMemo(() => {
+    const trimmed = contextLabel?.trim();
+    if (trimmed) {
+      return trimmed;
+    }
+
+    return formatFoodLoggedTime(resolvedLoggedAt);
+  }, [contextLabel, resolvedLoggedAt]);
+
   const addLogForFood = async (food: DBFoodItem) => {
     if (!user) {
       Alert.alert("No account found", "Create or restore a user before adding food.");
@@ -102,8 +122,9 @@ const AddFoodScreen = () => {
       userExternalId: user.externalId,
       foodId: food.id,
       date,
+      loggedAt: resolvedLoggedAt,
       quantityG: getFoodDefaultLogAmount(food),
-      mealType,
+      mealType: mealType ?? null,
     });
 
     navigation.goBack();
@@ -218,8 +239,8 @@ const AddFoodScreen = () => {
       >
         <FoodScreenHeader
           eyebrow="Food Search"
-          title={`Add to ${mealType}`}
-          subtitle={`${formatFoodShortDate(date)} • Search your library or quick-add familiar foods.`}
+          title="Add food"
+          subtitle={`${formatFoodShortDate(date)} • ${resolvedContextLabel} • Search your library or quick-add familiar foods.`}
           onBack={() => navigation.goBack()}
         />
 
@@ -227,18 +248,23 @@ const AddFoodScreen = () => {
           <View style={styles.contextRow}>
             <View style={styles.contextPill}>
               <ForkKnifeIcon size={14} color="#9A3412" weight="fill" />
-              <Text style={styles.contextPillText}>{mealType}</Text>
+              <Text style={styles.contextPillText}>{resolvedContextLabel}</Text>
             </View>
             <View style={styles.contextPill}>
               <CalendarIcon size={14} color="#9A3412" weight="bold" />
               <Text style={styles.contextPillText}>{formatFoodShortDate(date)}</Text>
             </View>
+            {mealType ? (
+              <View style={styles.contextPill}>
+                <Text style={styles.contextPillText}>{mealType}</Text>
+              </View>
+            ) : null}
           </View>
           <Text style={styles.heroTitle}>Search or quick-add</Text>
           <Text style={styles.heroText}>
-            Tap a food card to add its default serving right away, save it for
-            faster logging later, browse your full saved library, or scan a barcode
-            for a quick debug read.
+            Tap a food card to log its default serving into this time slot right
+            away, save it for faster logging later, browse your full saved
+            library, or scan a barcode for a quick debug read.
           </Text>
           <View style={styles.searchRow}>
             <TextInput
@@ -261,7 +287,12 @@ const AddFoodScreen = () => {
           </View>
 
           <Pressable
-            onPress={() => navigation.navigate("FoodLibrary", { date, mealType })}
+            onPress={() =>
+              navigation.navigate("FoodLibrary", {
+                date,
+                mealType: mealType ?? undefined,
+              })
+            }
             style={({ pressed }) => [
               styles.libraryButton,
               pressed && styles.cardPressed,
@@ -291,7 +322,7 @@ const AddFoodScreen = () => {
           <>
             {renderSection(
               "Favorites",
-              "Your fastest repeat adds for this meal.",
+              "Your fastest repeat adds for this time slot.",
               favorites,
               "No favorite foods yet.",
             )}
@@ -305,7 +336,14 @@ const AddFoodScreen = () => {
         )}
 
         <Pressable
-          onPress={() => navigation.navigate("CreateCustomFood", { date, mealType })}
+          onPress={() =>
+            navigation.navigate("CreateCustomFood", {
+              contextLabel: resolvedContextLabel,
+              date,
+              loggedAt: resolvedLoggedAt,
+              mealType,
+            })
+          }
           style={({ pressed }) => [styles.createCard, pressed && styles.cardPressed]}
         >
           <View style={styles.createTextWrap}>

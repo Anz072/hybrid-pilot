@@ -53,6 +53,52 @@ export const formatFoodShortDate = (date: Date | string): string => {
   });
 };
 
+export const formatFoodTimelineDate = (date: Date): string =>
+  date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
+export const formatFoodHourLabel = (hour: number): string =>
+  `${String(hour).padStart(2, "0")}:00`;
+
+export const clampFoodHour = (hour: number): number => {
+  if (hour < 0) {
+    return 0;
+  }
+  if (hour > 23) {
+    return 23;
+  }
+  return hour;
+};
+
+export const buildFoodLoggedAt = (
+  dateKey: string,
+  hour: number,
+  minute = 0,
+): string => {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return new Date(
+    year,
+    (month || 1) - 1,
+    day || 1,
+    clampFoodHour(hour),
+    Math.min(59, Math.max(0, minute)),
+    0,
+    0,
+  ).toISOString();
+};
+
+export const formatFoodLoggedTime = (iso: string): string =>
+  new Date(iso).toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+export const getFoodLoggedHour = (iso: string): number => new Date(iso).getHours();
+
 export const formatFoodServing = (
   amount: number | null | undefined,
   unit: string | null | undefined,

@@ -12,6 +12,7 @@ import {
 import { getFirstUser, upsertUser } from "./userRepository";
 import {
   addFoodItem,
+  deleteFoodItem,
   getFavoriteFoodIds,
   getFavoriteFoodItems,
   getFoodItemByBarcode,
@@ -51,6 +52,7 @@ export const DB = {
   listFoodItems,
   getFoodItemById,
   getFoodItemByBarcode,
+  deleteFoodItem,
   searchFoodItems,
   getFavoriteFoodIds,
   getFavoriteFoodItems,

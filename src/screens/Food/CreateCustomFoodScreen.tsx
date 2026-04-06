@@ -18,7 +18,11 @@ import type { FoodStackParamList } from "../../navigation/foodTypes";
 import { DB } from "../../store/DB";
 import { useAppSelector } from "../../store/hooks";
 import FoodScreenHeader from "./FoodScreenHeader";
-import { formatFoodShortDate } from "./foodUtils";
+import {
+  buildFoodLoggedAt,
+  formatFoodLoggedTime,
+  formatFoodShortDate,
+} from "./foodUtils";
 
 type CreateCustomFoodRoute = RouteProp<FoodStackParamList, "CreateCustomFood">;
 type CreateCustomFoodNav = NativeStackNavigationProp<
@@ -38,7 +42,25 @@ const CreateCustomFoodScreen = () => {
   const user = useAppSelector((state) => state.user.currentUser);
   const route = useRoute<CreateCustomFoodRoute>();
   const navigation = useNavigation<CreateCustomFoodNav>();
-  const { date, mealType } = route.params;
+  const { contextLabel, date, loggedAt, mealType } = route.params;
+
+  const resolvedLoggedAt = React.useMemo(() => {
+    if (loggedAt) {
+      return loggedAt;
+    }
+
+    const now = new Date();
+    return buildFoodLoggedAt(date, now.getHours(), now.getMinutes());
+  }, [date, loggedAt]);
+
+  const resolvedContextLabel = React.useMemo(() => {
+    const trimmed = contextLabel?.trim();
+    if (trimmed) {
+      return trimmed;
+    }
+
+    return formatFoodLoggedTime(resolvedLoggedAt);
+  }, [contextLabel, resolvedLoggedAt]);
 
   const parsedServing = Number(servingSize);
   const parsedCalories = Number(calories);
@@ -99,8 +121,9 @@ const CreateCustomFoodScreen = () => {
       userExternalId: user.externalId,
       foodId,
       date,
+      loggedAt: resolvedLoggedAt,
       quantityG: parsedServing,
-      mealType,
+      mealType: mealType ?? null,
     });
 
     navigation.navigate("Diary");
@@ -119,20 +142,29 @@ const CreateCustomFoodScreen = () => {
           <FoodScreenHeader
             eyebrow="Custom Food"
             title="Create a new item"
-            subtitle="Build a food once, then reuse it instantly inside your diary."
+            subtitle={`Build a food once, then reuse it instantly inside your diary at ${resolvedContextLabel}.`}
             onBack={() => navigation.goBack()}
           />
 
           <View style={styles.heroCard}>
-            <View style={styles.heroPill}>
-              <ForkKnifeIcon size={14} color="#9A3412" weight="fill" />
-              <Text style={styles.heroPillText}>
-                {mealType} • {formatFoodShortDate(date)}
-              </Text>
+            <View style={styles.heroPillRow}>
+              <View style={styles.heroPill}>
+                <ForkKnifeIcon size={14} color="#9A3412" weight="fill" />
+                <Text style={styles.heroPillText}>{resolvedContextLabel}</Text>
+              </View>
+              <View style={styles.heroPill}>
+                <Text style={styles.heroPillText}>{formatFoodShortDate(date)}</Text>
+              </View>
+              {mealType ? (
+                <View style={styles.heroPill}>
+                  <Text style={styles.heroPillText}>{mealType}</Text>
+                </View>
+              ) : null}
             </View>
             <Text style={styles.heroTitle}>Saved for quick logging</Text>
             <Text style={styles.heroText}>
-              This custom food will be added straight into your diary using the serving size below.
+              This custom food will be added straight into your diary at the
+              selected time using the serving size below.
             </Text>
           </View>
 
@@ -316,6 +348,12 @@ const styles = StyleSheet.create({
     padding: 18,
     marginBottom: 16,
   },
+  heroPillRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 12,
+  },
   heroPill: {
     alignSelf: "flex-start",
     flexDirection: "row",
@@ -327,7 +365,6 @@ const styles = StyleSheet.create({
     borderColor: "#FDBA74",
     paddingHorizontal: 10,
     paddingVertical: 7,
-    marginBottom: 12,
   },
   heroPillText: {
     color: "#9A3412",

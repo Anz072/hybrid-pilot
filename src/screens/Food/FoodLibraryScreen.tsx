@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from "react";
 import {
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -67,6 +68,7 @@ const FoodLibraryScreen = () => {
   const [items, setItems] = useState<DBFoodItem[]>([]);
   const [query, setQuery] = useState("");
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const loadItems = useCallback(async () => {
     const rows = await DB.listFoodItems({
@@ -96,6 +98,39 @@ const FoodLibraryScreen = () => {
     () => (selectedItem ? getDebugFields(selectedItem) : []),
     [selectedItem],
   );
+
+  const handleDeleteSelected = useCallback(() => {
+    if (!selectedItem || isDeleting) {
+      return;
+    }
+
+    Alert.alert(
+      "Delete food item?",
+      `This will remove "${selectedItem.name}" from the local food DB, along with related local logs and favorites.`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              try {
+                setIsDeleting(true);
+                await DB.deleteFoodItem(selectedItem.id);
+                setSelectedItemId(null);
+                await loadItems();
+              } finally {
+                setIsDeleting(false);
+              }
+            })();
+          },
+        },
+      ],
+    );
+  }, [isDeleting, loadItems, selectedItem]);
 
   return (
     <View style={styles.screen}>
@@ -163,6 +198,19 @@ const FoodLibraryScreen = () => {
           <Text style={styles.panelTitle}>Selected item</Text>
           {selectedItem ? (
             <View style={styles.details}>
+              <View style={styles.actionRow}>
+                <Pressable
+                  onPress={handleDeleteSelected}
+                  style={({ pressed }) => [
+                    styles.deleteButton,
+                    (pressed || isDeleting) && styles.rowPressed,
+                  ]}
+                >
+                  <Text style={styles.deleteButtonText}>
+                    {isDeleting ? "Deleting..." : "Delete item"}
+                  </Text>
+                </Pressable>
+              </View>
               {selectedFields.map((field) => (
                 <View key={field.label} style={styles.fieldRow}>
                   <Text style={styles.fieldLabel}>{field.label}</Text>
@@ -262,6 +310,24 @@ const styles = StyleSheet.create({
   },
   details: {
     gap: 8,
+  },
+  actionRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginBottom: 4,
+  },
+  deleteButton: {
+    borderWidth: 1,
+    borderColor: "#DC2626",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "#FEF2F2",
+  },
+  deleteButtonText: {
+    color: "#B91C1C",
+    fontSize: 13,
+    fontWeight: "700",
   },
   fieldRow: {
     borderBottomWidth: 1,

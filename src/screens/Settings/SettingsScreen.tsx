@@ -29,13 +29,18 @@ import {
 } from "../Weight/weightUtils";
 
 type WeightSeedPreset = "down" | "up" | "maintain";
+const WEIGHT_PRESET_ENTRY_COUNT = 180;
+const WEIGHT_PRESET_HISTORY_LABEL = "about 6 months";
 
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value));
 
 const createWeightPresetValues = (preset: WeightSeedPreset): number[] =>
-  Array.from({ length: 60 }, (_, index) => {
-    const progress = index / 59;
+  Array.from({ length: WEIGHT_PRESET_ENTRY_COUNT }, (_, index) => {
+    const progress =
+      WEIGHT_PRESET_ENTRY_COUNT > 1
+        ? index / (WEIGHT_PRESET_ENTRY_COUNT - 1)
+        : 0;
 
     if (preset === "down") {
       const base = 74.7 - progress * 9.1;
@@ -166,7 +171,6 @@ const SettingsScreen = () => {
           unitOriginal: "kg",
           source: "manual",
           notes: `Debug preset: ${getPresetLabel(preset)}`,
-          tags: ["debug", preset],
           clientGeneratedId: entryId,
         });
       }
@@ -174,7 +178,9 @@ const SettingsScreen = () => {
       await handleRefresh();
       Alert.alert(
         "Weight history ready",
-        `Added 60 ${getPresetLabel(preset)} entries and cleared previous weight data.`,
+        `Added ${WEIGHT_PRESET_ENTRY_COUNT} ${getPresetLabel(
+          preset,
+        )} entries and cleared previous weight data.`,
       );
     } catch (error) {
       Alert.alert(
@@ -189,7 +195,7 @@ const SettingsScreen = () => {
   const handleSeedWeightPreset = (preset: WeightSeedPreset) => {
     Alert.alert(
       `Generate ${getPresetLabel(preset)} history?`,
-      "This will remove current weight entries and weight goal for the active user, then add 60 fresh debug entries.",
+      `This will remove current weight entries and weight goal for the active user, then add ${WEIGHT_PRESET_HISTORY_LABEL} of fresh debug entries.`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -251,7 +257,8 @@ const SettingsScreen = () => {
         <Text style={styles.cardTitle}>Weight Debug Presets</Text>
         <Text style={styles.empty}>
           Each preset clears the current user&apos;s weight entries and goal,
-          then adds 60 fresh kg entries for chart testing.
+          then adds {WEIGHT_PRESET_HISTORY_LABEL} of fresh kg entries for chart
+          testing.
         </Text>
 
         <View style={styles.seedGroup}>

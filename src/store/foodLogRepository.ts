@@ -70,11 +70,12 @@ export const getUserFoodLogEntryById = async (
       l.meal_type AS mealType,
       l.created_at AS createdAt,
       f.name AS foodName,
-      f.serving_size AS servingSize,
-      f.calories,
-      f.protein_g AS proteinG,
-      f.carbs_g AS carbsG,
-      f.fat_g AS fatG
+      COALESCE(f.serving_size_value, f.serving_size) AS servingSize,
+      COALESCE(f.serving_size_unit, f.serving_unit) AS servingUnit,
+      COALESCE(f.calories, 0) AS calories,
+      COALESCE(f.protein_g, 0) AS proteinG,
+      COALESCE(f.carbs_g, 0) AS carbsG,
+      COALESCE(f.fat_g, 0) AS fatG
     FROM user_food_log l
     JOIN food_items f ON f.id = l.food_id
     WHERE l.id = ?
@@ -102,11 +103,12 @@ export const getUserFoodLogEntriesByDate = async (
       l.meal_type AS mealType,
       l.created_at AS createdAt,
       f.name AS foodName,
-      f.serving_size AS servingSize,
-      f.calories,
-      f.protein_g AS proteinG,
-      f.carbs_g AS carbsG,
-      f.fat_g AS fatG
+      COALESCE(f.serving_size_value, f.serving_size) AS servingSize,
+      COALESCE(f.serving_size_unit, f.serving_unit) AS servingUnit,
+      COALESCE(f.calories, 0) AS calories,
+      COALESCE(f.protein_g, 0) AS proteinG,
+      COALESCE(f.carbs_g, 0) AS carbsG,
+      COALESCE(f.fat_g, 0) AS fatG
     FROM user_food_log l
     JOIN food_items f ON f.id = l.food_id
     WHERE l.user_external_id = ? AND l.date = ?

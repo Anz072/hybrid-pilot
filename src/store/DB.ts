@@ -12,8 +12,13 @@ import {
 import { getFirstUser, upsertUser } from "./userRepository";
 import {
   addFoodItem,
+  getFavoriteFoodIds,
   getFavoriteFoodItems,
+  getFoodItemByBarcode,
+  getFoodItemById,
   getRecentFoodItems,
+  listFoodItems,
+  saveFoodItem,
   searchFoodItems,
   setFoodItemFavorite,
 } from "./foodRepository";
@@ -41,8 +46,13 @@ export const DB = {
   getWeightGoal,
   saveWeightGoal,
   clearWeightGoal,
+  saveFoodItem,
   addFoodItem,
+  listFoodItems,
+  getFoodItemById,
+  getFoodItemByBarcode,
   searchFoodItems,
+  getFavoriteFoodIds,
   getFavoriteFoodItems,
   getRecentFoodItems,
   setFoodItemFavorite,

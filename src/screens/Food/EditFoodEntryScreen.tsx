@@ -19,6 +19,7 @@ import FoodScreenHeader from "./FoodScreenHeader";
 import {
   DEFAULT_MEALS,
   calculateLoggedNutrition,
+  formatFoodServing,
   formatMacroLine,
 } from "./foodUtils";
 
@@ -134,7 +135,8 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
             </View>
             <Text style={styles.heroTitle}>{entry.foodName}</Text>
             <Text style={styles.heroSubtitle}>
-              Base serving {entry.servingSize.toFixed(0)} g • {entry.calories.toFixed(0)} kcal
+              Base serving {formatFoodServing(entry.servingSize, entry.servingUnit)} •{" "}
+              {entry.calories.toFixed(0)} kcal
             </Text>
             <View style={styles.previewStrip}>
               <Text style={styles.previewStripValue}>
@@ -161,7 +163,7 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
                 placeholderTextColor="#9CA3AF"
               />
               <View style={styles.unitPill}>
-                <Text style={styles.unitText}>g</Text>
+                <Text style={styles.unitText}>{entry.servingUnit?.trim() || "g"}</Text>
               </View>
             </View>
           </View>

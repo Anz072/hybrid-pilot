@@ -164,7 +164,6 @@ const AccountScreen = ({ navigation, route }: Props) => {
         unitOriginal: "kg",
         source: "manual",
         notes: null,
-        tags: [],
         clientGeneratedId: initialWeightEntryId,
         deviceId: generateUuid(),
       });

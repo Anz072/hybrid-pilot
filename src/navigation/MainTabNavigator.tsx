@@ -5,11 +5,14 @@ import WeightScreen from "../screens/Weight/WeightScreen";
 import SettingsScreen from "../screens/Settings/SettingsScreen";
 import FoodNavigator from "./FoodNavigator";
 import {
+  BooksIcon,
+  BugDroidIcon,
   DotsThreeCircleIcon,
   FireIcon,
   ForkKnifeIcon,
   HouseSimpleIcon,
 } from "phosphor-react-native";
+import FoodLibraryScreen from "../screens/Food/FoodLibraryScreen";
 
 export type MainTabParamList = {
   Home: undefined;
@@ -17,6 +20,7 @@ export type MainTabParamList = {
   Food: undefined;
   More: undefined;
   Debug: undefined;
+  Library: undefined;
 };
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -68,7 +72,19 @@ const MainTabNavigator = () => {
         component={SettingsScreen}
         options={{
           tabBarIcon: ({ focused }) => (
-            <DotsThreeCircleIcon
+            <BugDroidIcon 
+              size={24}
+              color={focused ? "#007AFF" : "#222"}
+            />
+          ),
+        }}
+      />
+       <Tab.Screen
+        name="Library"
+        component={FoodLibraryScreen}
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <BooksIcon 
               size={24}
               color={focused ? "#007AFF" : "#222"}
             />

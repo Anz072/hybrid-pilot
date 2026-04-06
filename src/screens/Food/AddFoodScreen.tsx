@@ -16,7 +16,15 @@ import { DB } from "../../store/DB";
 import type { DBFoodItem, DBUser } from "../../store/DB_TYPES";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
 import FoodScreenHeader from "./FoodScreenHeader";
-import { formatFoodShortDate } from "./foodUtils";
+import FoodBarcodeScannerModal from "./FoodBarcodeScannerModal";
+import {
+  formatFoodItemServing,
+  formatFoodMacro,
+  formatFoodNumber,
+  formatFoodShortDate,
+  formatFoodSourceLabel,
+  getFoodDefaultLogAmount,
+} from "./foodUtils";
 
 type AddFoodRoute = RouteProp<FoodStackParamList, "AddFood">;
 type AddFoodNav = NativeStackNavigationProp<FoodStackParamList, "AddFood">;
@@ -32,6 +40,7 @@ const AddFoodScreen = () => {
   const [results, setResults] = useState<DBFoodItem[]>([]);
   const [recent, setRecent] = useState<DBFoodItem[]>([]);
   const [favorites, setFavorites] = useState<DBFoodItem[]>([]);
+  const [scannerVisible, setScannerVisible] = useState(false);
 
   const loadStaticLists = useCallback(async () => {
     const currentUser = await DB.getUser();
@@ -45,7 +54,7 @@ const AddFoodScreen = () => {
 
     const [recentFoods, favoriteFoods] = await Promise.all([
       DB.getRecentFoodItems(currentUser.externalId, 10),
-      DB.getFavoriteFoodItems(10),
+      DB.getFavoriteFoodItems(currentUser.externalId, 10),
     ]);
 
     setRecent(recentFoods);
@@ -78,6 +87,11 @@ const AddFoodScreen = () => {
     };
   }, [query]);
 
+  const favoriteIds = useMemo(
+    () => new Set(favorites.map((food) => food.id)),
+    [favorites],
+  );
+
   const addLogForFood = async (food: DBFoodItem) => {
     if (!user) {
       Alert.alert("No account found", "Create or restore a user before adding food.");
@@ -88,15 +102,20 @@ const AddFoodScreen = () => {
       userExternalId: user.externalId,
       foodId: food.id,
       date,
-      quantityG: food.servingSize,
+      quantityG: getFoodDefaultLogAmount(food),
       mealType,
     });
 
     navigation.goBack();
   };
 
-  const toggleFavorite = async (food: DBFoodItem) => {
-    await DB.setFoodItemFavorite(food.id, !food.isFavorite);
+  const toggleFavorite = async (foodId: number, isFavorite: boolean) => {
+    if (!user) {
+      Alert.alert("No account found", "Create or restore a user before saving foods.");
+      return;
+    }
+
+    await DB.setFoodItemFavorite(user.externalId, foodId, !isFavorite);
     await Promise.all([
       loadStaticLists(),
       query.trim()
@@ -105,35 +124,57 @@ const AddFoodScreen = () => {
     ]);
   };
 
-  const activeResults = useMemo(() => (query.trim() ? results : []), [query, results]);
+  const activeResults = useMemo(
+    () => (query.trim() ? results : []),
+    [query, results],
+  );
 
-  const renderFoodCard = (food: DBFoodItem) => (
+  const renderFoodCard = (food: DBFoodItem, isFavorite: boolean) => (
     <View key={food.id} style={styles.foodCard}>
       <Pressable style={styles.foodBody} onPress={() => void addLogForFood(food)}>
+        <View style={styles.foodBadgeRow}>
+          {food.brand ? (
+            <View style={styles.foodBadge}>
+              <Text style={styles.foodBadgeText}>{food.brand}</Text>
+            </View>
+          ) : null}
+          <View style={styles.foodBadge}>
+            <Text style={styles.foodBadgeText}>
+              {formatFoodSourceLabel(food.source)}
+            </Text>
+          </View>
+          {food.verified ? (
+            <View style={styles.foodBadge}>
+              <Text style={styles.foodBadgeText}>Verified</Text>
+            </View>
+          ) : null}
+        </View>
         <Text style={styles.foodName}>{food.name}</Text>
         <Text style={styles.foodMeta}>
-          {food.servingSize.toFixed(0)} g serving • {food.calories.toFixed(0)} kcal
+          {formatFoodItemServing(food)} serving •{" "}
+          {formatFoodNumber(food.calories, " kcal")}
         </Text>
         <Text style={styles.foodMacroText}>
-          {food.proteinG.toFixed(0)}P • {food.carbsG.toFixed(0)}C • {food.fatG.toFixed(0)}F
+          {formatFoodMacro(food.proteinG, "P")} • {formatFoodMacro(food.carbsG, "C")} •{" "}
+          {formatFoodMacro(food.fatG, "F")}
         </Text>
       </Pressable>
       <View style={styles.foodActionColumn}>
         <Pressable
-          onPress={() => void toggleFavorite(food)}
+          onPress={() => void toggleFavorite(food.id, isFavorite)}
           style={({ pressed }) => [
             styles.secondaryAction,
-            food.isFavorite && styles.secondaryActionActive,
+            isFavorite && styles.secondaryActionActive,
             pressed && styles.cardPressed,
           ]}
         >
           <Text
             style={[
               styles.secondaryActionText,
-              food.isFavorite && styles.secondaryActionTextActive,
+              isFavorite && styles.secondaryActionTextActive,
             ]}
           >
-            {food.isFavorite ? "Saved" : "Save"}
+            {isFavorite ? "Saved" : "Save"}
           </Text>
         </Pressable>
         <Pressable
@@ -159,7 +200,7 @@ const AddFoodScreen = () => {
         {items.length === 0 ? (
           <Text style={styles.emptyText}>{emptyText}</Text>
         ) : (
-          items.map((item) => renderFoodCard(item))
+          items.map((item) => renderFoodCard(item, favoriteIds.has(item.id)))
         )}
       </View>
     </View>
@@ -195,15 +236,48 @@ const AddFoodScreen = () => {
           </View>
           <Text style={styles.heroTitle}>Search or quick-add</Text>
           <Text style={styles.heroText}>
-            Tap a food card to add its default serving right away, or save it for faster logging later.
+            Tap a food card to add its default serving right away, save it for
+            faster logging later, browse your full saved library, or scan a barcode
+            for a quick debug read.
           </Text>
-          <TextInput
-            placeholder="Search foods"
-            placeholderTextColor="#9CA3AF"
-            value={query}
-            onChangeText={setQuery}
-            style={styles.searchInput}
-          />
+          <View style={styles.searchRow}>
+            <TextInput
+              placeholder="Search foods"
+              placeholderTextColor="#9CA3AF"
+              value={query}
+              onChangeText={setQuery}
+              style={styles.searchInput}
+            />
+            <Pressable
+              onPress={() => setScannerVisible(true)}
+              style={({ pressed }) => [
+                styles.scanButton,
+                pressed && styles.cardPressed,
+              ]}
+            >
+              <Text style={styles.scanButtonEyebrow}>Barcode</Text>
+              <Text style={styles.scanButtonText}>SCAN</Text>
+            </Pressable>
+          </View>
+
+          <Pressable
+            onPress={() => navigation.navigate("FoodLibrary", { date, mealType })}
+            style={({ pressed }) => [
+              styles.libraryButton,
+              pressed && styles.cardPressed,
+            ]}
+          >
+            <View style={styles.libraryButtonCopy}>
+              <Text style={styles.libraryButtonEyebrow}>Local library</Text>
+              <Text style={styles.libraryButtonTitle}>Browse saved foods</Text>
+              <Text style={styles.libraryButtonText}>
+                Open every item already saved in your local database.
+              </Text>
+            </View>
+            <View style={styles.libraryButtonPill}>
+              <Text style={styles.libraryButtonPillText}>Open</Text>
+            </View>
+          </Pressable>
         </View>
 
         {query.trim() ? (
@@ -245,6 +319,11 @@ const AddFoodScreen = () => {
           </View>
         </Pressable>
       </ScrollView>
+
+      <FoodBarcodeScannerModal
+        visible={scannerVisible}
+        onClose={() => setScannerVisible(false)}
+      />
     </View>
   );
 };
@@ -319,7 +398,13 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 14,
   },
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: 10,
+  },
   searchInput: {
+    flex: 1,
     borderWidth: 1,
     borderColor: "#FCD34D",
     borderRadius: 16,
@@ -329,6 +414,72 @@ const styles = StyleSheet.create({
     color: "#111827",
     fontSize: 16,
     fontWeight: "600",
+  },
+  scanButton: {
+    minWidth: 96,
+    borderRadius: 18,
+    backgroundColor: "#111827",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  scanButtonEyebrow: {
+    color: "#FDBA74",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    marginBottom: 3,
+  },
+  scanButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "900",
+    letterSpacing: 0.4,
+  },
+  libraryButton: {
+    marginTop: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 18,
+    backgroundColor: "#111827",
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  libraryButtonCopy: {
+    flex: 1,
+  },
+  libraryButtonEyebrow: {
+    color: "#FDE68A",
+    fontSize: 11,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    marginBottom: 4,
+  },
+  libraryButtonTitle: {
+    color: "#FFFFFF",
+    fontSize: 17,
+    fontWeight: "900",
+    marginBottom: 4,
+  },
+  libraryButtonText: {
+    color: "#CBD5E1",
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  libraryButtonPill: {
+    borderRadius: 999,
+    backgroundColor: "#EA580C",
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  libraryButtonPillText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "800",
   },
   sectionCard: {
     backgroundColor: "rgba(255,255,255,0.94)",
@@ -369,6 +520,25 @@ const styles = StyleSheet.create({
   },
   foodBody: {
     flex: 1,
+  },
+  foodBadgeRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 8,
+  },
+  foodBadge: {
+    borderRadius: 999,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#FDBA74",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  foodBadgeText: {
+    color: "#9A3412",
+    fontSize: 11,
+    fontWeight: "800",
   },
   foodName: {
     color: "#111827",

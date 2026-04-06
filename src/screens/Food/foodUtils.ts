@@ -1,4 +1,4 @@
-import type { DBUserFoodLogEntry } from "../../store/DB_TYPES";
+import type { DBFoodItem, DBUserFoodLogEntry } from "../../store/DB_TYPES";
 
 export const DEFAULT_MEALS = ["Breakfast", "Lunch", "Dinner", "Snacks"];
 
@@ -13,6 +13,12 @@ const roundTo = (value: number, places = 1): number => {
   const factor = 10 ** places;
   return Math.round(value * factor) / factor;
 };
+
+const FOOD_BASIS_DEFAULTS = {
+  "100g": { value: 100, unit: "g" },
+  "100ml": { value: 100, unit: "ml" },
+  serving: { value: 1, unit: "serving" },
+} as const;
 
 export const formatFoodDateKey = (date: Date): string => {
   const year = date.getFullYear();
@@ -45,6 +51,79 @@ export const formatFoodShortDate = (date: Date | string): string => {
     month: "short",
     day: "numeric",
   });
+};
+
+export const formatFoodServing = (
+  amount: number | null | undefined,
+  unit: string | null | undefined,
+  empty = "--",
+): string => {
+  if (amount == null || !Number.isFinite(amount)) {
+    return empty;
+  }
+
+  return `${roundTo(amount, 0).toFixed(0)} ${unit?.trim() || "g"}`;
+};
+
+export const formatFoodNumber = (
+  value: number | null | undefined,
+  suffix = "",
+  places = 0,
+  empty = "--",
+): string => {
+  if (value == null || !Number.isFinite(value)) {
+    return empty;
+  }
+
+  return `${roundTo(value, places).toFixed(places)}${suffix}`;
+};
+
+export const getFoodResolvedServing = (
+  food: Pick<DBFoodItem, "nutritionBasis" | "servingSizeValue" | "servingSizeUnit">,
+) => {
+  const fallback = FOOD_BASIS_DEFAULTS[food.nutritionBasis];
+
+  return {
+    value: food.servingSizeValue ?? fallback.value,
+    unit: food.servingSizeUnit?.trim() || fallback.unit,
+  };
+};
+
+export const getFoodDefaultLogAmount = (
+  food: Pick<DBFoodItem, "nutritionBasis" | "servingSizeValue" | "servingSizeUnit">,
+): number => getFoodResolvedServing(food).value;
+
+export const formatFoodItemServing = (
+  food: Pick<DBFoodItem, "nutritionBasis" | "servingSizeValue" | "servingSizeUnit">,
+): string => {
+  const serving = getFoodResolvedServing(food);
+  return formatFoodServing(serving.value, serving.unit);
+};
+
+export const formatFoodMacro = (
+  value: number | null | undefined,
+  label: string,
+): string => `${formatFoodNumber(value, "", 0)}${label}`;
+
+export const formatFoodSourceLabel = (source: string): string => {
+  switch (source) {
+    case "custom":
+      return "Custom";
+    case "manual":
+      return "Manual";
+    case "open_food_facts":
+      return "Open Food Facts";
+    case "import":
+      return "Import";
+    case "usda":
+      return "USDA";
+    default:
+      return source
+        .split(/[_\s-]+/)
+        .filter(Boolean)
+        .map((part) => part[0]?.toUpperCase() + part.slice(1))
+        .join(" ");
+  }
 };
 
 export const calculateLoggedNutrition = (

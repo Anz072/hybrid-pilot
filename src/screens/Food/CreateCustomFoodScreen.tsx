@@ -70,15 +70,29 @@ const CreateCustomFoodScreen = () => {
       return;
     }
 
-    const foodId = await DB.addFoodItem({
+    const foodId = await DB.saveFoodItem({
+      source: "custom",
+      sourceId: null,
+      barcode: null,
       name: trimmedName,
-      servingSize: parsedServing,
+      brand: null,
+      imageUrl: null,
+      quantityValue: null,
+      quantityUnit: null,
+      servingSizeValue: parsedServing,
+      servingSizeUnit: "g",
+      nutritionBasis: "serving",
       calories: parsedCalories,
       proteinG: parsedProtein,
       carbsG: parsedCarbs,
       fatG: parsedFat,
       fiberG: null,
-      isFavorite: false,
+      sugarG: null,
+      saltG: null,
+      saturatedFatG: null,
+      ingredientsText: null,
+      verified: false,
+      isComplete: true,
     });
 
     await DB.addUserFoodLog({

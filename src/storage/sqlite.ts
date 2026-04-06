@@ -264,6 +264,101 @@ const migrations: Migration[] = [
     `);
     },
   },
+  {
+    version: 9,
+    name: "food_items_ssot_expansion",
+    up: async (db) => {
+      await db.execAsync(`
+      ALTER TABLE food_items ADD COLUMN source TEXT NOT NULL DEFAULT 'custom';
+      ALTER TABLE food_items ADD COLUMN source_id TEXT;
+      ALTER TABLE food_items ADD COLUMN barcode TEXT;
+      ALTER TABLE food_items ADD COLUMN brand_name TEXT;
+      ALTER TABLE food_items ADD COLUMN serving_unit TEXT NOT NULL DEFAULT 'g';
+      ALTER TABLE food_items ADD COLUMN image_url TEXT;
+      ALTER TABLE food_items ADD COLUMN raw_payload TEXT;
+      ALTER TABLE food_items ADD COLUMN updated_at TEXT;
+
+      UPDATE food_items
+      SET updated_at = created_at
+      WHERE updated_at IS NULL;
+
+      CREATE INDEX IF NOT EXISTS idx_food_items_name
+      ON food_items(lower(name));
+
+      CREATE INDEX IF NOT EXISTS idx_food_items_barcode
+      ON food_items(barcode);
+
+      CREATE INDEX IF NOT EXISTS idx_food_items_source_source_id
+      ON food_items(source, source_id);
+
+      CREATE INDEX IF NOT EXISTS idx_food_items_favorite_name
+      ON food_items(is_favorite, name);
+    `);
+    },
+  },
+  {
+    version: 10,
+    name: "food_items_ssot_v2_shape",
+    up: async (db) => {
+      await db.execAsync(`
+      ALTER TABLE food_items ADD COLUMN quantity_value REAL;
+      ALTER TABLE food_items ADD COLUMN quantity_unit TEXT;
+      ALTER TABLE food_items ADD COLUMN serving_size_value REAL;
+      ALTER TABLE food_items ADD COLUMN serving_size_unit TEXT;
+      ALTER TABLE food_items ADD COLUMN nutrition_basis TEXT NOT NULL DEFAULT 'serving';
+      ALTER TABLE food_items ADD COLUMN sugar_g REAL;
+      ALTER TABLE food_items ADD COLUMN salt_g REAL;
+      ALTER TABLE food_items ADD COLUMN saturated_fat_g REAL;
+      ALTER TABLE food_items ADD COLUMN ingredients_text TEXT;
+      ALTER TABLE food_items ADD COLUMN verified INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE food_items ADD COLUMN is_complete INTEGER NOT NULL DEFAULT 0;
+
+      UPDATE food_items
+      SET
+        serving_size_value = COALESCE(serving_size_value, serving_size),
+        serving_size_unit = COALESCE(serving_size_unit, serving_unit),
+        nutrition_basis = COALESCE(nutrition_basis, 'serving'),
+        verified = CASE WHEN source = 'open_food_facts' THEN 1 ELSE verified END,
+        is_complete = CASE
+          WHEN calories IS NOT NULL
+            AND protein_g IS NOT NULL
+            AND carbs_g IS NOT NULL
+            AND fat_g IS NOT NULL
+          THEN 1
+          ELSE is_complete
+        END
+      WHERE id IS NOT NULL;
+    `);
+    },
+  },
+  {
+    version: 11,
+    name: "user_food_favorites_join_table",
+    up: async (db) => {
+      await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS user_food_favorites (
+        user_external_id TEXT NOT NULL,
+        food_id INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (user_external_id, food_id),
+        FOREIGN KEY(user_external_id) REFERENCES users(external_id),
+        FOREIGN KEY(food_id) REFERENCES food_items(id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_user_food_favorites_user_created
+      ON user_food_favorites(user_external_id, created_at DESC);
+
+      INSERT OR IGNORE INTO user_food_favorites (user_external_id, food_id, created_at)
+      SELECT
+        u.external_id,
+        f.id,
+        COALESCE(f.updated_at, f.created_at, datetime('now'))
+      FROM food_items f
+      CROSS JOIN users u
+      WHERE f.is_favorite = 1;
+    `);
+    },
+  },
 ];
 
 const trackedTables = [
@@ -274,6 +369,7 @@ const trackedTables = [
   "weight_goals",
   "app_kv",
   "food_items",
+  "user_food_favorites",
   "user_food_log",
   "activities",
   "custom_meals",

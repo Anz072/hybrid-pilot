@@ -32,7 +32,10 @@ import {
   clampFoodRatio,
   formatFoodDateKey,
   formatFoodLongDate,
+  formatFoodServing,
   formatMacroLine,
+  getFoodDefaultLogAmount,
+  getFoodResolvedServing,
   shiftFoodDate,
   sumLoggedNutrition,
   type FoodNutritionTotals,
@@ -40,6 +43,14 @@ import {
 } from "./foodUtils";
 
 type FoodDiaryNav = NativeStackNavigationProp<FoodStackParamList, "Diary">;
+type FavoriteFoodCardItem = DBFoodItem & {
+  servingSize: number;
+  servingUnit: string | null;
+  calories: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+};
 
 const MacroMeter = ({
   label,
@@ -82,7 +93,7 @@ const FoodDiaryScreen = () => {
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [user, setUser] = useState<DBUser | null>(null);
   const [entries, setEntries] = useState<DBUserFoodLogEntry[]>([]);
-  const [favoriteFoods, setFavoriteFoods] = useState<DBFoodItem[]>([]);
+  const [favoriteFoods, setFavoriteFoods] = useState<FavoriteFoodCardItem[]>([]);
   const [customMeals, setCustomMeals] = useState<DBCustomMeal[]>([]);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [customMealDraft, setCustomMealDraft] = useState("");
@@ -103,12 +114,26 @@ const FoodDiaryScreen = () => {
 
     const [dayEntries, favorites, customMealRows] = await Promise.all([
       DB.getUserFoodLogEntriesByDate(currentUser.externalId, dateKey),
-      DB.getFavoriteFoodItems(),
+      DB.getFavoriteFoodItems(currentUser.externalId),
       DB.getCustomMeals(currentUser.externalId),
     ]);
 
     setEntries(dayEntries);
-    setFavoriteFoods(favorites.slice(0, 8));
+    setFavoriteFoods(
+      favorites.slice(0, 8).map((food) => {
+        const serving = getFoodResolvedServing(food);
+
+        return {
+          ...food,
+          servingSize: serving.value,
+          servingUnit: serving.unit,
+          calories: food.calories ?? 0,
+          proteinG: food.proteinG ?? 0,
+          carbsG: food.carbsG ?? 0,
+          fatG: food.fatG ?? 0,
+        };
+      }),
+    );
     setCustomMeals(customMealRows);
   }, [dateKey]);
 
@@ -190,7 +215,7 @@ const FoodDiaryScreen = () => {
       userExternalId: user.externalId,
       foodId: food.id,
       date: dateKey,
-      quantityG: food.servingSize,
+      quantityG: getFoodDefaultLogAmount(food),
       mealType,
     });
 
@@ -388,6 +413,22 @@ const FoodDiaryScreen = () => {
           </Pressable>
         </View>
 
+        <Pressable
+          style={({ pressed }) => [styles.libraryShortcutCard, pressed && styles.cardPressed]}
+          onPress={() => navigation.navigate("FoodLibrary")}
+        >
+          <View style={styles.libraryShortcutCopy}>
+            <Text style={styles.libraryShortcutEyebrow}>Library</Text>
+            <Text style={styles.libraryShortcutTitle}>Saved foods</Text>
+            <Text style={styles.libraryShortcutSubtitle}>
+              Browse every local food item your diary can reuse.
+            </Text>
+          </View>
+          <View style={styles.libraryShortcutButton}>
+            <Text style={styles.libraryShortcutButtonText}>Open</Text>
+          </View>
+        </Pressable>
+
         {favoriteFoods.length > 0 ? (
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Favorite foods</Text>
@@ -436,7 +477,8 @@ const FoodDiaryScreen = () => {
                     {food.name}
                   </Text>
                   <Text style={styles.favoriteMeta}>
-                    {food.calories.toFixed(0)} kcal • {food.servingSize.toFixed(0)} g
+                    {food.calories.toFixed(0)} kcal •{" "}
+                    {formatFoodServing(food.servingSize, food.servingUnit)}
                   </Text>
                   <Text style={styles.favoriteMacros}>
                     {food.proteinG.toFixed(0)}P • {food.carbsG.toFixed(0)}C • {food.fatG.toFixed(0)}F
@@ -560,7 +602,8 @@ const FoodDiaryScreen = () => {
                               </Text>
                             </View>
                             <Text style={styles.entryMeta}>
-                              {entry.quantityG.toFixed(0)} g • {formatMacroLine(nutrition)}
+                              {formatFoodServing(entry.quantityG, entry.servingUnit)} •{" "}
+                              {formatMacroLine(nutrition)}
                             </Text>
                           </Pressable>
                           <View style={styles.entryActions}>
@@ -850,6 +893,50 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     fontSize: 13,
     lineHeight: 18,
+  },
+  libraryShortcutCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "rgba(255,255,255,0.94)",
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    padding: 16,
+    marginBottom: 16,
+  },
+  libraryShortcutCopy: {
+    flex: 1,
+  },
+  libraryShortcutEyebrow: {
+    color: "#9A3412",
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: 8,
+  },
+  libraryShortcutTitle: {
+    color: "#111827",
+    fontSize: 18,
+    fontWeight: "900",
+    marginBottom: 4,
+  },
+  libraryShortcutSubtitle: {
+    color: "#6B7280",
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  libraryShortcutButton: {
+    borderRadius: 999,
+    backgroundColor: "#111827",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  libraryShortcutButtonText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "800",
   },
   card: {
     backgroundColor: "rgba(255,255,255,0.94)",

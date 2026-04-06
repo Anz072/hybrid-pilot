@@ -62,7 +62,6 @@ export type DBWeightEntry = {
   unitOriginal: "kg";
   source: WeightEntrySource;
   notes: string | null;
-  tags: string[];
   clientGeneratedId: string;
   deviceId: string | null;
   createdAt: DBIsoDateString;
@@ -84,7 +83,6 @@ export type SaveWeightEntryInput = {
   unitOriginal: "kg";
   source: WeightEntrySource;
   notes?: string | null;
-  tags?: string[];
   clientGeneratedId: string;
   deviceId?: string | null;
 };
@@ -110,28 +108,63 @@ export type SaveWeightGoalInput = {
   goalBandKg?: number | null;
 };
 
+export type FoodSource = "custom" | "manual" | "open_food_facts" | "import" | "usda";
+
+export type NutritionBasis = "100g" | "100ml" | "serving";
+
 export type DBFoodItem = {
   id: number;
+
+  // identity
+  source: FoodSource;
+  sourceId: string | null; // OFF barcode, USDA fdcId, null for manual
+  barcode: string | null;
+  // display
   name: string;
-  servingSize: number;
-  calories: number;
-  proteinG: number;
-  carbsG: number;
-  fatG: number;
+  brand: string | null;
+  imageUrl: string | null;
+  // quantity / serving info
+  quantityValue: number | null;      // 500
+  quantityUnit: string | null;       // ml
+  servingSizeValue: number | null;   // 100, 30, 1 etc
+  servingSizeUnit: string | null;    // g, ml, piece
+  nutritionBasis: NutritionBasis;    // "100g", "100ml", or "serving"
+  // macros
+  calories: number | null;
+  proteinG: number | null;
+  carbsG: number | null;
+  fatG: number | null;
   fiberG: number | null;
-  isFavorite: boolean;
+  sugarG: number | null;
+  saltG: number | null;
+  saturatedFatG: number | null;
+  // metadata
+  ingredientsText: string | null;
+  verified: boolean; //  true for imported official-ish source, false for manual
+  isComplete: boolean;
   createdAt: DBIsoDateString;
+  updatedAt: DBIsoDateString;
 };
 
-export type AddFoodItemInput = {
-  name: string;
-  servingSize: number;
-  calories: number;
-  proteinG: number;
-  carbsG: number;
-  fatG: number;
-  fiberG?: number | null;
-  isFavorite?: boolean;
+export type SaveFoodItemInput = Omit<
+  DBFoodItem,
+  "id" | "createdAt" | "updatedAt"
+> & {
+  id?: number;
+};
+
+export type AddFoodItemInput = SaveFoodItemInput;
+
+export type ListFoodItemsInput = {
+  query?: string;
+  limit?: number;
+  source?: FoodSource | string | null;
+};
+
+export type DBUserFoodFavorite = {
+  userExternalId: string;
+  foodId: number;
+  createdAt: DBIsoDateString;
 };
 
 export type DBUserFoodLog = {
@@ -161,6 +194,7 @@ export type UpdateUserFoodLogInput = {
 export type DBUserFoodLogEntry = DBUserFoodLog & {
   foodName: string;
   servingSize: number;
+  servingUnit: string | null;
   calories: number;
   proteinG: number;
   carbsG: number;

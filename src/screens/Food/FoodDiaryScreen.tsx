@@ -443,13 +443,6 @@ const FoodDiaryScreen = () => {
           <Text style={styles.sectionTitle}>More</Text>
           <Text style={styles.sectionText}>Support actions that stay out of the way.</Text>
           <View style={styles.stack}>
-            <Pressable onPress={() => navigation.navigate("FoodLibrary")} style={({ pressed }) => [styles.moreRow, pressed && styles.cardPressed]}>
-              <View style={styles.moreCopy}>
-                <Text style={styles.moreTitle}>Saved foods</Text>
-                <Text style={styles.moreText}>Browse every local item in your library.</Text>
-              </View>
-              <View style={styles.morePill}><Text style={styles.morePillText}>Open</Text></View>
-            </Pressable>
             <Pressable onPress={() => void copyYesterday()} style={({ pressed }) => [styles.moreRow, pressed && styles.cardPressed]}>
               <View style={styles.moreCopy}>
                 <Text style={styles.moreTitle}>Copy yesterday</Text>

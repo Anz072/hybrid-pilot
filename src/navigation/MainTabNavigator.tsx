@@ -14,14 +14,11 @@ import type { NavigatorScreenParams } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import HomeScreen from "../screens/Home/HomeScreen";
 import WeightScreen from "../screens/Weight/WeightScreen";
-import SettingsScreen from "../screens/Settings/SettingsScreen";
-import MoreScreen from "../screens/User_Settings/MoreScreen";
 import FoodNavigator from "./FoodNavigator";
 import type { FoodStackParamList } from "./foodTypes";
+import MoreNavigator, { type MoreParamList } from "./MoreNavigator";
 import {
   BarcodeIcon,
-  BooksIcon,
-  BugDroidIcon,
   DotsThreeCircleIcon,
   FireIcon,
   ForkKnifeIcon,
@@ -29,10 +26,8 @@ import {
   MagnifyingGlassIcon,
   PlusIcon,
   ScalesIcon,
-  SparkleIcon,
   XIcon,
 } from "phosphor-react-native";
-import FoodLibraryScreen from "../screens/Food/FoodLibraryScreen";
 import { DB } from "../store/DB";
 import WeightEntryModal, {
   type WeightEntryDraft,
@@ -45,8 +40,8 @@ export type MainTabParamList = {
   Food: NavigatorScreenParams<FoodStackParamList> | undefined;
   Shortcuts: undefined;
   Weight: undefined;
-  More: undefined;
-  Debug: undefined;
+  More: NavigatorScreenParams<MoreParamList> | undefined;
+  Debug: NavigatorScreenParams<MoreParamList> | undefined;
   Library: undefined;
 };
 
@@ -176,6 +171,14 @@ const MainTabNavigator = () => {
         <Tab.Screen
           name="Food"
           component={FoodNavigator}
+          listeners={({ navigation }) => ({
+            tabPress: (event) => {
+              event.preventDefault();
+              navigation.navigate("Food", {
+                screen: "Diary",
+              });
+            },
+          })}
           options={{
             tabBarIcon: ({ focused }) => (
               <ForkKnifeIcon
@@ -219,7 +222,15 @@ const MainTabNavigator = () => {
         />
         <Tab.Screen
           name="More"
-          component={MoreScreen}
+          component={MoreNavigator}
+          listeners={({ navigation }) => ({
+            tabPress: (event) => {
+              event.preventDefault();
+              navigation.navigate("More", {
+                screen: "MoreMainScreen",
+              });
+            },
+          })}
           options={{
             tabBarIcon: ({ focused }) => (
               <DotsThreeCircleIcon

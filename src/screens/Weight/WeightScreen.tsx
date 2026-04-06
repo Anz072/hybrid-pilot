@@ -1105,22 +1105,6 @@ const WeightScreen = () => {
         }}
       />
 
-      <View style={[styles.fabWrap, { bottom: insets.bottom + 20 }]}>
-        <View style={styles.fabHalo}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.button,
-              pressed && styles.buttonPressed,
-            ]}
-            onPress={openCreateModal}
-            accessibilityRole="button"
-            accessibilityLabel="Add weight entry"
-          >
-            <Text style={styles.buttonText}>+</Text>
-          </Pressable>
-        </View>
-      </View>
-
       <Modal
         visible={goalModalVisible}
         animationType="slide"
@@ -1316,8 +1300,8 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#1E293B",
+    borderWidth: 6,
+    borderColor: "#1971ff",
     shadowColor: "#0F172A",
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.22,

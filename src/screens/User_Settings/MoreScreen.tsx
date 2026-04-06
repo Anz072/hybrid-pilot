@@ -1,18 +1,14 @@
-import type { NavigationProp } from "@react-navigation/native";
 import { useNavigation } from "@react-navigation/native";
-import {
-  StyleSheet,
-  Text,
-  View,
-  Image,
-  Pressable,
-} from "react-native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { StyleSheet, Text, View, Image, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { MainTabParamList } from "../../navigation/MainTabNavigator";
+import type { MoreParamList } from "../../navigation/MoreNavigator";
+import { useAppSelector } from "../../store/hooks";
 
-type MoreScreenNav = NavigationProp<MainTabParamList>;
+type MoreScreenNav = NativeStackNavigationProp<MoreParamList, "MoreMainScreen">;
 
 const MoreScreen = () => {
+  const user = useAppSelector((state) => state.user.currentUser);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<MoreScreenNav>();
 
@@ -21,25 +17,20 @@ const MoreScreen = () => {
       <View style={styles.heroCard}>
         <View style={styles.heroTopBar}>
           <Text style={styles.heroTitle}>Settings</Text>
+          <Text style={styles.heroTitle}>Hello, {user?.displayName}</Text>
           <Image
             source={require("../../../assets/images/temp-profile-pic.jpg")}
             style={{ width: 100, height: 100 }}
           />
         </View>
         <View>
-            <Text style={styles.title}>DEBUG MENU</Text>
-          <Pressable onPress={() => console.log("lol")}>
+          <Text style={styles.title}>DEBUG MENU</Text>
+          <Pressable onPress={() => navigation.navigate("SettingsScreen")}>
             <View style={styles.button}>
               <Text style={styles.buttonText}>Debug</Text>
             </View>
           </Pressable>
-          <Pressable
-            onPress={() =>
-              navigation.navigate("Food", {
-                screen: "FoodLibrary",
-              })
-            }
-          >
+          <Pressable onPress={() => navigation.navigate("FoodLibrary")}>
             <View style={styles.button}>
               <Text style={styles.buttonText}>Local Food Item Library</Text>
             </View>
@@ -74,23 +65,23 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     textAlign: "center",
   },
-  button:{
+  button: {
     paddingVertical: 14,
     paddingHorizontal: 4,
     marginHorizontal: 6,
     borderTopWidth: 1,
-    borderColor: "#ececec"
+    borderColor: "#ececec",
   },
-  buttonText:{
+  buttonText: {
     fontSize: 14,
     fontWeight: "600",
-    letterSpacing: 2
+    letterSpacing: 2,
   },
-  title:{
+  title: {
     fontWeight: "700",
     fontSize: 18,
     marginBottom: 12,
     marginTop: 24,
-  }
+  },
 });
 export default MoreScreen;

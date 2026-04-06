@@ -263,8 +263,8 @@ const AddFoodScreen = () => {
           <Text style={styles.heroTitle}>Search or quick-add</Text>
           <Text style={styles.heroText}>
             Tap a food card to log its default serving into this time slot right
-            away, save it for faster logging later, browse your full saved
-            library, or scan a barcode for a quick debug read.
+            away, save it for faster logging later, or scan a barcode for a
+            quick debug read.
           </Text>
           <View style={styles.searchRow}>
             <TextInput
@@ -285,30 +285,6 @@ const AddFoodScreen = () => {
               <Text style={styles.scanButtonText}>SCAN</Text>
             </Pressable>
           </View>
-
-          <Pressable
-            onPress={() =>
-              navigation.navigate("FoodLibrary", {
-                date,
-                mealType: mealType ?? undefined,
-              })
-            }
-            style={({ pressed }) => [
-              styles.libraryButton,
-              pressed && styles.cardPressed,
-            ]}
-          >
-            <View style={styles.libraryButtonCopy}>
-              <Text style={styles.libraryButtonEyebrow}>Local library</Text>
-              <Text style={styles.libraryButtonTitle}>Browse saved foods</Text>
-              <Text style={styles.libraryButtonText}>
-                Open every item already saved in your local database.
-              </Text>
-            </View>
-            <View style={styles.libraryButtonPill}>
-              <Text style={styles.libraryButtonPillText}>Open</Text>
-            </View>
-          </Pressable>
         </View>
 
         {query.trim() ? (

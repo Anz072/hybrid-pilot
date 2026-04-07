@@ -1,6 +1,13 @@
 import React from "react";
-import { useNavigation, useRoute } from "@react-navigation/native";
-import type { RouteProp } from "@react-navigation/native";
+import {
+  StackActions,
+  useNavigation,
+  useRoute,
+} from "@react-navigation/native";
+import type {
+  CompositeNavigationProp,
+  RouteProp,
+} from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { CaretDownIcon, CaretUpIcon, ForkKnifeIcon } from "phosphor-react-native";
 import {
@@ -14,6 +21,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import type { RootStackParamList } from "../../navigation/AppNavigator";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
 import { DB } from "../../store/DB";
 import { useAppSelector } from "../../store/hooks";
@@ -25,9 +33,9 @@ import {
 } from "./foodUtils";
 
 type CreateCustomFoodRoute = RouteProp<FoodStackParamList, "CreateCustomFood">;
-type CreateCustomFoodNav = NativeStackNavigationProp<
-  FoodStackParamList,
-  "CreateCustomFood"
+type CreateCustomFoodNav = CompositeNavigationProp<
+  NativeStackNavigationProp<FoodStackParamList, "CreateCustomFood">,
+  NativeStackNavigationProp<RootStackParamList>
 >;
 
 const CreateCustomFoodScreen = () => {
@@ -126,7 +134,15 @@ const CreateCustomFoodScreen = () => {
       mealType: mealType ?? null,
     });
 
-    navigation.navigate("Diary");
+    const routes = navigation.getState().routes;
+    const previousRoute = routes[routes.length - 2];
+
+    if (previousRoute?.name === "AddFood" && routes.length >= 2) {
+      navigation.dispatch(StackActions.pop(2));
+      return;
+    }
+
+    navigation.goBack();
   };
 
   return (

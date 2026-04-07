@@ -5,14 +5,19 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import MainTabNavigator from "./MainTabNavigator";
 import LoginScreen from "../screens/Auth/LoginScreen";
 import OnboardingNavigator from "./OnboardingNavigator";
+import AddFoodScreen from "../screens/Food/AddFoodScreen";
+import CreateCustomFoodScreen from "../screens/Food/CreateCustomFoodScreen";
 import { getOnboardingComplete } from "../storage/localStore";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { hydrateUserFromDb } from "../store/userSlice";
+import type { FoodStackParamList } from "./foodTypes";
 
 export type RootStackParamList = {
   Onboarding: undefined;
   Main: undefined;
   Login: undefined;
+  AddFood: FoodStackParamList["AddFood"];
+  CreateCustomFood: FoodStackParamList["CreateCustomFood"];
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -59,7 +64,25 @@ const AppNavigator = () => {
             )}
           </Stack.Screen>
         ) : isLoggedIn ? (
-          <Stack.Screen name="Main" component={MainTabNavigator} />
+          <>
+            <Stack.Screen name="Main" component={MainTabNavigator} />
+            <Stack.Screen
+              name="AddFood"
+              component={AddFoodScreen}
+              options={{
+                animation: "slide_from_bottom",
+                presentation: "fullScreenModal",
+              }}
+            />
+            <Stack.Screen
+              name="CreateCustomFood"
+              component={CreateCustomFoodScreen}
+              options={{
+                animation: "slide_from_bottom",
+                presentation: "fullScreenModal",
+              }}
+            />
+          </>
         ) : (
           <Stack.Screen name="Login" component={LoginScreen} />
         )}

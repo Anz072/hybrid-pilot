@@ -15,7 +15,14 @@ const FoodNavigator = () => {
       initialRouteName="Diary"
     >
       <Stack.Screen name="Diary" component={FoodDiaryScreen} />
-      <Stack.Screen name="AddFood" component={AddFoodScreen} />
+      <Stack.Screen
+        name="AddFood"
+        component={AddFoodScreen}
+        options={{
+          animation: "slide_from_bottom",
+          presentation: "fullScreenModal",
+        }}
+      />
       <Stack.Screen name="EditFoodEntry" component={EditFoodEntryScreen} />
       <Stack.Screen
         name="CreateCustomFood"

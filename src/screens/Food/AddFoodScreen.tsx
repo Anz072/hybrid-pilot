@@ -9,9 +9,13 @@ import {
   View,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import type { RouteProp } from "@react-navigation/native";
+import type {
+  CompositeNavigationProp,
+  RouteProp,
+} from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { CalendarIcon, ForkKnifeIcon } from "phosphor-react-native";
+import type { RootStackParamList } from "../../navigation/AppNavigator";
 import { DB } from "../../store/DB";
 import type { DBFoodItem, DBUser } from "../../store/DB_TYPES";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
@@ -29,7 +33,10 @@ import {
 } from "./foodUtils";
 
 type AddFoodRoute = RouteProp<FoodStackParamList, "AddFood">;
-type AddFoodNav = NativeStackNavigationProp<FoodStackParamList, "AddFood">;
+type AddFoodNav = CompositeNavigationProp<
+  NativeStackNavigationProp<FoodStackParamList, "AddFood">,
+  NativeStackNavigationProp<RootStackParamList>
+>;
 
 const AddFoodScreen = () => {
   const route = useRoute<AddFoodRoute>();

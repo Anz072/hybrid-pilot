@@ -369,12 +369,6 @@ const WeightScreen = () => {
         )}`
       : "Log your first entry to build a trend";
 
-  const openCreateModal = () => {
-    setEditingEntry(null);
-    setModalMode("create");
-    setModalVisible(true);
-  };
-
   const openEditModal = (entry: DBWeightEntry) => {
     setEditingEntry(entry);
     setModalMode("edit");
@@ -801,21 +795,20 @@ const WeightScreen = () => {
 
   const listHeader = (
     <View style={[styles.content, { paddingTop: insets.top + 16 }]}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Weight Diary</Text>
+        <Pressable
+          onPress={handleSyncPillPress}
+          style={({ pressed }) => [
+            styles.heroSyncButton,
+            pressed && styles.cardPressed,
+          ]}
+          accessibilityLabel="Open sync status"
+        >
+          <ArrowsClockwiseIcon size={18} color="#4B4360" weight="bold" />
+        </Pressable>
+      </View>
       <View style={styles.heroCard}>
-        <View style={styles.heroTopBar}>
-          <Text style={styles.heroTitle}>Weight Trend</Text>
-          <Pressable
-            onPress={handleSyncPillPress}
-            style={({ pressed }) => [
-              styles.heroSyncButton,
-              pressed && styles.cardPressed,
-            ]}
-            accessibilityLabel="Open sync status"
-          >
-            <ArrowsClockwiseIcon size={18} color="#4B4360" weight="bold" />
-          </Pressable>
-        </View>
-
         <View style={styles.heroStatRow}>
           <View style={styles.heroStatBlock}>
             <Text style={styles.heroStatLabel}>Average</Text>
@@ -1361,7 +1354,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 20,
     paddingHorizontal: 6,
-    marginBottom: 18,
+    marginBottom: 16,
   },
   heroTopBar: {
     alignItems: "center",
@@ -1529,10 +1522,16 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     marginBottom: 12,
   },
+  header: {
+    alignItems: "center",
+    marginBottom: 18,
+  },
   title: {
-    display: "flex",
-    justifyContent: "center",
-    fontSize: 20,
+    color: "#181326",
+    fontSize: 32,
+    lineHeight: 38,
+    fontWeight: "900",
+    marginBottom: 6,
   },
   metricUnit: {
     fontSize: 20,

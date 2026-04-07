@@ -10,13 +10,16 @@ import {
   View,
 } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { useNavigation } from "@react-navigation/native";
 import type { NavigatorScreenParams } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import HomeScreen from "../screens/Home/HomeScreen";
 import WeightScreen from "../screens/Weight/WeightScreen";
 import FoodNavigator from "./FoodNavigator";
 import type { FoodStackParamList } from "./foodTypes";
 import MoreNavigator, { type MoreParamList } from "./MoreNavigator";
+import type { RootStackParamList } from "./AppNavigator";
 import {
   BarcodeIcon,
   DotsThreeCircleIcon,
@@ -34,6 +37,11 @@ import WeightEntryModal, {
 } from "../screens/Weight/WeightEntryModal";
 import { generateUuid } from "../screens/Weight/weightUtils";
 import FoodBarcodeScannerModal from "../screens/Food/FoodBarcodeScannerModal";
+import {
+  buildFoodLoggedAt,
+  formatFoodDateKey,
+  formatFoodLoggedTime,
+} from "../screens/Food/foodUtils";
 
 export type MainTabParamList = {
   Home: undefined;
@@ -55,12 +63,15 @@ const ShortcutPlaceholderScreen = () => (
 );
 
 const MainTabNavigator = () => {
+  const rootNavigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList, "Main">>();
   const insets = useSafeAreaInsets();
   const [shortcutsVisible, setShortcutsVisible] = React.useState(false);
   const [weightModalVisible, setWeightModalVisible] = React.useState(false);
   const [barcodeModalScannerVisible, setBarcodeModalScannerVisible] =
     React.useState(false);
   const sheetProgress = React.useRef(new Animated.Value(0)).current;
+  const afterCloseActionRef = React.useRef<null | (() => void)>(null);
 
   const openShortcuts = React.useCallback(() => {
     sheetProgress.setValue(0);
@@ -75,7 +86,8 @@ const MainTabNavigator = () => {
     });
   }, [sheetProgress]);
 
-  const closeShortcuts = React.useCallback(() => {
+  const closeShortcuts = React.useCallback((afterClose?: () => void) => {
+    afterCloseActionRef.current = afterClose ?? null;
     Animated.timing(sheetProgress, {
       toValue: 0,
       duration: 180,
@@ -83,22 +95,44 @@ const MainTabNavigator = () => {
     }).start(({ finished }) => {
       if (finished) {
         setShortcutsVisible(false);
+        const callback = afterCloseActionRef.current;
+        afterCloseActionRef.current = null;
+        callback?.();
       }
     });
   }, [sheetProgress]);
+
+  const handleCloseShortcuts = React.useCallback(() => {
+    closeShortcuts();
+  }, [closeShortcuts]);
 
   const handleShortcutPress = React.useCallback(
     (shortcut: "search" | "barcode" | "weight") => {
       console.log(`[Shortcuts] ${shortcut} pressed`);
       if (shortcut === "weight") {
-        setWeightModalVisible(true);
+        closeShortcuts(() => setWeightModalVisible(true));
       } else if (shortcut === "barcode") {
-        setBarcodeModalScannerVisible(true);
+        closeShortcuts(() => setBarcodeModalScannerVisible(true));
       } else if (shortcut === "search") {
+        const now = new Date();
+        const date = formatFoodDateKey(now);
+        const loggedAt = buildFoodLoggedAt(
+          date,
+          now.getHours(),
+          now.getMinutes(),
+        );
+
+        closeShortcuts(() =>
+          rootNavigation.navigate("AddFood", {
+            contextLabel: formatFoodLoggedTime(loggedAt),
+            date,
+            loggedAt,
+            mealType: null,
+          }),
+        );
       }
-      closeShortcuts();
     },
-    [closeShortcuts],
+    [closeShortcuts, rootNavigation],
   );
 
   const handleShortcutWeightSave = React.useCallback(
@@ -240,37 +274,13 @@ const MainTabNavigator = () => {
             ),
           }}
         />
-        {/* <Tab.Screen
-          name="Debug"
-          component={SettingsScreen}
-          options={{
-            tabBarIcon: ({ focused }) => (
-              <BugDroidIcon
-                size={24}
-                color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
-              />
-            ),
-          }}
-        />
-        <Tab.Screen
-          name="Library"
-          component={FoodLibraryScreen}
-          options={{
-            tabBarIcon: ({ focused }) => (
-              <BooksIcon
-                size={24}
-                color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
-              />
-            ),
-          }} 
-        />*/}
       </Tab.Navigator>
 
       <Modal
         visible={shortcutsVisible}
         transparent
         animationType="none"
-        onRequestClose={closeShortcuts}
+        onRequestClose={handleCloseShortcuts}
       >
         <View style={styles.modalRoot}>
           <Animated.View
@@ -278,7 +288,7 @@ const MainTabNavigator = () => {
           >
             <Pressable
               style={StyleSheet.absoluteFill}
-              onPress={closeShortcuts}
+              onPress={handleCloseShortcuts}
             />
           </Animated.View>
 
@@ -298,7 +308,7 @@ const MainTabNavigator = () => {
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Close shortcuts"
-                onPress={closeShortcuts}
+                onPress={handleCloseShortcuts}
                 style={({ pressed }) => [
                   styles.closeButton,
                   pressed && styles.pressed,
@@ -372,6 +382,7 @@ const MainTabNavigator = () => {
         visible={barcodeModalScannerVisible}
         onClose={() => setBarcodeModalScannerVisible(false)}
       />
+      
     </View>
   );
 };

@@ -29,7 +29,7 @@ const FoodScreenHeader = ({
               pressed && styles.backButtonPressed,
             ]}
           >
-            <ArrowLeftIcon size={16} color="#1F2937" weight="bold" />
+            <ArrowLeftIcon size={16} color="#2F2741" weight="bold" />
             <Text style={styles.backText}>Back</Text>
           </Pressable>
         ) : (
@@ -61,13 +61,13 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: "rgba(255,255,255,0.9)",
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: "#E6DEF1",
   },
   backButtonPressed: {
     opacity: 0.88,
   },
   backText: {
-    color: "#1F2937",
+    color: "#2F2741",
     fontSize: 13,
     fontWeight: "800",
   },
@@ -77,8 +77,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: "#9A3412",
-    backgroundColor: "#FED7AA",
+    color: "#6D52EA",
+    backgroundColor: "#F0EAFB",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
@@ -88,11 +88,11 @@ const styles = StyleSheet.create({
     fontSize: 32,
     lineHeight: 38,
     fontWeight: "900",
-    color: "#111827",
+    color: "#181326",
     marginBottom: 6,
   },
   subtitle: {
-    color: "#6B7280",
+    color: "#7F7791",
     fontSize: 15,
     lineHeight: 22,
   },

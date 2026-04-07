@@ -8,7 +8,7 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/images/cat-1.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -30,8 +30,18 @@
     },
     "plugins": [
       "@react-native-community/datetimepicker",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/cat-1.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff",
+          "imageWidth": 200
+        }
+      ],
       "expo-camera",
-      "expo-font"
+      "expo-font",
+      "expo-sqlite"
     ]
   }
 }

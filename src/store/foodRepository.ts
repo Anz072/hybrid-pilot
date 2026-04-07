@@ -2,6 +2,7 @@ import { getDb, initDb } from "../storage/sqlite";
 import type {
   AddFoodItemInput,
   DBFoodItem,
+  DBFoodNutrientDetails,
   FoodSource,
   ListFoodItemsInput,
   NutritionBasis,
@@ -17,6 +18,78 @@ const FOOD_SOURCES: FoodSource[] = [
 ];
 
 const NUTRITION_BASES: NutritionBasis[] = ["100g", "100ml", "serving"];
+
+const FOOD_NUTRIENT_COLUMNS = [
+  ["fiberG", "fiber_g"],
+  ["sugarG", "sugar_g"],
+  ["addedSugarsG", "added_sugars_g"],
+  ["waterG", "water_g"],
+  ["alcoholG", "alcohol_g"],
+  ["saltG", "salt_g"],
+  ["saturatedFatG", "saturated_fat_g"],
+  ["fatSaturatedG", "fat_saturated_g"],
+  ["fatMonounsaturatedG", "fat_monounsaturated_g"],
+  ["fatPolyunsaturatedG", "fat_polyunsaturated_g"],
+  ["fatTransG", "fat_trans_g"],
+  ["omega3G", "omega3_g"],
+  ["omega6G", "omega6_g"],
+  ["epaG", "epa_g"],
+  ["dhaG", "dha_g"],
+  ["alaG", "ala_g"],
+  ["linoleicAcidG", "linoleic_acid_g"],
+  ["alphaLinolenicAcidG", "alpha_linolenic_acid_g"],
+  ["cholesterolMg", "cholesterol_mg"],
+  ["vitaminAUg", "vitamin_a_ug"],
+  ["vitaminCMg", "vitamin_c_mg"],
+  ["vitaminDUg", "vitamin_d_ug"],
+  ["vitaminEMg", "vitamin_e_mg"],
+  ["vitaminKUg", "vitamin_k_ug"],
+  ["vitaminK1Ug", "vitamin_k1_ug"],
+  ["vitaminK2Ug", "vitamin_k2_ug"],
+  ["thiaminB1Mg", "thiamin_b1_mg"],
+  ["riboflavinB2Mg", "riboflavin_b2_mg"],
+  ["niacinB3Mg", "niacin_b3_mg"],
+  ["pantothenicAcidB5Mg", "pantothenic_acid_b5_mg"],
+  ["vitaminB6Mg", "vitamin_b6_mg"],
+  ["biotinB7Ug", "biotin_b7_ug"],
+  ["folateB9Ug", "folate_b9_ug"],
+  ["vitaminB12Ug", "vitamin_b12_ug"],
+  ["cholineMg", "choline_mg"],
+  ["calciumMg", "calcium_mg"],
+  ["ironMg", "iron_mg"],
+  ["magnesiumMg", "magnesium_mg"],
+  ["phosphorusMg", "phosphorus_mg"],
+  ["potassiumMg", "potassium_mg"],
+  ["sodiumMg", "sodium_mg"],
+  ["zincMg", "zinc_mg"],
+  ["copperMg", "copper_mg"],
+  ["manganeseMg", "manganese_mg"],
+  ["seleniumUg", "selenium_ug"],
+  ["iodineUg", "iodine_ug"],
+  ["chromiumUg", "chromium_ug"],
+  ["molybdenumUg", "molybdenum_ug"],
+  ["histidineG", "histidine_g"],
+  ["isoleucineG", "isoleucine_g"],
+  ["leucineG", "leucine_g"],
+  ["lysineG", "lysine_g"],
+  ["methionineG", "methionine_g"],
+  ["phenylalanineG", "phenylalanine_g"],
+  ["threonineG", "threonine_g"],
+  ["tryptophanG", "tryptophan_g"],
+  ["valineG", "valine_g"],
+  ["alanineG", "alanine_g"],
+  ["arginineG", "arginine_g"],
+  ["asparticAcidG", "aspartic_acid_g"],
+  ["cysteineG", "cysteine_g"],
+  ["glutamicAcidG", "glutamic_acid_g"],
+  ["glycineG", "glycine_g"],
+  ["prolineG", "proline_g"],
+  ["serineG", "serine_g"],
+  ["tyrosineG", "tyrosine_g"],
+  ["caffeineMg", "caffeine_mg"],
+  ["betaineMg", "betaine_mg"],
+  ["luteinZeaxanthinUg", "lutein_zeaxanthin_ug"],
+] as const satisfies ReadonlyArray<readonly [keyof DBFoodNutrientDetails, string]>;
 
 const normalizeOptionalText = (value?: string | null): string | null => {
   const normalized = value?.trim();
@@ -72,6 +145,9 @@ const getResolvedServing = (
 
 const getFoodItemSelect = (alias?: string) => {
   const prefix = alias ? `${alias}.` : "";
+  const nutrientSelect = FOOD_NUTRIENT_COLUMNS.map(
+    ([property, column]) => `${prefix}${column} AS ${property}`,
+  ).join(",\n    ");
 
   return `
     ${prefix}id AS id,
@@ -90,17 +166,25 @@ const getFoodItemSelect = (alias?: string) => {
     ${prefix}protein_g AS proteinG,
     ${prefix}carbs_g AS carbsG,
     ${prefix}fat_g AS fatG,
-    ${prefix}fiber_g AS fiberG,
-    ${prefix}sugar_g AS sugarG,
-    ${prefix}salt_g AS saltG,
-    ${prefix}saturated_fat_g AS saturatedFatG,
+    ${nutrientSelect},
     ${prefix}ingredients_text AS ingredientsText,
+    ${prefix}raw_payload AS rawPayload,
     ${prefix}verified AS verified,
     ${prefix}is_complete AS isComplete,
     ${prefix}created_at AS createdAt,
     COALESCE(${prefix}updated_at, ${prefix}created_at) AS updatedAt
   `;
 };
+
+const toFoodNutrientDetails = (
+  row: Record<string, unknown>,
+): DBFoodNutrientDetails =>
+  Object.fromEntries(
+    FOOD_NUTRIENT_COLUMNS.map(([property]) => [
+      property,
+      parseNullableNumber(row[property]),
+    ]),
+  ) as DBFoodNutrientDetails;
 
 const toFoodItem = (row: Record<string, unknown>): DBFoodItem => ({
   id: Number(row.id),
@@ -131,12 +215,12 @@ const toFoodItem = (row: Record<string, unknown>): DBFoodItem => ({
   proteinG: parseNullableNumber(row.proteinG),
   carbsG: parseNullableNumber(row.carbsG),
   fatG: parseNullableNumber(row.fatG),
-  fiberG: parseNullableNumber(row.fiberG),
-  sugarG: parseNullableNumber(row.sugarG),
-  saltG: parseNullableNumber(row.saltG),
-  saturatedFatG: parseNullableNumber(row.saturatedFatG),
+  ...toFoodNutrientDetails(row),
   ingredientsText: normalizeOptionalText(
     typeof row.ingredientsText === "string" ? row.ingredientsText : null,
+  ),
+  rawPayload: normalizeOptionalText(
+    typeof row.rawPayload === "string" ? row.rawPayload : null,
   ),
   verified: row.verified === true || row.verified === 1 || row.verified === "1",
   isComplete:
@@ -245,10 +329,7 @@ const validateFoodItemInput = (input: SaveFoodItemInput) => {
     input.proteinG,
     input.carbsG,
     input.fatG,
-    input.fiberG,
-    input.sugarG,
-    input.saltG,
-    input.saturatedFatG,
+    ...FOOD_NUTRIENT_COLUMNS.map(([property]) => input[property]),
   ];
 
   if (
@@ -272,6 +353,30 @@ export const saveFoodItem = async (
   const now = new Date().toISOString();
   const existingId = await findExistingFoodItemId(db, input);
   const resolvedServing = getResolvedServing(input);
+  const saveColumns = [
+    "source",
+    "source_id",
+    "barcode",
+    "name",
+    "brand_name",
+    "image_url",
+    "quantity_value",
+    "quantity_unit",
+    "serving_size_value",
+    "serving_size_unit",
+    "nutrition_basis",
+    "calories",
+    "protein_g",
+    "carbs_g",
+    "fat_g",
+    ...FOOD_NUTRIENT_COLUMNS.map(([, column]) => column),
+    "ingredients_text",
+    "raw_payload",
+    "verified",
+    "is_complete",
+    "serving_size",
+    "serving_unit",
+  ];
 
   const values = [
     input.source,
@@ -289,11 +394,9 @@ export const saveFoodItem = async (
     input.proteinG ?? null,
     input.carbsG ?? null,
     input.fatG ?? null,
-    input.fiberG ?? null,
-    input.sugarG ?? null,
-    input.saltG ?? null,
-    input.saturatedFatG ?? null,
+    ...FOOD_NUTRIENT_COLUMNS.map(([property]) => input[property] ?? null),
     normalizeOptionalText(input.ingredientsText),
+    normalizeOptionalText(input.rawPayload),
     input.verified ? 1 : 0,
     input.isComplete ? 1 : 0,
     resolvedServing.value,
@@ -301,34 +404,15 @@ export const saveFoodItem = async (
   ] as const;
 
   if (existingId != null) {
+    const assignments = saveColumns
+      .map((column) => `${column} = ?`)
+      .join(",\n        ");
+
     await db.runAsync(
       `
       UPDATE food_items
       SET
-        source = ?,
-        source_id = ?,
-        barcode = ?,
-        name = ?,
-        brand_name = ?,
-        image_url = ?,
-        quantity_value = ?,
-        quantity_unit = ?,
-        serving_size_value = ?,
-        serving_size_unit = ?,
-        nutrition_basis = ?,
-        calories = ?,
-        protein_g = ?,
-        carbs_g = ?,
-        fat_g = ?,
-        fiber_g = ?,
-        sugar_g = ?,
-        salt_g = ?,
-        saturated_fat_g = ?,
-        ingredients_text = ?,
-        verified = ?,
-        is_complete = ?,
-        serving_size = ?,
-        serving_unit = ?,
+        ${assignments},
         updated_at = ?
       WHERE id = ?
       `,
@@ -340,37 +424,17 @@ export const saveFoodItem = async (
     return existingId;
   }
 
+  const insertColumns = saveColumns.join(",\n      ");
+  const placeholders = saveColumns.map(() => "?").join(", ");
+
   const result = await db.runAsync(
     `
     INSERT INTO food_items (
-      source,
-      source_id,
-      barcode,
-      name,
-      brand_name,
-      image_url,
-      quantity_value,
-      quantity_unit,
-      serving_size_value,
-      serving_size_unit,
-      nutrition_basis,
-      calories,
-      protein_g,
-      carbs_g,
-      fat_g,
-      fiber_g,
-      sugar_g,
-      salt_g,
-      saturated_fat_g,
-      ingredients_text,
-      verified,
-      is_complete,
-      serving_size,
-      serving_unit,
+      ${insertColumns},
       created_at,
       updated_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (${placeholders}, ?, ?)
     `,
     ...values,
     now,

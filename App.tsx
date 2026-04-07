@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import { View } from "react-native";
 import { Provider } from "react-redux";
 import {
   Inter_100Thin,
@@ -22,14 +23,21 @@ import {
   useFonts,
 } from "@expo-google-fonts/inter";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import * as SplashScreen from "expo-splash-screen";
+
 import AppNavigator from "./src/navigation/AppNavigator";
 import { store } from "./src/store/appStore";
 import { applyInterFontDefaults } from "./src/theme/applyInterFontDefaults";
+import { SpriteAnimator } from "./src/splash/spriteAnimator";
 
 applyInterFontDefaults();
 
+SplashScreen.preventAutoHideAsync();
+
 export default function App() {
-  const [fontsLoaded] = useFonts({
+  const [showAnimatedSplash, setShowAnimatedSplash] = useState(true);
+
+  const [fontsLoaded, fontError] = useFonts({
     Inter_100Thin,
     Inter_100Thin_Italic,
     Inter_200ExtraLight,
@@ -49,13 +57,60 @@ export default function App() {
     Inter_900Black,
     Inter_900Black_Italic,
   });
+  const appReady = fontsLoaded || Boolean(fontError);
 
-  if (!fontsLoaded) {
+  useEffect(() => {
+    if (!appReady) return;
+
+    if (fontError) {
+      console.error("[App] Font loading failed", fontError);
+    }
+
+    const timer = setTimeout(() => {
+      setShowAnimatedSplash(false);
+    }, 1600);
+
+    return () => clearTimeout(timer);
+  }, [appReady, fontError]);
+
+  const onLayoutRootView = useCallback(async () => {
+    if (appReady) {
+      await SplashScreen.hideAsync();
+    }
+  }, [appReady]);
+
+  if (!appReady) {
     return null;
   }
 
+  if (showAnimatedSplash) {
+    return (
+      <View
+        style={{ flex: 1, backgroundColor: "#ffffff" }}
+        onLayout={onLayoutRootView}
+      >
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <SpriteAnimator
+            frames={[
+              require("./assets/images/cat-1.png"),
+              require("./assets/images/cat-2.png"),
+            ]}
+            durations={[260, 140]}
+            style={{ width: 160, height: 160 }}
+          />
+        </View>
+      </View>
+    );
+  }
+
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
       <Provider store={store}>
         <AppNavigator />
       </Provider>

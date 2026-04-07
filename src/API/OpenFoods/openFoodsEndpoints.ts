@@ -2,6 +2,8 @@ import type { AxiosInstance } from "axios";
 import { baseApi } from "../axios.client";
 import type { SaveFoodItemInput } from "../../store/DB_TYPES";
 
+type NutrientTargetUnit = "g" | "mg" | "ug" | "kcal";
+
 class OpenFoodsAPI {
   openFoodFactsApi: AxiosInstance;
   fields: string[];
@@ -90,6 +92,7 @@ class OpenFoodsAPI {
         : nutritionBasis === "100ml"
           ? "_100g"
           : "_100g";
+    const nutrientDetails = this.getFoodNutrientDetails(nutriments, suffix);
 
     return {
       source: "open_food_facts",
@@ -108,36 +111,21 @@ class OpenFoodsAPI {
       servingSizeUnit,
       nutritionBasis,
       calories:
-        this.firstFinite(
-          nutriments[`energy-kcal${suffix}`],
-          nutriments["energy-kcal"],
-          nutriments["energy"],
-        ) ?? 0,
-      proteinG:
-        this.firstFinite(
-          nutriments[`proteins${suffix}`],
-          nutriments.proteins,
-        ) ?? 0,
+        this.readNutrient(nutriments, suffix, "kcal", "energy-kcal", "energy") ??
+        0,
+      proteinG: this.readNutrient(nutriments, suffix, "g", "proteins") ?? 0,
       carbsG:
-        this.firstFinite(
-          nutriments[`carbohydrates${suffix}`],
-          nutriments.carbohydrates,
-        ) ?? 0,
-      fatG: this.firstFinite(nutriments[`fat${suffix}`], nutriments.fat) ?? 0,
-      fiberG:
-        this.firstFinite(nutriments[`fiber${suffix}`], nutriments.fiber) ??
-        null,
-      sugarG:
-        this.firstFinite(nutriments[`sugars${suffix}`], nutriments.sugars) ??
-        null,
-      saltG:
-        this.firstFinite(nutriments[`salt${suffix}`], nutriments.salt) ?? null,
-      saturatedFatG:
-        this.firstFinite(
-          nutriments[`saturated-fat${suffix}`],
-          nutriments["saturated-fat"],
-        ) ?? null,
+        this.readNutrient(nutriments, suffix, "g", "carbohydrates") ?? 0,
+      fatG: this.readNutrient(nutriments, suffix, "g", "fat") ?? 0,
+      ...nutrientDetails,
       ingredientsText: this.normalizeText(product?.ingredients_text),
+      rawPayload: this.stringifyRawPayload({
+        nutriments,
+        nutrition_data_per: product?.nutrition_data_per ?? null,
+        product_quantity: product?.product_quantity ?? null,
+        product_quantity_unit: product?.product_quantity_unit ?? null,
+        quantity: product?.quantity ?? null,
+      }),
       verified: true,
       isComplete: true,
     };
@@ -217,6 +205,268 @@ class OpenFoodsAPI {
     }
 
     return null;
+  };
+
+  private getFoodNutrientDetails = (
+    nutriments: Record<string, unknown>,
+    suffix: string,
+  ) => {
+    const fatSaturatedG = this.readNutrient(
+      nutriments,
+      suffix,
+      "g",
+      "saturated-fat",
+    );
+    const alphaLinolenicAcidG = this.readNutrient(
+      nutriments,
+      suffix,
+      "g",
+      "alpha-linolenic-acid",
+      "ala",
+    );
+
+    return {
+      fiberG: this.readNutrient(nutriments, suffix, "g", "fiber"),
+      sugarG: this.readNutrient(nutriments, suffix, "g", "sugars"),
+      addedSugarsG: this.readNutrient(nutriments, suffix, "g", "added-sugars"),
+      waterG: this.readNutrient(nutriments, suffix, "g", "water"),
+      alcoholG: this.readNutrient(nutriments, suffix, "g", "alcohol"),
+      saltG: this.readNutrient(nutriments, suffix, "g", "salt"),
+      saturatedFatG: fatSaturatedG,
+      fatSaturatedG,
+      fatMonounsaturatedG: this.readNutrient(
+        nutriments,
+        suffix,
+        "g",
+        "monounsaturated-fat",
+      ),
+      fatPolyunsaturatedG: this.readNutrient(
+        nutriments,
+        suffix,
+        "g",
+        "polyunsaturated-fat",
+      ),
+      fatTransG: this.readNutrient(nutriments, suffix, "g", "trans-fat"),
+      omega3G: this.readNutrient(nutriments, suffix, "g", "omega-3-fat"),
+      omega6G: this.readNutrient(nutriments, suffix, "g", "omega-6-fat"),
+      epaG: this.readNutrient(
+        nutriments,
+        suffix,
+        "g",
+        "eicosapentaenoic-acid",
+        "epa",
+      ),
+      dhaG: this.readNutrient(
+        nutriments,
+        suffix,
+        "g",
+        "docosahexaenoic-acid",
+        "dha",
+      ),
+      alaG: alphaLinolenicAcidG,
+      linoleicAcidG: this.readNutrient(
+        nutriments,
+        suffix,
+        "g",
+        "linoleic-acid",
+      ),
+      alphaLinolenicAcidG,
+      cholesterolMg: this.readNutrient(nutriments, suffix, "mg", "cholesterol"),
+      vitaminAUg: this.readNutrient(nutriments, suffix, "ug", "vitamin-a"),
+      vitaminCMg: this.readNutrient(nutriments, suffix, "mg", "vitamin-c"),
+      vitaminDUg: this.readNutrient(nutriments, suffix, "ug", "vitamin-d"),
+      vitaminEMg: this.readNutrient(nutriments, suffix, "mg", "vitamin-e"),
+      vitaminKUg: this.readNutrient(nutriments, suffix, "ug", "vitamin-k"),
+      vitaminK1Ug: this.readNutrient(nutriments, suffix, "ug", "vitamin-k1"),
+      vitaminK2Ug: this.readNutrient(nutriments, suffix, "ug", "vitamin-k2"),
+      thiaminB1Mg: this.readNutrient(
+        nutriments,
+        suffix,
+        "mg",
+        "vitamin-b1",
+        "thiamin",
+        "thiamine",
+      ),
+      riboflavinB2Mg: this.readNutrient(
+        nutriments,
+        suffix,
+        "mg",
+        "vitamin-b2",
+        "riboflavin",
+      ),
+      niacinB3Mg: this.readNutrient(
+        nutriments,
+        suffix,
+        "mg",
+        "vitamin-pp",
+        "vitamin-b3",
+        "niacin",
+      ),
+      pantothenicAcidB5Mg: this.readNutrient(
+        nutriments,
+        suffix,
+        "mg",
+        "pantothenic-acid",
+        "vitamin-b5",
+      ),
+      vitaminB6Mg: this.readNutrient(nutriments, suffix, "mg", "vitamin-b6"),
+      biotinB7Ug: this.readNutrient(
+        nutriments,
+        suffix,
+        "ug",
+        "biotin",
+        "vitamin-b7",
+      ),
+      folateB9Ug: this.readNutrient(
+        nutriments,
+        suffix,
+        "ug",
+        "folates",
+        "folate",
+        "vitamin-b9",
+      ),
+      vitaminB12Ug: this.readNutrient(nutriments, suffix, "ug", "vitamin-b12"),
+      cholineMg: this.readNutrient(nutriments, suffix, "mg", "choline"),
+      calciumMg: this.readNutrient(nutriments, suffix, "mg", "calcium"),
+      ironMg: this.readNutrient(nutriments, suffix, "mg", "iron"),
+      magnesiumMg: this.readNutrient(nutriments, suffix, "mg", "magnesium"),
+      phosphorusMg: this.readNutrient(nutriments, suffix, "mg", "phosphorus"),
+      potassiumMg: this.readNutrient(nutriments, suffix, "mg", "potassium"),
+      sodiumMg: this.readNutrient(nutriments, suffix, "mg", "sodium"),
+      zincMg: this.readNutrient(nutriments, suffix, "mg", "zinc"),
+      copperMg: this.readNutrient(nutriments, suffix, "mg", "copper"),
+      manganeseMg: this.readNutrient(nutriments, suffix, "mg", "manganese"),
+      seleniumUg: this.readNutrient(nutriments, suffix, "ug", "selenium"),
+      iodineUg: this.readNutrient(nutriments, suffix, "ug", "iodine"),
+      chromiumUg: this.readNutrient(nutriments, suffix, "ug", "chromium"),
+      molybdenumUg: this.readNutrient(nutriments, suffix, "ug", "molybdenum"),
+      histidineG: this.readNutrient(nutriments, suffix, "g", "histidine"),
+      isoleucineG: this.readNutrient(nutriments, suffix, "g", "isoleucine"),
+      leucineG: this.readNutrient(nutriments, suffix, "g", "leucine"),
+      lysineG: this.readNutrient(nutriments, suffix, "g", "lysine"),
+      methionineG: this.readNutrient(nutriments, suffix, "g", "methionine"),
+      phenylalanineG: this.readNutrient(
+        nutriments,
+        suffix,
+        "g",
+        "phenylalanine",
+      ),
+      threonineG: this.readNutrient(nutriments, suffix, "g", "threonine"),
+      tryptophanG: this.readNutrient(nutriments, suffix, "g", "tryptophan"),
+      valineG: this.readNutrient(nutriments, suffix, "g", "valine"),
+      alanineG: this.readNutrient(nutriments, suffix, "g", "alanine"),
+      arginineG: this.readNutrient(nutriments, suffix, "g", "arginine"),
+      asparticAcidG: this.readNutrient(
+        nutriments,
+        suffix,
+        "g",
+        "aspartic-acid",
+      ),
+      cysteineG: this.readNutrient(
+        nutriments,
+        suffix,
+        "g",
+        "cysteine",
+        "cystine",
+      ),
+      glutamicAcidG: this.readNutrient(
+        nutriments,
+        suffix,
+        "g",
+        "glutamic-acid",
+      ),
+      glycineG: this.readNutrient(nutriments, suffix, "g", "glycine"),
+      prolineG: this.readNutrient(nutriments, suffix, "g", "proline"),
+      serineG: this.readNutrient(nutriments, suffix, "g", "serine"),
+      tyrosineG: this.readNutrient(nutriments, suffix, "g", "tyrosine"),
+      caffeineMg: this.readNutrient(nutriments, suffix, "mg", "caffeine"),
+      betaineMg: this.readNutrient(nutriments, suffix, "mg", "betaine"),
+      luteinZeaxanthinUg: this.readNutrient(
+        nutriments,
+        suffix,
+        "ug",
+        "lutein-zeaxanthin",
+      ),
+    };
+  };
+
+  private readNutrient = (
+    nutriments: Record<string, unknown>,
+    suffix: string,
+    targetUnit: NutrientTargetUnit,
+    ...keys: string[]
+  ): number | null => {
+    for (const key of keys) {
+      const numeric = this.firstFinite(
+        nutriments[`${key}${suffix}`],
+        suffix === "_100g" ? null : nutriments[`${key}_100g`],
+        nutriments[key],
+      );
+
+      if (numeric == null) {
+        continue;
+      }
+
+      return this.convertNutrientUnit(
+        numeric,
+        this.normalizeText(nutriments[`${key}_unit`]),
+        targetUnit,
+      );
+    }
+
+    return null;
+  };
+
+  private convertNutrientUnit = (
+    value: number,
+    sourceUnit: string | null,
+    targetUnit: NutrientTargetUnit,
+  ): number => {
+    const normalizedSourceUnit = sourceUnit
+      ?.trim()
+      .toLowerCase()
+      .replace(/\u00b5|\u03bc/g, "u");
+
+    if (!normalizedSourceUnit || normalizedSourceUnit === targetUnit) {
+      return value;
+    }
+
+    if (targetUnit === "kcal") {
+      return normalizedSourceUnit === "kj" ? value / 4.184 : value;
+    }
+
+    const grams =
+      normalizedSourceUnit === "g"
+        ? value
+        : normalizedSourceUnit === "mg"
+          ? value / 1000
+          : normalizedSourceUnit === "ug" ||
+              normalizedSourceUnit === "mcg" ||
+              normalizedSourceUnit === "microgram"
+            ? value / 1000000
+            : null;
+
+    if (grams == null) {
+      return value;
+    }
+
+    if (targetUnit === "g") {
+      return grams;
+    }
+
+    if (targetUnit === "mg") {
+      return grams * 1000;
+    }
+
+    return grams * 1000000;
+  };
+
+  private stringifyRawPayload = (payload: unknown): string | null => {
+    try {
+      return JSON.stringify(payload);
+    } catch {
+      return null;
+    }
   };
 
   private parseNutritionQuantity = (

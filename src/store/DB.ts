@@ -10,6 +10,7 @@ import {
   softDeleteWeightEntry,
 } from "./weightRepository";
 import { getFirstUser, upsertUser } from "./userRepository";
+import { getUserSettings, saveUserSettings } from "./userSettingsRepository";
 import {
   addFoodItem,
   deleteFoodItem,
@@ -38,6 +39,8 @@ import {
 export const DB = {
   addUser: upsertUser,
   getUser: getFirstUser,
+  getUserSettings,
+  saveUserSettings,
   addWeightLog,
   getRecentWeightLogs,
   listWeightEntries,

@@ -24,6 +24,20 @@ export type DBUser = {
 
 export type UpsertUserInput = DBUser;
 
+export type DBUserSettings = {
+  userExternalId: string;
+  foodDiaryStartHour: number;
+  foodDiaryEndHour: number;
+  createdAt: DBIsoDateString;
+  updatedAt: DBIsoDateString;
+};
+
+export type SaveUserSettingsInput = {
+  userExternalId: string;
+  foodDiaryStartHour: number;
+  foodDiaryEndHour: number;
+};
+
 export type DBWeightLog = {
   id: number;
   userExternalId: string;
@@ -112,7 +126,79 @@ export type FoodSource = "custom" | "manual" | "open_food_facts" | "import" | "u
 
 export type NutritionBasis = "100g" | "100ml" | "serving";
 
-export type DBFoodItem = {
+export type DBFoodNutrientDetails = {
+  fiberG: number | null;
+  sugarG: number | null;
+  addedSugarsG: number | null;
+  waterG: number | null;
+  alcoholG: number | null;
+  saltG: number | null;
+  saturatedFatG: number | null;
+  fatSaturatedG: number | null;
+  fatMonounsaturatedG: number | null;
+  fatPolyunsaturatedG: number | null;
+  fatTransG: number | null;
+  omega3G: number | null;
+  omega6G: number | null;
+  epaG: number | null;
+  dhaG: number | null;
+  alaG: number | null;
+  linoleicAcidG: number | null;
+  alphaLinolenicAcidG: number | null;
+  cholesterolMg: number | null;
+  vitaminAUg: number | null;
+  vitaminCMg: number | null;
+  vitaminDUg: number | null;
+  vitaminEMg: number | null;
+  vitaminKUg: number | null;
+  vitaminK1Ug: number | null;
+  vitaminK2Ug: number | null;
+  thiaminB1Mg: number | null;
+  riboflavinB2Mg: number | null;
+  niacinB3Mg: number | null;
+  pantothenicAcidB5Mg: number | null;
+  vitaminB6Mg: number | null;
+  biotinB7Ug: number | null;
+  folateB9Ug: number | null;
+  vitaminB12Ug: number | null;
+  cholineMg: number | null;
+  calciumMg: number | null;
+  ironMg: number | null;
+  magnesiumMg: number | null;
+  phosphorusMg: number | null;
+  potassiumMg: number | null;
+  sodiumMg: number | null;
+  zincMg: number | null;
+  copperMg: number | null;
+  manganeseMg: number | null;
+  seleniumUg: number | null;
+  iodineUg: number | null;
+  chromiumUg: number | null;
+  molybdenumUg: number | null;
+  histidineG: number | null;
+  isoleucineG: number | null;
+  leucineG: number | null;
+  lysineG: number | null;
+  methionineG: number | null;
+  phenylalanineG: number | null;
+  threonineG: number | null;
+  tryptophanG: number | null;
+  valineG: number | null;
+  alanineG: number | null;
+  arginineG: number | null;
+  asparticAcidG: number | null;
+  cysteineG: number | null;
+  glutamicAcidG: number | null;
+  glycineG: number | null;
+  prolineG: number | null;
+  serineG: number | null;
+  tyrosineG: number | null;
+  caffeineMg: number | null;
+  betaineMg: number | null;
+  luteinZeaxanthinUg: number | null;
+};
+
+export type DBFoodItem = DBFoodNutrientDetails & {
   id: number;
 
   // identity
@@ -134,12 +220,9 @@ export type DBFoodItem = {
   proteinG: number | null;
   carbsG: number | null;
   fatG: number | null;
-  fiberG: number | null;
-  sugarG: number | null;
-  saltG: number | null;
-  saturatedFatG: number | null;
   // metadata
   ingredientsText: string | null;
+  rawPayload: string | null;
   verified: boolean; //  true for imported official-ish source, false for manual
   isComplete: boolean;
   createdAt: DBIsoDateString;
@@ -148,10 +231,15 @@ export type DBFoodItem = {
 
 export type SaveFoodItemInput = Omit<
   DBFoodItem,
-  "id" | "createdAt" | "updatedAt"
+  | "id"
+  | "createdAt"
+  | "updatedAt"
+  | "rawPayload"
+  | keyof DBFoodNutrientDetails
 > & {
   id?: number;
-};
+  rawPayload?: string | null;
+} & Partial<DBFoodNutrientDetails>;
 
 export type AddFoodItemInput = SaveFoodItemInput;
 

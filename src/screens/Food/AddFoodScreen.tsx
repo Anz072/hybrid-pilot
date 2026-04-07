@@ -14,7 +14,12 @@ import type {
   RouteProp,
 } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { CalendarIcon, ForkKnifeIcon } from "phosphor-react-native";
+import {
+  BarcodeIcon,
+  CalendarIcon,
+  ForkKnifeIcon,
+  MagnifyingGlassIcon,
+} from "phosphor-react-native";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import { DB } from "../../store/DB";
 import type { DBFoodItem, DBUser } from "../../store/DB_TYPES";
@@ -177,7 +182,9 @@ const AddFoodScreen = () => {
             </View>
           ) : null}
         </View>
-        <Text style={styles.foodName}>{food.name}</Text>
+        <Text style={styles.foodName} numberOfLines={2}>
+          {food.name}
+        </Text>
         <Text style={styles.foodMeta}>
           {formatFoodItemServing(food)} serving •{" "}
           {formatFoodNumber(food.calories, " kcal")}
@@ -222,8 +229,17 @@ const AddFoodScreen = () => {
     emptyText: string,
   ) => (
     <View style={styles.sectionCard}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <Text style={styles.sectionSubtitle}>{subtitle}</Text>
+      <View style={styles.sectionHeaderRow}>
+        <View style={styles.sectionHeaderCopy}>
+          <Text style={styles.sectionTitle}>{title}</Text>
+          <Text style={styles.sectionSubtitle}>{subtitle}</Text>
+        </View>
+        {items.length > 0 ? (
+          <View style={styles.countPill}>
+            <Text style={styles.countPillText}>{items.length}</Text>
+          </View>
+        ) : null}
+      </View>
       <View style={styles.sectionStack}>
         {items.length === 0 ? (
           <Text style={styles.emptyText}>{emptyText}</Text>
@@ -254,11 +270,11 @@ const AddFoodScreen = () => {
         <View style={styles.heroCard}>
           <View style={styles.contextRow}>
             <View style={styles.contextPill}>
-              <ForkKnifeIcon size={14} color="#9A3412" weight="fill" />
+              <ForkKnifeIcon size={14} color="#6D52EA" weight="fill" />
               <Text style={styles.contextPillText}>{resolvedContextLabel}</Text>
             </View>
             <View style={styles.contextPill}>
-              <CalendarIcon size={14} color="#9A3412" weight="bold" />
+              <CalendarIcon size={14} color="#6D52EA" weight="bold" />
               <Text style={styles.contextPillText}>{formatFoodShortDate(date)}</Text>
             </View>
             {mealType ? (
@@ -274,13 +290,16 @@ const AddFoodScreen = () => {
             quick debug read.
           </Text>
           <View style={styles.searchRow}>
-            <TextInput
-              placeholder="Search foods"
-              placeholderTextColor="#9CA3AF"
-              value={query}
-              onChangeText={setQuery}
-              style={styles.searchInput}
-            />
+            <View style={styles.searchInputWrap}>
+              <MagnifyingGlassIcon size={18} color="#8A809F" weight="bold" />
+              <TextInput
+                placeholder="Search foods"
+                placeholderTextColor="#8A809F"
+                value={query}
+                onChangeText={setQuery}
+                style={styles.searchInput}
+              />
+            </View>
             <Pressable
               onPress={() => setScannerVisible(true)}
               style={({ pressed }) => [
@@ -288,8 +307,8 @@ const AddFoodScreen = () => {
                 pressed && styles.cardPressed,
               ]}
             >
-              <Text style={styles.scanButtonEyebrow}>Barcode</Text>
-              <Text style={styles.scanButtonText}>SCAN</Text>
+              <BarcodeIcon size={20} color="#FFFFFF" weight="bold" />
+              <Text style={styles.scanButtonText}>Scan</Text>
             </Pressable>
           </View>
         </View>
@@ -352,37 +371,34 @@ const AddFoodScreen = () => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#FFF7ED",
+    backgroundColor: "#F7F4FB",
   },
   content: {
-    paddingHorizontal: 20,
-    paddingBottom: 28,
+    paddingHorizontal: 18,
+    paddingBottom: 36,
   },
   bgOrbTop: {
     position: "absolute",
-    top: -72,
-    right: -56,
-    width: 220,
-    height: 220,
-    borderRadius: 999,
-    backgroundColor: "#FFEDD5",
-  },
-  bgOrbBottom: {
-    position: "absolute",
-    bottom: -90,
-    left: -70,
+    top: -90,
+    right: -70,
     width: 250,
     height: 250,
     borderRadius: 999,
-    backgroundColor: "#FDE68A",
-    opacity: 0.28,
+    backgroundColor: "#E4D9FF",
+  },
+  bgOrbBottom: {
+    position: "absolute",
+    bottom: -120,
+    left: -90,
+    width: 280,
+    height: 280,
+    borderRadius: 999,
+    backgroundColor: "#EEE7FF",
   },
   heroCard: {
-    backgroundColor: "rgba(255,255,255,0.92)",
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: "#FED7AA",
-    padding: 18,
+    backgroundColor: "rgba(255,255,255,0.96)",
+    borderRadius: 8,
+    padding: 16,
     marginBottom: 16,
   },
   contextRow: {
@@ -395,26 +411,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#FFF7ED",
+    backgroundColor: "#F3EEFC",
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: "#FDBA74",
+    borderColor: "#E6DEF1",
   },
   contextPillText: {
-    color: "#9A3412",
+    color: "#6D52EA",
     fontSize: 12,
     fontWeight: "800",
   },
   heroTitle: {
-    color: "#111827",
+    color: "#1B1529",
     fontSize: 24,
     fontWeight: "900",
     marginBottom: 8,
   },
   heroText: {
-    color: "#6B7280",
+    color: "#7F7791",
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 14,
@@ -424,109 +440,89 @@ const styles = StyleSheet.create({
     alignItems: "stretch",
     gap: 10,
   },
+  searchInputWrap: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#E6DEF1",
+    borderRadius: 16,
+    backgroundColor: "#FBF9FF",
+    paddingLeft: 14,
+    paddingRight: 8,
+  },
   searchInput: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: "#FCD34D",
-    borderRadius: 16,
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 14,
     paddingVertical: 14,
-    color: "#111827",
+    color: "#1B1529",
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   scanButton: {
-    minWidth: 96,
-    borderRadius: 18,
-    backgroundColor: "#111827",
+    minWidth: 88,
+    flexDirection: "row",
+    gap: 6,
+    borderRadius: 16,
+    backgroundColor: "#1F1831",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 12,
-  },
-  scanButtonEyebrow: {
-    color: "#FDBA74",
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-    marginBottom: 3,
   },
   scanButtonText: {
     color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "900",
-    letterSpacing: 0.4,
-  },
-  libraryButton: {
-    marginTop: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    borderRadius: 18,
-    backgroundColor: "#111827",
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-  },
-  libraryButtonCopy: {
-    flex: 1,
-  },
-  libraryButtonEyebrow: {
-    color: "#FDE68A",
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-    marginBottom: 4,
-  },
-  libraryButtonTitle: {
-    color: "#FFFFFF",
-    fontSize: 17,
-    fontWeight: "900",
-    marginBottom: 4,
-  },
-  libraryButtonText: {
-    color: "#CBD5E1",
     fontSize: 13,
-    lineHeight: 18,
-  },
-  libraryButtonPill: {
-    borderRadius: 999,
-    backgroundColor: "#EA580C",
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-  },
-  libraryButtonPillText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "900",
+    letterSpacing: 0.2,
   },
   sectionCard: {
-    backgroundColor: "rgba(255,255,255,0.94)",
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
+    backgroundColor: "rgba(255,255,255,0.96)",
+    borderRadius: 8,
     padding: 16,
     marginBottom: 16,
   },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 12,
+  },
+  sectionHeaderCopy: {
+    flex: 1,
+  },
   sectionTitle: {
-    color: "#111827",
-    fontSize: 18,
+    color: "#1B1529",
+    fontSize: 22,
     fontWeight: "900",
     marginBottom: 4,
   },
   sectionSubtitle: {
-    color: "#6B7280",
+    color: "#7F7791",
     fontSize: 14,
     lineHeight: 20,
-    marginBottom: 12,
+  },
+  countPill: {
+    minWidth: 34,
+    borderRadius: 999,
+    backgroundColor: "#F3EEFC",
+    borderWidth: 1,
+    borderColor: "#E6DEF1",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    alignItems: "center",
+  },
+  countPillText: {
+    color: "#6D52EA",
+    fontSize: 12,
+    fontWeight: "900",
   },
   sectionStack: {
     gap: 10,
   },
   emptyText: {
-    color: "#6B7280",
+    color: "#7F7791",
     fontSize: 14,
     lineHeight: 20,
   },
@@ -534,9 +530,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 12,
     borderRadius: 18,
-    backgroundColor: "#FFF7ED",
+    backgroundColor: "#FBF9FF",
     borderWidth: 1,
-    borderColor: "#FED7AA",
+    borderColor: "#ECE5F9",
     padding: 14,
   },
   foodBody: {
@@ -552,29 +548,29 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#FDBA74",
+    borderColor: "#E6DEF1",
     paddingHorizontal: 8,
     paddingVertical: 5,
   },
   foodBadgeText: {
-    color: "#9A3412",
+    color: "#6D52EA",
     fontSize: 11,
     fontWeight: "800",
   },
   foodName: {
-    color: "#111827",
+    color: "#1B1529",
     fontSize: 16,
-    fontWeight: "800",
+    fontWeight: "900",
     marginBottom: 4,
   },
   foodMeta: {
-    color: "#6B7280",
+    color: "#6E6582",
     fontSize: 13,
     lineHeight: 18,
     marginBottom: 4,
   },
   foodMacroText: {
-    color: "#9A3412",
+    color: "#6D52EA",
     fontSize: 12,
     fontWeight: "800",
   },
@@ -589,28 +585,28 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#FDBA74",
+    borderColor: "#E6DEF1",
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 10,
     paddingVertical: 9,
   },
   secondaryActionActive: {
-    backgroundColor: "#FED7AA",
+    backgroundColor: "#EEE7FF",
   },
   secondaryActionText: {
-    color: "#9A3412",
+    color: "#6D52EA",
     fontSize: 13,
     fontWeight: "800",
   },
   secondaryActionTextActive: {
-    color: "#7C2D12",
+    color: "#4F3D83",
   },
   primaryAction: {
     minWidth: 72,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 12,
-    backgroundColor: "#111827",
+    backgroundColor: "#1F1831",
     paddingHorizontal: 10,
     paddingVertical: 9,
   },
@@ -623,27 +619,28 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: "#111827",
-    borderRadius: 22,
-    padding: 18,
+    backgroundColor: "rgba(255,255,255,0.96)",
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 8,
   },
   createTextWrap: {
     flex: 1,
   },
   createTitle: {
-    color: "#FFFFFF",
+    color: "#1B1529",
     fontSize: 18,
     fontWeight: "900",
     marginBottom: 4,
   },
   createSubtitle: {
-    color: "#CBD5E1",
+    color: "#7F7791",
     fontSize: 14,
     lineHeight: 20,
   },
   createButton: {
     borderRadius: 999,
-    backgroundColor: "#EA580C",
+    backgroundColor: "#1F1831",
     paddingHorizontal: 14,
     paddingVertical: 10,
   },

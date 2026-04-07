@@ -6,6 +6,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DB } from "../../store/DB";
 import type { DBFoodItem, DBUser, DBUserFoodLogEntry } from "../../store/DB_TYPES";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
+import FoodDiaryDateStrip, {
+  buildFoodDiaryWeekDays,
+  type FoodDiaryDateStripDay,
+} from "./FoodDiaryDateStrip";
 import FoodDiaryHeroCard from "./FoodDiaryHeroCard";
 import FoodDiaryMoreSection from "./FoodDiaryMoreSection";
 import FoodDiaryQuickAdds from "./FoodDiaryQuickAdds";
@@ -30,6 +34,19 @@ type FoodDiaryNav = NativeStackNavigationProp<FoodStackParamList, "Diary">;
 const INITIAL_START = 7;
 const INITIAL_END = 22;
 
+const normalizeVisibleHours = (startHour: number, endHour: number) => {
+  const boundedEnd = Math.max(1, Math.min(23, Math.round(endHour)));
+  const boundedStart = Math.max(
+    0,
+    Math.min(Math.round(startHour), boundedEnd - 1),
+  );
+
+  return {
+    startHour: boundedStart,
+    endHour: boundedEnd,
+  };
+};
+
 const FoodDiaryScreen = () => {
   const navigation = useNavigation<FoodDiaryNav>();
   const insets = useSafeAreaInsets();
@@ -37,6 +54,14 @@ const FoodDiaryScreen = () => {
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [user, setUser] = useState<DBUser | null>(null);
   const [entries, setEntries] = useState<DBUserFoodLogEntry[]>([]);
+  const [dateStripDays, setDateStripDays] = useState<FoodDiaryDateStripDay[]>(
+    () =>
+      buildFoodDiaryWeekDays(new Date()).map((date) => ({
+        date,
+        dateKey: formatFoodDateKey(date),
+        calories: 0,
+      })),
+  );
   const [favoriteFoods, setFavoriteFoods] = useState<FoodDiaryFavoriteFood[]>(
     [],
   );
@@ -57,16 +82,49 @@ const FoodDiaryScreen = () => {
 
     if (!currentUser) {
       setEntries([]);
+      setDateStripDays(
+        buildFoodDiaryWeekDays(selectedDate).map((date) => ({
+          date,
+          dateKey: formatFoodDateKey(date),
+          calories: 0,
+        })),
+      );
       setFavoriteFoods([]);
       return;
     }
 
-    const [dayEntries, favorites] = await Promise.all([
-      DB.getUserFoodLogEntriesByDate(currentUser.externalId, dateKey),
+    const weekDays = buildFoodDiaryWeekDays(selectedDate);
+    const weekDateKeys = weekDays.map(formatFoodDateKey);
+    const [favorites, settings, weekEntriesByDate] = await Promise.all([
       DB.getFavoriteFoodItems(currentUser.externalId, 10),
+      DB.getUserSettings(currentUser.externalId),
+      Promise.all(
+        weekDateKeys.map((weekDateKey) =>
+          DB.getUserFoodLogEntriesByDate(currentUser.externalId, weekDateKey),
+        ),
+      ),
     ]);
 
-    setEntries(dayEntries);
+    const selectedDateIndex = weekDateKeys.indexOf(dateKey);
+    setEntries(weekEntriesByDate[selectedDateIndex] ?? []);
+    setDateStripDays(
+      weekDays.map((date, index) => ({
+        date,
+        dateKey: weekDateKeys[index],
+        calories: sumLoggedNutrition(weekEntriesByDate[index] ?? []).calories,
+      })),
+    );
+
+    if (settings) {
+      const normalized = normalizeVisibleHours(
+        settings.foodDiaryStartHour,
+        settings.foodDiaryEndHour,
+      );
+
+      setVisibleStartHour(normalized.startHour);
+      setVisibleEndHour(normalized.endHour);
+    }
+
     setFavoriteFoods(
       favorites.map((food) => {
         const serving = getFoodResolvedServing(food);
@@ -81,7 +139,7 @@ const FoodDiaryScreen = () => {
         };
       }),
     );
-  }, [dateKey]);
+  }, [dateKey, selectedDate]);
 
   useFocusEffect(
     useCallback(() => {
@@ -97,10 +155,6 @@ const FoodDiaryScreen = () => {
 
   const totals = useMemo(() => sumLoggedNutrition(entries), [entries]);
   const isToday = dateKey === formatFoodDateKey(new Date());
-  const remainingCalories =
-    user?.calorieAllowance != null
-      ? Math.round(user.calorieAllowance - totals.calories)
-      : null;
 
   const hourBuckets = useMemo(() => {
     const rows: FoodDiaryHourBucket[] = [];
@@ -120,10 +174,6 @@ const FoodDiaryScreen = () => {
 
     return rows;
   }, [entries, visibleEndHour, visibleStartHour]);
-
-  const filledHours = hourBuckets.filter(
-    (bucket) => bucket.entries.length > 0,
-  ).length;
 
   const openAddFoodAtHour = useCallback(
     (hour: number) => {
@@ -187,16 +237,31 @@ const FoodDiaryScreen = () => {
     await loadData();
   }, [dateKey, loadData, selectedDate, user]);
 
+  const updateVisibleHours = useCallback(
+    (startHour: number, endHour: number) => {
+      const normalized = normalizeVisibleHours(startHour, endHour);
+      setVisibleStartHour(normalized.startHour);
+      setVisibleEndHour(normalized.endHour);
+
+      if (user) {
+        void DB.saveUserSettings({
+          userExternalId: user.externalId,
+          foodDiaryStartHour: normalized.startHour,
+          foodDiaryEndHour: normalized.endHour,
+        });
+      }
+    },
+    [user],
+  );
+
   const changeStart = useCallback(
-    (next: number) =>
-      setVisibleStartHour(Math.max(1, Math.min(next, visibleEndHour - 1))),
-    [visibleEndHour],
+    (next: number) => updateVisibleHours(next, visibleEndHour),
+    [updateVisibleHours, visibleEndHour],
   );
 
   const changeEnd = useCallback(
-    (next: number) =>
-      setVisibleEndHour(Math.min(23, Math.max(next, visibleStartHour + 1))),
-    [visibleStartHour],
+    (next: number) => updateVisibleHours(visibleStartHour, next),
+    [updateVisibleHours, visibleStartHour],
   );
 
   return (
@@ -216,40 +281,22 @@ const FoodDiaryScreen = () => {
           <Text style={styles.title}>Food Diary</Text>
         </View>
 
-        <FoodDiaryHeroCard
-          dateKey={dateKey}
-          filledHours={filledHours}
-          hourBuckets={hourBuckets}
-          isToday={isToday}
-          remainingCalories={remainingCalories}
+        <FoodDiaryDateStrip
+          days={dateStripDays}
           selectedDate={selectedDate}
-          selectedHour={selectedHour}
-          totals={totals}
-          user={user}
-          visibleEndHour={visibleEndHour}
-          visibleStartHour={visibleStartHour}
-          onAddFood={openAddFoodAtHour}
-          onChangeEnd={changeEnd}
-          onChangeStart={changeStart}
-          onNextDate={() =>
-            setSelectedDate((current) => shiftFoodDate(current, 1))
+          targetCalories={user?.calorieAllowance ?? null}
+          onNextWeek={() =>
+            setSelectedDate((current) => shiftFoodDate(current, 7))
           }
-          onPrevDate={() =>
-            setSelectedDate((current) => shiftFoodDate(current, -1))
+          onPreviousWeek={() =>
+            setSelectedDate((current) => shiftFoodDate(current, -7))
           }
-          onResetHours={() => {
-            setVisibleStartHour(INITIAL_START);
-            setVisibleEndHour(INITIAL_END);
-          }}
-          onSelectHour={setSelectedHour}
+          onSelectDate={setSelectedDate}
         />
 
-        <FoodDiaryQuickAdds
-          favoriteFoods={favoriteFoods}
-          selectedHour={selectedHour}
-          onAddFavorite={(food, hour) => {
-            void addFavoriteToHour(food, hour);
-          }}
+        <FoodDiaryHeroCard
+          totals={totals}
+          user={user}
         />
 
         <FoodDiaryTimelineSection
@@ -263,8 +310,23 @@ const FoodDiaryScreen = () => {
           onSelectHour={setSelectedHour}
         />
 
-        <FoodDiaryMoreSection
+        <FoodDiaryQuickAdds
+          favoriteFoods={favoriteFoods}
           selectedHour={selectedHour}
+          onAddFavorite={(food, hour) => {
+            void addFavoriteToHour(food, hour);
+          }}
+        />
+
+
+        <FoodDiaryMoreSection
+          hourBuckets={hourBuckets}
+          selectedHour={selectedHour}
+          visibleEndHour={visibleEndHour}
+          visibleStartHour={visibleStartHour}
+          onChangeEnd={changeEnd}
+          onChangeStart={changeStart}
+          onAddFood={openAddFoodAtHour}
           onCopyYesterday={() => {
             void copyYesterday();
           }}
@@ -276,6 +338,8 @@ const FoodDiaryScreen = () => {
               mealType: null,
             })
           }
+          onResetHours={() => updateVisibleHours(INITIAL_START, INITIAL_END)}
+          onSelectHour={setSelectedHour}
         />
       </ScrollView>
     </View>

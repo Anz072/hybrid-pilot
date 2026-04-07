@@ -1,6 +1,15 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
 import {
+  type GestureResponderEvent,
+  LayoutAnimation,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import {
+  CaretDownIcon,
+  CaretUpIcon,
   ClockIcon,
   PencilSimpleIcon,
   TrashIcon,
@@ -23,6 +32,181 @@ type FoodDiaryTimelineSectionProps = {
   onSelectHour: (hour: number) => void;
 };
 
+type FoodDiaryTimelineItemProps = {
+  onAddFood: (hour: number) => void;
+  onDeleteEntry: (entryId: number) => void;
+  onEditEntry: (entryId: number) => void;
+  bucket: FoodDiaryHourBucket;
+  collapsed: boolean;
+  selected: boolean;
+  onToggle: () => void;
+};
+
+const withOpacity = (hex: string, opacity: number) => {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};
+
+const FoodDiaryTimelineItem = ({
+  onAddFood,
+  onDeleteEntry,
+  onEditEntry,
+  bucket,
+  collapsed,
+  selected,
+  onToggle,
+}: FoodDiaryTimelineItemProps) => {
+  const runWithoutToggling = (
+    event: GestureResponderEvent,
+    action: () => void,
+  ) => {
+    event.stopPropagation();
+    action();
+  };
+
+  return (
+    <Pressable
+      onPress={onToggle}
+      style={({ pressed }) => [
+        styles.timelineContent,
+        pressed && styles.cardPressed,
+      ]}
+    >
+      <View style={[styles.hourCard]}>
+        <View style={styles.hourHeader}>
+          <View style={styles.hourHeaderCopy}>
+            <Text
+              style={[
+                styles.hourTitle,
+                bucket.entries.length === 0 && {
+                  color: withOpacity("#1B1529", 0.6),
+                },
+              ]}
+            >
+              {bucket.entries.length
+                ? `${bucket.entries.length} ${bucket.entries.length === 1 ? "entry" : "entries"}`
+                : "No entries yet"}
+            </Text>
+            {bucket.entries.length ? (
+              <Text style={styles.hourText}>
+                {bucket.entries.length
+                  ? `${Math.round(bucket.totals.calories)} kcal | ${formatMacroLine(bucket.totals)}`
+                  : "Tap Add to log food here."}
+              </Text>
+            ) : null}
+          </View>
+          <View style={styles.hourHeaderActions}>
+            {collapsed ? (
+              <CaretDownIcon size={16} />
+            ) : (
+              <CaretUpIcon size={16} />
+            )}
+          </View>
+        </View>
+
+        {!collapsed ? (
+          <View style={styles.stack}>
+            {bucket.entries.length >= 1 ? (
+              bucket.entries.map((entry) => {
+                const nutrition = calculateLoggedNutrition(entry);
+                const time = formatFoodLoggedTime(
+                  entry.loggedAt ?? entry.createdAt,
+                );
+
+                return (
+                  <View key={entry.id} style={styles.entryCard}>
+                    <Pressable
+                      style={styles.entryMain}
+                      onPress={(event) =>
+                        runWithoutToggling(event, () => onEditEntry(entry.id))
+                      }
+                    >
+                      <View style={styles.rowBetween}>
+                        <View style={styles.entryCopy}>
+                          <Text style={styles.entryTitle} numberOfLines={2}>
+                            {entry.foodName}
+                          </Text>
+                          <Text style={styles.entryTime}>{time}</Text>
+                        </View>
+                        <Text style={styles.entryCalories}>
+                          {Math.round(nutrition.calories)} kcal
+                        </Text>
+                      </View>
+                      <View style={styles.entryMetaRow}>
+                        <View style={styles.entryPill}>
+                          <ClockIcon size={12} color="#6D52EA" weight="bold" />
+                          <Text style={styles.entryPillText}>{time}</Text>
+                        </View>
+                        {entry.mealType?.trim() ? (
+                          <View style={styles.entryPill}>
+                            <Text style={styles.entryPillText}>
+                              {entry.mealType.trim()}
+                            </Text>
+                          </View>
+                        ) : null}
+                      </View>
+                      <Text style={styles.entryText}>
+                        {formatFoodServing(entry.quantityG, entry.servingUnit)}{" "}
+                        | {formatMacroLine(nutrition)}
+                      </Text>
+                    </Pressable>
+                    <View style={styles.entryActions}>
+                      <Pressable
+                        onPress={(event) =>
+                          runWithoutToggling(event, () => onEditEntry(entry.id))
+                        }
+                        style={({ pressed }) => [
+                          styles.iconButton,
+                          pressed && styles.cardPressed,
+                        ]}
+                      >
+                        <PencilSimpleIcon
+                          size={16}
+                          color="#6D52EA"
+                          weight="bold"
+                        />
+                      </Pressable>
+                      <Pressable
+                        onPress={(event) =>
+                          runWithoutToggling(event, () =>
+                            onDeleteEntry(entry.id),
+                          )
+                        }
+                        style={({ pressed }) => [
+                          styles.iconButton,
+                          pressed && styles.cardPressed,
+                        ]}
+                      >
+                        <TrashIcon size={16} color="#DC2626" weight="bold" />
+                      </Pressable>
+                    </View>
+                  </View>
+                );
+              })
+            ) : (
+              <Pressable
+                onPress={(event) =>
+                  runWithoutToggling(event, () => onAddFood(bucket.hour))
+                }
+                style={({ pressed }) => [
+                  styles.emptyState,
+                  pressed && styles.cardPressed,
+                ]}
+              >
+                <Text style={styles.emptyStateText}>No entries here.</Text>
+                <Text style={styles.emptyStateAction}>Tap to add food</Text>
+              </Pressable>
+            )}
+          </View>
+        ) : null}
+      </View>
+    </Pressable>
+  );
+};
+
 const FoodDiaryTimelineSection = ({
   hourBuckets,
   selectedHour,
@@ -31,12 +215,28 @@ const FoodDiaryTimelineSection = ({
   onEditEntry,
   onSelectHour,
 }: FoodDiaryTimelineSectionProps) => {
+  const [expandedHours, setExpandedHours] = React.useState<Set<number>>(
+    () => new Set(),
+  );
+
+  const toggleHour = React.useCallback((hour: number) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedHours((current) => {
+      const next = new Set(current);
+
+      if (next.has(hour)) {
+        next.delete(hour);
+      } else {
+        next.add(hour);
+      }
+
+      return next;
+    });
+  }, []);
+
   return (
     <View style={styles.card}>
       <Text style={styles.sectionTitle}>Timeline</Text>
-      <Text style={styles.sectionText}>
-        Every visible hour stays readable, even when it is empty.
-      </Text>
       <View style={styles.timeline}>
         {hourBuckets.map((bucket, index) => {
           const selected = bucket.hour === selectedHour;
@@ -44,147 +244,24 @@ const FoodDiaryTimelineSection = ({
 
           return (
             <View key={bucket.hour} style={styles.timelineRow}>
-              <Pressable
-                onPress={() => onSelectHour(bucket.hour)}
-                style={styles.axis}
-              >
-                <Text
-                  style={[
-                    styles.axisLabel,
-                    selected && styles.axisLabelActive,
-                  ]}
-                >
+              <View style={styles.axis}>
+                <Text style={[styles.axisLabel]}>
                   {formatFoodHourLabel(bucket.hour)}
                 </Text>
                 <View style={styles.axisTrack}>
-                  <View
-                    style={[styles.axisDot, selected && styles.axisDotActive]}
-                  />
+                  <View style={[styles.axisDot]} />
                   {!isLast ? <View style={styles.axisLine} /> : null}
                 </View>
-              </Pressable>
-              <View style={styles.timelineContent}>
-                <View
-                  style={[styles.hourCard, selected && styles.hourCardActive]}
-                >
-                  <View
-                    style={[
-                      styles.rowBetween,
-                      { marginBottom: bucket.entries.length ? 10 : 0 },
-                    ]}
-                  >
-                    <View>
-                      <Text style={styles.hourTitle}>
-                        {bucket.entries.length
-                          ? `${bucket.entries.length} ${bucket.entries.length === 1 ? "entry" : "entries"}`
-                          : "No entries yet"}
-                      </Text>
-                      <Text style={styles.hourText}>
-                        {bucket.entries.length
-                          ? `${Math.round(bucket.totals.calories)} kcal | ${formatMacroLine(bucket.totals)}`
-                          : "Add food here if you want the full day visible."}
-                      </Text>
-                    </View>
-                    <Pressable
-                      onPress={() => onAddFood(bucket.hour)}
-                      style={({ pressed }) => [
-                        styles.addPill,
-                        pressed && styles.cardPressed,
-                      ]}
-                    >
-                      <Text style={styles.addPillText}>Add</Text>
-                    </Pressable>
-                  </View>
-                  {bucket.entries.length > 0 ? (
-                    <View style={styles.stack}>
-                      {bucket.entries.map((entry) => {
-                        const nutrition = calculateLoggedNutrition(entry);
-                        const time = formatFoodLoggedTime(
-                          entry.loggedAt ?? entry.createdAt,
-                        );
-
-                        return (
-                          <View key={entry.id} style={styles.entryCard}>
-                            <Pressable
-                              style={styles.entryMain}
-                              onPress={() => onEditEntry(entry.id)}
-                            >
-                              <View style={styles.rowBetween}>
-                                <View style={styles.entryCopy}>
-                                  <Text
-                                    style={styles.entryTitle}
-                                    numberOfLines={2}
-                                  >
-                                    {entry.foodName}
-                                  </Text>
-                                  <Text style={styles.entryTime}>{time}</Text>
-                                </View>
-                                <Text style={styles.entryCalories}>
-                                  {Math.round(nutrition.calories)} kcal
-                                </Text>
-                              </View>
-                              <View style={styles.entryMetaRow}>
-                                <View style={styles.entryPill}>
-                                  <ClockIcon
-                                    size={12}
-                                    color="#6D52EA"
-                                    weight="bold"
-                                  />
-                                  <Text style={styles.entryPillText}>
-                                    {time}
-                                  </Text>
-                                </View>
-                                {entry.mealType?.trim() ? (
-                                  <View style={styles.entryPill}>
-                                    <Text style={styles.entryPillText}>
-                                      {entry.mealType.trim()}
-                                    </Text>
-                                  </View>
-                                ) : null}
-                              </View>
-                              <Text style={styles.entryText}>
-                                {formatFoodServing(
-                                  entry.quantityG,
-                                  entry.servingUnit,
-                                )}{" "}
-                                | {formatMacroLine(nutrition)}
-                              </Text>
-                            </Pressable>
-                            <View style={styles.entryActions}>
-                              <Pressable
-                                onPress={() => onEditEntry(entry.id)}
-                                style={({ pressed }) => [
-                                  styles.iconButton,
-                                  pressed && styles.cardPressed,
-                                ]}
-                              >
-                                <PencilSimpleIcon
-                                  size={16}
-                                  color="#6D52EA"
-                                  weight="bold"
-                                />
-                              </Pressable>
-                              <Pressable
-                                onPress={() => onDeleteEntry(entry.id)}
-                                style={({ pressed }) => [
-                                  styles.iconButton,
-                                  pressed && styles.cardPressed,
-                                ]}
-                              >
-                                <TrashIcon
-                                  size={16}
-                                  color="#DC2626"
-                                  weight="bold"
-                                />
-                              </Pressable>
-                            </View>
-                          </View>
-                        );
-                      })}
-                    </View>
-                  ) : null}
-                </View>
               </View>
+              <FoodDiaryTimelineItem
+                onAddFood={onAddFood}
+                onDeleteEntry={onDeleteEntry}
+                onEditEntry={onEditEntry}
+                bucket={bucket}
+                collapsed={!expandedHours.has(bucket.hour)}
+                selected={selected}
+                onToggle={() => toggleHour(bucket.hour)}
+              />
             </View>
           );
         })}
@@ -204,7 +281,7 @@ const styles = StyleSheet.create({
     color: "#1B1529",
     fontSize: 22,
     fontWeight: "900",
-    marginBottom: 4,
+    marginBottom: 12,
   },
   sectionText: {
     color: "#7F7791",
@@ -217,18 +294,16 @@ const styles = StyleSheet.create({
   },
   timelineRow: {
     flexDirection: "row",
-    gap: 12,
   },
   axis: {
-    width: 62,
+    width: 36,
+    marginRight: 6,
     alignItems: "center",
   },
   axisLabel: {
     color: "#8A809F",
     fontSize: 12,
     fontWeight: "800",
-    marginTop: 6,
-    marginBottom: 8,
   },
   axisLabelActive: {
     color: "#6D52EA",
@@ -238,8 +313,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   axisDot: {
-    width: 11,
-    height: 11,
+    width: 9,
+    height: 9,
     borderRadius: 999,
     backgroundColor: "#DDD3F3",
   },
@@ -247,26 +322,35 @@ const styles = StyleSheet.create({
     backgroundColor: "#6D52EA",
   },
   axisLine: {
-    width: 2,
+    width: 1,
     flex: 1,
     backgroundColor: "#ECE5F6",
-    marginTop: 6,
-    marginBottom: -2,
+    marginBottom: -8,
   },
   timelineContent: {
     flex: 1,
-    paddingBottom: 8,
   },
   hourCard: {
-    borderRadius: 22,
-    backgroundColor: "#FCFBFF",
-    borderWidth: 1,
-    borderColor: "#ECE5F8",
-    padding: 14,
+    borderRadius: 8,
+    backgroundColor: "#FAF7FF",
+    padding: 10,
   },
   hourCardActive: {
     borderColor: "#CDBEFF",
-    backgroundColor: "#FAF7FF",
+    backgroundColor: "#f3eefc",
+  },
+  hourHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  hourHeaderCopy: {
+    flex: 1,
+  },
+  hourHeaderActions: {
+    alignItems: "flex-end",
+    gap: 8,
   },
   rowBetween: {
     flexDirection: "row",
@@ -275,10 +359,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   hourTitle: {
+    fontSize: 12,
+    fontWeight: "600",
     color: "#1B1529",
-    fontSize: 15,
-    fontWeight: "900",
-    marginBottom: 4,
+    letterSpacing: 0.5,
   },
   hourText: {
     color: "#7F7791",
@@ -297,8 +381,33 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
   },
+  collapseText: {
+    color: "#8A809F",
+    fontSize: 11,
+    fontWeight: "800",
+  },
   stack: {
     gap: 10,
+    marginTop: 12,
+  },
+  emptyState: {
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#EAE3F7",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  emptyStateText: {
+    color: "#1B1529",
+    fontSize: 13,
+    fontWeight: "800",
+    marginBottom: 2,
+  },
+  emptyStateAction: {
+    color: "#6D52EA",
+    fontSize: 12,
+    fontWeight: "700",
   },
   entryCard: {
     flexDirection: "row",

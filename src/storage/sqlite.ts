@@ -375,11 +375,105 @@ const migrations: Migration[] = [
     `);
     },
   },
+  {
+    version: 13,
+    name: "food_items_extended_nutrients",
+    up: async (db) => {
+      await db.execAsync(`
+      ALTER TABLE food_items ADD COLUMN added_sugars_g REAL;
+      ALTER TABLE food_items ADD COLUMN water_g REAL;
+      ALTER TABLE food_items ADD COLUMN alcohol_g REAL;
+      ALTER TABLE food_items ADD COLUMN fat_saturated_g REAL;
+      ALTER TABLE food_items ADD COLUMN fat_monounsaturated_g REAL;
+      ALTER TABLE food_items ADD COLUMN fat_polyunsaturated_g REAL;
+      ALTER TABLE food_items ADD COLUMN fat_trans_g REAL;
+      ALTER TABLE food_items ADD COLUMN omega3_g REAL;
+      ALTER TABLE food_items ADD COLUMN omega6_g REAL;
+      ALTER TABLE food_items ADD COLUMN epa_g REAL;
+      ALTER TABLE food_items ADD COLUMN dha_g REAL;
+      ALTER TABLE food_items ADD COLUMN ala_g REAL;
+      ALTER TABLE food_items ADD COLUMN linoleic_acid_g REAL;
+      ALTER TABLE food_items ADD COLUMN alpha_linolenic_acid_g REAL;
+      ALTER TABLE food_items ADD COLUMN cholesterol_mg REAL;
+      ALTER TABLE food_items ADD COLUMN vitamin_a_ug REAL;
+      ALTER TABLE food_items ADD COLUMN vitamin_c_mg REAL;
+      ALTER TABLE food_items ADD COLUMN vitamin_d_ug REAL;
+      ALTER TABLE food_items ADD COLUMN vitamin_e_mg REAL;
+      ALTER TABLE food_items ADD COLUMN vitamin_k_ug REAL;
+      ALTER TABLE food_items ADD COLUMN vitamin_k1_ug REAL;
+      ALTER TABLE food_items ADD COLUMN vitamin_k2_ug REAL;
+      ALTER TABLE food_items ADD COLUMN thiamin_b1_mg REAL;
+      ALTER TABLE food_items ADD COLUMN riboflavin_b2_mg REAL;
+      ALTER TABLE food_items ADD COLUMN niacin_b3_mg REAL;
+      ALTER TABLE food_items ADD COLUMN pantothenic_acid_b5_mg REAL;
+      ALTER TABLE food_items ADD COLUMN vitamin_b6_mg REAL;
+      ALTER TABLE food_items ADD COLUMN biotin_b7_ug REAL;
+      ALTER TABLE food_items ADD COLUMN folate_b9_ug REAL;
+      ALTER TABLE food_items ADD COLUMN vitamin_b12_ug REAL;
+      ALTER TABLE food_items ADD COLUMN choline_mg REAL;
+      ALTER TABLE food_items ADD COLUMN calcium_mg REAL;
+      ALTER TABLE food_items ADD COLUMN iron_mg REAL;
+      ALTER TABLE food_items ADD COLUMN magnesium_mg REAL;
+      ALTER TABLE food_items ADD COLUMN phosphorus_mg REAL;
+      ALTER TABLE food_items ADD COLUMN potassium_mg REAL;
+      ALTER TABLE food_items ADD COLUMN sodium_mg REAL;
+      ALTER TABLE food_items ADD COLUMN zinc_mg REAL;
+      ALTER TABLE food_items ADD COLUMN copper_mg REAL;
+      ALTER TABLE food_items ADD COLUMN manganese_mg REAL;
+      ALTER TABLE food_items ADD COLUMN selenium_ug REAL;
+      ALTER TABLE food_items ADD COLUMN iodine_ug REAL;
+      ALTER TABLE food_items ADD COLUMN chromium_ug REAL;
+      ALTER TABLE food_items ADD COLUMN molybdenum_ug REAL;
+      ALTER TABLE food_items ADD COLUMN histidine_g REAL;
+      ALTER TABLE food_items ADD COLUMN isoleucine_g REAL;
+      ALTER TABLE food_items ADD COLUMN leucine_g REAL;
+      ALTER TABLE food_items ADD COLUMN lysine_g REAL;
+      ALTER TABLE food_items ADD COLUMN methionine_g REAL;
+      ALTER TABLE food_items ADD COLUMN phenylalanine_g REAL;
+      ALTER TABLE food_items ADD COLUMN threonine_g REAL;
+      ALTER TABLE food_items ADD COLUMN tryptophan_g REAL;
+      ALTER TABLE food_items ADD COLUMN valine_g REAL;
+      ALTER TABLE food_items ADD COLUMN alanine_g REAL;
+      ALTER TABLE food_items ADD COLUMN arginine_g REAL;
+      ALTER TABLE food_items ADD COLUMN aspartic_acid_g REAL;
+      ALTER TABLE food_items ADD COLUMN cysteine_g REAL;
+      ALTER TABLE food_items ADD COLUMN glutamic_acid_g REAL;
+      ALTER TABLE food_items ADD COLUMN glycine_g REAL;
+      ALTER TABLE food_items ADD COLUMN proline_g REAL;
+      ALTER TABLE food_items ADD COLUMN serine_g REAL;
+      ALTER TABLE food_items ADD COLUMN tyrosine_g REAL;
+      ALTER TABLE food_items ADD COLUMN caffeine_mg REAL;
+      ALTER TABLE food_items ADD COLUMN betaine_mg REAL;
+      ALTER TABLE food_items ADD COLUMN lutein_zeaxanthin_ug REAL;
+
+      UPDATE food_items
+      SET fat_saturated_g = COALESCE(fat_saturated_g, saturated_fat_g)
+      WHERE fat_saturated_g IS NULL;
+    `);
+    },
+  },
+  {
+    version: 14,
+    name: "user_settings",
+    up: async (db) => {
+      await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS user_settings (
+        user_external_id TEXT PRIMARY KEY,
+        food_diary_start_hour INTEGER NOT NULL DEFAULT 7,
+        food_diary_end_hour INTEGER NOT NULL DEFAULT 22,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY(user_external_id) REFERENCES users(external_id)
+      );
+    `);
+    },
+  },
 ];
 
 const trackedTables = [
   "migration_history",
   "users",
+  "user_settings",
   "weight_logs",
   "weight_entries",
   "weight_goals",
@@ -585,6 +679,7 @@ export const resetDb = async (): Promise<void> => {
     DROP TABLE IF EXISTS weight_entries;
     DROP TABLE IF EXISTS weight_logs;
     DROP TABLE IF EXISTS users;
+    DROP TABLE IF EXISTS user_settings;
     DROP TABLE IF EXISTS app_kv;
 
     PRAGMA user_version = 0;

@@ -24,6 +24,7 @@ import {
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
 import { DB } from "../../store/DB";
+import type { DBFoodNutrientDetails } from "../../store/DB_TYPES";
 import { useAppSelector } from "../../store/hooks";
 import FoodScreenHeader from "./FoodScreenHeader";
 import {
@@ -38,6 +39,119 @@ type CreateCustomFoodNav = CompositeNavigationProp<
   NativeStackNavigationProp<RootStackParamList>
 >;
 
+type OptionalNutrientInputValues = Partial<
+  Record<keyof DBFoodNutrientDetails, string>
+>;
+
+type NutrientField = {
+  key: keyof DBFoodNutrientDetails;
+  label: string;
+  unit: string;
+};
+
+const OPTIONAL_NUTRIENT_SECTIONS: Array<{
+  title: string;
+  fields: NutrientField[];
+}> = [
+  {
+    title: "Macros + extras",
+    fields: [
+      { key: "fiberG", label: "Fiber", unit: "g" },
+      { key: "sugarG", label: "Sugar", unit: "g" },
+      { key: "addedSugarsG", label: "Added sugars", unit: "g" },
+      { key: "waterG", label: "Water", unit: "g" },
+      { key: "alcoholG", label: "Alcohol", unit: "g" },
+    ],
+  },
+  {
+    title: "Fats",
+    fields: [
+      { key: "fatSaturatedG", label: "Saturated fat", unit: "g" },
+      { key: "fatMonounsaturatedG", label: "Monounsaturated fat", unit: "g" },
+      { key: "fatPolyunsaturatedG", label: "Polyunsaturated fat", unit: "g" },
+      { key: "fatTransG", label: "Trans fat", unit: "g" },
+      { key: "omega3G", label: "Omega-3", unit: "g" },
+      { key: "omega6G", label: "Omega-6", unit: "g" },
+      { key: "epaG", label: "EPA", unit: "g" },
+      { key: "dhaG", label: "DHA", unit: "g" },
+      { key: "alaG", label: "ALA", unit: "g" },
+      { key: "linoleicAcidG", label: "Linoleic acid", unit: "g" },
+      { key: "alphaLinolenicAcidG", label: "Alpha-linolenic acid", unit: "g" },
+      { key: "cholesterolMg", label: "Cholesterol", unit: "mg" },
+    ],
+  },
+  {
+    title: "Vitamins",
+    fields: [
+      { key: "vitaminAUg", label: "Vitamin A", unit: "ug" },
+      { key: "vitaminCMg", label: "Vitamin C", unit: "mg" },
+      { key: "vitaminDUg", label: "Vitamin D", unit: "ug" },
+      { key: "vitaminEMg", label: "Vitamin E", unit: "mg" },
+      { key: "vitaminKUg", label: "Vitamin K", unit: "ug" },
+      { key: "vitaminK1Ug", label: "Vitamin K1", unit: "ug" },
+      { key: "vitaminK2Ug", label: "Vitamin K2", unit: "ug" },
+      { key: "thiaminB1Mg", label: "Thiamin B1", unit: "mg" },
+      { key: "riboflavinB2Mg", label: "Riboflavin B2", unit: "mg" },
+      { key: "niacinB3Mg", label: "Niacin B3", unit: "mg" },
+      { key: "pantothenicAcidB5Mg", label: "Pantothenic acid B5", unit: "mg" },
+      { key: "vitaminB6Mg", label: "Vitamin B6", unit: "mg" },
+      { key: "biotinB7Ug", label: "Biotin B7", unit: "ug" },
+      { key: "folateB9Ug", label: "Folate B9", unit: "ug" },
+      { key: "vitaminB12Ug", label: "Vitamin B12", unit: "ug" },
+      { key: "cholineMg", label: "Choline", unit: "mg" },
+    ],
+  },
+  {
+    title: "Minerals",
+    fields: [
+      { key: "calciumMg", label: "Calcium", unit: "mg" },
+      { key: "ironMg", label: "Iron", unit: "mg" },
+      { key: "magnesiumMg", label: "Magnesium", unit: "mg" },
+      { key: "phosphorusMg", label: "Phosphorus", unit: "mg" },
+      { key: "potassiumMg", label: "Potassium", unit: "mg" },
+      { key: "sodiumMg", label: "Sodium", unit: "mg" },
+      { key: "zincMg", label: "Zinc", unit: "mg" },
+      { key: "copperMg", label: "Copper", unit: "mg" },
+      { key: "manganeseMg", label: "Manganese", unit: "mg" },
+      { key: "seleniumUg", label: "Selenium", unit: "ug" },
+      { key: "iodineUg", label: "Iodine", unit: "ug" },
+      { key: "chromiumUg", label: "Chromium", unit: "ug" },
+      { key: "molybdenumUg", label: "Molybdenum", unit: "ug" },
+    ],
+  },
+  {
+    title: "Amino acids",
+    fields: [
+      { key: "histidineG", label: "Histidine", unit: "g" },
+      { key: "isoleucineG", label: "Isoleucine", unit: "g" },
+      { key: "leucineG", label: "Leucine", unit: "g" },
+      { key: "lysineG", label: "Lysine", unit: "g" },
+      { key: "methionineG", label: "Methionine", unit: "g" },
+      { key: "phenylalanineG", label: "Phenylalanine", unit: "g" },
+      { key: "threonineG", label: "Threonine", unit: "g" },
+      { key: "tryptophanG", label: "Tryptophan", unit: "g" },
+      { key: "valineG", label: "Valine", unit: "g" },
+      { key: "alanineG", label: "Alanine", unit: "g" },
+      { key: "arginineG", label: "Arginine", unit: "g" },
+      { key: "asparticAcidG", label: "Aspartic acid", unit: "g" },
+      { key: "cysteineG", label: "Cysteine", unit: "g" },
+      { key: "glutamicAcidG", label: "Glutamic acid", unit: "g" },
+      { key: "glycineG", label: "Glycine", unit: "g" },
+      { key: "prolineG", label: "Proline", unit: "g" },
+      { key: "serineG", label: "Serine", unit: "g" },
+      { key: "tyrosineG", label: "Tyrosine", unit: "g" },
+    ],
+  },
+  {
+    title: "Other",
+    fields: [
+      { key: "caffeineMg", label: "Caffeine", unit: "mg" },
+      { key: "betaineMg", label: "Betaine", unit: "mg" },
+      { key: "luteinZeaxanthinUg", label: "Lutein + zeaxanthin", unit: "ug" },
+    ],
+  },
+];
+
 const CreateCustomFoodScreen = () => {
   const [name, setName] = React.useState("");
   const [servingSize, setServingSize] = React.useState("100");
@@ -46,6 +160,8 @@ const CreateCustomFoodScreen = () => {
   const [carbs, setCarbs] = React.useState("0");
   const [fat, setFat] = React.useState("0");
   const [showAdvanced, setShowAdvanced] = React.useState(false);
+  const [optionalNutrients, setOptionalNutrients] =
+    React.useState<OptionalNutrientInputValues>({});
 
   const user = useAppSelector((state) => state.user.currentUser);
   const route = useRoute<CreateCustomFoodRoute>();
@@ -76,6 +192,46 @@ const CreateCustomFoodScreen = () => {
   const parsedCarbs = Number(carbs);
   const parsedFat = Number(fat);
 
+  const updateOptionalNutrient = React.useCallback(
+    (key: keyof DBFoodNutrientDetails, value: string) => {
+      setOptionalNutrients((current) => ({
+        ...current,
+        [key]: value,
+      }));
+    },
+    [],
+  );
+
+  const parseOptionalNutrients = React.useCallback(() => {
+    const parsed: Partial<DBFoodNutrientDetails> = {};
+
+    for (const section of OPTIONAL_NUTRIENT_SECTIONS) {
+      for (const field of section.fields) {
+        const rawValue = optionalNutrients[field.key]?.trim();
+
+        if (!rawValue) {
+          continue;
+        }
+
+        const numericValue = Number(rawValue.replace(",", "."));
+
+        if (!Number.isFinite(numericValue) || numericValue < 0) {
+          return {
+            error: `${field.label} must be a non-negative number.`,
+            values: null,
+          };
+        }
+
+        parsed[field.key] = numericValue;
+      }
+    }
+
+    return {
+      error: null,
+      values: parsed,
+    };
+  }, [optionalNutrients]);
+
   const createAndAdd = async () => {
     if (!user) {
       Alert.alert("No account found", "Create or restore a user before adding food.");
@@ -100,6 +256,15 @@ const CreateCustomFoodScreen = () => {
       return;
     }
 
+    const parsedOptionalNutrients = parseOptionalNutrients();
+    if (parsedOptionalNutrients.error || !parsedOptionalNutrients.values) {
+      Alert.alert(
+        "Invalid optional nutrient",
+        parsedOptionalNutrients.error ?? "Check the advanced nutrition values.",
+      );
+      return;
+    }
+
     const foodId = await DB.saveFoodItem({
       source: "custom",
       sourceId: null,
@@ -116,10 +281,12 @@ const CreateCustomFoodScreen = () => {
       proteinG: parsedProtein,
       carbsG: parsedCarbs,
       fatG: parsedFat,
-      fiberG: null,
-      sugarG: null,
       saltG: null,
-      saturatedFatG: null,
+      ...parsedOptionalNutrients.values,
+      saturatedFatG:
+        parsedOptionalNutrients.values.saturatedFatG ??
+        parsedOptionalNutrients.values.fatSaturatedG ??
+        null,
       ingredientsText: null,
       verified: false,
       isComplete: true,
@@ -297,7 +464,7 @@ const CreateCustomFoodScreen = () => {
             <View>
               <Text style={styles.advancedTitle}>Advanced nutrition</Text>
               <Text style={styles.advancedText}>
-                Micronutrient detail support is planned, but not stored in the current local model yet.
+                Optional micronutrients and detailed fats for this serving.
               </Text>
             </View>
             {showAdvanced ? (
@@ -310,9 +477,33 @@ const CreateCustomFoodScreen = () => {
           {showAdvanced ? (
             <View style={styles.advancedPanel}>
               <Text style={styles.advancedPanelText}>
-                The custom-food form is focused on the fields the diary currently saves and uses in totals:
-                calories, protein, carbs, fat, and serving size.
+                Leave anything blank if you do not know it. Calories and macros above are the only
+                required nutrition fields.
               </Text>
+              {OPTIONAL_NUTRIENT_SECTIONS.map((section) => (
+                <View key={section.title} style={styles.advancedGroup}>
+                  <Text style={styles.advancedGroupTitle}>{section.title}</Text>
+                  <View style={styles.grid}>
+                    {section.fields.map((field) => (
+                      <View key={field.key} style={styles.gridCell}>
+                        <Text style={styles.label}>
+                          {field.label} ({field.unit})
+                        </Text>
+                        <TextInput
+                          style={styles.input}
+                          placeholder="Optional"
+                          placeholderTextColor="#9CA3AF"
+                          value={optionalNutrients[field.key] ?? ""}
+                          onChangeText={(value) =>
+                            updateOptionalNutrient(field.key, value)
+                          }
+                          keyboardType="decimal-pad"
+                        />
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ))}
             </View>
           ) : null}
 
@@ -522,6 +713,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     fontWeight: "700",
+    marginBottom: 14,
+  },
+  advancedGroup: {
+    marginTop: 4,
+    marginBottom: 18,
+  },
+  advancedGroupTitle: {
+    color: "#111827",
+    fontSize: 15,
+    fontWeight: "900",
+    marginBottom: 10,
   },
   primaryButton: {
     borderRadius: 20,

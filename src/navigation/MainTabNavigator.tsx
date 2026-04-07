@@ -57,14 +57,14 @@ const FOCUSED_COLOR = "#5B33B5";
 const UNFOCUSED_COLOR = "#222";
 const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.5);
 const Tab = createBottomTabNavigator<MainTabParamList>();
+type RootNavigation = NativeStackNavigationProp<RootStackParamList>;
 
 const ShortcutPlaceholderScreen = () => (
   <View style={styles.placeholderScreen} />
 );
 
 const MainTabNavigator = () => {
-  const rootNavigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList, "Main">>();
+  const rootNavigation = useNavigation<RootNavigation>();
   const insets = useSafeAreaInsets();
   const [shortcutsVisible, setShortcutsVisible] = React.useState(false);
   const [weightModalVisible, setWeightModalVisible] = React.useState(false);

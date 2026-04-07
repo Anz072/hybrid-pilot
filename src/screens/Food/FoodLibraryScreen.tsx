@@ -22,7 +22,7 @@ type DebugField = {
   value: string;
 };
 
-const formatDebugValue = (value: boolean | number | string | null | undefined) => {
+const formatDebugValue = (value: unknown) => {
   if (value == null) {
     return "null";
   }
@@ -31,36 +31,53 @@ const formatDebugValue = (value: boolean | number | string | null | undefined) =
     return value ? "true" : "false";
   }
 
+  if (typeof value === "object") {
+    return prettyJson(value);
+  }
+
   return String(value);
 };
 
-const getDebugFields = (item: DBFoodItem): DebugField[] => [
-  { label: "id", value: formatDebugValue(item.id) },
-  { label: "source", value: formatDebugValue(item.source) },
-  { label: "sourceId", value: formatDebugValue(item.sourceId) },
-  { label: "barcode", value: formatDebugValue(item.barcode) },
-  { label: "name", value: formatDebugValue(item.name) },
-  { label: "brand", value: formatDebugValue(item.brand) },
-  { label: "imageUrl", value: formatDebugValue(item.imageUrl) },
-  { label: "quantityValue", value: formatDebugValue(item.quantityValue) },
-  { label: "quantityUnit", value: formatDebugValue(item.quantityUnit) },
-  { label: "servingSizeValue", value: formatDebugValue(item.servingSizeValue) },
-  { label: "servingSizeUnit", value: formatDebugValue(item.servingSizeUnit) },
-  { label: "nutritionBasis", value: formatDebugValue(item.nutritionBasis) },
-  { label: "calories", value: formatDebugValue(item.calories) },
-  { label: "proteinG", value: formatDebugValue(item.proteinG) },
-  { label: "carbsG", value: formatDebugValue(item.carbsG) },
-  { label: "fatG", value: formatDebugValue(item.fatG) },
-  { label: "fiberG", value: formatDebugValue(item.fiberG) },
-  { label: "sugarG", value: formatDebugValue(item.sugarG) },
-  { label: "saltG", value: formatDebugValue(item.saltG) },
-  { label: "saturatedFatG", value: formatDebugValue(item.saturatedFatG) },
-  { label: "ingredientsText", value: formatDebugValue(item.ingredientsText) },
-  { label: "verified", value: formatDebugValue(item.verified) },
-  { label: "isComplete", value: formatDebugValue(item.isComplete) },
-  { label: "createdAt", value: formatDebugValue(item.createdAt) },
-  { label: "updatedAt", value: formatDebugValue(item.updatedAt) },
-];
+const prettyJson = (value: unknown): string => JSON.stringify(value, null, 2);
+
+const parseRawPayload = (value: string | null) => {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(value) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+};
+
+const getDebugFields = (item: DBFoodItem): DebugField[] => {
+  const rawPayload = parseRawPayload(item.rawPayload);
+  const nutriments = rawPayload?.nutriments ?? null;
+  const fields = Object.entries(item).map(([label, value]) => ({
+    label,
+    value:
+      label === "rawPayload" && rawPayload
+        ? prettyJson(rawPayload)
+        : formatDebugValue(value),
+  }));
+  const rawPayloadIndex = fields.findIndex((field) => field.label === "rawPayload");
+  const nutrimentsField = {
+    label: "nutriments",
+    value: nutriments ? prettyJson(nutriments) : "null",
+  };
+
+  if (rawPayloadIndex === -1) {
+    return [...fields, nutrimentsField];
+  }
+
+  return [
+    ...fields.slice(0, rawPayloadIndex),
+    nutrimentsField,
+    ...fields.slice(rawPayloadIndex),
+  ];
+};
 
 const FoodLibraryScreen = () => {
   const navigation = useNavigation<FoodLibraryNav>();

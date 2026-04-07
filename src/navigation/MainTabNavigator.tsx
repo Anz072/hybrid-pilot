@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { useNavigation } from "@react-navigation/native";
+import { StackActions, useNavigation } from "@react-navigation/native";
 import type { NavigatorScreenParams } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -37,6 +37,7 @@ import WeightEntryModal, {
 } from "../screens/Weight/WeightEntryModal";
 import { generateUuid } from "../screens/Weight/weightUtils";
 import FoodBarcodeScannerModal from "../screens/Food/FoodBarcodeScannerModal";
+import type { ScannedFoodLookupResult } from "../screens/Food/FoodBarcodeScannerShared";
 import {
   buildFoodLoggedAt,
   formatFoodDateKey,
@@ -162,6 +163,34 @@ const MainTabNavigator = () => {
       }
     },
     [],
+  );
+
+  const handleShortcutScannedFoodResolved = React.useCallback(
+    (result: ScannedFoodLookupResult) => {
+      const now = new Date();
+      const date = formatFoodDateKey(now);
+      const loggedAt = buildFoodLoggedAt(
+        date,
+        now.getHours(),
+        now.getMinutes(),
+      );
+
+      const scannedFoodParams: RootStackParamList["ScannedFood"] = {
+        foodId: result.foodId,
+        barcode: result.barcode,
+        scanStatus: result.status,
+        contextLabel: formatFoodLoggedTime(loggedAt),
+        date,
+        loggedAt,
+        mealType: null,
+      };
+
+      setBarcodeModalScannerVisible(false);
+      rootNavigation.dispatch(
+        StackActions.push("ScannedFood", scannedFoodParams),
+      );
+    },
+    [rootNavigation],
   );
 
   const backdropOpacity = sheetProgress.interpolate({
@@ -381,8 +410,8 @@ const MainTabNavigator = () => {
       <FoodBarcodeScannerModal
         visible={barcodeModalScannerVisible}
         onClose={() => setBarcodeModalScannerVisible(false)}
+        onFoodResolved={handleShortcutScannedFoodResolved}
       />
-      
     </View>
   );
 };

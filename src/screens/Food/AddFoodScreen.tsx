@@ -26,6 +26,7 @@ import type { DBFoodItem, DBUser } from "../../store/DB_TYPES";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
 import FoodScreenHeader from "./FoodScreenHeader";
 import FoodBarcodeScannerModal from "./FoodBarcodeScannerModal";
+import type { ScannedFoodLookupResult } from "./FoodBarcodeScannerShared";
 import {
   buildFoodLoggedAt,
   formatFoodItemServing,
@@ -123,6 +124,22 @@ const AddFoodScreen = () => {
 
     return formatFoodLoggedTime(resolvedLoggedAt);
   }, [contextLabel, resolvedLoggedAt]);
+
+  const handleScannedFoodResolved = useCallback(
+    (result: ScannedFoodLookupResult) => {
+      setScannerVisible(false);
+      navigation.navigate("ScannedFood", {
+        foodId: result.foodId,
+        barcode: result.barcode,
+        scanStatus: result.status,
+        contextLabel: resolvedContextLabel,
+        date,
+        loggedAt: resolvedLoggedAt,
+        mealType,
+      });
+    },
+    [date, mealType, navigation, resolvedContextLabel, resolvedLoggedAt],
+  );
 
   const addLogForFood = async (food: DBFoodItem) => {
     if (!user) {
@@ -287,7 +304,7 @@ const AddFoodScreen = () => {
           <Text style={styles.heroText}>
             Tap a food card to log its default serving into this time slot right
             away, save it for faster logging later, or scan a barcode for a
-            quick debug read.
+            quick match.
           </Text>
           <View style={styles.searchRow}>
             <View style={styles.searchInputWrap}>
@@ -363,6 +380,7 @@ const AddFoodScreen = () => {
       <FoodBarcodeScannerModal
         visible={scannerVisible}
         onClose={() => setScannerVisible(false)}
+        onFoodResolved={handleScannedFoodResolved}
       />
     </View>
   );

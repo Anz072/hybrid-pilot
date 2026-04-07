@@ -5,6 +5,7 @@ import AddFoodScreen from "../screens/Food/AddFoodScreen";
 import EditFoodEntryScreen from "../screens/Food/EditFoodEntryScreen";
 import type { FoodStackParamList } from "./foodTypes";
 import CreateCustomFoodScreen from "../screens/Food/CreateCustomFoodScreen";
+import ScannedFoodLogScreen from "../screens/Food/ScannedFoodLogScreen";
 
 const Stack = createNativeStackNavigator<FoodStackParamList>();
 
@@ -18,6 +19,14 @@ const FoodNavigator = () => {
       <Stack.Screen
         name="AddFood"
         component={AddFoodScreen}
+        options={{
+          animation: "slide_from_bottom",
+          presentation: "fullScreenModal",
+        }}
+      />
+      <Stack.Screen
+        name="ScannedFood"
+        component={ScannedFoodLogScreen}
         options={{
           animation: "slide_from_bottom",
           presentation: "fullScreenModal",

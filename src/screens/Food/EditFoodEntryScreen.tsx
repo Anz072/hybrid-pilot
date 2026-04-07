@@ -118,12 +118,14 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
     return (
       <View style={styles.screen}>
         <View style={styles.bgOrbTop} />
-        <FoodScreenHeader
-          eyebrow="Food Entry"
-          title="Edit entry"
-          subtitle="Loading nutrition details..."
-          onBack={() => navigation.goBack()}
-        />
+        <View style={styles.content}>
+          <FoodScreenHeader
+            eyebrow="Food Entry"
+            title="Edit entry"
+            subtitle="Loading nutrition details..."
+            onBack={() => navigation.goBack()}
+          />
+        </View>
       </View>
     );
   }
@@ -150,7 +152,7 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
           <View style={styles.heroCard}>
             <View style={styles.heroPillRow}>
               <View style={styles.heroPill}>
-                <ForkKnifeIcon size={14} color="#9A3412" weight="fill" />
+                <ForkKnifeIcon size={14} color="#6D52EA" weight="fill" />
                 <Text style={styles.heroPillText}>
                   {formatFoodLoggedTime(resolvedLoggedAt.toISOString())}
                 </Text>
@@ -211,7 +213,7 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
               onPress={() => setShowTimePicker(true)}
             >
               <View style={styles.timeButtonCopy}>
-                <ClockIcon size={18} color="#9A3412" weight="bold" />
+                <ClockIcon size={18} color="#6D52EA" weight="bold" />
                 <View>
                   <Text style={styles.timeButtonLabel}>Time</Text>
                   <Text style={styles.timeButtonValue}>
@@ -303,38 +305,34 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#FFF7ED",
+    backgroundColor: "#F7F4FB",
   },
   content: {
-    paddingHorizontal: 20,
-    paddingBottom: 28,
+    paddingHorizontal: 18,
+    paddingBottom: 36,
   },
   bgOrbTop: {
     position: "absolute",
-    top: -84,
-    right: -44,
-    width: 220,
-    height: 220,
+    top: -90,
+    right: -70,
+    width: 250,
+    height: 250,
     borderRadius: 999,
-    backgroundColor: "#FED7AA",
-    opacity: 0.9,
+    backgroundColor: "#E4D9FF",
   },
   bgOrbBottom: {
     position: "absolute",
-    bottom: -110,
-    left: -76,
-    width: 240,
-    height: 240,
+    bottom: -120,
+    left: -90,
+    width: 280,
+    height: 280,
     borderRadius: 999,
-    backgroundColor: "#FDE68A",
-    opacity: 0.25,
+    backgroundColor: "#EEE7FF",
   },
   heroCard: {
-    backgroundColor: "rgba(255,255,255,0.94)",
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: "#FED7AA",
-    padding: 18,
+    backgroundColor: "rgba(255,255,255,0.96)",
+    borderRadius: 8,
+    padding: 16,
     marginBottom: 16,
   },
   heroPillRow: {
@@ -349,32 +347,32 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     borderRadius: 999,
-    backgroundColor: "#FFF7ED",
+    backgroundColor: "#F3EEFC",
     borderWidth: 1,
-    borderColor: "#FDBA74",
+    borderColor: "#E6DEF1",
     paddingHorizontal: 10,
     paddingVertical: 7,
   },
   heroPillText: {
-    color: "#9A3412",
+    color: "#6D52EA",
     fontSize: 12,
     fontWeight: "800",
   },
   heroTitle: {
-    color: "#111827",
+    color: "#1B1529",
     fontSize: 26,
     fontWeight: "900",
     marginBottom: 6,
   },
   heroSubtitle: {
-    color: "#6B7280",
+    color: "#7F7791",
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 14,
   },
   previewStrip: {
-    borderRadius: 18,
-    backgroundColor: "#111827",
+    borderRadius: 8,
+    backgroundColor: "#1F1831",
     padding: 14,
   },
   previewStripValue: {
@@ -384,26 +382,24 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   previewStripText: {
-    color: "#CBD5E1",
+    color: "#CFC5E7",
     fontSize: 13,
     lineHeight: 18,
   },
   card: {
-    backgroundColor: "rgba(255,255,255,0.94)",
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
+    backgroundColor: "rgba(255,255,255,0.96)",
+    borderRadius: 8,
     padding: 16,
     marginBottom: 16,
   },
   sectionTitle: {
-    color: "#111827",
-    fontSize: 18,
+    color: "#1B1529",
+    fontSize: 22,
     fontWeight: "900",
     marginBottom: 4,
   },
   sectionSubtitle: {
-    color: "#6B7280",
+    color: "#7F7791",
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 14,
@@ -416,25 +412,25 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#E6DEF1",
     borderRadius: 16,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#FBF9FF",
     paddingHorizontal: 14,
     paddingVertical: 14,
-    color: "#111827",
+    color: "#1B1529",
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   unitPill: {
     borderRadius: 14,
-    backgroundColor: "#FFF7ED",
+    backgroundColor: "#F3EEFC",
     borderWidth: 1,
-    borderColor: "#FDBA74",
+    borderColor: "#E6DEF1",
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
   unitText: {
-    color: "#9A3412",
+    color: "#6D52EA",
     fontSize: 15,
     fontWeight: "800",
   },
@@ -443,10 +439,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
-    borderRadius: 18,
-    backgroundColor: "#FFF7ED",
+    borderRadius: 16,
+    backgroundColor: "#FBF9FF",
     borderWidth: 1,
-    borderColor: "#FED7AA",
+    borderColor: "#E6DEF1",
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
@@ -456,20 +452,20 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   timeButtonLabel: {
-    color: "#9A3412",
+    color: "#7E7399",
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "800",
     textTransform: "uppercase",
     letterSpacing: 0.6,
     marginBottom: 2,
   },
   timeButtonValue: {
-    color: "#111827",
+    color: "#1B1529",
     fontSize: 17,
     fontWeight: "900",
   },
   timeButtonAction: {
-    color: "#9A3412",
+    color: "#6D52EA",
     fontSize: 13,
     fontWeight: "800",
   },
@@ -480,22 +476,22 @@ const styles = StyleSheet.create({
   },
   nutritionCell: {
     width: "47%",
-    borderRadius: 16,
-    backgroundColor: "#FFF7ED",
+    borderRadius: 14,
+    backgroundColor: "#FBF9FF",
     borderWidth: 1,
-    borderColor: "#FED7AA",
+    borderColor: "#ECE5F9",
     padding: 12,
   },
   nutritionLabel: {
-    color: "#6B7280",
+    color: "#7E7399",
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "800",
     textTransform: "uppercase",
     letterSpacing: 0.7,
     marginBottom: 8,
   },
   nutritionValue: {
-    color: "#111827",
+    color: "#1B1529",
     fontSize: 18,
     fontWeight: "900",
   },
@@ -505,7 +501,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     borderRadius: 18,
-    backgroundColor: "#111827",
+    backgroundColor: "#1F1831",
     paddingVertical: 16,
     marginBottom: 12,
   },

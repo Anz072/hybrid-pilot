@@ -11,14 +11,15 @@ import {
   useBarcodeDebugScanner,
 } from "./FoodBarcodeScannerShared";
 
-const BARCODE_TYPES = ["ean13", "ean8", "upc_a", "upc_e"] as const;
-
 const FoodBarcodeScannerModal = ({
   visible,
   onClose,
+  onFoodResolved,
 }: FoodBarcodeScannerModalProps) => {
   const [permission, requestPermission] = useCameraPermissions();
-  const [scanWindow, setScanWindow] = React.useState<LayoutRectangle | null>(null);
+  const [scanWindow, setScanWindow] = React.useState<LayoutRectangle | null>(
+    null,
+  );
 
   const {
     dismissResultModal,
@@ -27,7 +28,7 @@ const FoodBarcodeScannerModal = ({
     registerScan,
     resetScannerState,
     scannedCode,
-  } = useBarcodeDebugScanner(visible);
+  } = useBarcodeDebugScanner(visible, onFoodResolved);
 
   const handleCloseScanner = () => {
     resetScannerState();
@@ -40,9 +41,10 @@ const FoodBarcodeScannerModal = ({
         return false;
       }
 
+      const cornerPoints = result.cornerPoints ?? [];
       const points =
-        result.cornerPoints.length > 0
-          ? result.cornerPoints
+        cornerPoints.length > 0
+          ? cornerPoints
           : [
               result.bounds.origin,
               {
@@ -76,7 +78,11 @@ const FoodBarcodeScannerModal = ({
         return;
       }
 
-      registerScan(result.data, result.type);
+      console.log("[BarcodeScanner] Expo barcode event", {
+        data: result.data,
+        type: result.type,
+      });
+      void registerScan(result.data, result.type);
     },
     [isWithinScanWindow, registerScan],
   );
@@ -99,7 +105,10 @@ const FoodBarcodeScannerModal = ({
         <CameraView
           style={StyleSheet.absoluteFill}
           facing="back"
-          barcodeScannerSettings={{ barcodeTypes: [...BARCODE_TYPES] }}
+          onCameraReady={() => console.log("[BarcodeScanner] Camera ready")}
+          onMountError={(error) =>
+            console.warn("[BarcodeScanner] Camera mount error", error)
+          }
           onBarcodeScanned={locked ? undefined : handleBarcodeScanned}
         />
       }

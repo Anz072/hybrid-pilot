@@ -1,7 +1,6 @@
 import React from "react";
 import {
   ActivityIndicator,
-  LayoutChangeEvent,
   LayoutRectangle,
   Modal,
   Pressable,
@@ -17,57 +16,63 @@ import { API } from "../../API/apiCaller";
 export type FoodBarcodeScannerModalProps = {
   visible: boolean;
   onClose: () => void;
+  onFoodResolved?: (result: ScannedFoodLookupResult) => void;
+};
+
+export type ScannedFoodLookupResult = {
+  foodId: number;
+  barcode: string;
+  status: "existing" | "created";
+  foodName: string;
 };
 
 const SCAN_DEBOUNCE_MS = 1000;
 
-type SupportedBarcodeType = "ean13" | "ean8" | "upc_a" | "upc_e";
+type SupportedBarcodeType =
+  | "ean13"
+  | "ean8"
+  | "upc_a"
+  | "upc_e"
+  | "itf14";
 
 const onlyDigits = (value: string): string => value.replace(/\D/g, "");
 
-const computeModulo10CheckDigit = (
-  digits: string,
-  evenWeight: number,
-  oddWeight: number,
-): number => {
+const computeGtinCheckDigit = (digits: string): number => {
   const sum = digits
     .split("")
+    .reverse()
     .map(Number)
     .reduce((acc, digit, index) => {
-      return acc + digit * (index % 2 === 0 ? oddWeight : evenWeight);
+      return acc + digit * (index % 2 === 0 ? 3 : 1);
     }, 0);
 
   return (10 - (sum % 10)) % 10;
 };
 
-const isValidEAN13 = (code: string): boolean => {
+const isValidGtin = (code: string, length: number): boolean => {
   const normalized = onlyDigits(code);
-  if (!/^\d{13}$/.test(normalized)) return false;
+  if (normalized.length !== length) return false;
 
-  const body = normalized.slice(0, 12);
-  const checkDigit = Number(normalized[12]);
+  const body = normalized.slice(0, -1);
+  const checkDigit = Number(normalized[normalized.length - 1]);
 
-  return computeModulo10CheckDigit(body, 3, 1) === checkDigit;
+  return computeGtinCheckDigit(body) === checkDigit;
+};
+
+const isValidEAN13 = (code: string): boolean => {
+  return isValidGtin(code, 13);
 };
 
 const isValidEAN8 = (code: string): boolean => {
-  const normalized = onlyDigits(code);
-  if (!/^\d{8}$/.test(normalized)) return false;
-
-  const body = normalized.slice(0, 7);
-  const checkDigit = Number(normalized[7]);
-
-  return computeModulo10CheckDigit(body, 1, 3) === checkDigit;
+  return isValidGtin(code, 8);
 };
 
 const isValidUPCA = (code: string): boolean => {
-  const normalized = onlyDigits(code);
-  if (!/^\d{12}$/.test(normalized)) return false;
+  return isValidGtin(code, 12);
+};
 
-  const body = normalized.slice(0, 11);
-  const checkDigit = Number(normalized[11]);
-
-  return computeModulo10CheckDigit(body, 3, 1) === checkDigit;
+const isValidGTIN14 = (code: string): boolean => {
+  return isValidGtin(code, 14);
 };
 
 const expandUPCEToUPCA = (code: string): string | null => {
@@ -131,7 +136,10 @@ const validateBarcode = (
       return isValidUPCA(normalized);
     case "upc_e":
       return isValidUPCE(normalized);
+    case "itf14":
+      return isValidGTIN14(normalized);
     default:
+      if (normalized.length === 14) return isValidGTIN14(normalized);
       if (normalized.length === 13) return isValidEAN13(normalized);
       if (normalized.length === 12) return isValidUPCA(normalized);
       if (normalized.length === 8) {
@@ -146,7 +154,10 @@ export const normalizeBarcodeValue = (value?: string | null): string | null => {
   return normalized ? normalized : null;
 };
 
-export const useBarcodeDebugScanner = (visible: boolean) => {
+export const useBarcodeDebugScanner = (
+  visible: boolean,
+  onFoodResolved?: (result: ScannedFoodLookupResult) => void,
+) => {
   const [scannedCode, setScannedCode] = React.useState<string | null>(null);
   const [modalVisible, setModalVisible] = React.useState(false);
   const [locked, setLocked] = React.useState(false);
@@ -191,53 +202,95 @@ export const useBarcodeDebugScanner = (visible: boolean) => {
   );
 
   const registerScan = React.useCallback(
-    async (rawValue?: string | null, rawType?: SupportedBarcodeType | string | null) => {
+    async (
+      rawValue?: string | null,
+      rawType?: SupportedBarcodeType | string | null,
+    ) => {
+      console.log("[BarcodeScanner] Registering scan", {
+        rawType,
+        rawValue,
+      });
       if (lockRef.current || locked) {
         return false;
       }
 
       const nextValue = normalizeBarcodeValue(rawValue);
       if (!nextValue) {
+        console.log("[BarcodeScanner] Ignoring non-numeric barcode", {
+          rawType,
+          rawValue,
+        });
         return false;
       }
 
       if (!validateBarcode(nextValue, rawType)) {
+        console.log("[BarcodeScanner] Ignoring invalid food barcode", {
+          rawType,
+          value: nextValue,
+        });
         return false;
       }
 
       lockRef.current = true;
       setLocked(true);
       setScannedCode(nextValue);
-      console.log("rawType: ", rawType);
-      console.log("SCANNED CODE: ", nextValue);
-      try {
-        const localFoodData =
-          await API.localFoodAPI.checkDBForFoodItemByBarcode(nextValue);
-        if (localFoodData && localFoodData.found) {
-          setScannedCode("ITEM ALREADY EXISTS IN THE DATABASE");
-        } else {
-          const foodData = await API.openFoodsAPI.getByBarcode(nextValue);
-          if (!foodData) {
-            setScannedCode("FOODDATA UNDEFINED");
-          } else if (!foodData.valid) {
-            setScannedCode(`INVALID BARCODE: ${nextValue}`);
-          } else if (foodData.foodItem) {
-            try {
-              await DB.saveFoodItem(foodData.foodItem);
-              setScannedCode("ITEM SAVED!");
-            } catch {
-              setScannedCode("ITEM FAILED SAVED!");
-            }
-          }
+
+      const resolveFood = (result: ScannedFoodLookupResult) => {
+        if (onFoodResolved) {
+          onFoodResolved(result);
+          return;
         }
-      } catch {
-        setScannedCode("UNAVAILABLE/ERROR");
+
+        setScannedCode(
+          `${result.foodName}\n${result.status === "created" ? "Added to library" : "Found in library"}`,
+        );
+        setModalVisible(true);
+      };
+
+      try {
+        const localFood = await DB.getFoodItemByBarcode(nextValue);
+
+        if (localFood) {
+          resolveFood({
+            foodId: localFood.id,
+            barcode: nextValue,
+            status: "existing",
+            foodName: localFood.name,
+          });
+          return true;
+        }
+
+        const foodData = await API.openFoodsAPI.getByBarcode(nextValue);
+        if (!foodData) {
+          setScannedCode(`Could not look up barcode ${nextValue}.`);
+          setModalVisible(true);
+          return true;
+        }
+
+        if (!foodData.valid || !foodData.foodItem) {
+          setScannedCode(`No food found for barcode ${nextValue}.`);
+          setModalVisible(true);
+          return true;
+        }
+
+        const foodId = await DB.saveFoodItem(foodData.foodItem);
+        const savedFood = await DB.getFoodItemById(foodId);
+
+        resolveFood({
+          foodId,
+          barcode: nextValue,
+          status: "created",
+          foodName: savedFood?.name ?? foodData.foodItem.name,
+        });
+      } catch (error) {
+        console.error("[BarcodeScanner] Could not resolve scanned food", error);
+        setScannedCode("Could not load this barcode. Please try again.");
+        setModalVisible(true);
       }
-      setModalVisible(true);
 
       return true;
     },
-    [locked],
+    [locked, onFoodResolved],
   );
 
   const dismissResultModal = React.useCallback(() => {
@@ -284,17 +337,26 @@ export const FoodBarcodeScannerScaffold = ({
   scannedCode,
 }: FoodBarcodeScannerScaffoldProps) => {
   const insets = useSafeAreaInsets();
+  const screenRef = React.useRef<View | null>(null);
   const finderRef = React.useRef<View | null>(null);
 
   const reportFinderLayout = React.useCallback(() => {
-    const node = finderRef.current;
-    if (!node) {
+    const screenNode = screenRef.current;
+    const finderNode = finderRef.current;
+    if (!screenNode || !finderNode) {
       return;
     }
 
     requestAnimationFrame(() => {
-      node.measureInWindow((x, y, width, height) => {
-        onFinderLayout({ x, y, width, height });
+      screenNode.measureInWindow((screenX, screenY) => {
+        finderNode.measureInWindow((x, y, width, height) => {
+          onFinderLayout({
+            x: x - screenX,
+            y: y - screenY,
+            width,
+            height,
+          });
+        });
       });
     });
   }, [onFinderLayout]);
@@ -306,7 +368,11 @@ export const FoodBarcodeScannerScaffold = ({
       presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
-      <View style={styles.screen}>
+      <View
+        ref={screenRef}
+        style={styles.screen}
+        onLayout={() => reportFinderLayout()}
+      >
         {hasPermission ? (
           isPreparing ? (
             <View style={styles.cameraFallback}>
@@ -376,7 +442,7 @@ export const FoodBarcodeScannerScaffold = ({
             <View
               ref={finderRef}
               style={styles.finderFrame}
-              onLayout={(_: LayoutChangeEvent) => reportFinderLayout()}
+              onLayout={() => reportFinderLayout()}
             >
               <View style={styles.scanLine} />
             </View>
@@ -385,16 +451,30 @@ export const FoodBarcodeScannerScaffold = ({
           <View style={styles.footerCard}>
             <Text style={styles.footerTitle}>Scan a barcode</Text>
             <Text style={styles.footerText}>
-              Keep the barcode centered inside the finder frame. Only codes
-              detected in that window will trigger a lookup.
+              Keep the barcode centered inside the finder frame. Only codes in
+              that window will trigger a lookup.
             </Text>
             <Text style={styles.footerHint}>
               {locked
-                ? "Scanner is paused until you close the current result."
+                ? "Looking up the scanned barcode..."
                 : "Expo Camera is active for this session."}
             </Text>
           </View>
         </View>
+
+        {locked && !modalVisible ? (
+          <View style={styles.lookupBanner} pointerEvents="none">
+            <ActivityIndicator size="small" color="#FFFFFF" />
+            <View style={styles.lookupCopy}>
+              <Text style={styles.lookupTitle}>Barcode detected</Text>
+              <Text style={styles.lookupText}>
+                {scannedCode
+                  ? `Looking up ${scannedCode}`
+                  : "Checking your food library"}
+              </Text>
+            </View>
+          </View>
+        ) : null}
 
         <Modal
           visible={modalVisible}
@@ -454,7 +534,7 @@ export const styles = StyleSheet.create({
     maxWidth: 320,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: "rgba(251, 191, 36, 0.28)",
+    borderColor: "rgba(167, 139, 250, 0.34)",
     backgroundColor: "rgba(15, 23, 42, 0.82)",
     padding: 22,
     gap: 12,
@@ -473,7 +553,7 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 16,
-    backgroundColor: "#EA580C",
+    backgroundColor: "#6D52EA",
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
@@ -516,14 +596,14 @@ export const styles = StyleSheet.create({
   },
   backendBadge: {
     borderRadius: 999,
-    backgroundColor: "rgba(251, 146, 60, 0.16)",
+    backgroundColor: "rgba(109, 82, 234, 0.18)",
     borderWidth: 1,
-    borderColor: "rgba(251, 146, 60, 0.34)",
+    borderColor: "rgba(167, 139, 250, 0.38)",
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
   backendBadgeText: {
-    color: "#FDBA74",
+    color: "#DDD6FE",
     fontSize: 12,
     fontWeight: "800",
   },
@@ -556,8 +636,8 @@ export const styles = StyleSheet.create({
     height: 2,
     marginHorizontal: 20,
     borderRadius: 999,
-    backgroundColor: "#FB923C",
-    shadowColor: "#FB923C",
+    backgroundColor: "#A78BFA",
+    shadowColor: "#A78BFA",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
     shadowRadius: 10,
@@ -583,7 +663,36 @@ export const styles = StyleSheet.create({
     marginBottom: 8,
   },
   footerHint: {
-    color: "#FDBA74",
+    color: "#CFC5E7",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  lookupBanner: {
+    position: "absolute",
+    left: 20,
+    right: 20,
+    bottom: 122,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 18,
+    backgroundColor: "rgba(31, 24, 49, 0.92)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.16)",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  lookupCopy: {
+    flex: 1,
+  },
+  lookupTitle: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "900",
+    marginBottom: 2,
+  },
+  lookupText: {
+    color: "#CFC5E7",
     fontSize: 12,
     fontWeight: "700",
   },
@@ -609,7 +718,7 @@ export const styles = StyleSheet.create({
     marginBottom: 10,
   },
   modalValue: {
-    color: "#EA580C",
+    color: "#6D52EA",
     fontSize: 18,
     lineHeight: 24,
     fontWeight: "800",

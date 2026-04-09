@@ -18,6 +18,7 @@ import {
   formatGoalSummary,
   formatTrainingSummary,
 } from "./onboardingSummary";
+import { appColors } from "../../theme/colors";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "FuelPlan">;
 
@@ -53,19 +54,19 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
       {
         label: "Protein",
         value: Math.max(1, fuelPlan.protein * 4),
-        color: "#2563EB",
+        color: appColors.blue600,
         grams: fuelPlan.protein,
       },
       {
         label: "Carbs",
         value: Math.max(1, fuelPlan.carbs * 4),
-        color: "#0D9488",
+        color: appColors.teal600,
         grams: fuelPlan.carbs,
       },
       {
         label: "Fats",
         value: Math.max(1, fuelPlan.fats * 9),
-        color: "#D97706",
+        color: appColors.raw_hex_D97706,
         grams: fuelPlan.fats,
       },
     ],
@@ -85,7 +86,7 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
       <OnboardingTopBar onBack={() => navigation.goBack()} stepLabel="Fuel Plan" />
       <Text style={styles.eyebrow}>Fuel Strategy</Text>
       <View style={styles.titleRow}>
-        <ForkKnifeIcon size={26} color="#0F766E" weight="fill" />
+        <ForkKnifeIcon size={26} color={appColors.teal700} weight="fill" />
         <Text style={styles.title}>Initial Plan</Text>
       </View>
       <Text style={styles.subtitle}>
@@ -202,7 +203,7 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: appColors.slate50,
   },
   content: {
     paddingHorizontal: 22,
@@ -214,8 +215,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: "#0F766E",
-    backgroundColor: "#CCFBF1",
+    color: appColors.teal700,
+    backgroundColor: appColors.tealSoftBg,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
@@ -231,30 +232,30 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 30,
     fontWeight: "800",
-    color: "#0F172A",
+    color: appColors.slate900,
   },
   subtitle: {
     fontSize: 15,
-    color: "#475569",
+    color: appColors.slate600,
     marginBottom: 10,
   },
   pacePill: {
     alignSelf: "flex-start",
-    backgroundColor: "#DBEAFE",
+    backgroundColor: appColors.blueSoftBg,
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginBottom: 16,
   },
   pacePillText: {
-    color: "#1D4ED8",
+    color: appColors.blue700,
     fontSize: 12,
     fontWeight: "800",
     letterSpacing: 0.4,
     textTransform: "uppercase",
   },
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
     borderRadius: 6,
     padding: 14,
     marginBottom: 14,
@@ -267,22 +268,22 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     fontSize: 14,
-    color: "#475569",
+    color: appColors.slate600,
     fontWeight: "700",
   },
   metricValue: {
     fontSize: 15,
-    color: "#0F172A",
+    color: appColors.slate900,
     fontWeight: "800",
   },
   chartCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
     borderRadius: 6,
     padding: 14,
     marginBottom: 18,
   },
   chartTitle: {
-    color: "#475569",
+    color: appColors.slate600,
     fontWeight: "800",
     fontSize: 16,
     textAlign: "center",
@@ -304,14 +305,14 @@ const styles = StyleSheet.create({
   chartCenterValue: {
     fontSize: 24,
     fontWeight: "900",
-    color: "#0F172A",
+    color: appColors.slate900,
     lineHeight: 28,
   },
   chartCenterLabel: {
     marginTop: 2,
     fontSize: 12,
     fontWeight: "700",
-    color: "#64748B",
+    color: appColors.slate500,
     textTransform: "uppercase",
     letterSpacing: 0.6,
   },
@@ -334,7 +335,7 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 12,
-    color: "#475569",
+    color: appColors.slate600,
     fontWeight: "700",
   },
   primaryButton: {
@@ -342,7 +343,7 @@ const styles = StyleSheet.create({
   },
   helper: {
     marginTop: 10,
-    color: "#475569",
+    color: appColors.slate600,
     textAlign: "center",
     fontSize: 13,
   },

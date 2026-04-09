@@ -43,6 +43,7 @@ import {
   formatFoodDateKey,
   formatFoodLoggedTime,
 } from "../screens/Food/foodUtils";
+import { appColors } from "../theme/colors";
 
 export type MainTabParamList = {
   Home: undefined;
@@ -54,9 +55,9 @@ export type MainTabParamList = {
   Library: undefined;
 };
 
-const FOCUSED_COLOR = "#5B33B5";
-const UNFOCUSED_COLOR = "#222";
-const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.5);
+const FOCUSED_COLOR = appColors.tabFocused;
+const UNFOCUSED_COLOR = appColors.neutral900;
+const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.3);
 const Tab = createBottomTabNavigator<MainTabParamList>();
 type RootNavigation = NativeStackNavigationProp<RootStackParamList>;
 
@@ -87,21 +88,24 @@ const MainTabNavigator = () => {
     });
   }, [sheetProgress]);
 
-  const closeShortcuts = React.useCallback((afterClose?: () => void) => {
-    afterCloseActionRef.current = afterClose ?? null;
-    Animated.timing(sheetProgress, {
-      toValue: 0,
-      duration: 180,
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (finished) {
-        setShortcutsVisible(false);
-        const callback = afterCloseActionRef.current;
-        afterCloseActionRef.current = null;
-        callback?.();
-      }
-    });
-  }, [sheetProgress]);
+  const closeShortcuts = React.useCallback(
+    (afterClose?: () => void) => {
+      afterCloseActionRef.current = afterClose ?? null;
+      Animated.timing(sheetProgress, {
+        toValue: 0,
+        duration: 180,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) {
+          setShortcutsVisible(false);
+          const callback = afterCloseActionRef.current;
+          afterCloseActionRef.current = null;
+          callback?.();
+        }
+      });
+    },
+    [sheetProgress],
+  );
 
   const handleCloseShortcuts = React.useCallback(() => {
     closeShortcuts();
@@ -265,7 +269,7 @@ const MainTabNavigator = () => {
                 ]}
               >
                 <View style={styles.shortcutTabButton}>
-                  <PlusIcon size={26} color="#FFFFFF" weight="bold" />
+                  <PlusIcon size={26} color={appColors.white} weight="bold" />
                 </View>
               </Pressable>
             ),
@@ -334,6 +338,10 @@ const MainTabNavigator = () => {
             <View style={styles.sheetHandle} />
 
             <View style={styles.sheetHeader}>
+              <View style={styles.headerSpacer} />
+
+              <Text style={styles.sheetTitle}>Shortcuts</Text>
+
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Close shortcuts"
@@ -343,12 +351,8 @@ const MainTabNavigator = () => {
                   pressed && styles.pressed,
                 ]}
               >
-                <XIcon size={22} color="#FFFFFF" weight="bold" />
+                <XIcon size={22} color={appColors.white} weight="bold" />
               </Pressable>
-
-              <Text style={styles.sheetTitle}>Shortcuts</Text>
-
-              <View style={styles.headerSpacer} />
             </View>
 
             <View style={styles.sheetDivider} />
@@ -364,7 +368,7 @@ const MainTabNavigator = () => {
                 <View style={styles.shortcutIconWrap}>
                   <MagnifyingGlassIcon
                     size={26}
-                    color="#FFFFFF"
+                    color={appColors.white}
                     weight="bold"
                   />
                 </View>
@@ -379,7 +383,7 @@ const MainTabNavigator = () => {
                 ]}
               >
                 <View style={styles.shortcutIconWrap}>
-                  <BarcodeIcon size={26} color="#FFFFFF" weight="bold" />
+                  <BarcodeIcon size={26} color={appColors.white} weight="bold" />
                 </View>
                 <Text style={styles.shortcutLabel}>Barcode</Text>
               </Pressable>
@@ -392,7 +396,7 @@ const MainTabNavigator = () => {
                 ]}
               >
                 <View style={styles.shortcutIconWrap}>
-                  <ScalesIcon size={26} color="#FFFFFF" weight="bold" />
+                  <ScalesIcon size={26} color={appColors.white} weight="bold" />
                 </View>
                 <Text style={styles.shortcutLabel}>Weight</Text>
               </Pressable>
@@ -422,12 +426,12 @@ const styles = StyleSheet.create({
   },
   placeholderScreen: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
   },
   tabBar: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
     borderTopWidth: 1,
-    borderTopColor: "#E9E1F7",
+    borderTopColor: appColors.raw_hex_E9E1F7,
     paddingTop: 8,
   },
   shortcutTabSlot: {
@@ -440,9 +444,9 @@ const styles = StyleSheet.create({
     height: 54,
     borderRadius: 999,
     // backgroundColor: "#1F1831",
-    backgroundColor: "#bfbdc5",
+    backgroundColor: appColors.raw_hex_bfbdc5,
     borderWidth: 3,
-    borderColor: "#b3b1b9",
+    borderColor: appColors.raw_hex_b3b1b9,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -452,10 +456,10 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(15, 10, 24, 0.52)",
+    backgroundColor: appColors.tabScrim,
   },
   sheet: {
-    backgroundColor: "#17131F",
+    backgroundColor: appColors.tabSheet,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingHorizontal: 20,
@@ -466,20 +470,20 @@ const styles = StyleSheet.create({
     width: 52,
     height: 5,
     borderRadius: 999,
-    backgroundColor: "#4A435A",
+    backgroundColor: appColors.tabSurface,
     marginBottom: 16,
   },
   sheetHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 14,
+    marginBottom: 8,
   },
   closeButton: {
     width: 42,
     height: 42,
     borderRadius: 999,
-    backgroundColor: "#26212F",
+    backgroundColor: appColors.tabBackdrop,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -488,13 +492,13 @@ const styles = StyleSheet.create({
     height: 42,
   },
   sheetTitle: {
-    color: "#FFFFFF",
+    color: appColors.white,
     fontSize: 28,
     fontWeight: "900",
   },
   sheetDivider: {
     height: 1,
-    backgroundColor: "#2B2535",
+    backgroundColor: appColors.tabButton,
     marginBottom: 22,
   },
   shortcutsGrid: {
@@ -511,12 +515,12 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 999,
-    backgroundColor: "#2A2436",
+    backgroundColor: appColors.tabCard,
     alignItems: "center",
     justifyContent: "center",
   },
   shortcutLabel: {
-    color: "#FFFFFF",
+    color: appColors.white,
     fontSize: 15,
     fontWeight: "800",
   },

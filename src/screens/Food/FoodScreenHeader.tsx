@@ -2,6 +2,7 @@ import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowLeftIcon } from "phosphor-react-native";
+import { appColors } from "../../theme/colors";
 
 type FoodScreenHeaderProps = {
   eyebrow: string;
@@ -29,7 +30,7 @@ const FoodScreenHeader = ({
               pressed && styles.backButtonPressed,
             ]}
           >
-            <ArrowLeftIcon size={16} color="#2F2741" weight="bold" />
+            <ArrowLeftIcon size={16} color={appColors.foodInk} weight="bold" />
             <Text style={styles.backText}>Back</Text>
           </Pressable>
         ) : (
@@ -37,7 +38,6 @@ const FoodScreenHeader = ({
         )}
       </View>
       <Text style={styles.eyebrow}>{eyebrow}</Text>
-      <Text style={styles.title}>{title}</Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
     </View>
   );
@@ -59,15 +59,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.9)",
+    backgroundColor: appColors.whiteOverlay90,
     borderWidth: 1,
-    borderColor: "#E6DEF1",
+    borderColor: appColors.foodBorder,
   },
   backButtonPressed: {
     opacity: 0.88,
   },
   backText: {
-    color: "#2F2741",
+    color: appColors.foodInk,
     fontSize: 13,
     fontWeight: "800",
   },
@@ -77,8 +77,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: "#6D52EA",
-    backgroundColor: "#F0EAFB",
+    color: appColors.foodPrimary,
+    backgroundColor: appColors.foodEyebrowBg,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
@@ -88,11 +88,11 @@ const styles = StyleSheet.create({
     fontSize: 32,
     lineHeight: 38,
     fontWeight: "900",
-    color: "#181326",
+    color: appColors.plum950,
     marginBottom: 6,
   },
   subtitle: {
-    color: "#7F7791",
+    color: appColors.foodMuted,
     fontSize: 15,
     lineHeight: 22,
   },

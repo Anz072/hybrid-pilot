@@ -9,7 +9,12 @@ import type {
   RouteProp,
 } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { CaretDownIcon, CaretUpIcon, ForkKnifeIcon } from "phosphor-react-native";
+import {
+  CalendarIcon,
+  CaretDownIcon,
+  CaretUpIcon,
+  ForkKnifeIcon,
+} from "phosphor-react-native";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -30,8 +35,10 @@ import FoodScreenHeader from "./FoodScreenHeader";
 import {
   buildFoodLoggedAt,
   formatFoodLoggedTime,
+  formatFoodMacro,
   formatFoodShortDate,
 } from "./foodUtils";
+import { appColors } from "../../theme/colors";
 
 type CreateCustomFoodRoute = RouteProp<FoodStackParamList, "CreateCustomFood">;
 type CreateCustomFoodNav = CompositeNavigationProp<
@@ -152,6 +159,15 @@ const OPTIONAL_NUTRIENT_SECTIONS: Array<{
   },
 ];
 
+const parseLocalizedNumber = (value: string): number =>
+  Number(value.trim().replace(",", "."));
+
+const formatPreviewNumber = (
+  value: number,
+  suffix = "",
+  empty = "--",
+): string => (Number.isFinite(value) ? `${value.toFixed(0)}${suffix}` : empty);
+
 const CreateCustomFoodScreen = () => {
   const [name, setName] = React.useState("");
   const [servingSize, setServingSize] = React.useState("100");
@@ -160,6 +176,7 @@ const CreateCustomFoodScreen = () => {
   const [carbs, setCarbs] = React.useState("0");
   const [fat, setFat] = React.useState("0");
   const [showAdvanced, setShowAdvanced] = React.useState(false);
+  const [creating, setCreating] = React.useState(false);
   const [optionalNutrients, setOptionalNutrients] =
     React.useState<OptionalNutrientInputValues>({});
 
@@ -186,11 +203,22 @@ const CreateCustomFoodScreen = () => {
     return formatFoodLoggedTime(resolvedLoggedAt);
   }, [contextLabel, resolvedLoggedAt]);
 
-  const parsedServing = Number(servingSize);
-  const parsedCalories = Number(calories);
-  const parsedProtein = Number(protein);
-  const parsedCarbs = Number(carbs);
-  const parsedFat = Number(fat);
+  const trimmedName = name.trim();
+  const trimmedMealType = mealType?.trim() || null;
+  const parsedServing = React.useMemo(
+    () => parseLocalizedNumber(servingSize),
+    [servingSize],
+  );
+  const parsedCalories = React.useMemo(
+    () => parseLocalizedNumber(calories),
+    [calories],
+  );
+  const parsedProtein = React.useMemo(
+    () => parseLocalizedNumber(protein),
+    [protein],
+  );
+  const parsedCarbs = React.useMemo(() => parseLocalizedNumber(carbs), [carbs]);
+  const parsedFat = React.useMemo(() => parseLocalizedNumber(fat), [fat]);
 
   const updateOptionalNutrient = React.useCallback(
     (key: keyof DBFoodNutrientDetails, value: string) => {
@@ -213,7 +241,7 @@ const CreateCustomFoodScreen = () => {
           continue;
         }
 
-        const numericValue = Number(rawValue.replace(",", "."));
+        const numericValue = parseLocalizedNumber(rawValue);
 
         if (!Number.isFinite(numericValue) || numericValue < 0) {
           return {
@@ -232,13 +260,15 @@ const CreateCustomFoodScreen = () => {
     };
   }, [optionalNutrients]);
 
-  const createAndAdd = async () => {
+  const createAndAdd = React.useCallback(async () => {
     if (!user) {
-      Alert.alert("No account found", "Create or restore a user before adding food.");
+      Alert.alert(
+        "No account found",
+        "Create or restore a user before adding food.",
+      );
       return;
     }
 
-    const trimmedName = name.trim();
     if (!trimmedName) {
       Alert.alert("Missing name", "Enter a food name first.");
       return;
@@ -251,7 +281,7 @@ const CreateCustomFoodScreen = () => {
     ) {
       Alert.alert(
         "Invalid numbers",
-        "Use positive serving size and non-negative values for the nutrition fields.",
+        "Use a positive serving size and non-negative values for the nutrition fields.",
       );
       return;
     }
@@ -265,52 +295,71 @@ const CreateCustomFoodScreen = () => {
       return;
     }
 
-    const foodId = await DB.saveFoodItem({
-      source: "custom",
-      sourceId: null,
-      barcode: null,
-      name: trimmedName,
-      brand: null,
-      imageUrl: null,
-      quantityValue: null,
-      quantityUnit: null,
-      servingSizeValue: parsedServing,
-      servingSizeUnit: "g",
-      nutritionBasis: "serving",
-      calories: parsedCalories,
-      proteinG: parsedProtein,
-      carbsG: parsedCarbs,
-      fatG: parsedFat,
-      saltG: null,
-      ...parsedOptionalNutrients.values,
-      saturatedFatG:
-        parsedOptionalNutrients.values.saturatedFatG ??
-        parsedOptionalNutrients.values.fatSaturatedG ??
-        null,
-      ingredientsText: null,
-      verified: false,
-      isComplete: true,
-    });
+    try {
+      setCreating(true);
 
-    await DB.addUserFoodLog({
-      userExternalId: user.externalId,
-      foodId,
-      date,
-      loggedAt: resolvedLoggedAt,
-      quantityG: parsedServing,
-      mealType: mealType ?? null,
-    });
+      const foodId = await DB.saveFoodItem({
+        source: "custom",
+        sourceId: null,
+        barcode: null,
+        name: trimmedName,
+        brand: null,
+        imageUrl: null,
+        quantityValue: null,
+        quantityUnit: null,
+        servingSizeValue: parsedServing,
+        servingSizeUnit: "g",
+        nutritionBasis: "serving",
+        calories: parsedCalories,
+        proteinG: parsedProtein,
+        carbsG: parsedCarbs,
+        fatG: parsedFat,
+        saltG: null,
+        ...parsedOptionalNutrients.values,
+        saturatedFatG:
+          parsedOptionalNutrients.values.saturatedFatG ??
+          parsedOptionalNutrients.values.fatSaturatedG ??
+          null,
+        ingredientsText: null,
+        verified: false,
+        isComplete: true,
+      });
 
-    const routes = navigation.getState().routes;
-    const previousRoute = routes[routes.length - 2];
+      await DB.addUserFoodLog({
+        userExternalId: user.externalId,
+        foodId,
+        date,
+        loggedAt: resolvedLoggedAt,
+        quantityG: parsedServing,
+        mealType: mealType ?? null,
+      });
 
-    if (previousRoute?.name === "AddFood" && routes.length >= 2) {
-      navigation.dispatch(StackActions.pop(2));
-      return;
+      const routes = navigation.getState().routes;
+      const previousRoute = routes[routes.length - 2];
+
+      if (previousRoute?.name === "AddFood" && routes.length >= 2) {
+        navigation.dispatch(StackActions.pop(2));
+        return;
+      }
+
+      navigation.goBack();
+    } finally {
+      setCreating(false);
     }
-
-    navigation.goBack();
-  };
+  }, [
+    date,
+    mealType,
+    navigation,
+    parseOptionalNutrients,
+    parsedCalories,
+    parsedCarbs,
+    parsedFat,
+    parsedProtein,
+    parsedServing,
+    resolvedLoggedAt,
+    trimmedName,
+    user,
+  ]);
 
   return (
     <View style={styles.screen}>
@@ -321,60 +370,88 @@ const CreateCustomFoodScreen = () => {
         style={styles.screen}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
           <FoodScreenHeader
             eyebrow="Custom Food"
-            title="Create a new item"
-            subtitle={`Build a food once, then reuse it instantly inside your diary at ${resolvedContextLabel}.`}
+            title="Create custom food"
+            subtitle={`${formatFoodShortDate(date)} | ${resolvedContextLabel}`}
             onBack={() => navigation.goBack()}
           />
 
           <View style={styles.heroCard}>
-            <View style={styles.heroPillRow}>
-              <View style={styles.heroPill}>
-                <ForkKnifeIcon size={14} color="#9A3412" weight="fill" />
-                <Text style={styles.heroPillText}>{resolvedContextLabel}</Text>
+            <View style={styles.heroHeaderCopy}>
+              <Text style={styles.heroEyebrow}>Quick Create</Text>
+              <Text style={styles.heroTitle}>
+                {trimmedName || "New custom food"}
+              </Text>
+              <Text style={styles.heroMeta}>
+                Save it once, then drop it straight into your diary using the
+                serving below.
+              </Text>
+            </View>
+
+            <View style={styles.pillRow}>
+              <View style={styles.pill}>
+                <ForkKnifeIcon size={14} color={appColors.foodPrimary} weight="fill" />
+                <Text style={styles.pillText}>{resolvedContextLabel}</Text>
               </View>
-              <View style={styles.heroPill}>
-                <Text style={styles.heroPillText}>{formatFoodShortDate(date)}</Text>
+              <View style={styles.pill}>
+                <CalendarIcon size={14} color={appColors.foodPrimary} weight="bold" />
+                <Text style={styles.pillText}>{formatFoodShortDate(date)}</Text>
               </View>
-              {mealType ? (
-                <View style={styles.heroPill}>
-                  <Text style={styles.heroPillText}>{mealType}</Text>
+              {trimmedMealType ? (
+                <View style={styles.pill}>
+                  <Text style={styles.pillText}>{trimmedMealType}</Text>
                 </View>
               ) : null}
             </View>
-            <Text style={styles.heroTitle}>Saved for quick logging</Text>
-            <Text style={styles.heroText}>
-              This custom food will be added straight into your diary at the
-              selected time using the serving size below.
-            </Text>
+
+            <View style={styles.previewStrip}>
+              <Text style={styles.previewValue}>
+                {formatPreviewNumber(parsedCalories, " kcal")}
+              </Text>
+              <Text style={styles.previewText}>
+                {`${formatFoodMacro(parsedProtein, "P")} | ${formatFoodMacro(
+                  parsedCarbs,
+                  "C",
+                )} | ${formatFoodMacro(parsedFat, "F")}`}
+              </Text>
+              <Text style={styles.previewSubtext}>
+                Default log size {formatPreviewNumber(parsedServing, " g")}
+              </Text>
+            </View>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Basics</Text>
+            <Text style={styles.sectionTitle}>Food Details</Text>
             <Text style={styles.sectionSubtitle}>
-              Start with the name and the serving you want to log by default.
+              Start with the saved name and the amount you want logged by
+              default.
             </Text>
 
-            <Text style={styles.label}>Food name</Text>
+            <Text style={styles.fieldLabel}>Food name</Text>
             <TextInput
               style={styles.input}
               placeholder="Chicken rice bowl"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={appColors.foodPlaceholder}
               value={name}
               onChangeText={setName}
             />
 
-            <Text style={styles.label}>Serving size</Text>
+            <Text style={[styles.fieldLabel, styles.fieldLabelSpacing]}>
+              Default serving
+            </Text>
             <View style={styles.inputRow}>
               <TextInput
                 style={styles.input}
                 placeholder="100"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={appColors.foodPlaceholder}
                 value={servingSize}
                 onChangeText={setServingSize}
-                keyboardType="numeric"
+                keyboardType="decimal-pad"
               />
               <View style={styles.unitPill}>
                 <Text style={styles.unitText}>g</Text>
@@ -383,102 +460,85 @@ const CreateCustomFoodScreen = () => {
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Macros</Text>
+            <Text style={styles.sectionTitle}>Core Nutrition</Text>
             <Text style={styles.sectionSubtitle}>
-              Enter the nutrition for the serving above.
+              Enter the nutrition for that serving.
             </Text>
 
             <View style={styles.grid}>
               <View style={styles.gridCell}>
-                <Text style={styles.label}>Calories</Text>
+                <Text style={styles.fieldLabel}>Calories</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="0"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={appColors.foodPlaceholder}
                   value={calories}
                   onChangeText={setCalories}
-                  keyboardType="numeric"
+                  keyboardType="decimal-pad"
                 />
               </View>
               <View style={styles.gridCell}>
-                <Text style={styles.label}>Protein (g)</Text>
+                <Text style={styles.fieldLabel}>Protein (g)</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="0"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={appColors.foodPlaceholder}
                   value={protein}
                   onChangeText={setProtein}
-                  keyboardType="numeric"
+                  keyboardType="decimal-pad"
                 />
               </View>
               <View style={styles.gridCell}>
-                <Text style={styles.label}>Carbs (g)</Text>
+                <Text style={styles.fieldLabel}>Carbs (g)</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="0"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={appColors.foodPlaceholder}
                   value={carbs}
                   onChangeText={setCarbs}
-                  keyboardType="numeric"
+                  keyboardType="decimal-pad"
                 />
               </View>
               <View style={styles.gridCell}>
-                <Text style={styles.label}>Fat (g)</Text>
+                <Text style={styles.fieldLabel}>Fat (g)</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="0"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={appColors.foodPlaceholder}
                   value={fat}
                   onChangeText={setFat}
-                  keyboardType="numeric"
+                  keyboardType="decimal-pad"
                 />
               </View>
-            </View>
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Preview</Text>
-            <Text style={styles.sectionSubtitle}>
-              This is what will be logged into your diary when you tap create.
-            </Text>
-
-            <View style={styles.previewStrip}>
-              <Text style={styles.previewCalories}>
-                {Number.isFinite(parsedCalories) ? parsedCalories.toFixed(0) : "--"} kcal
-              </Text>
-              <Text style={styles.previewMacros}>
-                {Number.isFinite(parsedProtein) ? parsedProtein.toFixed(0) : "--"}P •{" "}
-                {Number.isFinite(parsedCarbs) ? parsedCarbs.toFixed(0) : "--"}C •{" "}
-                {Number.isFinite(parsedFat) ? parsedFat.toFixed(0) : "--"}F
-              </Text>
-              <Text style={styles.previewServing}>
-                Default log size {Number.isFinite(parsedServing) ? parsedServing.toFixed(0) : "--"} g
-              </Text>
             </View>
           </View>
 
           <Pressable
-            style={({ pressed }) => [styles.advancedToggle, pressed && styles.cardPressed]}
             onPress={() => setShowAdvanced((current) => !current)}
+            style={({ pressed }) => [
+              styles.card,
+              styles.advancedToggle,
+              pressed && styles.cardPressed,
+            ]}
           >
-            <View>
-              <Text style={styles.advancedTitle}>Advanced nutrition</Text>
-              <Text style={styles.advancedText}>
-                Optional micronutrients and detailed fats for this serving.
+            <View style={styles.advancedToggleCopy}>
+              <Text style={styles.sectionTitle}>Advanced Nutrition</Text>
+              <Text style={styles.advancedToggleText}>
+                Optional micronutrients and detailed fats for the same serving.
               </Text>
             </View>
             {showAdvanced ? (
-              <CaretUpIcon size={18} color="#374151" weight="bold" />
+              <CaretUpIcon size={18} color={appColors.foodInk} weight="bold" />
             ) : (
-              <CaretDownIcon size={18} color="#374151" weight="bold" />
+              <CaretDownIcon size={18} color={appColors.foodInk} weight="bold" />
             )}
           </Pressable>
 
           {showAdvanced ? (
-            <View style={styles.advancedPanel}>
-              <Text style={styles.advancedPanelText}>
-                Leave anything blank if you do not know it. Calories and macros above are the only
-                required nutrition fields.
+            <View style={styles.card}>
+              <Text style={styles.advancedIntro}>
+                Leave anything blank if you do not know it. Calories and macros
+                above are the only required nutrition fields.
               </Text>
               {OPTIONAL_NUTRIENT_SECTIONS.map((section) => (
                 <View key={section.title} style={styles.advancedGroup}>
@@ -486,13 +546,13 @@ const CreateCustomFoodScreen = () => {
                   <View style={styles.grid}>
                     {section.fields.map((field) => (
                       <View key={field.key} style={styles.gridCell}>
-                        <Text style={styles.label}>
+                        <Text style={styles.fieldLabel}>
                           {field.label} ({field.unit})
                         </Text>
                         <TextInput
                           style={styles.input}
                           placeholder="Optional"
-                          placeholderTextColor="#9CA3AF"
+                          placeholderTextColor={appColors.foodPlaceholder}
                           value={optionalNutrients[field.key] ?? ""}
                           onChangeText={(value) =>
                             updateOptionalNutrient(field.key, value)
@@ -508,10 +568,19 @@ const CreateCustomFoodScreen = () => {
           ) : null}
 
           <Pressable
-            style={({ pressed }) => [styles.primaryButton, pressed && styles.cardPressed]}
-            onPress={() => void createAndAdd()}
+            onPress={() => {
+              void createAndAdd();
+            }}
+            disabled={creating}
+            style={({ pressed }) => [
+              styles.primaryButton,
+              creating && styles.disabled,
+              pressed && !creating && styles.cardPressed,
+            ]}
           >
-            <Text style={styles.primaryButtonText}>Create and add</Text>
+            <Text style={styles.primaryButtonText}>
+              {creating ? "Creating..." : "Create and add"}
+            </Text>
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -522,220 +591,217 @@ const CreateCustomFoodScreen = () => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#FFF7ED",
+    backgroundColor: appColors.foodScreenBg,
   },
   content: {
-    paddingHorizontal: 20,
-    paddingBottom: 28,
+    paddingHorizontal: 18,
+    paddingBottom: 36,
   },
   bgOrbTop: {
     position: "absolute",
-    top: -92,
-    right: -60,
-    width: 240,
-    height: 240,
+    top: -90,
+    right: -70,
+    width: 250,
+    height: 250,
     borderRadius: 999,
-    backgroundColor: "#FED7AA",
+    backgroundColor: appColors.foodOrbTop,
   },
   bgOrbBottom: {
     position: "absolute",
-    bottom: -100,
-    left: -70,
-    width: 260,
-    height: 260,
+    bottom: -120,
+    left: -90,
+    width: 280,
+    height: 280,
     borderRadius: 999,
-    backgroundColor: "#FDE68A",
-    opacity: 0.26,
+    backgroundColor: appColors.foodOrbBottom,
   },
   heroCard: {
-    backgroundColor: "rgba(255,255,255,0.94)",
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: "#FED7AA",
-    padding: 18,
+    backgroundColor: appColors.white,
+    borderRadius: 8,
+    padding: 14,
     marginBottom: 16,
   },
-  heroPillRow: {
+  heroHeaderCopy: {
+    marginBottom: 10,
+  },
+  heroEyebrow: {
+    alignSelf: "flex-start",
+    color: appColors.foodPrimary,
+    fontSize: 11,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.7,
+    marginBottom: 4,
+  },
+  heroTitle: {
+    color: appColors.foodText,
+    fontSize: 18,
+    fontWeight: "900",
+    marginBottom: 3,
+  },
+  heroMeta: {
+    color: appColors.foodMuted,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  pillRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 12,
+    gap: 7,
+    marginBottom: 10,
   },
-  heroPill: {
-    alignSelf: "flex-start",
+  pill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     borderRadius: 999,
-    backgroundColor: "#FFF7ED",
+    backgroundColor: appColors.foodPillBg,
     borderWidth: 1,
-    borderColor: "#FDBA74",
+    borderColor: appColors.foodBorder,
     paddingHorizontal: 10,
     paddingVertical: 7,
   },
-  heroPillText: {
-    color: "#9A3412",
-    fontSize: 12,
+  pillText: {
+    color: appColors.foodPrimary,
+    fontSize: 11,
     fontWeight: "800",
   },
-  heroTitle: {
-    color: "#111827",
-    fontSize: 24,
-    fontWeight: "900",
-    marginBottom: 8,
+  previewStrip: {
+    borderRadius: 8,
+    backgroundColor: appColors.foodPrimaryDark,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
   },
-  heroText: {
-    color: "#6B7280",
-    fontSize: 14,
-    lineHeight: 20,
+  previewValue: {
+    color: appColors.white,
+    fontSize: 20,
+    fontWeight: "900",
+    marginBottom: 2,
+  },
+  previewText: {
+    color: appColors.foodPreviewText,
+    fontSize: 12,
+    lineHeight: 16,
+    marginBottom: 2,
+  },
+  previewSubtext: {
+    color: appColors.foodPreviewText,
+    fontSize: 12,
+    lineHeight: 16,
   },
   card: {
-    backgroundColor: "rgba(255,255,255,0.94)",
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    padding: 16,
+    backgroundColor: appColors.white,
+    borderRadius: 8,
+    padding: 14,
     marginBottom: 16,
   },
   sectionTitle: {
-    color: "#111827",
-    fontSize: 18,
+    color: appColors.foodText,
+    fontSize: 14,
     fontWeight: "900",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   sectionSubtitle: {
-    color: "#6B7280",
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 14,
-  },
-  label: {
-    color: "#6B7280",
+    color: appColors.foodMuted,
     fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.7,
+    lineHeight: 17,
+    marginBottom: 10,
+  },
+  fieldLabel: {
+    color: appColors.foodLabel,
+    fontSize: 11,
+    fontWeight: "800",
     textTransform: "uppercase",
-    marginBottom: 8,
+    letterSpacing: 0.6,
+    marginBottom: 6,
+  },
+  fieldLabelSpacing: {
+    marginTop: 10,
   },
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
   },
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 16,
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    color: "#111827",
-    fontSize: 16,
-    fontWeight: "600",
+    borderColor: appColors.foodBorder,
+    borderRadius: 8,
+    backgroundColor: appColors.foodFieldBg,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    color: appColors.foodText,
+    fontSize: 14,
+    fontWeight: "700",
   },
   unitPill: {
-    borderRadius: 14,
-    backgroundColor: "#FFF7ED",
+    borderRadius: 8,
+    backgroundColor: appColors.foodPillBg,
     borderWidth: 1,
-    borderColor: "#FDBA74",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    borderColor: appColors.foodBorder,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
   },
   unitText: {
-    color: "#9A3412",
-    fontSize: 15,
+    color: appColors.foodPrimary,
+    fontSize: 13,
     fontWeight: "800",
   },
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    gap: 8,
   },
   gridCell: {
     width: "47%",
-  },
-  previewStrip: {
-    borderRadius: 18,
-    backgroundColor: "#111827",
-    padding: 16,
-  },
-  previewCalories: {
-    color: "#FFFFFF",
-    fontSize: 26,
-    fontWeight: "900",
-    marginBottom: 6,
-  },
-  previewMacros: {
-    color: "#FDE68A",
-    fontSize: 14,
-    fontWeight: "800",
-    marginBottom: 4,
-  },
-  previewServing: {
-    color: "#CBD5E1",
-    fontSize: 13,
-    lineHeight: 18,
   },
   advancedToggle: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
-    backgroundColor: "rgba(255,255,255,0.9)",
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    padding: 16,
-    marginBottom: 10,
   },
-  advancedTitle: {
-    color: "#111827",
-    fontSize: 16,
-    fontWeight: "800",
-    marginBottom: 4,
+  advancedToggleCopy: {
+    flex: 1,
   },
-  advancedText: {
-    color: "#6B7280",
-    fontSize: 13,
-    lineHeight: 18,
+  advancedToggleText: {
+    color: appColors.foodMuted,
+    fontSize: 12,
+    lineHeight: 17,
   },
-  advancedPanel: {
-    borderRadius: 18,
-    backgroundColor: "#FFF7ED",
-    borderWidth: 1,
-    borderColor: "#FED7AA",
-    padding: 14,
-    marginBottom: 16,
-  },
-  advancedPanelText: {
-    color: "#9A3412",
-    fontSize: 13,
-    lineHeight: 19,
+  advancedIntro: {
+    color: appColors.foodPrimary,
+    fontSize: 12,
+    lineHeight: 17,
     fontWeight: "700",
-    marginBottom: 14,
+    marginBottom: 10,
   },
   advancedGroup: {
-    marginTop: 4,
-    marginBottom: 18,
+    marginTop: 6,
+    marginBottom: 14,
   },
   advancedGroupTitle: {
-    color: "#111827",
-    fontSize: 15,
+    color: appColors.foodText,
+    fontSize: 13,
     fontWeight: "900",
-    marginBottom: 10,
-  },
-  primaryButton: {
-    borderRadius: 20,
-    backgroundColor: "#111827",
-    paddingVertical: 17,
-    alignItems: "center",
     marginBottom: 8,
   },
+  primaryButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 999,
+    backgroundColor: appColors.foodPrimaryDark,
+    paddingVertical: 13,
+    marginBottom: 12,
+  },
   primaryButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "900",
+    color: appColors.white,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  disabled: {
+    opacity: 0.58,
   },
   cardPressed: {
     opacity: 0.9,

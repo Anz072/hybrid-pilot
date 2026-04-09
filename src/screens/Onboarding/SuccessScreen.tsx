@@ -10,6 +10,7 @@ import {
   formatActivitySummary,
   formatTrainingSummary,
 } from "./onboardingSummary";
+import { appColors } from "../../theme/colors";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "Success"> & {
   onFinish: () => void;
@@ -36,7 +37,7 @@ const SuccessScreen = ({ onFinish, route }: Props) => {
       <View style={styles.bgOrbBottom} />
 
       <View style={styles.badge}>
-        <CheckCircleIcon size={34} color="#16A34A" weight="fill" />
+        <CheckCircleIcon size={34} color={appColors.green600} weight="fill" />
       </View>
 
       <Text style={styles.eyebrow}>Ready</Text>
@@ -48,7 +49,7 @@ const SuccessScreen = ({ onFinish, route }: Props) => {
 
       <View style={styles.highlightCard}>
         <View style={styles.highlightHeader}>
-          <ForkKnifeIcon size={22} color="#0F766E" weight="fill" />
+          <ForkKnifeIcon size={22} color={appColors.teal700} weight="fill" />
           <Text style={styles.highlightTitle}>Starting Targets</Text>
         </View>
         {goalRateLabel ? (
@@ -116,7 +117,7 @@ const SuccessScreen = ({ onFinish, route }: Props) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: appColors.slate50,
   },
   content: {
     paddingHorizontal: 22,
@@ -129,7 +130,7 @@ const styles = StyleSheet.create({
     width: 180,
     height: 180,
     borderRadius: 999,
-    backgroundColor: "#DCFCE7",
+    backgroundColor: appColors.greenSoftBg,
   },
   bgOrbBottom: {
     position: "absolute",
@@ -138,15 +139,15 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 999,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: appColors.slate200,
   },
   badge: {
     width: 68,
     height: 68,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#BBF7D0",
-    backgroundColor: "#F0FDF4",
+    borderColor: appColors.raw_hex_BBF7D0,
+    backgroundColor: appColors.raw_hex_F0FDF4,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 14,
@@ -157,8 +158,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: "#166534",
-    backgroundColor: "#DCFCE7",
+    color: appColors.green800,
+    backgroundColor: appColors.greenSoftBg,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
@@ -168,21 +169,21 @@ const styles = StyleSheet.create({
     fontSize: 34,
     lineHeight: 40,
     fontWeight: "800",
-    color: "#0F172A",
+    color: appColors.slate900,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 15,
     lineHeight: 22,
-    color: "#475569",
+    color: appColors.slate600,
     marginBottom: 18,
   },
   highlightCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#D1FAE5",
+    borderColor: appColors.raw_hex_D1FAE5,
     marginBottom: 16,
   },
   highlightHeader: {
@@ -194,18 +195,18 @@ const styles = StyleSheet.create({
   highlightTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#0F172A",
+    color: appColors.slate900,
   },
   pacePill: {
     alignSelf: "flex-start",
-    backgroundColor: "#DBEAFE",
+    backgroundColor: appColors.blueSoftBg,
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginBottom: 14,
   },
   pacePillText: {
-    color: "#1D4ED8",
+    color: appColors.blue700,
     fontSize: 12,
     fontWeight: "800",
     letterSpacing: 0.4,
@@ -218,15 +219,15 @@ const styles = StyleSheet.create({
   },
   metricTile: {
     width: "47%",
-    backgroundColor: "#F8FAFC",
+    backgroundColor: appColors.slate50,
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: appColors.slate200,
   },
   metricTileLabel: {
-    color: "#64748B",
+    color: appColors.slate500,
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
@@ -234,44 +235,44 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   metricTileValue: {
-    color: "#0F172A",
+    color: appColors.slate900,
     fontSize: 24,
     fontWeight: "900",
     lineHeight: 28,
   },
   metricTileUnit: {
-    color: "#475569",
+    color: appColors.slate600,
     fontSize: 12,
     fontWeight: "700",
     marginTop: 2,
   },
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: appColors.slate200,
     marginBottom: 18,
   },
   detailRow: {
     gap: 6,
   },
   detailLabel: {
-    color: "#64748B",
+    color: appColors.slate500,
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 0.8,
     textTransform: "uppercase",
   },
   detailValue: {
-    color: "#0F172A",
+    color: appColors.slate900,
     fontSize: 16,
     fontWeight: "800",
     lineHeight: 22,
   },
   divider: {
     height: 1,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: appColors.slate200,
     marginVertical: 12,
   },
   button: {

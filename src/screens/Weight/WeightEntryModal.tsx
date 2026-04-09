@@ -24,6 +24,7 @@ import {
   parseLocalizedWeight,
   toLocalIsoWithOffset,
 } from "./weightUtils";
+import { appColors } from "../../theme/colors";
 
 export type WeightEntryDraft = {
   valueOriginal: number;
@@ -185,7 +186,7 @@ const WeightEntryModal = ({
             style={({ pressed }) => [styles.closeButton, pressed && styles.closeButtonPressed]}
             accessibilityLabel="Close weight entry"
           >
-            <XIcon size={18} color="#0F172A" weight="bold" />
+            <XIcon size={18} color={appColors.slate900} weight="bold" />
           </Pressable>
         </View>
 
@@ -204,7 +205,7 @@ const WeightEntryModal = ({
                 blurOnSubmit
                 onSubmitEditing={Keyboard.dismiss}
                 placeholder="82.4"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={appColors.slate400}
                 style={styles.weightInput}
                 accessibilityLabel="Weight in kilograms"
               />
@@ -223,7 +224,7 @@ const WeightEntryModal = ({
                 ]}
                 accessibilityLabel="Select measurement date"
               >
-                <ClockIcon size={16} color="#0F172A" weight="bold" />
+                <ClockIcon size={16} color={appColors.slate900} weight="bold" />
                 <Text style={styles.dateButtonText}>
                   {measuredAtDate.toLocaleDateString(undefined, {
                     month: "short",
@@ -240,7 +241,7 @@ const WeightEntryModal = ({
                 ]}
                 accessibilityLabel="Select measurement time"
               >
-                <ClockIcon size={16} color="#0F172A" weight="bold" />
+                <ClockIcon size={16} color={appColors.slate900} weight="bold" />
                 <Text style={styles.dateButtonText}>
                   {measuredAtDate.toLocaleTimeString(undefined, {
                     hour: "numeric",
@@ -272,7 +273,7 @@ const WeightEntryModal = ({
               value={notes}
               onChangeText={setNotes}
               placeholder="Optional notes"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={appColors.slate400}
               style={styles.notesInput}
               multiline
               accessibilityLabel="Entry notes"
@@ -309,7 +310,7 @@ const WeightEntryModal = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: appColors.slate50,
   },
   header: {
     paddingHorizontal: 20,
@@ -324,8 +325,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: "#0F766E",
-    backgroundColor: "#CCFBF1",
+    color: appColors.teal700,
+    backgroundColor: appColors.tealSoftBg,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
@@ -334,15 +335,15 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 30,
     fontWeight: "800",
-    color: "#0F172A",
+    color: appColors.slate900,
   },
   closeButton: {
     width: 40,
     height: 40,
     borderRadius: 999,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: appColors.slate300,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -354,14 +355,14 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: appColors.slate200,
     padding: 16,
   },
   label: {
-    color: "#64748B",
+    color: appColors.slate500,
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 0.8,
@@ -377,27 +378,27 @@ const styles = StyleSheet.create({
   weightInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: appColors.slate300,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 14,
     fontSize: 22,
     fontWeight: "800",
-    color: "#0F172A",
-    backgroundColor: "#FFFFFF",
+    color: appColors.slate900,
+    backgroundColor: appColors.white,
   },
   unitPill: {
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: appColors.slate50,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: appColors.slate300,
   },
   unitText: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#0F172A",
+    color: appColors.slate900,
   },
   dateRow: {
     flexDirection: "row",
@@ -410,30 +411,30 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: appColors.slate50,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: appColors.slate300,
     borderRadius: 12,
   },
   dateButtonPressed: {
     opacity: 0.9,
   },
   dateButtonText: {
-    color: "#0F172A",
+    color: appColors.slate900,
     fontSize: 14,
     fontWeight: "700",
   },
   notesInput: {
     minHeight: 96,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: appColors.slate300,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 12,
     textAlignVertical: "top",
-    color: "#0F172A",
+    color: appColors.slate900,
     fontSize: 15,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
   },
   deleteButton: {
     marginTop: 18,
@@ -444,7 +445,7 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
   deleteText: {
-    color: "#B91C1C",
+    color: appColors.danger700,
     fontSize: 15,
     fontWeight: "800",
   },

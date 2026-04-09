@@ -13,6 +13,7 @@ import {
   ClockIcon,
   PencilSimpleIcon,
   TrashIcon,
+  XIcon,
 } from "phosphor-react-native";
 import type { FoodDiaryHourBucket } from "./foodDiaryTypes";
 import {
@@ -22,6 +23,7 @@ import {
   formatFoodServing,
   formatMacroLine,
 } from "./foodUtils";
+import { appColors } from "../../theme/colors";
 
 type FoodDiaryTimelineSectionProps = {
   hourBuckets: FoodDiaryHourBucket[];
@@ -82,7 +84,7 @@ const FoodDiaryTimelineItem = ({
               style={[
                 styles.hourTitle,
                 bucket.entries.length === 0 && {
-                  color: withOpacity("#1B1529", 0.6),
+                  color: withOpacity(appColors.foodText, 0.6),
                 },
               ]}
             >
@@ -117,73 +119,58 @@ const FoodDiaryTimelineItem = ({
                 );
 
                 return (
-                  <View key={entry.id} style={styles.entryCard}>
-                    <Pressable
-                      style={styles.entryMain}
-                      onPress={(event) =>
-                        runWithoutToggling(event, () => onEditEntry(entry.id))
-                      }
-                    >
+                  <Pressable
+                    key={entry.id}
+                    style={styles.entryCard}
+                    onPress={(event) =>
+                      runWithoutToggling(event, () => onEditEntry(entry.id))
+                    }
+                  >
+                    <View style={styles.entryMain}>
                       <View style={styles.rowBetween}>
                         <View style={styles.entryCopy}>
                           <Text style={styles.entryTitle} numberOfLines={2}>
                             {entry.foodName}
                           </Text>
-                          <Text style={styles.entryTime}>{time}</Text>
                         </View>
-                        <Text style={styles.entryCalories}>
+                        <View style={styles.entryActions}>
+                          <Pressable
+                            onPress={(event) =>
+                              runWithoutToggling(event, () =>
+                                onDeleteEntry(entry.id),
+                              )
+                            }
+                            style={({ pressed }) => [
+                              styles.iconButton,
+                              pressed && styles.cardPressed,
+                            ]}
+                          >
+                            <XIcon size={18} color={appColors.neutral300} />
+                          </Pressable>
+                        </View>
+                        {/* <Text style={styles.entryCalories}>
                           {Math.round(nutrition.calories)} kcal
+                        </Text> */}
+                      </View>
+                      <View
+                        style={{
+                          display: "flex",
+                          flexDirection: "row",
+                          gap: 4,
+                        }}
+                      >
+                        <Text style={styles.entryText}>{time}</Text>
+                        <Text style={styles.entryText}>|</Text>
+                        <Text style={styles.entryText}>
+                          {formatFoodServing(
+                            entry.quantityG,
+                            entry.servingUnit,
+                          )}{" "}
+                          | {(nutrition.calories)} kcal
                         </Text>
                       </View>
-                      <View style={styles.entryMetaRow}>
-                        <View style={styles.entryPill}>
-                          <ClockIcon size={12} color="#6D52EA" weight="bold" />
-                          <Text style={styles.entryPillText}>{time}</Text>
-                        </View>
-                        {entry.mealType?.trim() ? (
-                          <View style={styles.entryPill}>
-                            <Text style={styles.entryPillText}>
-                              {entry.mealType.trim()}
-                            </Text>
-                          </View>
-                        ) : null}
-                      </View>
-                      <Text style={styles.entryText}>
-                        {formatFoodServing(entry.quantityG, entry.servingUnit)}{" "}
-                        | {formatMacroLine(nutrition)}
-                      </Text>
-                    </Pressable>
-                    <View style={styles.entryActions}>
-                      <Pressable
-                        onPress={(event) =>
-                          runWithoutToggling(event, () => onEditEntry(entry.id))
-                        }
-                        style={({ pressed }) => [
-                          styles.iconButton,
-                          pressed && styles.cardPressed,
-                        ]}
-                      >
-                        <PencilSimpleIcon
-                          size={16}
-                          color="#6D52EA"
-                          weight="bold"
-                        />
-                      </Pressable>
-                      <Pressable
-                        onPress={(event) =>
-                          runWithoutToggling(event, () =>
-                            onDeleteEntry(entry.id),
-                          )
-                        }
-                        style={({ pressed }) => [
-                          styles.iconButton,
-                          pressed && styles.cardPressed,
-                        ]}
-                      >
-                        <TrashIcon size={16} color="#DC2626" weight="bold" />
-                      </Pressable>
                     </View>
-                  </View>
+                  </Pressable>
                 );
               })
             ) : (
@@ -272,19 +259,20 @@ const FoodDiaryTimelineSection = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "rgba(255,255,255,0.96)",
-    borderRadius: 8,
-    padding: 16,
+    backgroundColor: appColors.white,
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    padding: 8,
     marginBottom: 16,
   },
   sectionTitle: {
-    color: "#1B1529",
+    color: appColors.foodText,
     fontSize: 22,
     fontWeight: "900",
     marginBottom: 12,
   },
   sectionText: {
-    color: "#7F7791",
+    color: appColors.foodMuted,
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 14,
@@ -301,12 +289,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   axisLabel: {
-    color: "#8A809F",
+    color: appColors.foodPlaceholder,
     fontSize: 12,
     fontWeight: "800",
   },
   axisLabelActive: {
-    color: "#6D52EA",
+    color: appColors.foodPrimary,
   },
   axisTrack: {
     flex: 1,
@@ -316,15 +304,15 @@ const styles = StyleSheet.create({
     width: 9,
     height: 9,
     borderRadius: 999,
-    backgroundColor: "#DDD3F3",
+    backgroundColor: appColors.lavenderDot,
   },
   axisDotActive: {
-    backgroundColor: "#6D52EA",
+    backgroundColor: appColors.foodPrimary,
   },
   axisLine: {
     width: 1,
     flex: 1,
-    backgroundColor: "#ECE5F6",
+    backgroundColor: appColors.foodSectionBg,
     marginBottom: -8,
   },
   timelineContent: {
@@ -332,12 +320,12 @@ const styles = StyleSheet.create({
   },
   hourCard: {
     borderRadius: 8,
-    backgroundColor: "#FAF7FF",
+    backgroundColor: appColors.foodSurfaceAlt,
     padding: 10,
   },
   hourCardActive: {
-    borderColor: "#CDBEFF",
-    backgroundColor: "#f3eefc",
+    borderColor: appColors.lavenderRowBorder,
+    backgroundColor: appColors.raw_hex_f3eefc,
   },
   hourHeader: {
     flexDirection: "row",
@@ -361,28 +349,28 @@ const styles = StyleSheet.create({
   hourTitle: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#1B1529",
+    color: appColors.foodText,
     letterSpacing: 0.5,
   },
   hourText: {
-    color: "#7F7791",
+    color: appColors.foodMuted,
     fontSize: 12,
     lineHeight: 17,
     maxWidth: 210,
   },
   addPill: {
     borderRadius: 999,
-    backgroundColor: "#EFE9FA",
+    backgroundColor: appColors.raw_hex_EFE9FA,
     paddingHorizontal: 14,
     paddingVertical: 9,
   },
   addPillText: {
-    color: "#6D52EA",
+    color: appColors.foodPrimary,
     fontSize: 12,
     fontWeight: "800",
   },
   collapseText: {
-    color: "#8A809F",
+    color: appColors.foodPlaceholder,
     fontSize: 11,
     fontWeight: "800",
   },
@@ -392,95 +380,67 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     borderRadius: 14,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
     borderWidth: 1,
-    borderColor: "#EAE3F7",
+    borderColor: appColors.foodTimelineBorder,
     paddingHorizontal: 12,
     paddingVertical: 12,
   },
   emptyStateText: {
-    color: "#1B1529",
+    color: appColors.foodText,
     fontSize: 13,
     fontWeight: "800",
     marginBottom: 2,
   },
   emptyStateAction: {
-    color: "#6D52EA",
+    color: appColors.foodPrimary,
     fontSize: 12,
     fontWeight: "700",
   },
   entryCard: {
     flexDirection: "row",
     gap: 12,
-    borderRadius: 18,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#EAE3F7",
-    padding: 12,
+    borderRadius: 8,
+    backgroundColor: appColors.white,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   entryMain: {
     flex: 1,
   },
   entryCopy: {
     flex: 1,
-    paddingRight: 8,
-  },
-  entryTitle: {
-    color: "#1B1529",
-    fontSize: 15,
-    fontWeight: "900",
-    marginBottom: 3,
-  },
-  entryTime: {
-    color: "#8A809F",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  entryCalories: {
-    color: "#1B1529",
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  entryMetaRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  entryPill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    borderRadius: 999,
-    backgroundColor: "#F3EEFC",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    gap: 5,
   },
-  entryPillText: {
-    color: "#6D52EA",
-    fontSize: 11,
-    fontWeight: "800",
+  entryTitle: {
+    color: appColors.foodText,
+    fontSize: 16,
+    marginBottom: 4,
+    fontWeight: "700",
+  },
+  entryTime: {
+    color: appColors.black65,
+    fontSize: 10,
+    borderRadius: 6,
+    paddingHorizontal: 3,
+    paddingVertical: 2,
+    backgroundColor: appColors.raw_hex_6e52ea1f,
   },
   entryText: {
-    color: "#6E6582",
+    color: appColors.black30,
     fontSize: 12,
     lineHeight: 17,
-    fontWeight: "700",
   },
   entryActions: {
     justifyContent: "space-between",
     gap: 8,
+    marginTop: -5,
   },
   iconButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F6F2FC",
-    borderWidth: 1,
-    borderColor: "#E8E1F5",
   },
   cardPressed: {
     opacity: 0.9,

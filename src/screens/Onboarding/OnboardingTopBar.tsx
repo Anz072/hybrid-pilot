@@ -1,6 +1,7 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { ArrowLeftIcon } from "phosphor-react-native";
+import { appColors } from "../../theme/colors";
 
 type OnboardingTopBarProps = {
   onBack?: () => void;
@@ -21,7 +22,7 @@ const OnboardingTopBar = ({
             pressed && styles.backButtonPressed,
           ]}
         >
-          <ArrowLeftIcon size={16} color="#0F172A" weight="bold" />
+          <ArrowLeftIcon size={16} color={appColors.slate900} weight="bold" />
           <Text style={styles.backText}>Back</Text>
         </Pressable>
       ) : (
@@ -46,20 +47,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 999,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: appColors.slate300,
   },
   backButtonPressed: {
     opacity: 0.9,
   },
   backText: {
-    color: "#0F172A",
+    color: appColors.slate900,
     fontSize: 13,
     fontWeight: "800",
   },
   stepLabel: {
-    color: "#64748B",
+    color: appColors.slate500,
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 0.6,

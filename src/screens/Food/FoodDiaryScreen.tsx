@@ -1,19 +1,21 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DB } from "../../store/DB";
-import type { DBFoodItem, DBUser, DBUserFoodLogEntry } from "../../store/DB_TYPES";
+import type {
+  DBFoodItem,
+  DBUser,
+  DBUserFoodLogEntry,
+} from "../../store/DB_TYPES";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
-import FoodDiaryDateStrip, {
+import FoodDiaryMainStrip, {
   buildFoodDiaryWeekDays,
-  type FoodDiaryDateStripDay,
-} from "./FoodDiaryDateStrip";
-import FoodDiaryHeroCard from "./FoodDiaryHeroCard";
+  type FoodDiaryMainStripDay,
+} from "./FoodDiaryMainStrip";
 import FoodDiaryMoreSection from "./FoodDiaryMoreSection";
 import FoodDiaryQuickAdds from "./FoodDiaryQuickAdds";
-import FoodDiaryTimelineSection from "./FoodDiaryTimelineSection";
 import type {
   FoodDiaryFavoriteFood,
   FoodDiaryHourBucket,
@@ -22,12 +24,12 @@ import {
   buildFoodLoggedAt,
   formatFoodDateKey,
   formatFoodHourLabel,
-  getFoodDefaultLogAmount,
   getFoodLoggedHour,
   getFoodResolvedServing,
   shiftFoodDate,
   sumLoggedNutrition,
 } from "./foodUtils";
+import { appColors } from "../../theme/colors";
 
 type FoodDiaryNav = NativeStackNavigationProp<FoodStackParamList, "Diary">;
 
@@ -54,7 +56,7 @@ const FoodDiaryScreen = () => {
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [user, setUser] = useState<DBUser | null>(null);
   const [entries, setEntries] = useState<DBUserFoodLogEntry[]>([]);
-  const [dateStripDays, setDateStripDays] = useState<FoodDiaryDateStripDay[]>(
+  const [mainStripDays, setMainStripDays] = useState<FoodDiaryMainStripDay[]>(
     () =>
       buildFoodDiaryWeekDays(new Date()).map((date) => ({
         date,
@@ -82,7 +84,7 @@ const FoodDiaryScreen = () => {
 
     if (!currentUser) {
       setEntries([]);
-      setDateStripDays(
+      setMainStripDays(
         buildFoodDiaryWeekDays(selectedDate).map((date) => ({
           date,
           dateKey: formatFoodDateKey(date),
@@ -107,7 +109,7 @@ const FoodDiaryScreen = () => {
 
     const selectedDateIndex = weekDateKeys.indexOf(dateKey);
     setEntries(weekEntriesByDate[selectedDateIndex] ?? []);
-    setDateStripDays(
+    setMainStripDays(
       weekDays.map((date, index) => ({
         date,
         dateKey: weekDateKeys[index],
@@ -187,27 +189,20 @@ const FoodDiaryScreen = () => {
     [dateKey, navigation],
   );
 
-  const addFavoriteToHour = useCallback(
-    async (food: DBFoodItem, hour: number) => {
-      if (!user) {
-        return;
-      }
-
+  const openFavoriteEditorAtHour = useCallback(
+    (food: DBFoodItem, hour: number) => {
       const minute =
         isToday && new Date().getHours() === hour ? new Date().getMinutes() : 0;
 
-      await DB.addUserFoodLog({
-        userExternalId: user.externalId,
+      navigation.navigate("ScannedFood", {
         foodId: food.id,
         date: dateKey,
         loggedAt: buildFoodLoggedAt(dateKey, hour, minute),
-        quantityG: getFoodDefaultLogAmount(food),
         mealType: null,
+        contextLabel: formatFoodHourLabel(hour),
       });
-
-      await loadData();
     },
-    [dateKey, isToday, loadData, user],
+    [dateKey, isToday, navigation],
   );
 
   const deleteEntry = useCallback(
@@ -277,12 +272,8 @@ const FoodDiaryScreen = () => {
         ]}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Food Diary</Text>
-        </View>
-
-        <FoodDiaryDateStrip
-          days={dateStripDays}
+        <FoodDiaryMainStrip
+          days={mainStripDays}
           selectedDate={selectedDate}
           targetCalories={user?.calorieAllowance ?? null}
           onNextWeek={() =>
@@ -292,14 +283,8 @@ const FoodDiaryScreen = () => {
             setSelectedDate((current) => shiftFoodDate(current, -7))
           }
           onSelectDate={setSelectedDate}
-        />
-
-        <FoodDiaryHeroCard
           totals={totals}
           user={user}
-        />
-
-        <FoodDiaryTimelineSection
           hourBuckets={hourBuckets}
           selectedHour={selectedHour}
           onAddFood={openAddFoodAtHour}
@@ -314,10 +299,9 @@ const FoodDiaryScreen = () => {
           favoriteFoods={favoriteFoods}
           selectedHour={selectedHour}
           onAddFavorite={(food, hour) => {
-            void addFavoriteToHour(food, hour);
+            openFavoriteEditorAtHour(food, hour);
           }}
         />
-
 
         <FoodDiaryMoreSection
           hourBuckets={hourBuckets}
@@ -349,7 +333,7 @@ const FoodDiaryScreen = () => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#F7F4FB",
+    backgroundColor: appColors.foodScreenBg,
   },
   content: {
     paddingHorizontal: 18,
@@ -361,7 +345,7 @@ const styles = StyleSheet.create({
     width: 250,
     height: 250,
     borderRadius: 999,
-    backgroundColor: "#E4D9FF",
+    backgroundColor: appColors.foodOrbTop,
   },
   orbBottom: {
     position: "absolute",
@@ -370,18 +354,7 @@ const styles = StyleSheet.create({
     width: 280,
     height: 280,
     borderRadius: 999,
-    backgroundColor: "#EEE7FF",
-  },
-  header: {
-    alignItems: "center",
-    marginBottom: 18,
-  },
-  title: {
-    color: "#181326",
-    fontSize: 32,
-    lineHeight: 38,
-    fontWeight: "900",
-    marginBottom: 6,
+    backgroundColor: appColors.foodOrbBottom,
   },
 });
 

@@ -1,5 +1,10 @@
 import React from "react";
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -7,14 +12,10 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
-import DateTimePicker, {
-  type DateTimePickerEvent,
-} from "@react-native-community/datetimepicker";
-import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import {
+  CalendarIcon,
   ClockIcon,
   ForkKnifeIcon,
   PencilSimpleIcon,
@@ -23,37 +24,70 @@ import {
 import type { FoodStackParamList } from "../../navigation/foodTypes";
 import { DB } from "../../store/DB";
 import type { DBUserFoodLogEntry } from "../../store/DB_TYPES";
+import FoodEntryForm from "./FoodEntryForm";
 import FoodScreenHeader from "./FoodScreenHeader";
 import {
   calculateLoggedNutrition,
   formatFoodLoggedTime,
+  formatFoodMacro,
   formatFoodServing,
   formatFoodShortDate,
-  formatMacroLine,
 } from "./foodUtils";
+import { appColors } from "../../theme/colors";
 
 type Props = NativeStackScreenProps<FoodStackParamList, "EditFoodEntry">;
 
+const parseQuantity = (value: string): number =>
+  Number(value.trim().replace(",", "."));
+
+const formatPreviewValue = (
+  value: number | null | undefined,
+  places = 1,
+): string => {
+  if (value == null || !Number.isFinite(value)) {
+    return "--";
+  }
+
+  return `${value.toFixed(places)} g`;
+};
+
 const EditFoodEntryScreen = ({ navigation, route }: Props) => {
   const [entry, setEntry] = React.useState<DBUserFoodLogEntry | null>(null);
-  const [quantityG, setQuantityG] = React.useState("");
-  const [mealType, setMealType] = React.useState("");
-  const [loggedAt, setLoggedAt] = React.useState<Date | null>(null);
+  const [quantityValue, setQuantityValue] = React.useState("");
+  const [mealTypeValue, setMealTypeValue] = React.useState("");
+  const [loggedAtDate, setLoggedAtDate] = React.useState(new Date());
   const [showTimePicker, setShowTimePicker] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
+  const [saving, setSaving] = React.useState(false);
 
-  React.useEffect(() => {
-    const load = async () => {
-      const data = await DB.getUserFoodLogEntryById(route.params.entryId);
-      setEntry(data);
-      setQuantityG(String(data?.quantityG ?? ""));
-      setMealType(data?.mealType ?? "");
-      setLoggedAt(data ? new Date(data.loggedAt ?? data.createdAt) : null);
-    };
+  const loadEntry = React.useCallback(async () => {
+    setLoading(true);
 
-    void load();
+    try {
+      const nextEntry = await DB.getUserFoodLogEntryById(route.params.entryId);
+      setEntry(nextEntry);
+
+      if (!nextEntry) {
+        return;
+      }
+
+      setQuantityValue(String(nextEntry.quantityG));
+      setMealTypeValue(nextEntry.mealType ?? "");
+      setLoggedAtDate(new Date(nextEntry.loggedAt));
+    } finally {
+      setLoading(false);
+    }
   }, [route.params.entryId]);
 
-  const quantity = Number(quantityG);
+  React.useEffect(() => {
+    void loadEntry();
+  }, [loadEntry]);
+
+  const quantity = React.useMemo(
+    () => parseQuantity(quantityValue),
+    [quantityValue],
+  );
+
   const preview = React.useMemo(() => {
     if (!entry || !Number.isFinite(quantity) || quantity <= 0) {
       return null;
@@ -65,54 +99,86 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
     });
   }, [entry, quantity]);
 
-  const handleSave = async () => {
-    if (!entry || !Number.isFinite(quantity) || quantity <= 0) {
-      Alert.alert("Invalid quantity", "Enter a valid quantity in grams.");
-      return;
-    }
+  const handleTimeChange = React.useCallback(
+    (event: DateTimePickerEvent, nextDate?: Date) => {
+      if (Platform.OS === "android") {
+        setShowTimePicker(false);
+      }
 
-    await DB.updateUserFoodLog({
-      id: entry.id,
-      loggedAt: loggedAt?.toISOString() ?? entry.loggedAt,
-      quantityG: quantity,
-      mealType: mealType.trim() || null,
-    });
+      if (event.type !== "set" || !nextDate) {
+        return;
+      }
 
-    navigation.goBack();
-  };
+      const merged = new Date(loggedAtDate);
+      merged.setHours(nextDate.getHours(), nextDate.getMinutes(), 0, 0);
+      setLoggedAtDate(merged);
+    },
+    [loggedAtDate],
+  );
 
-  const handleDelete = async () => {
+  const handleSave = React.useCallback(async () => {
     if (!entry) {
       return;
     }
 
-    Alert.alert("Delete entry?", "Remove this item from your diary?", [
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      Alert.alert("Invalid amount", "Enter a positive amount before saving.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await DB.updateUserFoodLog({
+        id: entry.id,
+        loggedAt: loggedAtDate.toISOString(),
+        quantityG: quantity,
+        mealType: mealTypeValue.trim() || null,
+      });
+      navigation.goBack();
+    } finally {
+      setSaving(false);
+    }
+  }, [entry, loggedAtDate, mealTypeValue, navigation, quantity]);
+
+  const handleDelete = React.useCallback(() => {
+    if (!entry) {
+      return;
+    }
+
+    Alert.alert("Delete entry?", "This will remove the entry from your diary.", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
         style: "destructive",
-        onPress: async () => {
-          await DB.deleteUserFoodLog(entry.id);
-          navigation.goBack();
+        onPress: () => {
+          void (async () => {
+            await DB.deleteUserFoodLog(entry.id);
+            navigation.goBack();
+          })();
         },
       },
     ]);
-  };
+  }, [entry, navigation]);
 
-  const handleTimeChange = (
-    event: DateTimePickerEvent,
-    selectedDate?: Date,
-  ) => {
-    if (Platform.OS === "android") {
-      setShowTimePicker(false);
-    }
-
-    if (event.type === "dismissed" || !selectedDate) {
-      return;
-    }
-
-    setLoggedAt(selectedDate);
-  };
+  if (loading) {
+    return (
+      <View style={styles.screen}>
+        <View style={styles.bgOrbTop} />
+        <View style={styles.content}>
+          <FoodScreenHeader
+            eyebrow="Food Entry"
+            title="Edit entry"
+            subtitle="Loading your saved food..."
+            onBack={() => navigation.goBack()}
+          />
+          <View style={styles.centerCard}>
+            <ActivityIndicator size="small" color={appColors.foodPrimaryDark} />
+            <Text style={styles.centerText}>Preparing the editor.</Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   if (!entry) {
     return (
@@ -121,16 +187,26 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
         <View style={styles.content}>
           <FoodScreenHeader
             eyebrow="Food Entry"
-            title="Edit entry"
-            subtitle="Loading nutrition details..."
+            title="Entry unavailable"
+            subtitle="The saved food entry could not be loaded."
             onBack={() => navigation.goBack()}
           />
+          <Pressable
+            onPress={() => navigation.goBack()}
+            style={({ pressed }) => [
+              styles.primaryButton,
+              pressed && styles.cardPressed,
+            ]}
+          >
+            <Text style={styles.primaryButtonText}>Go back</Text>
+          </Pressable>
         </View>
       </View>
     );
   }
 
-  const resolvedLoggedAt = loggedAt ?? new Date(entry.loggedAt ?? entry.createdAt);
+  const loggedTime = formatFoodLoggedTime(loggedAtDate.toISOString());
+  const loggedDate = formatFoodShortDate(loggedAtDate);
 
   return (
     <View style={styles.screen}>
@@ -141,163 +217,107 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
         style={styles.screen}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <FoodScreenHeader
-            eyebrow="Food Entry"
-            title="Edit entry"
-            subtitle="Refine the amount, time, or optional label for this log."
+        <ScrollView
+          style={styles.screen}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
+          <FoodEntryForm
+            headerEyebrow="Food Entry"
+            headerTitle="Edit entry"
+            headerSubtitle={`${loggedDate} | ${loggedTime}`}
             onBack={() => navigation.goBack()}
+            heroEyebrow="Entry Review"
+            heroTitle={entry.foodName}
+            heroMeta={`Base serving ${formatFoodServing(
+              entry.servingSize,
+              entry.servingUnit,
+            )} | ${entry.calories.toFixed(0)} kcal`}
+            heroPills={[
+              {
+                key: "date",
+                label: loggedDate,
+                icon: <CalendarIcon size={14} color={appColors.foodPrimary} weight="bold" />,
+              },
+              ...(mealTypeValue.trim()
+                ? [
+                    {
+                      key: "label",
+                      label: mealTypeValue.trim(),
+                      icon: <ForkKnifeIcon size={14} color={appColors.foodPrimary} weight="fill" />,
+                    },
+                  ]
+                : []),
+            ]}
+            previewCaloriesText={preview ? `${preview.calories.toFixed(0)} kcal` : "--"}
+            previewSummaryText={
+              preview
+                ? `${formatFoodMacro(preview.proteinG, "P")} | ${formatFoodMacro(
+                    preview.carbsG,
+                    "C",
+                  )} | ${formatFoodMacro(preview.fatG, "F")}`
+                : "Enter an amount to preview nutrition"
+            }
+            amountKeyboardType="decimal-pad"
+            amountPlaceholder="Amount"
+            amountUnit={entry.servingUnit?.trim() || "g"}
+            amountValue={quantityValue}
+            detailsSubtitle="Adjust the amount, logged time, or label for this entry."
+            onChangeAmount={setQuantityValue}
+            slot={{
+              icon: <ClockIcon size={18} color={appColors.foodPrimary} weight="bold" />,
+              label: "Logged time",
+              value: loggedTime,
+              actionLabel: "Change",
+              onPress: () => setShowTimePicker((current) => !current),
+            }}
+            labelValue={mealTypeValue}
+            onChangeLabel={setMealTypeValue}
+            labelPlaceholder="Post-workout, cafe, office..."
+            nutritionItems={[
+              {
+                label: "Calories",
+                value: preview ? preview.calories.toFixed(0) : "--",
+              },
+              {
+                label: "Protein",
+                value: preview ? formatPreviewValue(preview.proteinG) : "--",
+              },
+              {
+                label: "Carbs",
+                value: preview ? formatPreviewValue(preview.carbsG) : "--",
+              },
+              {
+                label: "Fat",
+                value: preview ? formatPreviewValue(preview.fatG) : "--",
+              },
+            ]}
+            onPrimaryAction={() => {
+              void handleSave();
+            }}
+            primaryActionDisabled={saving}
+            primaryActionIcon={
+              <PencilSimpleIcon size={16} color={appColors.white} weight="bold" />
+            }
+            primaryActionLabel={saving ? "Saving..." : "Save changes"}
+            secondaryAction={{
+              label: "Delete entry",
+              icon: <TrashIcon size={16} color={appColors.danger700} weight="bold" />,
+              onPress: handleDelete,
+              tone: "danger",
+            }}
           />
 
-          <View style={styles.heroCard}>
-            <View style={styles.heroPillRow}>
-              <View style={styles.heroPill}>
-                <ForkKnifeIcon size={14} color="#6D52EA" weight="fill" />
-                <Text style={styles.heroPillText}>
-                  {formatFoodLoggedTime(resolvedLoggedAt.toISOString())}
-                </Text>
-              </View>
-              <View style={styles.heroPill}>
-                <Text style={styles.heroPillText}>
-                  {formatFoodShortDate(resolvedLoggedAt)}
-                </Text>
-              </View>
-              {mealType.trim() ? (
-                <View style={styles.heroPill}>
-                  <Text style={styles.heroPillText}>{mealType.trim()}</Text>
-                </View>
-              ) : null}
-            </View>
-            <Text style={styles.heroTitle}>{entry.foodName}</Text>
-            <Text style={styles.heroSubtitle}>
-              Base serving {formatFoodServing(entry.servingSize, entry.servingUnit)} •{" "}
-              {entry.calories.toFixed(0)} kcal
-            </Text>
-            <View style={styles.previewStrip}>
-              <Text style={styles.previewStripValue}>
-                {preview ? `${preview.calories.toFixed(0)} kcal` : "--"}
-              </Text>
-              <Text style={styles.previewStripText}>
-                {preview ? formatMacroLine(preview) : "Enter a quantity to preview nutrition"}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Quantity</Text>
-            <Text style={styles.sectionSubtitle}>
-              Update grams to match what you actually ate.
-            </Text>
-            <View style={styles.inputRow}>
-              <TextInput
-                style={styles.input}
-                value={quantityG}
-                onChangeText={setQuantityG}
-                keyboardType="numeric"
-                placeholder="Quantity (g)"
-                placeholderTextColor="#9CA3AF"
-              />
-              <View style={styles.unitPill}>
-                <Text style={styles.unitText}>{entry.servingUnit?.trim() || "g"}</Text>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Logged time</Text>
-            <Text style={styles.sectionSubtitle}>
-              Keep the diary ordered by when you actually ate it.
-            </Text>
-            <Pressable
-              style={({ pressed }) => [styles.timeButton, pressed && styles.cardPressed]}
-              onPress={() => setShowTimePicker(true)}
-            >
-              <View style={styles.timeButtonCopy}>
-                <ClockIcon size={18} color="#6D52EA" weight="bold" />
-                <View>
-                  <Text style={styles.timeButtonLabel}>Time</Text>
-                  <Text style={styles.timeButtonValue}>
-                    {formatFoodLoggedTime(resolvedLoggedAt.toISOString())}
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.timeButtonAction}>Change</Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Optional label</Text>
-            <Text style={styles.sectionSubtitle}>
-              Keep a short label only if it helps you remember the context.
-            </Text>
-            <TextInput
-              style={styles.input}
-              value={mealType}
-              onChangeText={setMealType}
-              placeholder="Post-workout, cafe, office..."
-              placeholderTextColor="#9CA3AF"
+          {showTimePicker ? (
+            <DateTimePicker
+              value={loggedAtDate}
+              mode="time"
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              onChange={handleTimeChange}
             />
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Nutrition preview</Text>
-            <Text style={styles.sectionSubtitle}>
-              Your preview updates instantly as you adjust the quantity.
-            </Text>
-            <View style={styles.nutritionGrid}>
-              <View style={styles.nutritionCell}>
-                <Text style={styles.nutritionLabel}>Calories</Text>
-                <Text style={styles.nutritionValue}>
-                  {preview ? preview.calories.toFixed(0) : "--"}
-                </Text>
-              </View>
-              <View style={styles.nutritionCell}>
-                <Text style={styles.nutritionLabel}>Protein</Text>
-                <Text style={styles.nutritionValue}>
-                  {preview ? `${preview.proteinG.toFixed(1)} g` : "--"}
-                </Text>
-              </View>
-              <View style={styles.nutritionCell}>
-                <Text style={styles.nutritionLabel}>Carbs</Text>
-                <Text style={styles.nutritionValue}>
-                  {preview ? `${preview.carbsG.toFixed(1)} g` : "--"}
-                </Text>
-              </View>
-              <View style={styles.nutritionCell}>
-                <Text style={styles.nutritionLabel}>Fat</Text>
-                <Text style={styles.nutritionValue}>
-                  {preview ? `${preview.fatG.toFixed(1)} g` : "--"}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          <Pressable
-            style={({ pressed }) => [styles.primaryButton, pressed && styles.cardPressed]}
-            onPress={() => void handleSave()}
-          >
-            <PencilSimpleIcon size={16} color="#FFFFFF" weight="bold" />
-            <Text style={styles.primaryButtonText}>Save changes</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.deleteButton, pressed && styles.cardPressed]}
-            onPress={() => void handleDelete()}
-          >
-            <TrashIcon size={16} color="#B91C1C" weight="bold" />
-            <Text style={styles.deleteButtonText}>Delete entry</Text>
-          </Pressable>
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
-
-      {showTimePicker ? (
-        <DateTimePicker
-          value={resolvedLoggedAt}
-          mode="time"
-          display={Platform.OS === "ios" ? "spinner" : "default"}
-          is24Hour
-          onChange={handleTimeChange}
-        />
-      ) : null}
     </View>
   );
 };
@@ -305,7 +325,7 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#F7F4FB",
+    backgroundColor: appColors.foodScreenBg,
   },
   content: {
     paddingHorizontal: 18,
@@ -318,7 +338,7 @@ const styles = StyleSheet.create({
     width: 250,
     height: 250,
     borderRadius: 999,
-    backgroundColor: "#E4D9FF",
+    backgroundColor: appColors.foodOrbTop,
   },
   bgOrbBottom: {
     position: "absolute",
@@ -327,203 +347,31 @@ const styles = StyleSheet.create({
     width: 280,
     height: 280,
     borderRadius: 999,
-    backgroundColor: "#EEE7FF",
+    backgroundColor: appColors.foodOrbBottom,
   },
-  heroCard: {
-    backgroundColor: "rgba(255,255,255,0.96)",
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
-  },
-  heroPillRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 12,
-  },
-  heroPill: {
-    alignSelf: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderRadius: 999,
-    backgroundColor: "#F3EEFC",
-    borderWidth: 1,
-    borderColor: "#E6DEF1",
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-  heroPillText: {
-    color: "#6D52EA",
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  heroTitle: {
-    color: "#1B1529",
-    fontSize: 26,
-    fontWeight: "900",
-    marginBottom: 6,
-  },
-  heroSubtitle: {
-    color: "#7F7791",
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 14,
-  },
-  previewStrip: {
-    borderRadius: 8,
-    backgroundColor: "#1F1831",
-    padding: 14,
-  },
-  previewStripValue: {
-    color: "#FFFFFF",
-    fontSize: 24,
-    fontWeight: "900",
-    marginBottom: 4,
-  },
-  previewStripText: {
-    color: "#CFC5E7",
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  card: {
-    backgroundColor: "rgba(255,255,255,0.96)",
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    color: "#1B1529",
-    fontSize: 22,
-    fontWeight: "900",
-    marginBottom: 4,
-  },
-  sectionSubtitle: {
-    color: "#7F7791",
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 14,
-  },
-  inputRow: {
-    flexDirection: "row",
+  centerCard: {
     alignItems: "center",
     gap: 10,
+    borderRadius: 8,
+    backgroundColor: appColors.white,
+    padding: 16,
   },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#E6DEF1",
-    borderRadius: 16,
-    backgroundColor: "#FBF9FF",
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    color: "#1B1529",
-    fontSize: 16,
+  centerText: {
+    color: appColors.foodMuted,
+    fontSize: 13,
     fontWeight: "700",
   },
-  unitPill: {
-    borderRadius: 14,
-    backgroundColor: "#F3EEFC",
-    borderWidth: 1,
-    borderColor: "#E6DEF1",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  unitText: {
-    color: "#6D52EA",
-    fontSize: 15,
-    fontWeight: "800",
-  },
-  timeButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    borderRadius: 16,
-    backgroundColor: "#FBF9FF",
-    borderWidth: 1,
-    borderColor: "#E6DEF1",
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-  },
-  timeButtonCopy: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  timeButtonLabel: {
-    color: "#7E7399",
-    fontSize: 12,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-    marginBottom: 2,
-  },
-  timeButtonValue: {
-    color: "#1B1529",
-    fontSize: 17,
-    fontWeight: "900",
-  },
-  timeButtonAction: {
-    color: "#6D52EA",
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  nutritionGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  nutritionCell: {
-    width: "47%",
-    borderRadius: 14,
-    backgroundColor: "#FBF9FF",
-    borderWidth: 1,
-    borderColor: "#ECE5F9",
-    padding: 12,
-  },
-  nutritionLabel: {
-    color: "#7E7399",
-    fontSize: 12,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.7,
-    marginBottom: 8,
-  },
-  nutritionValue: {
-    color: "#1B1529",
-    fontSize: 18,
-    fontWeight: "900",
-  },
   primaryButton: {
-    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    borderRadius: 18,
-    backgroundColor: "#1F1831",
-    paddingVertical: 16,
+    borderRadius: 999,
+    backgroundColor: appColors.foodPrimaryDark,
+    paddingVertical: 13,
     marginBottom: 12,
   },
   primaryButtonText: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "800",
-  },
-  deleteButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderRadius: 18,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#FCA5A5",
-    paddingVertical: 15,
-  },
-  deleteButtonText: {
-    color: "#B91C1C",
-    fontSize: 15,
+    color: appColors.white,
+    fontSize: 14,
     fontWeight: "800",
   },
   cardPressed: {

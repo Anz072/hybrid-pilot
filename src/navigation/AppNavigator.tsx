@@ -18,6 +18,7 @@ import { getOnboardingComplete } from "../storage/localStore";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { hydrateUserFromDb } from "../store/userSlice";
 import type { FoodStackParamList } from "./foodTypes";
+import { appColors } from "../theme/colors";
 
 export type RootStackParamList = {
   Onboarding: undefined;
@@ -74,7 +75,7 @@ const AppNavigator = () => {
   if (isHydrating) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0f172a" />
+        <ActivityIndicator size="large" color={appColors.slate900} />
         {bootstrapError ? (
           <Text style={styles.loadingError}>{bootstrapError}</Text>
         ) : null}
@@ -156,23 +157,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 12,
-    backgroundColor: "#ffffff",
+    backgroundColor: appColors.white,
     padding: 24,
   },
   loadingError: {
-    color: "#B42318",
+    color: appColors.dangerText,
     fontSize: 14,
     fontWeight: "700",
     textAlign: "center",
   },
   errorTitle: {
-    color: "#0F172A",
+    color: appColors.slate900,
     fontSize: 20,
     fontWeight: "900",
     textAlign: "center",
   },
   retryButton: {
-    backgroundColor: "#0F172A",
+    backgroundColor: appColors.slate900,
     borderRadius: 999,
     paddingHorizontal: 20,
     paddingVertical: 12,
@@ -181,7 +182,7 @@ const styles = StyleSheet.create({
     opacity: 0.86,
   },
   retryButtonText: {
-    color: "#FFFFFF",
+    color: appColors.white,
     fontSize: 14,
     fontWeight: "800",
   },

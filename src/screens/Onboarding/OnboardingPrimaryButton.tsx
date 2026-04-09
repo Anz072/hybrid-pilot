@@ -6,6 +6,7 @@ import {
   Text,
   ViewStyle,
 } from "react-native";
+import { appColors } from "../../theme/colors";
 
 type OnboardingPrimaryButtonProps = {
   label: string;
@@ -38,7 +39,7 @@ const OnboardingPrimaryButton = ({
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: "#0F172A",
+    backgroundColor: appColors.slate900,
     borderRadius: 14,
     paddingVertical: 15,
     alignItems: "center",
@@ -51,7 +52,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.99 }],
   },
   buttonText: {
-    color: "#FFFFFF",
+    color: appColors.white,
     fontSize: 18,
     letterSpacing: 2,
     fontWeight: "800",

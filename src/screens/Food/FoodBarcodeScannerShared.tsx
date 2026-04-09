@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { XIcon } from "phosphor-react-native";
 import { DB } from "../../store/DB";
 import { API } from "../../API/apiCaller";
+import { appColors } from "../../theme/colors";
 
 export type FoodBarcodeScannerModalProps = {
   visible: boolean;
@@ -376,7 +377,7 @@ export const FoodBarcodeScannerScaffold = ({
         {hasPermission ? (
           isPreparing ? (
             <View style={styles.cameraFallback}>
-              <ActivityIndicator size="small" color="#FFFFFF" />
+              <ActivityIndicator size="small" color={appColors.white} />
               <Text style={styles.fallbackTitle}>Preparing camera</Text>
               <Text style={styles.fallbackText}>
                 We are getting the barcode scanner ready for a quick read.
@@ -434,7 +435,7 @@ export const FoodBarcodeScannerScaffold = ({
               ]}
               accessibilityLabel="Close barcode scanner"
             >
-              <XIcon size={18} color="#F8FAFC" weight="bold" />
+              <XIcon size={18} color={appColors.slate50} weight="bold" />
             </Pressable>
           </View>
 
@@ -464,7 +465,7 @@ export const FoodBarcodeScannerScaffold = ({
 
         {locked && !modalVisible ? (
           <View style={styles.lookupBanner} pointerEvents="none">
-            <ActivityIndicator size="small" color="#FFFFFF" />
+            <ActivityIndicator size="small" color={appColors.white} />
             <View style={styles.lookupCopy}>
               <Text style={styles.lookupTitle}>Barcode detected</Text>
               <Text style={styles.lookupText}>
@@ -508,7 +509,7 @@ export const FoodBarcodeScannerScaffold = ({
 export const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#020617",
+    backgroundColor: appColors.slate950,
   },
   cameraFallback: {
     flex: 1,
@@ -516,15 +517,15 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 24,
     gap: 10,
-    backgroundColor: "#0F172A",
+    backgroundColor: appColors.slate900,
   },
   fallbackTitle: {
-    color: "#F8FAFC",
+    color: appColors.slate50,
     fontSize: 22,
     fontWeight: "900",
   },
   fallbackText: {
-    color: "#CBD5E1",
+    color: appColors.slate300,
     fontSize: 14,
     lineHeight: 20,
     textAlign: "center",
@@ -534,18 +535,18 @@ export const styles = StyleSheet.create({
     maxWidth: 320,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: "rgba(167, 139, 250, 0.34)",
-    backgroundColor: "rgba(15, 23, 42, 0.82)",
+    borderColor: appColors.raw_rgba167_139_250_0_34,
+    backgroundColor: appColors.raw_rgba15_23_42_0_82,
     padding: 22,
     gap: 12,
   },
   permissionTitle: {
-    color: "#F8FAFC",
+    color: appColors.slate50,
     fontSize: 22,
     fontWeight: "900",
   },
   permissionText: {
-    color: "#CBD5E1",
+    color: appColors.slate300,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -553,12 +554,12 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 16,
-    backgroundColor: "#6D52EA",
+    backgroundColor: appColors.foodPrimary,
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
   permissionButtonText: {
-    color: "#FFFFFF",
+    color: appColors.white,
     fontSize: 14,
     fontWeight: "800",
   },
@@ -581,14 +582,14 @@ export const styles = StyleSheet.create({
   },
   headerBadge: {
     borderRadius: 999,
-    backgroundColor: "rgba(15, 23, 42, 0.72)",
+    backgroundColor: appColors.slateOverlay72,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
+    borderColor: appColors.whiteOverlay18,
     paddingHorizontal: 12,
     paddingVertical: 9,
   },
   headerBadgeText: {
-    color: "#F8FAFC",
+    color: appColors.slate50,
     fontSize: 12,
     fontWeight: "800",
     letterSpacing: 0.6,
@@ -596,14 +597,14 @@ export const styles = StyleSheet.create({
   },
   backendBadge: {
     borderRadius: 999,
-    backgroundColor: "rgba(109, 82, 234, 0.18)",
+    backgroundColor: appColors.raw_rgba109_82_234_0_18,
     borderWidth: 1,
-    borderColor: "rgba(167, 139, 250, 0.38)",
+    borderColor: appColors.raw_rgba167_139_250_0_38,
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
   backendBadgeText: {
-    color: "#DDD6FE",
+    color: appColors.violetSoftBg,
     fontSize: 12,
     fontWeight: "800",
   },
@@ -613,9 +614,9 @@ export const styles = StyleSheet.create({
     borderRadius: 21,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(15, 23, 42, 0.72)",
+    backgroundColor: appColors.slateOverlay72,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
+    borderColor: appColors.whiteOverlay18,
   },
   finderWrap: {
     alignItems: "center",
@@ -627,8 +628,8 @@ export const styles = StyleSheet.create({
     maxWidth: 320,
     borderRadius: 28,
     borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.82)",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: appColors.raw_rgba255_255_255_0_82,
+    backgroundColor: appColors.raw_rgba255_255_255_0_04,
     overflow: "hidden",
     justifyContent: "center",
   },
@@ -636,8 +637,8 @@ export const styles = StyleSheet.create({
     height: 2,
     marginHorizontal: 20,
     borderRadius: 999,
-    backgroundColor: "#A78BFA",
-    shadowColor: "#A78BFA",
+    backgroundColor: appColors.violet400,
+    shadowColor: appColors.violet400,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
     shadowRadius: 10,
@@ -645,25 +646,25 @@ export const styles = StyleSheet.create({
   },
   footerCard: {
     borderRadius: 24,
-    backgroundColor: "rgba(15, 23, 42, 0.78)",
+    backgroundColor: appColors.raw_rgba15_23_42_0_78,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
+    borderColor: appColors.raw_rgba255_255_255_0_12,
     padding: 18,
   },
   footerTitle: {
-    color: "#F8FAFC",
+    color: appColors.slate50,
     fontSize: 18,
     fontWeight: "900",
     marginBottom: 6,
   },
   footerText: {
-    color: "#CBD5E1",
+    color: appColors.slate300,
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 8,
   },
   footerHint: {
-    color: "#CFC5E7",
+    color: appColors.foodPreviewText,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -676,9 +677,9 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     borderRadius: 18,
-    backgroundColor: "rgba(31, 24, 49, 0.92)",
+    backgroundColor: appColors.raw_rgba31_24_49_0_92,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.16)",
+    borderColor: appColors.raw_rgba255_255_255_0_16,
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
@@ -686,19 +687,19 @@ export const styles = StyleSheet.create({
     flex: 1,
   },
   lookupTitle: {
-    color: "#FFFFFF",
+    color: appColors.white,
     fontSize: 14,
     fontWeight: "900",
     marginBottom: 2,
   },
   lookupText: {
-    color: "#CFC5E7",
+    color: appColors.foodPreviewText,
     fontSize: 12,
     fontWeight: "700",
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: appColors.raw_rgba0_0_0_0_6,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 24,
@@ -707,18 +708,18 @@ export const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 320,
     borderRadius: 18,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
     padding: 22,
     alignItems: "center",
   },
   modalTitle: {
-    color: "#111827",
+    color: appColors.gray900,
     fontSize: 20,
     fontWeight: "900",
     marginBottom: 10,
   },
   modalValue: {
-    color: "#6D52EA",
+    color: appColors.foodPrimary,
     fontSize: 18,
     lineHeight: 24,
     fontWeight: "800",
@@ -730,12 +731,12 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 14,
-    backgroundColor: "#111827",
+    backgroundColor: appColors.gray900,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
   modalButtonText: {
-    color: "#FFFFFF",
+    color: appColors.white,
     fontSize: 14,
     fontWeight: "800",
   },

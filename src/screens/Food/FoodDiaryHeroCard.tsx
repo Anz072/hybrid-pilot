@@ -5,6 +5,7 @@ import {
   clampFoodRatio,
   type FoodNutritionTotals,
 } from "./foodUtils";
+import { appColors } from "../../theme/colors";
 
 type MacroBarProps = {
   accent: string;
@@ -35,6 +36,7 @@ const MacroBar = ({
   const safeRatio = Number.isFinite(rawRatio) ? rawRatio : 0;
   const ratio = clampFoodRatio(safeRatio);
   const isOver = hasTarget && safeRatio > 1;
+  const remaining = hasTarget ? safeTarget - safeConsumed : null;
 
   return (
     <View style={styles.macroCard}>
@@ -50,7 +52,7 @@ const MacroBar = ({
         <Text
           style={[styles.progressPercent, isOver && styles.progressPercentOver]}
         >
-          {target && `${target-consumed} kcal`}
+          {remaining != null ? `${remaining.toFixed(places)} ${unit}` : ""}
         </Text>
       </View>
       <View style={styles.progressTrack}>
@@ -78,30 +80,30 @@ const FoodDiaryHeroCard = ({
     <View style={styles.hero}>
       <View style={styles.progressPanel}>
         <MacroBar
-          accent="#2F2A3D"
-          consumed={totals.calories}
+          accent={appColors.plum820}
+          consumed={Number(totals.calories.toFixed(0))}
           label="Energy"
           places={0}
           target={user?.calorieAllowance ?? null}
           unit="kcal"
         />
         <MacroBar
-          accent="#22C55E"
-          consumed={totals.proteinG}
+          accent={appColors.raw_hex_22C55E}
+          consumed={Number(totals.proteinG.toFixed(0))}
           label="Protein"
           target={user?.proteinG ?? null}
           unit="g"
         />
         <MacroBar
-          accent="#06B6D4"
-          consumed={totals.carbsG}
+          accent={appColors.cyan500}
+          consumed={Number(totals.carbsG.toFixed(0))}
           label="Carbs"
           target={user?.carbsG ?? null}
           unit="g"
         />
         <MacroBar
-          accent="#F97316"
-          consumed={totals.fatG}
+          accent={appColors.raw_hex_F97316}
+          consumed={Number(totals.fatG.toFixed(0))}
           label="Fat"
           target={user?.fatG ?? null}
           unit="g"
@@ -114,10 +116,9 @@ const FoodDiaryHeroCard = ({
 
 const styles = StyleSheet.create({
   hero: {
-    backgroundColor: "rgba(255,255,255,0.96)",
-    borderRadius: 8,
-    padding: 18,
-    marginBottom: 16,
+    backgroundColor: appColors.whiteOverlay96,
+    paddingHorizontal: 6,
+    marginTop: 16,
   },
   progressPanel: {
     gap: 6,
@@ -133,7 +134,7 @@ const styles = StyleSheet.create({
   },
   progressHeadline: {
     flex: 1,
-    color: "#1B1529",
+    color: appColors.foodText,
     fontSize: 13,
     lineHeight: 16,
   },
@@ -141,23 +142,23 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   progressHeadlineMuted: {
-    color: "#463D59",
+    color: appColors.plum720,
     fontWeight: "400",
   },
   progressPercent: {
-    color: "#2F2A3D",
+    color: appColors.plum820,
     fontSize: 14,
     fontWeight: "400",
   },
   progressPercentOver: {
-    color: "#DC2626",
+    color: appColors.danger600,
   },
   progressTrack: {
     marginTop: -3,
     flexDirection: "row",
     height: 6,
     borderRadius: 999,
-    backgroundColor: "#E5E1EC",
+    backgroundColor: appColors.raw_hex_E5E1EC,
     overflow: "hidden",
   },
   progressFill: {

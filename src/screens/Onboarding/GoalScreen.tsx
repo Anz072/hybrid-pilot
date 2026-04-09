@@ -8,6 +8,7 @@ import type {
 } from "../../navigation/onboardingTypes";
 import OnboardingButton from "./onboardingButton";
 import OnboardingTopBar from "./OnboardingTopBar";
+import { appColors } from "../../theme/colors";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "Goal">;
 
@@ -25,22 +26,22 @@ const GoalScreen = ({ navigation }: Props) => {
       label: "Lose fat",
       value: "lose_fat",
       subtitle: "Slight calorie deficit with protein-first targets.",
-      icon: <FireIcon size={36} color="#353535ad" weight="fill" />,
-      borderColor: "#383838",
+      icon: <FireIcon size={36} color={appColors.overlayGray} weight="fill" />,
+      borderColor: appColors.charcoal,
     },
     {
       label: "Maintain",
       value: "maintain",
       subtitle: "Balanced intake to keep performance steady.",
-      icon: <ShieldCheckIcon size={36} color="#353535ad" weight="fill" />,
-      borderColor: "#383838",
+      icon: <ShieldCheckIcon size={36} color={appColors.overlayGray} weight="fill" />,
+      borderColor: appColors.charcoal,
     },
     {
       label: "Build muscle",
       value: "build_muscle",
       subtitle: "Lean surplus and recovery-focused macro split.",
-      icon: <TrendUpIcon size={36} color="#353535ad" weight="fill" />,
-      borderColor: "#383838",
+      icon: <TrendUpIcon size={36} color={appColors.overlayGray} weight="fill" />,
+      borderColor: appColors.charcoal,
     },
   ];
 
@@ -86,7 +87,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingTop: 34,
     paddingBottom: 24,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: appColors.slate50,
   },
   bgOrbTop: {
     position: "absolute",
@@ -95,7 +96,7 @@ const styles = StyleSheet.create({
     width: 180,
     height: 180,
     borderRadius: 999,
-    backgroundColor: "#FFE4CC",
+    backgroundColor: appColors.raw_hex_FFE4CC,
   },
   bgOrbBottom: {
     position: "absolute",
@@ -104,7 +105,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 999,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: appColors.slate200,
   },
   headerWrap: {
     marginTop: 20,
@@ -116,8 +117,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: "#9A3412",
-    backgroundColor: "#FFEDD5",
+    color: appColors.amber800,
+    backgroundColor: appColors.amberSurface,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
@@ -127,13 +128,13 @@ const styles = StyleSheet.create({
     fontSize: 32,
     lineHeight: 38,
     fontWeight: "800",
-    color: "#0F172A",
+    color: appColors.slate900,
     marginBottom: 10,
   },
   subtitle: {
     fontSize: 15,
     lineHeight: 22,
-    color: "#475569",
+    color: appColors.slate600,
   },
   optionsWrap: {
     gap: 12,

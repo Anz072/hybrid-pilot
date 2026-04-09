@@ -1,4 +1,5 @@
 import { View, StyleSheet, Pressable, Text } from "react-native";
+import { appColors } from "../../theme/colors";
 
 export type OnboardingButtonProps = {
   label: string;
@@ -69,20 +70,20 @@ const styles = StyleSheet.create({
     fontSize: 20,
     letterSpacing: 0.8,
     fontWeight: "800",
-    color: "#0F172A",
+    color: appColors.slate900,
     marginBottom: 3,
     marginTop: 4,
   },
   optionSubtext2: {
     fontSize: 13,
-    color: "#64748B",
+    color: appColors.slate500,
     lineHeight: 18,
   },
   option2: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderColor: "#E2E8F0",
+    backgroundColor: appColors.white,
+    borderColor: appColors.slate200,
     borderRadius: 6,
     paddingVertical: 18,
     paddingHorizontal: 24,

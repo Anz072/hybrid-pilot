@@ -27,6 +27,7 @@ import {
   roundWeightKg,
   toLocalIsoWithOffset,
 } from "../Weight/weightUtils";
+import { appColors } from "../../theme/colors";
 
 type WeightSeedPreset = "down" | "up" | "maintain";
 const WEIGHT_PRESET_ENTRY_COUNT = 180;
@@ -216,7 +217,7 @@ const SettingsScreen = () => {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.headerRow}>
-        <BugIcon size={24} color="#0f172a" weight="fill" />
+        <BugIcon size={24} color={appColors.slate900} weight="fill" />
         <Text style={styles.title}>Debug Tools</Text>
       </View>
 
@@ -230,7 +231,7 @@ const SettingsScreen = () => {
           onPress={() => void handleRefresh()}
           disabled={busy}
         >
-          <DatabaseIcon size={18} color="#ffffff" weight="fill" />
+          <DatabaseIcon size={18} color={appColors.white} weight="fill" />
           <Text style={styles.buttonText}>Refresh Counts</Text>
         </TouchableOpacity>
 
@@ -239,7 +240,7 @@ const SettingsScreen = () => {
           onPress={() => void handleSeed()}
           disabled={busy}
         >
-          <PlantIcon size={18} color="#ffffff" weight="fill" />
+          <PlantIcon size={18} color={appColors.white} weight="fill" />
           <Text style={styles.buttonText}>Seed Sample</Text>
         </TouchableOpacity>
 
@@ -248,7 +249,7 @@ const SettingsScreen = () => {
           onPress={handleReset}
           disabled={busy}
         >
-          <BroomIcon size={18} color="#ffffff" weight="fill" />
+          <BroomIcon size={18} color={appColors.white} weight="fill" />
           <Text style={styles.buttonText}>Reset DB</Text>
         </TouchableOpacity>
       </View>
@@ -372,7 +373,7 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     padding: 16,
-    backgroundColor: "#ffffff",
+    backgroundColor: appColors.white,
   },
   headerRow: {
     marginTop: 8,
@@ -383,12 +384,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#0f172a",
+    color: appColors.slate900,
   },
   subtitle: {
     marginTop: 8,
     marginBottom: 14,
-    color: "#475569",
+    color: appColors.slate600,
     fontSize: 14,
   },
   buttonRow: {
@@ -400,35 +401,35 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#0f172a",
+    backgroundColor: appColors.slate900,
     borderRadius: 10,
     paddingVertical: 12,
   },
   seedButton: {
-    backgroundColor: "#166534",
+    backgroundColor: appColors.green800,
   },
   weightDownButton: {
-    backgroundColor: "#0f766e",
+    backgroundColor: appColors.teal700,
   },
   weightUpButton: {
-    backgroundColor: "#1d4ed8",
+    backgroundColor: appColors.blue700,
   },
   weightMaintainButton: {
-    backgroundColor: "#7c3aed",
+    backgroundColor: appColors.violet600,
   },
   resetButton: {
-    backgroundColor: "#991b1b",
+    backgroundColor: appColors.danger800,
   },
   buttonText: {
-    color: "#ffffff",
+    color: appColors.white,
     fontWeight: "700",
   },
   card: {
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: appColors.slate200,
     borderRadius: 12,
     padding: 12,
-    backgroundColor: "#f8fafc",
+    backgroundColor: appColors.raw_hex_f8fafc,
   },
   seedGroup: {
     marginTop: 12,
@@ -437,25 +438,25 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#0f172a",
+    color: appColors.slate900,
     marginBottom: 8,
   },
   empty: {
-    color: "#64748b",
+    color: appColors.raw_hex_64748b,
   },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     borderTopWidth: 1,
-    borderTopColor: "#e2e8f0",
+    borderTopColor: appColors.slate200,
     paddingVertical: 8,
   },
   table: {
-    color: "#334155",
+    color: appColors.slate700,
     fontWeight: "600",
   },
   count: {
-    color: "#0f172a",
+    color: appColors.slate900,
     fontWeight: "800",
   },
 });

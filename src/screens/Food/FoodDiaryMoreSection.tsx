@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { MinusIcon, PlusIcon } from "phosphor-react-native";
 import type { FoodDiaryHourBucket } from "./foodDiaryTypes";
 import { formatFoodHourLabel } from "./foodUtils";
+import { appColors } from "../../theme/colors";
 
 type FoodDiaryMoreSectionProps = {
   hourBuckets: FoodDiaryHourBucket[];
@@ -137,7 +138,7 @@ const FoodDiaryMoreSection = ({
                     pressed && visibleStartHour > 0 && styles.cardPressed,
                   ]}
                 >
-                  <MinusIcon size={16} color="#4F3D83" weight="bold" />
+                  <MinusIcon size={16} color={appColors.foodAccentText} weight="bold" />
                 </Pressable>
                 <Text style={styles.rangeValue}>
                   {formatFoodHourLabel(visibleStartHour)}
@@ -153,7 +154,7 @@ const FoodDiaryMoreSection = ({
                       styles.cardPressed,
                   ]}
                 >
-                  <PlusIcon size={16} color="#4F3D83" weight="bold" />
+                  <PlusIcon size={16} color={appColors.foodAccentText} weight="bold" />
                 </Pressable>
               </View>
             </View>
@@ -171,7 +172,7 @@ const FoodDiaryMoreSection = ({
                       styles.cardPressed,
                   ]}
                 >
-                  <MinusIcon size={16} color="#4F3D83" weight="bold" />
+                  <MinusIcon size={16} color={appColors.foodAccentText} weight="bold" />
                 </Pressable>
                 <Text style={styles.rangeValue}>
                   {formatFoodHourLabel(visibleEndHour)}
@@ -185,7 +186,7 @@ const FoodDiaryMoreSection = ({
                     pressed && visibleEndHour < 23 && styles.cardPressed,
                   ]}
                 >
-                  <PlusIcon size={16} color="#4F3D83" weight="bold" />
+                  <PlusIcon size={16} color={appColors.foodAccentText} weight="bold" />
                 </Pressable>
               </View>
             </View>
@@ -232,19 +233,19 @@ const FoodDiaryMoreSection = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "rgba(255,255,255,0.96)",
+    backgroundColor: appColors.whiteOverlay96,
     borderRadius: 8,
     padding: 16,
     marginBottom: 16,
   },
   sectionTitle: {
-    color: "#1B1529",
+    color: appColors.foodText,
     fontSize: 22,
     fontWeight: "900",
     marginBottom: 4,
   },
   sectionText: {
-    color: "#7F7791",
+    color: appColors.foodMuted,
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 14,
@@ -254,9 +255,9 @@ const styles = StyleSheet.create({
   },
   preferenceCard: {
     borderRadius: 18,
-    backgroundColor: "#FBF9FF",
+    backgroundColor: appColors.foodFieldBg,
     borderWidth: 1,
-    borderColor: "#ECE5F8",
+    borderColor: appColors.lavenderBorder,
     padding: 14,
   },
   preferenceHeader: {
@@ -267,12 +268,12 @@ const styles = StyleSheet.create({
   },
   resetPill: {
     borderRadius: 999,
-    backgroundColor: "#F0EAFB",
+    backgroundColor: appColors.foodEyebrowBg,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   resetPillText: {
-    color: "#6D52EA",
+    color: appColors.foodPrimary,
     fontSize: 12,
     fontWeight: "800",
   },
@@ -283,12 +284,12 @@ const styles = StyleSheet.create({
   rangeCell: {
     flex: 1,
     borderRadius: 12,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
     padding: 12,
   },
   smallLabel: {
     textAlign: "center",
-    color: "#7E7399",
+    color: appColors.foodLabel,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -305,7 +306,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 999,
-    backgroundColor: "#F1ECFA",
+    backgroundColor: appColors.lavenderPanel,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -313,7 +314,7 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   rangeValue: {
-    color: "#1B1529",
+    color: appColors.foodText,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -324,70 +325,70 @@ const styles = StyleSheet.create({
   hourChip: {
     width: 64,
     borderRadius: 8,
-    backgroundColor: "#F7F3FC",
+    backgroundColor: appColors.raw_hex_F7F3FC,
     borderWidth: 1,
-    borderColor: "#E9E2F7",
+    borderColor: appColors.raw_hex_E9E2F7,
     paddingHorizontal: 4,
     paddingVertical: 4,
   },
   hourChipActive: {
-    backgroundColor: "#1F1831",
-    borderColor: "#1F1831",
+    backgroundColor: appColors.foodPrimaryDark,
+    borderColor: appColors.foodPrimaryDark,
   },
   hourChipLabel: {
-    color: "#2F2741",
+    color: appColors.foodInk,
     fontSize: 14,
     fontWeight: "900",
     marginBottom: 4,
   },
   hourChipLabelActive: {
-    color: "#FFFFFF",
+    color: appColors.white,
   },
   hourChipText: {
-    color: "#827994",
+    color: appColors.raw_hex_827994,
     fontSize: 12,
     lineHeight: 16,
     fontWeight: "700",
   },
   hourChipTextActive: {
-    color: "#CFC5E7",
+    color: appColors.foodPreviewText,
   },
   moreRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
     borderRadius: 18,
-    backgroundColor: "#FBF9FF",
+    backgroundColor: appColors.foodFieldBg,
     borderWidth: 1,
-    borderColor: "#ECE5F8",
+    borderColor: appColors.lavenderBorder,
     padding: 14,
   },
   selectedSlotRow: {
-    backgroundColor: "#F4F0FF",
-    borderColor: "#DCD2F8",
+    backgroundColor: appColors.raw_hex_F4F0FF,
+    borderColor: appColors.raw_hex_DCD2F8,
   },
   moreCopy: {
     flex: 1,
   },
   moreTitle: {
-    color: "#1B1529",
+    color: appColors.foodText,
     fontSize: 15,
     fontWeight: "900",
     marginBottom: 4,
   },
   moreText: {
-    color: "#7F7791",
+    color: appColors.foodMuted,
     fontSize: 13,
     lineHeight: 18,
   },
   morePill: {
     borderRadius: 999,
-    backgroundColor: "#1F1831",
+    backgroundColor: appColors.foodPrimaryDark,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   morePillText: {
-    color: "#FFFFFF",
+    color: appColors.white,
     fontSize: 12,
     fontWeight: "800",
   },

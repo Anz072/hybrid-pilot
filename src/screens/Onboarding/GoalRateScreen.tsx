@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { GoalType, OnboardingParamList } from "../../navigation/onboardingTypes";
 import OnboardingButton from "./onboardingButton";
 import OnboardingTopBar from "./OnboardingTopBar";
+import { appColors } from "../../theme/colors";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "GoalRate">;
 
@@ -61,9 +62,9 @@ const buildScreenContent = (goal: GoalType) => {
         "If training performance matters a lot, start at 0.25 kg/week and review after 2-3 weeks.",
       ],
       options: LOSS_OPTIONS,
-      icon: <FireIcon size={26} color="#B91C1C" weight="fill" />,
-      accentBackground: "#FEE2E2",
-      accentText: "#B91C1C",
+      icon: <FireIcon size={26} color={appColors.danger700} weight="fill" />,
+      accentBackground: appColors.dangerSoftBg,
+      accentText: appColors.danger700,
     };
   }
 
@@ -76,9 +77,9 @@ const buildScreenContent = (goal: GoalType) => {
       "If you want to stay leaner, begin at 0.10 kg/week and increase only if progress stalls.",
     ],
     options: GAIN_OPTIONS,
-    icon: <TrendUpIcon size={26} color="#15803D" weight="fill" />,
-    accentBackground: "#DCFCE7",
-    accentText: "#15803D",
+    icon: <TrendUpIcon size={26} color={appColors.green700} weight="fill" />,
+    accentBackground: appColors.greenSoftBg,
+    accentText: appColors.green700,
   };
 };
 
@@ -122,7 +123,7 @@ const GoalRateScreen = ({ navigation, route }: Props) => {
             label={option.label}
             subtitle={option.subtitle}
             value={String(option.value)}
-            borderColor="#383838"
+            borderColor={appColors.charcoal}
             navigation={navigation}
             navGoal="BodyData"
             dataToSend={{
@@ -139,7 +140,7 @@ const GoalRateScreen = ({ navigation, route }: Props) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: appColors.slate50,
   },
   content: {
     paddingHorizontal: 22,
@@ -153,7 +154,7 @@ const styles = StyleSheet.create({
     width: 170,
     height: 170,
     borderRadius: 999,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: appColors.slate200,
   },
   bgOrbBottom: {
     position: "absolute",
@@ -162,7 +163,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 999,
-    backgroundColor: "#FDE68A",
+    backgroundColor: appColors.amberSoft,
     opacity: 0.3,
   },
   headerWrap: {
@@ -189,17 +190,17 @@ const styles = StyleSheet.create({
     fontSize: 30,
     lineHeight: 36,
     fontWeight: "800",
-    color: "#0F172A",
+    color: appColors.slate900,
   },
   subtitle: {
     fontSize: 15,
     lineHeight: 22,
-    color: "#475569",
+    color: appColors.slate600,
   },
   notesCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: appColors.slate300,
     borderRadius: 12,
     padding: 14,
     gap: 8,
@@ -208,7 +209,7 @@ const styles = StyleSheet.create({
   noteText: {
     fontSize: 13,
     lineHeight: 19,
-    color: "#334155",
+    color: appColors.slate700,
     fontWeight: "600",
   },
   optionsWrap: {

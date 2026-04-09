@@ -39,6 +39,7 @@ import {
   formatGoalSummary,
   formatTrainingSummary,
 } from "./onboardingSummary";
+import { appColors } from "../../theme/colors";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "Account">;
 
@@ -313,7 +314,7 @@ const AccountScreen = ({ navigation, route }: Props) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: appColors.slate50,
   },
   scrollContent: {
     paddingHorizontal: 22,
@@ -327,8 +328,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: "#9A3412",
-    backgroundColor: "#FFEDD5",
+    color: appColors.amber800,
+    backgroundColor: appColors.amberSurface,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
@@ -337,16 +338,16 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: "800",
-    color: "#0F172A",
+    color: appColors.slate900,
     marginBottom: 6,
   },
   subtitle: {
     fontSize: 14,
-    color: "#475569",
+    color: appColors.slate600,
     marginBottom: 14,
   },
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
     borderRadius: 6,
     padding: 16,
   },
@@ -357,34 +358,34 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.8,
     textTransform: "uppercase",
-    color: "#64748B",
+    color: appColors.slate500,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#383838",
+    borderColor: appColors.charcoal,
     borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 14,
-    backgroundColor: "#FFFFFF",
-    color: "#0F172A",
+    backgroundColor: appColors.white,
+    color: appColors.slate900,
     fontSize: 16,
     letterSpacing: 0.2,
     fontWeight: "600",
   },
   birthdateText: {
-    color: "#0F172A",
+    color: appColors.slate900,
     fontSize: 16,
     fontWeight: "600",
   },
   birthdatePlaceholder: {
-    color: "#94A3B8",
+    color: appColors.slate400,
     fontSize: 16,
     fontWeight: "600",
   },
   pickerWrap: {
     marginTop: 8,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: appColors.slate200,
     borderRadius: 12,
     paddingVertical: 8,
   },
@@ -396,7 +397,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   pickerDoneText: {
-    color: "#0F172A",
+    color: appColors.slate900,
     fontWeight: "700",
   },
   primaryButton: {

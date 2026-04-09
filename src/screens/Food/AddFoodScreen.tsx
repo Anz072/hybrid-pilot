@@ -21,9 +21,14 @@ import {
   MagnifyingGlassIcon,
 } from "phosphor-react-native";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
-import { DB } from "../../store/DB";
-import type { DBFoodItem, DBUser } from "../../store/DB_TYPES";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
+import { API } from "../../API/apiCaller";
+import { DB } from "../../store/DB";
+import type {
+  DBFoodItem,
+  DBUser,
+  SaveFoodItemInput,
+} from "../../store/DB_TYPES";
 import FoodScreenHeader from "./FoodScreenHeader";
 import FoodBarcodeScannerModal from "./FoodBarcodeScannerModal";
 import type { ScannedFoodLookupResult } from "./FoodBarcodeScannerShared";
@@ -35,8 +40,9 @@ import {
   formatFoodNumber,
   formatFoodShortDate,
   formatFoodSourceLabel,
-  getFoodDefaultLogAmount,
 } from "./foodUtils";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { appColors } from "../../theme/colors";
 
 type AddFoodRoute = RouteProp<FoodStackParamList, "AddFood">;
 type AddFoodNav = CompositeNavigationProp<
@@ -44,18 +50,59 @@ type AddFoodNav = CompositeNavigationProp<
   NativeStackNavigationProp<RootStackParamList>
 >;
 
+type SearchFoodResult = SaveFoodItemInput & {
+  key: string;
+  localId: number | null;
+};
+
+const getFoodIdentityKey = ({
+  barcode,
+  name,
+  source,
+  sourceId,
+}: Pick<SearchFoodResult, "barcode" | "name" | "source" | "sourceId">) => {
+  const fallback = name.trim().toLowerCase();
+  return `${source}:${sourceId?.trim() ?? barcode?.trim() ?? fallback}`;
+};
+
+const toSearchFoodResult = (
+  food: SaveFoodItemInput,
+  localId: number | null,
+): SearchFoodResult => ({
+  ...food,
+  key: `${getFoodIdentityKey({
+    source: food.source,
+    sourceId: food.sourceId,
+    barcode: food.barcode,
+    name: food.name,
+  })}:${localId ?? "remote"}`,
+  localId,
+});
+
+const fromDbFoodItem = (food: DBFoodItem): SearchFoodResult => {
+  const {
+    id,
+    createdAt: _createdAt,
+    updatedAt: _updatedAt,
+    ...saveInput
+  } = food;
+  return toSearchFoodResult(saveInput, id);
+};
+
 const AddFoodScreen = () => {
   const route = useRoute<AddFoodRoute>();
   const navigation = useNavigation<AddFoodNav>();
+  const insets = useSafeAreaInsets();
 
   const { contextLabel, date, loggedAt, mealType } = route.params;
 
   const [user, setUser] = useState<DBUser | null>(null);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<DBFoodItem[]>([]);
+  const [results, setResults] = useState<SearchFoodResult[]>([]);
   const [recent, setRecent] = useState<DBFoodItem[]>([]);
   const [favorites, setFavorites] = useState<DBFoodItem[]>([]);
   const [scannerVisible, setScannerVisible] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
   const loadStaticLists = useCallback(async () => {
     const currentUser = await DB.getUser();
@@ -76,6 +123,48 @@ const AddFoodScreen = () => {
     setFavorites(favoriteFoods);
   }, []);
 
+  const searchFoods = useCallback(async (normalizedQuery: string) => {
+    const [localRows, remoteRows] = await Promise.all([
+      DB.searchFoodItems(normalizedQuery, 40),
+      API.usdaAPI.getFood(normalizedQuery),
+    ]);
+
+    const localResults = localRows.map(fromDbFoodItem);
+    const localKeys = new Set(localResults.map(getFoodIdentityKey));
+    const remoteResults = remoteRows
+      .filter(
+        (food) =>
+          !localKeys.has(
+            getFoodIdentityKey({
+              source: food.source,
+              sourceId: food.sourceId,
+              barcode: food.barcode,
+              name: food.name,
+            }),
+          ),
+      )
+      .map((food) => toSearchFoodResult(food, null));
+
+    return [...localResults, ...remoteResults];
+  }, []);
+
+  const persistFoodIfNeeded = useCallback(async (food: SearchFoodResult) => {
+    if (food.localId != null) {
+      return food.localId;
+    }
+
+    const { key: _key, localId: _localId, ...saveInput } = food;
+    const savedId = await DB.saveFoodItem(saveInput);
+
+    setResults((current) =>
+      current.map((item) =>
+        item.key === food.key ? { ...item, localId: savedId } : item,
+      ),
+    );
+
+    return savedId;
+  }, []);
+
   useEffect(() => {
     void loadStaticLists();
   }, [loadStaticLists]);
@@ -87,25 +176,39 @@ const AddFoodScreen = () => {
       const normalized = query.trim();
       if (!normalized) {
         setResults([]);
+        setIsSearching(false);
         return;
       }
 
-      const rows = await DB.searchFoodItems(normalized, 40);
+      setIsSearching(true);
+      const rows = await searchFoods(normalized);
       if (!cancelled) {
         setResults(rows);
+        setIsSearching(false);
       }
     };
 
-    void run();
+    const timeout = setTimeout(() => {
+      void run();
+    }, 250);
+
     return () => {
       cancelled = true;
+      clearTimeout(timeout);
     };
-  }, [query]);
+  }, [query, searchFoods]);
 
   const favoriteIds = useMemo(
     () => new Set(favorites.map((food) => food.id)),
     [favorites],
   );
+
+  const favoriteResults = useMemo(
+    () => favorites.map(fromDbFoodItem),
+    [favorites],
+  );
+
+  const recentResults = useMemo(() => recent.map(fromDbFoodItem), [recent]);
 
   const resolvedLoggedAt = useMemo(() => {
     if (loggedAt) {
@@ -141,35 +244,52 @@ const AddFoodScreen = () => {
     [date, mealType, navigation, resolvedContextLabel, resolvedLoggedAt],
   );
 
-  const addLogForFood = async (food: DBFoodItem) => {
-    if (!user) {
-      Alert.alert("No account found", "Create or restore a user before adding food.");
-      return;
-    }
-
-    await DB.addUserFoodLog({
-      userExternalId: user.externalId,
-      foodId: food.id,
+  const openCreateCustomFood = useCallback(() => {
+    navigation.navigate("CreateCustomFood", {
+      contextLabel: resolvedContextLabel,
       date,
       loggedAt: resolvedLoggedAt,
-      quantityG: getFoodDefaultLogAmount(food),
-      mealType: mealType ?? null,
+      mealType,
     });
+  }, [date, mealType, navigation, resolvedContextLabel, resolvedLoggedAt]);
 
-    navigation.goBack();
-  };
-
-  const toggleFavorite = async (foodId: number, isFavorite: boolean) => {
+  const openFoodEditor = async (food: SearchFoodResult) => {
     if (!user) {
-      Alert.alert("No account found", "Create or restore a user before saving foods.");
+      Alert.alert(
+        "No account found",
+        "Create or restore a user before adding food.",
+      );
       return;
     }
 
+    const foodId = await persistFoodIfNeeded(food);
+    navigation.navigate("ScannedFood", {
+      foodId,
+      date,
+      loggedAt: resolvedLoggedAt,
+      mealType,
+      contextLabel: resolvedContextLabel,
+    });
+  };
+
+  const toggleFavorite = async (
+    food: SearchFoodResult,
+    isFavorite: boolean,
+  ) => {
+    if (!user) {
+      Alert.alert(
+        "No account found",
+        "Create or restore a user before saving foods.",
+      );
+      return;
+    }
+
+    const foodId = await persistFoodIfNeeded(food);
     await DB.setFoodItemFavorite(user.externalId, foodId, !isFavorite);
     await Promise.all([
       loadStaticLists(),
       query.trim()
-        ? DB.searchFoodItems(query.trim(), 40).then(setResults)
+        ? searchFoods(query.trim()).then(setResults)
         : Promise.resolve(),
     ]);
   };
@@ -179,41 +299,45 @@ const AddFoodScreen = () => {
     [query, results],
   );
 
-  const renderFoodCard = (food: DBFoodItem, isFavorite: boolean) => (
-    <View key={food.id} style={styles.foodCard}>
-      <Pressable style={styles.foodBody} onPress={() => void addLogForFood(food)}>
-        <View style={styles.foodBadgeRow}>
-          {food.brand ? (
+  const renderFoodCard = (food: SearchFoodResult, isFavorite: boolean) => (
+    <View key={food.key} style={styles.foodCard}>
+      <Pressable
+        style={styles.foodBody}
+        onPress={() => void openFoodEditor(food)}
+      >
+        <View style={styles.foodTopRow}>
+          <View style={styles.foodBadgeRow}>
             <View style={styles.foodBadge}>
-              <Text style={styles.foodBadgeText}>{food.brand}</Text>
+              <Text style={styles.foodBadgeText}>
+                {formatFoodSourceLabel(food.source)}
+              </Text>
             </View>
-          ) : null}
-          <View style={styles.foodBadge}>
-            <Text style={styles.foodBadgeText}>
-              {formatFoodSourceLabel(food.source)}
-            </Text>
+            {food.verified ? (
+              <View style={styles.foodBadge}>
+                <Text style={styles.foodBadgeText}>Verified</Text>
+              </View>
+            ) : null}
           </View>
-          {food.verified ? (
-            <View style={styles.foodBadge}>
-              <Text style={styles.foodBadgeText}>Verified</Text>
-            </View>
-          ) : null}
+          <Text style={styles.foodCalories}>
+            {formatFoodNumber(food.calories, " kcal")}
+          </Text>
         </View>
         <Text style={styles.foodName} numberOfLines={2}>
           {food.name}
         </Text>
-        <Text style={styles.foodMeta}>
-          {formatFoodItemServing(food)} serving •{" "}
-          {formatFoodNumber(food.calories, " kcal")}
+        <Text style={styles.foodMeta} numberOfLines={1}>
+          {food.brand ? `${food.brand} | ` : ""}
+          {formatFoodItemServing(food)} serving
         </Text>
         <Text style={styles.foodMacroText}>
-          {formatFoodMacro(food.proteinG, "P")} • {formatFoodMacro(food.carbsG, "C")} •{" "}
+          {formatFoodMacro(food.proteinG, "P")} |{" "}
+          {formatFoodMacro(food.carbsG, "C")} |{" "}
           {formatFoodMacro(food.fatG, "F")}
         </Text>
       </Pressable>
       <View style={styles.foodActionColumn}>
         <Pressable
-          onPress={() => void toggleFavorite(food.id, isFavorite)}
+          onPress={() => void toggleFavorite(food, isFavorite)}
           style={({ pressed }) => [
             styles.secondaryAction,
             isFavorite && styles.secondaryActionActive,
@@ -230,10 +354,13 @@ const AddFoodScreen = () => {
           </Text>
         </Pressable>
         <Pressable
-          onPress={() => void addLogForFood(food)}
-          style={({ pressed }) => [styles.primaryAction, pressed && styles.cardPressed]}
+          onPress={() => void openFoodEditor(food)}
+          style={({ pressed }) => [
+            styles.primaryAction,
+            pressed && styles.cardPressed,
+          ]}
         >
-          <Text style={styles.primaryActionText}>Add</Text>
+          <Text style={styles.primaryActionText}>Open</Text>
         </Pressable>
       </View>
     </View>
@@ -242,7 +369,7 @@ const AddFoodScreen = () => {
   const renderSection = (
     title: string,
     subtitle: string,
-    items: DBFoodItem[],
+    items: SearchFoodResult[],
     emptyText: string,
   ) => (
     <View style={styles.sectionCard}>
@@ -261,14 +388,19 @@ const AddFoodScreen = () => {
         {items.length === 0 ? (
           <Text style={styles.emptyText}>{emptyText}</Text>
         ) : (
-          items.map((item) => renderFoodCard(item, favoriteIds.has(item.id)))
+          items.map((item) =>
+            renderFoodCard(
+              item,
+              item.localId != null && favoriteIds.has(item.localId),
+            ),
+          )
         )}
       </View>
     </View>
   );
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top + 14 }]}>
       <View style={styles.bgOrbTop} />
       <View style={styles.bgOrbBottom} />
 
@@ -277,22 +409,33 @@ const AddFoodScreen = () => {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <FoodScreenHeader
-          eyebrow="Food Search"
-          title="Add food"
-          subtitle={`${formatFoodShortDate(date)} • ${resolvedContextLabel} • Search your library or quick-add familiar foods.`}
-          onBack={() => navigation.goBack()}
-        />
-
         <View style={styles.heroCard}>
+          <View style={styles.heroHeaderRow}>
+            <View style={styles.heroHeaderCopy}>
+              <Text style={styles.heroText}>
+                Search your library, scan a barcode, or open a custom food.
+              </Text>
+            </View>
+            <Pressable
+              onPress={openCreateCustomFood}
+              style={({ pressed }) => [
+                styles.heroAction,
+                pressed && styles.cardPressed,
+              ]}
+            >
+              <Text style={styles.heroActionText}>Custom</Text>
+            </Pressable>
+          </View>
           <View style={styles.contextRow}>
             <View style={styles.contextPill}>
-              <ForkKnifeIcon size={14} color="#6D52EA" weight="fill" />
+              <ForkKnifeIcon size={14} color={appColors.foodPrimary} weight="fill" />
               <Text style={styles.contextPillText}>{resolvedContextLabel}</Text>
             </View>
             <View style={styles.contextPill}>
-              <CalendarIcon size={14} color="#6D52EA" weight="bold" />
-              <Text style={styles.contextPillText}>{formatFoodShortDate(date)}</Text>
+              <CalendarIcon size={14} color={appColors.foodPrimary} weight="bold" />
+              <Text style={styles.contextPillText}>
+                {formatFoodShortDate(date)}
+              </Text>
             </View>
             {mealType ? (
               <View style={styles.contextPill}>
@@ -300,21 +443,16 @@ const AddFoodScreen = () => {
               </View>
             ) : null}
           </View>
-          <Text style={styles.heroTitle}>Search or quick-add</Text>
-          <Text style={styles.heroText}>
-            Tap a food card to log its default serving into this time slot right
-            away, save it for faster logging later, or scan a barcode for a
-            quick match.
-          </Text>
           <View style={styles.searchRow}>
             <View style={styles.searchInputWrap}>
-              <MagnifyingGlassIcon size={18} color="#8A809F" weight="bold" />
+              <MagnifyingGlassIcon size={18} color={appColors.foodPlaceholder} weight="bold" />
               <TextInput
                 placeholder="Search foods"
-                placeholderTextColor="#8A809F"
+                placeholderTextColor={appColors.foodPlaceholder}
                 value={query}
                 onChangeText={setQuery}
                 style={styles.searchInput}
+                returnKeyType="search"
               />
             </View>
             <Pressable
@@ -324,16 +462,22 @@ const AddFoodScreen = () => {
                 pressed && styles.cardPressed,
               ]}
             >
-              <BarcodeIcon size={20} color="#FFFFFF" weight="bold" />
-              <Text style={styles.scanButtonText}>Scan</Text>
+              <BarcodeIcon size={20} color={appColors.white} weight="bold" />
             </Pressable>
           </View>
+          <Text style={styles.searchHint}>
+            {query.trim()
+              ? isSearching
+                ? "Searching your foods and USDA..."
+                : `${activeResults.length} matches across local foods and USDA.`
+              : "Search above or pick from favorites and recent below."}
+          </Text>
         </View>
 
         {query.trim() ? (
           renderSection(
-            `Results${activeResults.length > 0 ? ` (${activeResults.length})` : ""}`,
-            "Matching items in your local food library.",
+            "Results",
+            "Pick a match and confirm the amount.",
             activeResults,
             "No foods matched that search yet.",
           )
@@ -341,40 +485,18 @@ const AddFoodScreen = () => {
           <>
             {renderSection(
               "Favorites",
-              "Your fastest repeat adds for this time slot.",
-              favorites,
+              "Fast repeat picks for this diary slot.",
+              favoriteResults,
               "No favorite foods yet.",
             )}
             {renderSection(
               "Recent",
               "Foods you logged recently.",
-              recent,
+              recentResults,
               "No recent foods yet.",
             )}
           </>
         )}
-
-        <Pressable
-          onPress={() =>
-            navigation.navigate("CreateCustomFood", {
-              contextLabel: resolvedContextLabel,
-              date,
-              loggedAt: resolvedLoggedAt,
-              mealType,
-            })
-          }
-          style={({ pressed }) => [styles.createCard, pressed && styles.cardPressed]}
-        >
-          <View style={styles.createTextWrap}>
-            <Text style={styles.createTitle}>Create custom food</Text>
-            <Text style={styles.createSubtitle}>
-              Add a brand-new item when it is missing from your library.
-            </Text>
-          </View>
-          <View style={styles.createButton}>
-            <Text style={styles.createButtonText}>Open</Text>
-          </View>
-        </Pressable>
       </ScrollView>
 
       <FoodBarcodeScannerModal
@@ -389,7 +511,7 @@ const AddFoodScreen = () => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#F7F4FB",
+    backgroundColor: appColors.foodScreenBg,
   },
   content: {
     paddingHorizontal: 18,
@@ -402,7 +524,7 @@ const styles = StyleSheet.create({
     width: 250,
     height: 250,
     borderRadius: 999,
-    backgroundColor: "#E4D9FF",
+    backgroundColor: appColors.foodOrbTop,
   },
   bgOrbBottom: {
     position: "absolute",
@@ -411,13 +533,32 @@ const styles = StyleSheet.create({
     width: 280,
     height: 280,
     borderRadius: 999,
-    backgroundColor: "#EEE7FF",
+    backgroundColor: appColors.foodOrbBottom,
   },
   heroCard: {
-    backgroundColor: "rgba(255,255,255,0.96)",
+    backgroundColor: appColors.white,
     borderRadius: 8,
-    padding: 16,
+    padding: 14,
     marginBottom: 16,
+  },
+  heroHeaderRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 12,
+  },
+  heroHeaderCopy: {
+    flex: 1,
+  },
+  heroEyebrow: {
+    alignSelf: "flex-start",
+    color: appColors.foodPrimary,
+    fontSize: 11,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.7,
+    marginBottom: 4,
   },
   contextRow: {
     flexDirection: "row",
@@ -429,34 +570,44 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#F3EEFC",
+    backgroundColor: appColors.foodPillBg,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: "#E6DEF1",
+    borderColor: appColors.foodBorder,
   },
   contextPillText: {
-    color: "#6D52EA",
+    color: appColors.foodPrimary,
     fontSize: 12,
     fontWeight: "800",
   },
   heroTitle: {
-    color: "#1B1529",
-    fontSize: 24,
+    color: appColors.foodText,
+    fontSize: 18,
     fontWeight: "900",
-    marginBottom: 8,
+    marginBottom: 4,
   },
   heroText: {
-    color: "#7F7791",
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 14,
+    color: appColors.foodMuted,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  heroAction: {
+    borderRadius: 999,
+    backgroundColor: appColors.foodPrimaryDark,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  heroActionText: {
+    color: appColors.white,
+    fontSize: 12,
+    fontWeight: "800",
   },
   searchRow: {
     flexDirection: "row",
     alignItems: "stretch",
-    gap: 10,
+    gap: 8,
   },
   searchInputWrap: {
     flex: 1,
@@ -464,40 +615,45 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     borderWidth: 1,
-    borderColor: "#E6DEF1",
-    borderRadius: 16,
-    backgroundColor: "#FBF9FF",
-    paddingLeft: 14,
+    borderColor: appColors.foodBorder,
+    borderRadius: 8,
+    backgroundColor: appColors.foodFieldBg,
+    paddingLeft: 12,
     paddingRight: 8,
   },
   searchInput: {
     flex: 1,
-    paddingVertical: 14,
-    color: "#1B1529",
-    fontSize: 16,
+    paddingVertical: 11,
+    color: appColors.foodText,
+    fontSize: 14,
     fontWeight: "700",
   },
   scanButton: {
-    minWidth: 88,
+    minWidth: 50,
     flexDirection: "row",
     gap: 6,
-    borderRadius: 16,
-    backgroundColor: "#1F1831",
+    borderRadius: 8,
+    backgroundColor: appColors.foodPrimaryDark,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
   },
   scanButtonText: {
-    color: "#FFFFFF",
-    fontSize: 13,
-    fontWeight: "900",
-    letterSpacing: 0.2,
+    color: appColors.white,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  searchHint: {
+    color: appColors.foodMuted,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 8,
   },
   sectionCard: {
-    backgroundColor: "rgba(255,255,255,0.96)",
+    backgroundColor: appColors.white,
     borderRadius: 8,
-    padding: 16,
+    padding: 14,
     marginBottom: 16,
   },
   sectionHeaderRow: {
@@ -505,166 +661,144 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     justifyContent: "space-between",
     gap: 12,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   sectionHeaderCopy: {
     flex: 1,
   },
   sectionTitle: {
-    color: "#1B1529",
-    fontSize: 22,
+    color: appColors.foodText,
+    fontSize: 14,
     fontWeight: "900",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   sectionSubtitle: {
-    color: "#7F7791",
-    fontSize: 14,
-    lineHeight: 20,
+    color: appColors.foodMuted,
+    fontSize: 12,
+    lineHeight: 17,
   },
   countPill: {
-    minWidth: 34,
+    minWidth: 28,
     borderRadius: 999,
-    backgroundColor: "#F3EEFC",
+    backgroundColor: appColors.foodPillBg,
     borderWidth: 1,
-    borderColor: "#E6DEF1",
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    borderColor: appColors.foodBorder,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
     alignItems: "center",
   },
   countPillText: {
-    color: "#6D52EA",
-    fontSize: 12,
-    fontWeight: "900",
+    color: appColors.foodPrimary,
+    fontSize: 11,
+    fontWeight: "800",
   },
   sectionStack: {
-    gap: 10,
+    gap: 8,
   },
   emptyText: {
-    color: "#7F7791",
-    fontSize: 14,
-    lineHeight: 20,
+    color: appColors.foodMuted,
+    fontSize: 12,
+    lineHeight: 17,
   },
   foodCard: {
     flexDirection: "row",
-    gap: 12,
-    borderRadius: 18,
-    backgroundColor: "#FBF9FF",
+    gap: 10,
+    borderRadius: 8,
+    backgroundColor: appColors.foodSurfaceAlt,
     borderWidth: 1,
-    borderColor: "#ECE5F9",
-    padding: 14,
+    borderColor: appColors.foodSoftBorder,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
   },
   foodBody: {
     flex: 1,
+  },
+  foodTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    marginBottom: 6,
   },
   foodBadgeRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
-    marginBottom: 8,
   },
   foodBadge: {
     borderRadius: 999,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
     borderWidth: 1,
-    borderColor: "#E6DEF1",
-    paddingHorizontal: 8,
-    paddingVertical: 5,
+    borderColor: appColors.foodBorder,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
   },
   foodBadgeText: {
-    color: "#6D52EA",
-    fontSize: 11,
+    color: appColors.foodPrimary,
+    fontSize: 10,
     fontWeight: "800",
   },
-  foodName: {
-    color: "#1B1529",
-    fontSize: 16,
-    fontWeight: "900",
-    marginBottom: 4,
-  },
-  foodMeta: {
-    color: "#6E6582",
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 4,
-  },
-  foodMacroText: {
-    color: "#6D52EA",
+  foodCalories: {
+    color: appColors.foodInk,
     fontSize: 12,
     fontWeight: "800",
   },
+  foodName: {
+    color: appColors.foodText,
+    fontSize: 14,
+    fontWeight: "800",
+    marginBottom: 3,
+  },
+  foodMeta: {
+    color: appColors.foodMeta,
+    fontSize: 12,
+    lineHeight: 16,
+    marginBottom: 3,
+  },
+  foodMacroText: {
+    color: appColors.foodPrimary,
+    fontSize: 11,
+    fontWeight: "700",
+  },
   foodActionColumn: {
-    justifyContent: "space-between",
+    justifyContent: "center",
     alignItems: "stretch",
-    gap: 8,
+    gap: 6,
   },
   secondaryAction: {
-    minWidth: 72,
+    minWidth: 62,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 12,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#E6DEF1",
-    backgroundColor: "#FFFFFF",
+    borderColor: appColors.foodBorder,
+    backgroundColor: appColors.white,
     paddingHorizontal: 10,
-    paddingVertical: 9,
+    paddingVertical: 7,
   },
   secondaryActionActive: {
-    backgroundColor: "#EEE7FF",
+    backgroundColor: appColors.foodOrbBottom,
   },
   secondaryActionText: {
-    color: "#6D52EA",
-    fontSize: 13,
+    color: appColors.foodPrimary,
+    fontSize: 12,
     fontWeight: "800",
   },
   secondaryActionTextActive: {
-    color: "#4F3D83",
+    color: appColors.foodAccentText,
   },
   primaryAction: {
-    minWidth: 72,
+    minWidth: 62,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 12,
-    backgroundColor: "#1F1831",
+    borderRadius: 999,
+    backgroundColor: appColors.foodPrimaryDark,
     paddingHorizontal: 10,
-    paddingVertical: 9,
+    paddingVertical: 7,
   },
   primaryActionText: {
-    color: "#FFFFFF",
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  createCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: "rgba(255,255,255,0.96)",
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 8,
-  },
-  createTextWrap: {
-    flex: 1,
-  },
-  createTitle: {
-    color: "#1B1529",
-    fontSize: 18,
-    fontWeight: "900",
-    marginBottom: 4,
-  },
-  createSubtitle: {
-    color: "#7F7791",
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  createButton: {
-    borderRadius: 999,
-    backgroundColor: "#1F1831",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  createButtonText: {
-    color: "#FFFFFF",
-    fontSize: 13,
+    color: appColors.white,
+    fontSize: 12,
     fontWeight: "800",
   },
   cardPressed: {

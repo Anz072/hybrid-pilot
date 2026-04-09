@@ -1,5 +1,6 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { appColors } from "../../theme/colors";
 
 export type ReviewItem = {
   label: string;
@@ -45,22 +46,22 @@ const OnboardingReviewCard = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: appColors.slate300,
     borderRadius: 12,
     padding: 14,
     marginBottom: 16,
   },
   title: {
-    color: "#0F172A",
+    color: appColors.slate900,
     fontSize: 15,
     fontWeight: "800",
     marginBottom: 10,
   },
   divider: {
     height: 1,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: appColors.slate200,
     marginVertical: 10,
   },
   row: {
@@ -73,14 +74,14 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   label: {
-    color: "#64748B",
+    color: appColors.slate500,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0.8,
     textTransform: "uppercase",
   },
   value: {
-    color: "#0F172A",
+    color: appColors.slate900,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "700",
@@ -89,16 +90,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: appColors.slate50,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: appColors.slate300,
     marginTop: 2,
   },
   editButtonPressed: {
     opacity: 0.9,
   },
   editText: {
-    color: "#0F172A",
+    color: appColors.slate900,
     fontSize: 12,
     fontWeight: "800",
     letterSpacing: 0.4,

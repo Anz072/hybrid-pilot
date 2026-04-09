@@ -4,6 +4,7 @@ import { StyleSheet, Text, View, Image, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { MoreParamList } from "../../navigation/MoreNavigator";
 import { useAppSelector } from "../../store/hooks";
+import { appColors } from "../../theme/colors";
 
 type MoreScreenNav = NativeStackNavigationProp<MoreParamList, "MoreMainScreen">;
 
@@ -46,7 +47,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   heroCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
     borderRadius: 8,
     paddingVertical: 20,
     paddingHorizontal: 6,
@@ -59,7 +60,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   heroTitle: {
-    color: "#221C2D",
+    color: appColors.plum900,
     fontSize: 24,
     lineHeight: 28,
     fontWeight: "800",
@@ -70,7 +71,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     marginHorizontal: 6,
     borderTopWidth: 1,
-    borderColor: "#ececec",
+    borderColor: appColors.raw_hex_ececec,
   },
   buttonText: {
     fontSize: 14,

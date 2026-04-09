@@ -187,18 +187,28 @@ export const calculateLoggedNutrition = (
 
 export const sumLoggedNutrition = (
   entries: DBUserFoodLogEntry[],
-): FoodNutritionTotals =>
-  entries.reduce<FoodNutritionTotals>(
+): FoodNutritionTotals => {
+  const totals = entries.reduce<FoodNutritionTotals>(
     (accumulator, entry) => {
-      const next = calculateLoggedNutrition(entry);
-      accumulator.calories += next.calories;
-      accumulator.proteinG += next.proteinG;
-      accumulator.carbsG += next.carbsG;
-      accumulator.fatG += next.fatG;
+      const factor =
+        entry.servingSize > 0 ? entry.quantityG / entry.servingSize : 1;
+
+      accumulator.calories += entry.calories * factor;
+      accumulator.proteinG += entry.proteinG * factor;
+      accumulator.carbsG += entry.carbsG * factor;
+      accumulator.fatG += entry.fatG * factor;
       return accumulator;
     },
     { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 },
   );
+
+  return {
+    calories: roundTo(totals.calories, 0),
+    proteinG: roundTo(totals.proteinG),
+    carbsG: roundTo(totals.carbsG),
+    fatG: roundTo(totals.fatG),
+  };
+};
 
 export const clampFoodRatio = (value: number): number => {
   if (value < 0) {
@@ -211,4 +221,4 @@ export const clampFoodRatio = (value: number): number => {
 };
 
 export const formatMacroLine = (totals: FoodNutritionTotals): string =>
-  `${roundTo(totals.proteinG)}P  ${roundTo(totals.carbsG)}C  ${roundTo(totals.fatG)}F`;
+  `${roundTo(totals.calories)}kcal`;

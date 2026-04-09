@@ -57,6 +57,7 @@ import {
   parseLocalizedWeight,
   roundWeightKg,
 } from "./weightUtils";
+import { appColors } from "../../theme/colors";
 
 const FALLBACK_USER_ID = "guest-local";
 const SOFT_MIN_WEIGHT_KG = 20;
@@ -773,9 +774,9 @@ const WeightScreen = () => {
                   {expanded ? "Hide" : "Open"}
                 </Text>
                 {expanded ? (
-                  <CaretUpIcon size={14} color="#4C4360" weight="bold" />
+                  <CaretUpIcon size={14} color={appColors.plumMutedAlt} weight="bold" />
                 ) : (
-                  <CaretDownIcon size={14} color="#7A718B" weight="bold" />
+                  <CaretDownIcon size={14} color={appColors.raw_hex_7A718B} weight="bold" />
                 )}
               </View>
             </View>
@@ -805,7 +806,7 @@ const WeightScreen = () => {
           ]}
           accessibilityLabel="Open sync status"
         >
-          <ArrowsClockwiseIcon size={18} color="#4B4360" weight="bold" />
+          <ArrowsClockwiseIcon size={18} color={appColors.plumMuted} weight="bold" />
         </Pressable>
       </View>
       <View style={styles.heroCard}>
@@ -839,7 +840,7 @@ const WeightScreen = () => {
             <Text style={styles.heroInfoValue}>{currentWeightText} kg</Text>
           </View>
           <View style={styles.heroInfoPill}>
-            <TargetIcon size={13} color="#6D28D9" weight="bold" />
+            <TargetIcon size={13} color={appColors.raw_hex_6D28D9} weight="bold" />
             <Text style={styles.heroInfoGoalText}>{goalChipText}</Text>
           </View>
         </View>
@@ -866,7 +867,7 @@ const WeightScreen = () => {
             <Text style={styles.subtleText}>{goalSummaryText}</Text>
           </View>
           <View style={[styles.pill, styles.goalLauncherPill]}>
-            <TargetIcon size={14} color="#0F172A" weight="bold" />
+            <TargetIcon size={14} color={appColors.slate900} weight="bold" />
             <Text style={styles.pillText}>{goalLauncherLabel}</Text>
           </View>
         </View>
@@ -909,9 +910,9 @@ const WeightScreen = () => {
             </View>
             <View style={styles.sectionToggle}>
               {hideInsights ? (
-                <CaretDownIcon size={18} color="#6D667C" weight="bold" />
+                <CaretDownIcon size={18} color={appColors.plumLabel} weight="bold" />
               ) : (
-                <CaretUpIcon size={18} color="#6D667C" weight="bold" />
+                <CaretUpIcon size={18} color={appColors.plumLabel} weight="bold" />
               )}
             </View>
           </View>
@@ -942,9 +943,9 @@ const WeightScreen = () => {
             </View>
             <View style={styles.sectionToggle}>
               {hideHistory ? (
-                <CaretDownIcon size={18} color="#6D667C" weight="bold" />
+                <CaretDownIcon size={18} color={appColors.plumLabel} weight="bold" />
               ) : (
-                <CaretUpIcon size={18} color="#6D667C" weight="bold" />
+                <CaretUpIcon size={18} color={appColors.plumLabel} weight="bold" />
               )}
             </View>
           </View>
@@ -962,7 +963,7 @@ const WeightScreen = () => {
   if (loading) {
     return (
       <View style={styles.centerState}>
-        <ActivityIndicator size="small" color="#0F172A" />
+        <ActivityIndicator size="small" color={appColors.slate900} />
       </View>
     );
   }
@@ -977,7 +978,7 @@ const WeightScreen = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => void hydrate({ silent: true })}
-            tintColor="#0F172A"
+            tintColor={appColors.slate900}
           />
         }
         contentContainerStyle={{ paddingBottom: 180 + insets.bottom }}
@@ -987,7 +988,7 @@ const WeightScreen = () => {
         ListEmptyComponent={
           hideHistory ? null : (
             <View style={[styles.card, styles.emptyCard]}>
-              <ChartLineIcon size={28} color="#0F766E" weight="bold" />
+              <ChartLineIcon size={28} color={appColors.teal700} weight="bold" />
               <Text style={styles.sectionTitle}>Log your first weigh-in</Text>
               <Text style={styles.subtleText}>
                 Add your first weight entry to unlock trend lines, goal
@@ -1030,7 +1031,7 @@ const WeightScreen = () => {
                   ]}
                   accessibilityLabel={`Delete ${formatWeightKg(item.valueKg)} kilogram entry`}
                 >
-                  <TrashIcon size={18} color="#FFFFFF" weight="bold" />
+                  <TrashIcon size={18} color={appColors.white} weight="bold" />
                   <Text style={styles.deleteSwipeText}>Delete</Text>
                 </Pressable>
               )}
@@ -1074,7 +1075,7 @@ const WeightScreen = () => {
                     </Text>
                   </View>
                   <View style={styles.rowAction}>
-                    <PencilSimpleIcon size={18} color="#475569" weight="bold" />
+                    <PencilSimpleIcon size={18} color={appColors.slate600} weight="bold" />
                   </View>
                 </View>
 
@@ -1083,7 +1084,7 @@ const WeightScreen = () => {
                     <View style={styles.historyInlineWarning}>
                       <WarningCircleIcon
                         size={12}
-                        color="#B45309"
+                        color={appColors.amber600}
                         weight="fill"
                       />
                       <Text style={styles.historyInlineWarningText}>
@@ -1122,7 +1123,7 @@ const WeightScreen = () => {
               ]}
               accessibilityLabel="Close goal editor"
             >
-              <XIcon size={18} color="#0F172A" weight="bold" />
+              <XIcon size={18} color={appColors.slate900} weight="bold" />
             </Pressable>
           </View>
 
@@ -1160,7 +1161,7 @@ const WeightScreen = () => {
                   onChangeText={setTargetWeightValue}
                   keyboardType="decimal-pad"
                   placeholder="78.0"
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={appColors.slate400}
                   style={styles.input}
                   accessibilityLabel="Target weight in kilograms"
                 />
@@ -1177,7 +1178,7 @@ const WeightScreen = () => {
                     pressed && styles.cardPressed,
                   ]}
                 >
-                  <CalendarIcon size={16} color="#0F172A" weight="bold" />
+                  <CalendarIcon size={16} color={appColors.slate900} weight="bold" />
                   <Text style={styles.inlineButtonText}>
                     {targetDate
                       ? targetDate.toLocaleDateString(undefined, {
@@ -1287,15 +1288,15 @@ const WeightScreen = () => {
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: "#0F172A",
+    backgroundColor: appColors.slate900,
     width: 64,
     height: 64,
     borderRadius: 32,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 6,
-    borderColor: "#1971ff",
-    shadowColor: "#0F172A",
+    borderColor: appColors.blueBrand,
+    shadowColor: appColors.slate900,
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.22,
     shadowRadius: 22,
@@ -1309,7 +1310,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.96 }],
   },
   buttonText: {
-    color: "#FFFFFF",
+    color: appColors.white,
     fontSize: 34,
     lineHeight: 34,
     fontWeight: "700",
@@ -1318,23 +1319,23 @@ const styles = StyleSheet.create({
   },
   screen: {
     flex: 1,
-    backgroundColor: "#F4F1F8",
+    backgroundColor: appColors.lavenderSurfaceStrong,
   },
   centerState: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F4F1F8",
+    backgroundColor: appColors.lavenderSurfaceStrong,
   },
   content: {
     paddingHorizontal: 20,
   },
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
     borderRadius: 8,
     padding: 12,
     marginBottom: 18,
-    shadowColor: "#8F84A9",
+    shadowColor: appColors.raw_hex_8F84A9,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.08,
     shadowRadius: 24,
@@ -1350,7 +1351,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   heroCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
     borderRadius: 8,
     paddingVertical: 20,
     paddingHorizontal: 6,
@@ -1370,7 +1371,7 @@ const styles = StyleSheet.create({
     borderRadius: 21,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F1EDF7",
+    backgroundColor: appColors.lavenderSurface,
   },
   heroStatRow: {
     flexDirection: "row",
@@ -1384,28 +1385,28 @@ const styles = StyleSheet.create({
   heroStatDivider: {
     width: 1,
     marginHorizontal: 14,
-    backgroundColor: "#EEE8F5",
+    backgroundColor: appColors.raw_hex_EEE8F5,
   },
   heroStatLabel: {
-    color: "#877D98",
+    color: appColors.plumSoftText,
     fontSize: 13,
     fontWeight: "700",
     marginBottom: 6,
   },
   heroStatValue: {
-    color: "#221C2D",
+    color: appColors.plum900,
     fontSize: 26,
     lineHeight: 30,
     fontWeight: "800",
     marginBottom: 6,
   },
   heroStatUnit: {
-    color: "#6D667C",
+    color: appColors.plumLabel,
     fontSize: 16,
     fontWeight: "700",
   },
   heroStatCaption: {
-    color: "#8F859F",
+    color: appColors.foodShadow,
     fontSize: 12,
     lineHeight: 17,
   },
@@ -1422,22 +1423,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     borderRadius: 999,
-    backgroundColor: "#F6F2FB",
+    backgroundColor: appColors.raw_hex_F6F2FB,
     paddingHorizontal: 12,
     paddingVertical: 9,
   },
   heroInfoLabel: {
-    color: "#8A8199",
+    color: appColors.raw_hex_8A8199,
     fontSize: 12,
     fontWeight: "700",
   },
   heroInfoValue: {
-    color: "#2F283C",
+    color: appColors.plum810,
     fontSize: 13,
     fontWeight: "800",
   },
   heroInfoGoalText: {
-    color: "#5E3DB3",
+    color: appColors.raw_hex_5E3DB3,
     fontSize: 13,
     fontWeight: "800",
   },
@@ -1449,7 +1450,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   heroStatusText: {
-    color: "#8C839C",
+    color: appColors.plumPlaceholderAlt,
     fontSize: 12,
     lineHeight: 17,
   },
@@ -1470,15 +1471,15 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: "#0F766E",
-    backgroundColor: "#CCFBF1",
+    color: appColors.teal700,
+    backgroundColor: appColors.tealSoftBg,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
     marginBottom: 10,
   },
   heroTitle: {
-    color: "#221C2D",
+    color: appColors.plum900,
     fontSize: 24,
     lineHeight: 28,
     fontWeight: "800",
@@ -1489,7 +1490,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     borderRadius: 999,
-    backgroundColor: "#F2EDF8",
+    backgroundColor: appColors.raw_hex_F2EDF8,
     paddingHorizontal: 12,
     paddingVertical: 9,
   },
@@ -1499,24 +1500,24 @@ const styles = StyleSheet.create({
   },
   expandInsightLike: {},
   pillText: {
-    color: "#2C2537",
+    color: appColors.raw_hex_2C2537,
     fontSize: 13,
     fontWeight: "700",
     flexShrink: 1,
   },
   pillDark: {
     borderRadius: 999,
-    backgroundColor: "#1E293B",
+    backgroundColor: appColors.slate800,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   pillDarkText: {
-    color: "#E2E8F0",
+    color: appColors.slate200,
     fontSize: 13,
     fontWeight: "800",
   },
   metric: {
-    color: "#0F172A",
+    color: appColors.slate900,
     fontSize: 44,
     lineHeight: 48,
     fontWeight: "900",
@@ -1527,7 +1528,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   title: {
-    color: "#181326",
+    color: appColors.plum950,
     fontSize: 32,
     lineHeight: 38,
     fontWeight: "900",
@@ -1535,7 +1536,7 @@ const styles = StyleSheet.create({
   },
   metricUnit: {
     fontSize: 20,
-    color: "#334155",
+    color: appColors.slate700,
   },
   metricRow: {
     flexDirection: "row",
@@ -1545,12 +1546,12 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   subtleText: {
-    color: "#877E96",
+    color: appColors.raw_hex_877E96,
     fontSize: 14,
     lineHeight: 20,
   },
   sectionCaption: {
-    color: "#958CA3",
+    color: appColors.plumSoft,
     fontSize: 13,
     lineHeight: 18,
     marginTop: 4,
@@ -1560,29 +1561,29 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     borderRadius: 999,
-    backgroundColor: "#EEE7FA",
+    backgroundColor: appColors.raw_hex_EEE7FA,
     paddingHorizontal: 12,
     paddingVertical: 9,
   },
   goalChipText: {
-    color: "#5A35B0",
+    color: appColors.primaryAlt,
     fontSize: 13,
     fontWeight: "800",
   },
   goalBandPill: {
-    backgroundColor: "#EFF6FF",
+    backgroundColor: appColors.raw_hex_EFF6FF,
   },
   goalLauncherPill: {
     alignSelf: "flex-start",
   },
   goalBandText: {
-    color: "#1D4ED8",
+    color: appColors.blue700,
     fontSize: 12,
     fontWeight: "800",
   },
   warningCard: {
-    backgroundColor: "#FEF3C7",
-    borderColor: "#FCD34D",
+    backgroundColor: appColors.amberSoftStrong,
+    borderColor: appColors.raw_hex_FCD34D,
   },
   warningRow: {
     flexDirection: "row",
@@ -1590,30 +1591,30 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   warningTitle: {
-    color: "#78350F",
+    color: appColors.raw_hex_78350F,
     fontSize: 14,
     fontWeight: "800",
     marginBottom: 2,
   },
   warningText: {
-    color: "#92400E",
+    color: appColors.amber700,
     fontSize: 13,
     lineHeight: 18,
   },
   sectionTitle: {
-    color: "#221C2D",
+    color: appColors.plum900,
     fontSize: 20,
     fontWeight: "800",
     marginBottom: 2,
   },
   dashboardSectionTitle: {
-    color: "#221C2D",
+    color: appColors.plum900,
     fontSize: 28,
     fontWeight: "800",
     marginBottom: 2,
   },
   label: {
-    color: "#64748B",
+    color: appColors.slate500,
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 0.8,
@@ -1630,25 +1631,25 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: appColors.slate300,
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 14,
     fontSize: 20,
     fontWeight: "800",
-    color: "#0F172A",
-    backgroundColor: "#FFFFFF",
+    color: appColors.slate900,
+    backgroundColor: appColors.white,
   },
   unitPill: {
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 14,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: appColors.slate50,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: appColors.slate300,
   },
   unitText: {
-    color: "#0F172A",
+    color: appColors.slate900,
     fontSize: 16,
     fontWeight: "800",
   },
@@ -1664,14 +1665,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: appColors.slate300,
     borderRadius: 12,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: appColors.slate50,
     paddingHorizontal: 12,
     paddingVertical: 12,
   },
   inlineButtonText: {
-    color: "#0F172A",
+    color: appColors.slate900,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -1684,12 +1685,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   textButtonText: {
-    color: "#475569",
+    color: appColors.slate600,
     fontSize: 14,
     fontWeight: "700",
   },
   destructiveText: {
-    color: "#B91C1C",
+    color: appColors.danger700,
     fontSize: 15,
     fontWeight: "800",
   },
@@ -1700,14 +1701,14 @@ const styles = StyleSheet.create({
   },
   softPanel: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: appColors.slate50,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: appColors.slate200,
     padding: 12,
   },
   panelLabel: {
-    color: "#64748B",
+    color: appColors.slate500,
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
@@ -1715,12 +1716,12 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   panelValue: {
-    color: "#0F172A",
+    color: appColors.slate900,
     fontSize: 16,
     fontWeight: "800",
   },
   panelText: {
-    color: "#0F172A",
+    color: appColors.slate900,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "700",
@@ -1729,13 +1730,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   stickyHeader: {
-    backgroundColor: "#F8FAFC",
+    backgroundColor: appColors.slate50,
     paddingHorizontal: 20,
     paddingTop: 4,
     paddingBottom: 8,
   },
   stickyHeaderText: {
-    color: "#334155",
+    color: appColors.slate700,
     fontSize: 13,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -1750,26 +1751,26 @@ const styles = StyleSheet.create({
     marginRight: 20,
     marginBottom: 8,
     borderRadius: 16,
-    backgroundColor: "#B91C1C",
+    backgroundColor: appColors.danger700,
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
   },
   deleteSwipeText: {
-    color: "#FFFFFF",
+    color: appColors.white,
     fontSize: 13,
     fontWeight: "800",
   },
   historyRow: {
     marginHorizontal: 20,
     marginBottom: 8,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
     borderRadius: 18,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
   historyRowActive: {
-    backgroundColor: "#F8F4FE",
+    backgroundColor: appColors.raw_hex_F8F4FE,
   },
   historyPrimaryRow: {
     flexDirection: "row",
@@ -1778,12 +1779,12 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   historyValue: {
-    color: "#0F172A",
+    color: appColors.slate900,
     fontSize: 18,
     fontWeight: "800",
   },
   historyMeta: {
-    color: "#64748B",
+    color: appColors.slate500,
     fontSize: 12,
     lineHeight: 16,
   },
@@ -1802,32 +1803,32 @@ const styles = StyleSheet.create({
   },
   statusChip: {
     borderRadius: 999,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: appColors.slate200,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   statusChipWarning: {
-    backgroundColor: "#FEF3C7",
+    backgroundColor: appColors.amberSoftStrong,
   },
   statusChipText: {
-    color: "#334155",
+    color: appColors.slate700,
     fontSize: 11,
     fontWeight: "800",
   },
   statusChipTextWarning: {
-    color: "#92400E",
+    color: appColors.amber700,
   },
   historyInlineWarning: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
     borderRadius: 999,
-    backgroundColor: "#FEF3C7",
+    backgroundColor: appColors.amberSoftStrong,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   historyInlineWarningText: {
-    color: "#92400E",
+    color: appColors.amber700,
     fontSize: 11,
     fontWeight: "700",
   },
@@ -1839,11 +1840,11 @@ const styles = StyleSheet.create({
   fabHalo: {
     padding: 6,
     borderRadius: 999,
-    backgroundColor: "rgba(168, 143, 214, 0.18)",
+    backgroundColor: appColors.raw_rgba168_143_214_0_18,
   },
   goalModalScreen: {
     flex: 1,
-    backgroundColor: "#F4F1F8",
+    backgroundColor: appColors.lavenderSurfaceStrong,
   },
   goalModalHeader: {
     paddingHorizontal: 20,
@@ -1854,7 +1855,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   goalModalTitle: {
-    color: "#0F172A",
+    color: appColors.slate900,
     fontSize: 28,
     fontWeight: "900",
     marginTop: 10,
@@ -1865,9 +1866,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: appColors.slate200,
   },
   goalModalContent: {
     paddingHorizontal: 20,
@@ -1878,7 +1879,7 @@ const styles = StyleSheet.create({
     left: 20,
     right: 20,
     borderRadius: 16,
-    backgroundColor: "#0F172A",
+    backgroundColor: appColors.slate900,
     paddingHorizontal: 16,
     paddingVertical: 14,
     flexDirection: "row",
@@ -1888,20 +1889,20 @@ const styles = StyleSheet.create({
   },
   snackbarText: {
     flex: 1,
-    color: "#FFFFFF",
+    color: appColors.white,
     fontSize: 14,
     fontWeight: "700",
   },
   insightCard: {
-    backgroundColor: "#FBF9FE",
+    backgroundColor: appColors.raw_hex_FBF9FE,
     borderRadius: 6,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#EEE8F5",
+    borderColor: appColors.raw_hex_EEE8F5,
   },
   insightCardExpanded: {
-    backgroundColor: "#F7F2FD",
-    borderColor: "#E1D6F3",
+    backgroundColor: appColors.raw_hex_F7F2FD,
+    borderColor: appColors.raw_hex_E1D6F3,
   },
   insightTopRow: {
     flexDirection: "row",
@@ -1917,7 +1918,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   insightTitle: {
-    color: "#3F384D",
+    color: appColors.plum740,
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
@@ -1925,12 +1926,12 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   insightValue: {
-    color: "#5B33B5",
+    color: appColors.tabFocused,
     fontSize: 22,
     fontWeight: "900",
   },
   insightDetail: {
-    color: "#857B95",
+    color: appColors.raw_hex_857B95,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -1938,7 +1939,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 3,
     borderRadius: 999,
-    backgroundColor: "#B28AF5",
+    backgroundColor: appColors.raw_hex_B28AF5,
     marginTop: 12,
     marginBottom: 2,
   },
@@ -1949,46 +1950,46 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    backgroundColor: "#F1EDF7",
+    backgroundColor: appColors.lavenderSurface,
     borderWidth: 1,
-    borderColor: "#E6DEF1",
+    borderColor: appColors.foodBorder,
   },
   insightToggleChipExpanded: {
-    backgroundColor: "#E8E0F4",
-    borderColor: "#D8CAE9",
+    backgroundColor: appColors.raw_hex_E8E0F4,
+    borderColor: appColors.raw_hex_D8CAE9,
   },
   insightToggleText: {
-    color: "#7B718B",
+    color: appColors.raw_hex_7B718B,
     fontSize: 12,
     fontWeight: "700",
   },
   insightToggleTextExpanded: {
-    color: "#443C53",
+    color: appColors.plum730,
   },
   insightExpandedBody: {
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: "#E5DDF0",
+    borderTopColor: appColors.raw_hex_E5DDF0,
     gap: 6,
   },
   insightExpandedLabel: {
-    color: "#7E748F",
+    color: appColors.raw_hex_7E748F,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
     letterSpacing: 0.8,
   },
   insightExpandedText: {
-    color: "#554C64",
+    color: appColors.plumMutedStrong,
     fontSize: 13,
     lineHeight: 19,
   },
   goalCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
   },
   sectionCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
   },
   sectionHeaderRow: {
     flexDirection: "row",
@@ -2003,10 +2004,10 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F3EEF8",
+    backgroundColor: appColors.raw_hex_F3EEF8,
   },
   collapsedSectionText: {
-    color: "#958CA3",
+    color: appColors.plumSoft,
     fontSize: 12,
     lineHeight: 18,
   },

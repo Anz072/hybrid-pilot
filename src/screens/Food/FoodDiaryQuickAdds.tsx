@@ -2,6 +2,7 @@ import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import type { FoodDiaryFavoriteFood } from "./foodDiaryTypes";
 import { formatFoodHourLabel, formatFoodServing, formatFoodSourceLabel } from "./foodUtils";
+import { appColors } from "../../theme/colors";
 
 type FoodDiaryQuickAddsProps = {
   favoriteFoods: FoodDiaryFavoriteFood[];
@@ -24,7 +25,7 @@ const FoodDiaryQuickAdds = ({
         Quick adds at {formatFoodHourLabel(selectedHour)}
       </Text>
       <Text style={styles.sectionText}>
-        Your repeat foods stay one tap away.
+        Your repeat foods stay one tap away, with a quick amount check first.
       </Text>
       <ScrollView
         horizontal
@@ -54,7 +55,7 @@ const FoodDiaryQuickAdds = ({
                 pressed && styles.cardPressed,
               ]}
             >
-              <Text style={styles.favoriteButtonText}>Add</Text>
+              <Text style={styles.favoriteButtonText}>Review</Text>
             </Pressable>
           </View>
         ))}
@@ -65,19 +66,19 @@ const FoodDiaryQuickAdds = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "rgba(255,255,255,0.96)",
+    backgroundColor: appColors.whiteOverlay96,
     borderRadius: 8,
     padding: 16,
     marginBottom: 16,
   },
   sectionTitle: {
-    color: "#1B1529",
+    color: appColors.foodText,
     fontSize: 22,
     fontWeight: "900",
     marginBottom: 4,
   },
   sectionText: {
-    color: "#7F7791",
+    color: appColors.foodMuted,
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 14,
@@ -89,13 +90,13 @@ const styles = StyleSheet.create({
   favoriteCard: {
     width: 214,
     borderRadius: 22,
-    backgroundColor: "#FBF9FF",
+    backgroundColor: appColors.foodFieldBg,
     borderWidth: 1,
-    borderColor: "#ECE5F9",
+    borderColor: appColors.foodSoftBorder,
     padding: 14,
   },
   favoriteEyebrow: {
-    color: "#8A7DB0",
+    color: appColors.raw_hex_8A7DB0,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -103,26 +104,26 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   favoriteName: {
-    color: "#1B1529",
+    color: appColors.foodText,
     fontSize: 16,
     fontWeight: "900",
     marginBottom: 6,
   },
   favoriteMeta: {
-    color: "#6E6582",
+    color: appColors.foodMeta,
     fontSize: 13,
     lineHeight: 18,
     marginBottom: 4,
   },
   favoriteButton: {
     borderRadius: 16,
-    backgroundColor: "#1F1831",
+    backgroundColor: appColors.foodPrimaryDark,
     paddingVertical: 12,
     alignItems: "center",
     marginTop: 10,
   },
   favoriteButtonText: {
-    color: "#FFFFFF",
+    color: appColors.white,
     fontSize: 13,
     fontWeight: "800",
   },

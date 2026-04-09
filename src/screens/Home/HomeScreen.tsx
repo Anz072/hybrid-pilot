@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { LighthouseIcon } from "phosphor-react-native";
 import { useAppSelector } from "../../store/hooks";
 import { SpriteAnimator } from "../../splash/spriteAnimator";
+import { appColors } from "../../theme/colors";
 
 const HomeScreen = () => {
   const user = useAppSelector((state) => state.user.currentUser);
@@ -21,7 +22,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#ffffff",
+    backgroundColor: appColors.white,
   },
   text: {
     fontSize: 20,

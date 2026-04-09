@@ -1,7 +1,14 @@
 import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { formatFoodDateKey, formatFoodShortDate } from "./foodUtils";
+import {
+  FoodNutritionTotals,
+  formatFoodDateKey,
+  formatFoodShortDate,
+} from "./foodUtils";
+import { DBUser } from "../../store/DB_TYPES";
+import FoodDiaryHeroCard from "./FoodDiaryHeroCard";
+import { appColors } from "../../theme/colors";
 
 export type FoodDiaryDateStripDay = {
   date: Date;
@@ -16,6 +23,8 @@ type FoodDiaryDateStripProps = {
   onNextWeek: () => void;
   onPreviousWeek: () => void;
   onSelectDate: (date: Date) => void;
+  totals?: FoodNutritionTotals;
+  user?: DBUser | null;
 };
 
 const PILL_WIDTH = 36;
@@ -78,6 +87,8 @@ const FoodDiaryDateStrip = ({
   onNextWeek,
   onPreviousWeek,
   onSelectDate,
+  totals,
+  user,
 }: FoodDiaryDateStripProps) => {
   const selectedDateKey = formatFoodDateKey(selectedDate);
   const weekRange =
@@ -146,14 +157,14 @@ const FoodDiaryDateStrip = ({
               >
                 <Path
                   d={outlinePath}
-                  stroke="#E4DDF3"
+                  stroke={appColors.lavenderShadow}
                   strokeWidth={OUTLINE_WIDTH}
                   fill="none"
                   strokeLinecap="round"
                 />
                 <Path
                   d={outlinePath}
-                  stroke={selected ? "#5F46D9" : "#9F8AF4"}
+                  stroke={selected ? appColors.indigo600 : appColors.violetAccent}
                   strokeWidth={OUTLINE_WIDTH}
                   fill="none"
                   strokeLinecap="round"
@@ -182,16 +193,17 @@ const FoodDiaryDateStrip = ({
           );
         })}
       </View>
+      {totals && user && <FoodDiaryHeroCard totals={totals} user={user} />}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "rgba(255,255,255,0.96)",
-    borderRadius: 8,
+    backgroundColor: appColors.white,
     padding: 14,
-    marginBottom: 16,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
   },
   header: {
     flexDirection: "row",
@@ -204,33 +216,33 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   title: {
-    color: "#1B1529",
+    color: appColors.foodText,
     fontSize: 14,
     fontWeight: "900",
     marginBottom: 2,
   },
   subtitle: {
-    color: "#8B839C",
+    color: appColors.plumPlaceholder,
     fontSize: 12,
     fontWeight: "700",
   },
   navButton: {
     borderRadius: 999,
-    backgroundColor: "#F5F1FB",
+    backgroundColor: appColors.raw_hex_F5F1FB,
     borderWidth: 1,
-    borderColor: "#E4DDF3",
+    borderColor: appColors.lavenderShadow,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   navButtonText: {
-    color: "#3A314A",
+    color: appColors.plum760,
     fontSize: 12,
     fontWeight: "800",
   },
   dayRow: {
-    display:'flex',
-    flexDirection: 'row',
-    justifyContent: 'center',
+    display: "flex",
+    flexDirection: "row",
+    justifyContent: "center",
     gap: 10,
     paddingHorizontal: 2,
     paddingVertical: 2,
@@ -241,42 +253,42 @@ const styles = StyleSheet.create({
     borderRadius: PILL_RADIUS,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FBFAFF",
+    backgroundColor: appColors.raw_hex_FBFAFF,
     overflow: "hidden",
   },
   dayPillSelected: {
-    backgroundColor: "#F1ECFA",
+    backgroundColor: appColors.lavenderPanel,
   },
   weekday: {
-    color: "#8A809F",
+    color: appColors.foodPlaceholder,
     fontSize: 12,
   },
   weekdaySelected: {
-    color: "#4A3B68",
+    color: appColors.plum700,
   },
   dayNumber: {
-    color: "#1B1529",
+    color: appColors.foodText,
     fontSize: 12,
     fontWeight: "700",
   },
   dayNumberSelected: {
-    color: "#1F1831",
+    color: appColors.foodPrimaryDark,
   },
   kcalText: {
-    color: "#8A809F",
+    color: appColors.foodPlaceholder,
     fontSize: 10,
     marginBottom: 2,
   },
   kcalTextSelected: {
-    color: "#6D52EA",
+    color: appColors.foodPrimary,
   },
   todayDot: {
     position: "absolute",
-    right:6,
+    right: 6,
     width: 6,
     height: 6,
     borderRadius: 999,
-    backgroundColor: "#6e52ea4b",
+    backgroundColor: appColors.foodPrimaryOverlay,
   },
   todayDot2: {
     position: "absolute",
@@ -284,7 +296,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 999,
-    backgroundColor: "#6e52ea4b",
+    backgroundColor: appColors.foodPrimaryOverlay,
   },
   cardPressed: {
     opacity: 0.9,

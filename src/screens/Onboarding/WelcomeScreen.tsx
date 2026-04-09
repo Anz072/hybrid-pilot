@@ -4,6 +4,7 @@ import { BarbellIcon, RocketLaunchIcon } from "phosphor-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { OnboardingParamList } from "../../navigation/onboardingTypes";
 import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
+import { appColors } from "../../theme/colors";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "Welcome">;
 
@@ -15,10 +16,10 @@ const WelcomeScreen = ({ navigation }: Props) => {
 
       <View style={styles.heroRow}>
         <View style={styles.heroIconBadge}>
-          <RocketLaunchIcon size={24} color="#EA580C" weight="fill" />
+          <RocketLaunchIcon size={24} color={appColors.raw_hex_EA580C} weight="fill" />
         </View>
         <View style={styles.heroIconBadgeMuted}>
-          <BarbellIcon size={20} color="#0F172A" weight="fill" />
+          <BarbellIcon size={20} color={appColors.slate900} weight="fill" />
         </View>
       </View>
 
@@ -56,7 +57,7 @@ const styles = StyleSheet.create({
     paddingTop: 56,
     paddingBottom: 30,
     justifyContent: "center",
-    backgroundColor: "#FFF8F2", //121212
+    backgroundColor: appColors.raw_hex_FFF8F2, //121212
   },
   bgOrbTop: {
     position: "absolute",
@@ -65,7 +66,7 @@ const styles = StyleSheet.create({
     width: 210,
     height: 210,
     borderRadius: 999,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: appColors.dangerSoftBg,
   },
   bgOrbBottom: {
     position: "absolute",
@@ -74,7 +75,7 @@ const styles = StyleSheet.create({
     width: 240,
     height: 240,
     borderRadius: 999,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: appColors.slate200,
   },
   heroRow: {
     flexDirection: "row",
@@ -87,9 +88,9 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 999,
-    backgroundColor: "#FFEDD5",
+    backgroundColor: appColors.amberSurface,
     borderWidth: 1,
-    borderColor: "#FDBA74",
+    borderColor: appColors.amber300,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -97,9 +98,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 999,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: appColors.slate100,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: appColors.slate300,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -109,8 +110,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: "#9A3412",
-    backgroundColor: "#FFEDD5",
+    color: appColors.amber800,
+    backgroundColor: appColors.amberSurface,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
@@ -120,14 +121,14 @@ const styles = StyleSheet.create({
     fontSize: 40,
     lineHeight: 44,
     fontWeight: "800",
-    color: "#0F172A",
+    color: appColors.slate900,
     marginBottom: 12,
     textAlign: "center",
   },
   subtitle: {
     fontSize: 16,
     lineHeight: 24,
-    color: "#475569",
+    color: appColors.slate600,
     marginBottom: 24,
     textAlign: "center",
     paddingHorizontal: 4,
@@ -141,10 +142,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   secondaryButtonPressed: {
-    backgroundColor: "#F1F5F9",
+    backgroundColor: appColors.slate100,
   },
   secondaryButtonText: {
-    color: "#334155",
+    color: appColors.slate700,
     fontWeight: "600",
   },
 });

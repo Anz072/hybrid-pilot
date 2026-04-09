@@ -19,6 +19,7 @@ import type {
 import { formatGoalRateKg } from "./initialCalculations";
 import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
 import OnboardingTopBar from "./OnboardingTopBar";
+import { appColors } from "../../theme/colors";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "BodyData">;
 
@@ -78,7 +79,7 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
         />
         <View style={styles.headerWrap}>
           <View style={styles.headerRow}>
-            <RulerIcon size={22} color="#0369A1" weight="fill" />
+            <RulerIcon size={22} color={appColors.sky700} weight="fill" />
             <Text style={styles.eyebrow}>Body Data</Text>
           </View>
           <Text style={styles.title}>Body basics</Text>
@@ -101,7 +102,7 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
               onChangeText={setAge}
               keyboardType="numeric"
               placeholder="Age"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={appColors.slate400}
             />
           </View>
           <View>
@@ -112,7 +113,7 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
               onChangeText={setHeightCm}
               keyboardType="numeric"
               placeholder="Height (cm)"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={appColors.slate400}
             />
           </View>
           <View>
@@ -123,7 +124,7 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
               onChangeText={setWeightKg}
               keyboardType="numeric"
               placeholder="Weight (kg)"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={appColors.slate400}
             />
           </View>
           <Text style={styles.sectionLabel}>Sex</Text>
@@ -164,7 +165,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 22,
     paddingTop: 34,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: appColors.slate50,
   },
   content: {
     flex: 1,
@@ -179,7 +180,7 @@ const styles = StyleSheet.create({
     width: 170,
     height: 170,
     borderRadius: 999,
-    backgroundColor: "#DBEAFE",
+    backgroundColor: appColors.blueSoftBg,
   },
   bgOrbBottom: {
     position: "absolute",
@@ -188,7 +189,7 @@ const styles = StyleSheet.create({
     width: 210,
     height: 210,
     borderRadius: 999,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: appColors.slate200,
   },
   headerWrap: {
     marginTop: 18,
@@ -206,8 +207,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: "#075985",
-    backgroundColor: "#E0F2FE",
+    color: appColors.sky800,
+    backgroundColor: appColors.skySoftBg,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
@@ -216,36 +217,36 @@ const styles = StyleSheet.create({
     fontSize: 32,
     lineHeight: 38,
     fontWeight: "800",
-    color: "#0F172A",
+    color: appColors.slate900,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 15,
     lineHeight: 22,
-    color: "#475569",
+    color: appColors.slate600,
   },
   contextNote: {
     marginTop: 10,
     fontSize: 13,
     lineHeight: 19,
-    color: "#0F766E",
+    color: appColors.teal700,
     fontWeight: "700",
   },
   formCard: {
-    backgroundColor: "#FFFFFF",
-    borderColor: "#383838",
+    backgroundColor: appColors.white,
+    borderColor: appColors.charcoal,
     borderRadius: 6,
     padding: 14,
     gap: 16,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#383838",
+    borderColor: appColors.charcoal,
     borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 14,
-    backgroundColor: "#FFFFFF",
-    color: "#0F172A",
+    backgroundColor: appColors.white,
+    color: appColors.slate900,
     fontSize: 18,
     letterSpacing: 0.5,
     fontWeight: "600",
@@ -256,7 +257,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.8,
     textTransform: "uppercase",
-    color: "#64748B",
+    color: appColors.slate500,
   },
   sectionLabelx: {
     marginTop: 4,
@@ -266,7 +267,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     letterSpacing: 0.8,
     textTransform: "uppercase",
-    color: "#64748B",
+    color: appColors.slate500,
   },
   sexRow: {
     flexDirection: "row",
@@ -274,26 +275,26 @@ const styles = StyleSheet.create({
   },
   sexChip: {
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: appColors.slate300,
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
   },
   sexChipActive: {
-    backgroundColor: "#0F172A",
-    borderColor: "#0F172A",
+    backgroundColor: appColors.slate900,
+    borderColor: appColors.slate900,
   },
   sexChipPressed: {
     opacity: 0.88,
   },
   sexChipText: {
-    color: "#334155",
+    color: appColors.slate700,
     fontWeight: "700",
     textTransform: "capitalize",
   },
   sexChipTextActive: {
-    color: "#FFFFFF",
+    color: appColors.white,
   },
 });
 

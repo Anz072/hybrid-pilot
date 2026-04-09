@@ -6,7 +6,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import {
@@ -30,18 +29,20 @@ import type { RootStackParamList } from "../../navigation/AppNavigator";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
 import { DB } from "../../store/DB";
 import type { DBFoodItem, DBUser } from "../../store/DB_TYPES";
+import FoodEntryForm from "./FoodEntryForm";
 import FoodScreenHeader from "./FoodScreenHeader";
 import {
   buildFoodLoggedAt,
+  formatFoodMacro,
   formatFoodLoggedTime,
   formatFoodNumber,
   formatFoodShortDate,
   formatFoodSourceLabel,
-  formatMacroLine,
   getFoodDefaultLogAmount,
   getFoodResolvedServing,
   type FoodNutritionTotals,
 } from "./foodUtils";
+import { appColors } from "../../theme/colors";
 
 type ScannedFoodRoute = RouteProp<FoodStackParamList, "ScannedFood">;
 type ScannedFoodNav = CompositeNavigationProp<
@@ -81,6 +82,7 @@ const ScannedFoodLogScreen = () => {
   const navigation = useNavigation<ScannedFoodNav>();
   const { barcode, contextLabel, date, foodId, loggedAt, mealType, scanStatus } =
     route.params;
+  const isScannedFlow = scanStatus != null;
 
   const [food, setFood] = React.useState<DBFoodItem | null>(null);
   const [user, setUser] = React.useState<DBUser | null>(null);
@@ -150,6 +152,38 @@ const ScannedFoodLogScreen = () => {
   );
   const statusLabel =
     scanStatus === "created" ? "Added to library" : "Found in library";
+  const screenEyebrow = isScannedFlow ? "Barcode" : "Food";
+  const screenTitle = isScannedFlow ? "Add scanned food" : "Review food";
+  const screenSubtitle = isScannedFlow
+    ? `${formatFoodShortDate(date)} | ${resolvedContextLabel}`
+    : `${formatFoodShortDate(date)} | ${resolvedContextLabel}`;
+  const heroPills = React.useMemo(() => {
+    const pills = [];
+
+    if (isScannedFlow) {
+      pills.push({
+        key: "status",
+        label: statusLabel,
+        icon: <CheckCircleIcon size={14} color={appColors.foodPrimary} weight="fill" />,
+      });
+    }
+
+    pills.push({
+      key: "date",
+      label: formatFoodShortDate(date),
+      icon: <CalendarIcon size={14} color={appColors.foodPrimary} weight="bold" />,
+    });
+
+    if (barcode) {
+      pills.push({
+        key: "barcode",
+        label: barcode,
+        icon: <BarcodeIcon size={14} color={appColors.foodPrimary} weight="bold" />,
+      });
+    }
+
+    return pills;
+  }, [barcode, date, isScannedFlow, statusLabel]);
 
   const closeAfterSave = React.useCallback(() => {
     const routes = navigation.getState().routes;
@@ -214,13 +248,15 @@ const ScannedFoodLogScreen = () => {
         <View style={styles.bgOrbTop} />
         <View style={styles.content}>
           <FoodScreenHeader
-            eyebrow="Barcode"
-            title="Add scanned food"
-            subtitle="Loading the scanned food..."
+            eyebrow={screenEyebrow}
+            title={screenTitle}
+            subtitle={
+              isScannedFlow ? "Loading the scanned food..." : "Loading food details..."
+            }
             onBack={() => navigation.goBack()}
           />
           <View style={styles.centerCard}>
-            <ActivityIndicator size="small" color="#1F1831" />
+            <ActivityIndicator size="small" color={appColors.foodPrimaryDark} />
             <Text style={styles.centerText}>Preparing the log screen.</Text>
           </View>
         </View>
@@ -234,9 +270,13 @@ const ScannedFoodLogScreen = () => {
         <View style={styles.bgOrbTop} />
         <View style={styles.content}>
           <FoodScreenHeader
-            eyebrow="Barcode"
+            eyebrow={screenEyebrow}
             title="Food unavailable"
-            subtitle="The barcode resolved, but the saved food item could not be loaded."
+            subtitle={
+              isScannedFlow
+                ? "The barcode resolved, but the saved food item could not be loaded."
+                : "The selected food item could not be loaded."
+            }
             onBack={() => navigation.goBack()}
           />
           <Pressable
@@ -263,163 +303,79 @@ const ScannedFoodLogScreen = () => {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <FoodScreenHeader
-          eyebrow="Barcode"
-          title="Add scanned food"
-          subtitle={`${formatFoodShortDate(date)} | ${resolvedContextLabel} | Review and log this item.`}
+        <FoodEntryForm
+          headerEyebrow={screenEyebrow}
+          headerTitle={screenTitle}
+          headerSubtitle={screenSubtitle}
           onBack={() => navigation.goBack()}
+          heroEyebrow={isScannedFlow ? "Quick Review" : "Food Review"}
+          heroTitle={food.name}
+          heroMeta={`${food.brand ? `${food.brand} | ` : ""}${formatFoodSourceLabel(
+            food.source,
+          )} | Serving ${formatFoodNumber(serving.value, ` ${serving.unit}`)}`}
+          heroPills={heroPills}
+          heroAction={{
+            active: isFavorite,
+            icon: (
+              <StarIcon
+                size={14}
+                color={isFavorite ? appColors.white : appColors.foodPrimary}
+                weight={isFavorite ? "fill" : "bold"}
+              />
+            ),
+            label: isFavorite ? "Saved" : "Save",
+            onPress: () => {
+              void toggleFavorite();
+            },
+          }}
+          previewCaloriesText={preview ? `${preview.calories.toFixed(0)} kcal` : "--"}
+          previewSummaryText={
+            preview
+              ? `${formatFoodMacro(preview.proteinG, "P")} | ${formatFoodMacro(
+                  preview.carbsG,
+                  "C",
+                )} | ${formatFoodMacro(preview.fatG, "F")}`
+              : "Enter an amount to preview nutrition"
+          }
+          amountKeyboardType="decimal-pad"
+          amountPlaceholder="Amount"
+          amountUnit={serving.unit}
+          amountValue={quantityValue}
+          detailsSubtitle="Set the amount and slot before adding this food."
+          onChangeAmount={setQuantityValue}
+          slot={{
+            icon: <ForkKnifeIcon size={18} color={appColors.foodPrimary} weight="fill" />,
+            label: "Time",
+            value: resolvedContextLabel,
+            trailingText: formatFoodShortDate(date),
+          }}
+          labelValue={labelValue}
+          onChangeLabel={setLabelValue}
+          labelPlaceholder="Optional label"
+          nutritionItems={[
+            {
+              label: "Calories",
+              value: preview ? preview.calories.toFixed(0) : "--",
+            },
+            {
+              label: "Protein",
+              value: preview ? `${preview.proteinG.toFixed(1)} g` : "--",
+            },
+            {
+              label: "Carbs",
+              value: preview ? `${preview.carbsG.toFixed(1)} g` : "--",
+            },
+            {
+              label: "Fat",
+              value: preview ? `${preview.fatG.toFixed(1)} g` : "--",
+            },
+          ]}
+          onPrimaryAction={() => {
+            void saveLog();
+          }}
+          primaryActionDisabled={saving}
+          primaryActionLabel={saving ? "Adding..." : "Add to diary"}
         />
-
-        <View style={styles.heroCard}>
-          <View style={styles.pillRow}>
-            <View style={styles.pill}>
-              <CheckCircleIcon size={14} color="#6D52EA" weight="fill" />
-              <Text style={styles.pillText}>{statusLabel}</Text>
-            </View>
-            <View style={styles.pill}>
-              <CalendarIcon size={14} color="#6D52EA" weight="bold" />
-              <Text style={styles.pillText}>{formatFoodShortDate(date)}</Text>
-            </View>
-            {barcode ? (
-              <View style={styles.pill}>
-                <BarcodeIcon size={14} color="#6D52EA" weight="bold" />
-                <Text style={styles.pillText}>{barcode}</Text>
-              </View>
-            ) : null}
-          </View>
-
-          <Text style={styles.heroTitle}>{food.name}</Text>
-          <Text style={styles.heroText}>
-            {food.brand ? `${food.brand} | ` : ""}
-            {formatFoodSourceLabel(food.source)} | Default serving{" "}
-            {formatFoodNumber(serving.value, ` ${serving.unit}`)}
-          </Text>
-
-          <View style={styles.previewStrip}>
-            <Text style={styles.previewValue}>
-              {preview ? `${preview.calories.toFixed(0)} kcal` : "--"}
-            </Text>
-            <Text style={styles.previewText}>
-              {preview
-                ? formatMacroLine(preview)
-                : "Enter an amount to preview nutrition"}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Amount</Text>
-          <Text style={styles.sectionSubtitle}>
-            Adjust the amount before it is added to your diary.
-          </Text>
-          <View style={styles.inputRow}>
-            <TextInput
-              style={styles.input}
-              value={quantityValue}
-              onChangeText={setQuantityValue}
-              keyboardType="decimal-pad"
-              placeholder="Amount"
-              placeholderTextColor="#8A809F"
-            />
-            <View style={styles.unitPill}>
-              <Text style={styles.unitText}>{serving.unit}</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Diary slot</Text>
-          <Text style={styles.sectionSubtitle}>
-            This food will be logged to the selected date and time.
-          </Text>
-          <View style={styles.slotRow}>
-            <View style={styles.slotIcon}>
-              <ForkKnifeIcon size={18} color="#6D52EA" weight="fill" />
-            </View>
-            <View style={styles.slotCopy}>
-              <Text style={styles.slotLabel}>Time</Text>
-              <Text style={styles.slotValue}>{resolvedContextLabel}</Text>
-            </View>
-            <Text style={styles.slotDate}>{formatFoodShortDate(date)}</Text>
-          </View>
-          <TextInput
-            style={[styles.input, styles.labelInput]}
-            value={labelValue}
-            onChangeText={setLabelValue}
-            placeholder="Optional label"
-            placeholderTextColor="#8A809F"
-          />
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Nutrition</Text>
-          <Text style={styles.sectionSubtitle}>
-            Preview based on the amount above.
-          </Text>
-          <View style={styles.nutritionGrid}>
-            <View style={styles.nutritionCell}>
-              <Text style={styles.nutritionLabel}>Calories</Text>
-              <Text style={styles.nutritionValue}>
-                {preview ? preview.calories.toFixed(0) : "--"}
-              </Text>
-            </View>
-            <View style={styles.nutritionCell}>
-              <Text style={styles.nutritionLabel}>Protein</Text>
-              <Text style={styles.nutritionValue}>
-                {preview ? `${preview.proteinG.toFixed(1)} g` : "--"}
-              </Text>
-            </View>
-            <View style={styles.nutritionCell}>
-              <Text style={styles.nutritionLabel}>Carbs</Text>
-              <Text style={styles.nutritionValue}>
-                {preview ? `${preview.carbsG.toFixed(1)} g` : "--"}
-              </Text>
-            </View>
-            <View style={styles.nutritionCell}>
-              <Text style={styles.nutritionLabel}>Fat</Text>
-              <Text style={styles.nutritionValue}>
-                {preview ? `${preview.fatG.toFixed(1)} g` : "--"}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        <Pressable
-          onPress={() => void toggleFavorite()}
-          style={({ pressed }) => [
-            styles.favoriteButton,
-            isFavorite && styles.favoriteButtonActive,
-            pressed && styles.cardPressed,
-          ]}
-        >
-          <StarIcon
-            size={16}
-            color={isFavorite ? "#FFFFFF" : "#6D52EA"}
-            weight={isFavorite ? "fill" : "bold"}
-          />
-          <Text
-            style={[
-              styles.favoriteButtonText,
-              isFavorite && styles.favoriteButtonTextActive,
-            ]}
-          >
-            {isFavorite ? "Saved to favorites" : "Save to favorites"}
-          </Text>
-        </Pressable>
-
-        <Pressable
-          onPress={() => void saveLog()}
-          disabled={saving}
-          style={({ pressed }) => [
-            styles.primaryButton,
-            saving && styles.disabled,
-            pressed && !saving && styles.cardPressed,
-          ]}
-        >
-          <Text style={styles.primaryButtonText}>
-            {saving ? "Adding..." : "Add to diary"}
-          </Text>
-        </Pressable>
       </ScrollView>
     </View>
   );
@@ -428,7 +384,7 @@ const ScannedFoodLogScreen = () => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#F7F4FB",
+    backgroundColor: appColors.foodScreenBg,
   },
   content: {
     paddingHorizontal: 18,
@@ -441,7 +397,7 @@ const styles = StyleSheet.create({
     width: 250,
     height: 250,
     borderRadius: 999,
-    backgroundColor: "#E4D9FF",
+    backgroundColor: appColors.foodOrbTop,
   },
   bgOrbBottom: {
     position: "absolute",
@@ -450,227 +406,31 @@ const styles = StyleSheet.create({
     width: 280,
     height: 280,
     borderRadius: 999,
-    backgroundColor: "#EEE7FF",
+    backgroundColor: appColors.foodOrbBottom,
   },
   centerCard: {
     alignItems: "center",
     gap: 10,
     borderRadius: 8,
-    backgroundColor: "rgba(255,255,255,0.96)",
-    padding: 18,
+    backgroundColor: appColors.white,
+    padding: 16,
   },
   centerText: {
-    color: "#7F7791",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  heroCard: {
-    backgroundColor: "rgba(255,255,255,0.96)",
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
-  },
-  pillRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 12,
-  },
-  pill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderRadius: 999,
-    backgroundColor: "#F3EEFC",
-    borderWidth: 1,
-    borderColor: "#E6DEF1",
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-  pillText: {
-    color: "#6D52EA",
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  heroTitle: {
-    color: "#1B1529",
-    fontSize: 26,
-    fontWeight: "900",
-    marginBottom: 6,
-  },
-  heroText: {
-    color: "#7F7791",
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 14,
-  },
-  previewStrip: {
-    borderRadius: 8,
-    backgroundColor: "#1F1831",
-    padding: 14,
-  },
-  previewValue: {
-    color: "#FFFFFF",
-    fontSize: 24,
-    fontWeight: "900",
-    marginBottom: 4,
-  },
-  previewText: {
-    color: "#CFC5E7",
+    color: appColors.foodMuted,
     fontSize: 13,
-    lineHeight: 18,
-  },
-  card: {
-    backgroundColor: "rgba(255,255,255,0.96)",
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    color: "#1B1529",
-    fontSize: 22,
-    fontWeight: "900",
-    marginBottom: 4,
-  },
-  sectionSubtitle: {
-    color: "#7F7791",
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 14,
-  },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#E6DEF1",
-    borderRadius: 16,
-    backgroundColor: "#FBF9FF",
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    color: "#1B1529",
-    fontSize: 16,
     fontWeight: "700",
-  },
-  unitPill: {
-    borderRadius: 14,
-    backgroundColor: "#F3EEFC",
-    borderWidth: 1,
-    borderColor: "#E6DEF1",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  unitText: {
-    color: "#6D52EA",
-    fontSize: 15,
-    fontWeight: "800",
-  },
-  slotRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    borderRadius: 16,
-    backgroundColor: "#FBF9FF",
-    borderWidth: 1,
-    borderColor: "#E6DEF1",
-    padding: 14,
-  },
-  slotIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#F3EEFC",
-  },
-  slotCopy: {
-    flex: 1,
-  },
-  slotLabel: {
-    color: "#7E7399",
-    fontSize: 12,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-    marginBottom: 2,
-  },
-  slotValue: {
-    color: "#1B1529",
-    fontSize: 17,
-    fontWeight: "900",
-  },
-  slotDate: {
-    color: "#6D52EA",
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  labelInput: {
-    marginTop: 12,
-  },
-  nutritionGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  nutritionCell: {
-    width: "47%",
-    borderRadius: 14,
-    backgroundColor: "#FBF9FF",
-    borderWidth: 1,
-    borderColor: "#ECE5F9",
-    padding: 12,
-  },
-  nutritionLabel: {
-    color: "#7E7399",
-    fontSize: 12,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.7,
-    marginBottom: 8,
-  },
-  nutritionValue: {
-    color: "#1B1529",
-    fontSize: 18,
-    fontWeight: "900",
-  },
-  favoriteButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.96)",
-    borderWidth: 1,
-    borderColor: "#E6DEF1",
-    paddingVertical: 15,
-    marginBottom: 12,
-  },
-  favoriteButtonActive: {
-    backgroundColor: "#6D52EA",
-    borderColor: "#6D52EA",
-  },
-  favoriteButtonText: {
-    color: "#6D52EA",
-    fontSize: 15,
-    fontWeight: "800",
-  },
-  favoriteButtonTextActive: {
-    color: "#FFFFFF",
   },
   primaryButton: {
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 18,
-    backgroundColor: "#1F1831",
-    paddingVertical: 16,
+    borderRadius: 999,
+    backgroundColor: appColors.foodPrimaryDark,
+    paddingVertical: 13,
     marginBottom: 12,
   },
   primaryButtonText: {
-    color: "#FFFFFF",
-    fontSize: 15,
+    color: appColors.white,
+    fontSize: 14,
     fontWeight: "800",
   },
   disabled: {

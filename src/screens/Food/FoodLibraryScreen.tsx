@@ -14,6 +14,7 @@ import type { FoodStackParamList } from "../../navigation/foodTypes";
 import { DB } from "../../store/DB";
 import type { DBFoodItem } from "../../store/DB_TYPES";
 import FoodScreenHeader from "./FoodScreenHeader";
+import { appColors } from "../../theme/colors";
 
 type FoodLibraryNav = NativeStackNavigationProp<FoodStackParamList, "FoodLibrary">;
 
@@ -168,7 +169,7 @@ const FoodLibraryScreen = () => {
           <Text style={styles.panelMeta}>{items.length} loaded</Text>
           <TextInput
             placeholder="Search by name, brand, or barcode"
-            placeholderTextColor="#6B7280"
+            placeholderTextColor={appColors.gray500}
             value={query}
             onChangeText={setQuery}
             style={styles.searchInput}
@@ -249,39 +250,39 @@ const FoodLibraryScreen = () => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: appColors.slate50,
   },
   content: {
     paddingHorizontal: 16,
     paddingBottom: 24,
   },
   panel: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: appColors.slate300,
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
   },
   panelTitle: {
-    color: "#0F172A",
+    color: appColors.slate900,
     fontSize: 18,
     fontWeight: "800",
     marginBottom: 4,
   },
   panelMeta: {
-    color: "#475569",
+    color: appColors.slate600,
     fontSize: 13,
     marginBottom: 10,
   },
   searchInput: {
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: appColors.slate300,
     borderRadius: 8,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    color: "#0F172A",
+    color: appColors.slate900,
     fontSize: 15,
     marginBottom: 10,
   },
@@ -293,15 +294,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: appColors.slate200,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
   },
   rowSelected: {
-    borderColor: "#0F172A",
-    backgroundColor: "#F8FAFC",
+    borderColor: appColors.slate900,
+    backgroundColor: appColors.slate50,
   },
   rowPressed: {
     opacity: 0.88,
@@ -310,18 +311,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   rowTitle: {
-    color: "#0F172A",
+    color: appColors.slate900,
     fontSize: 14,
     fontWeight: "700",
     marginBottom: 2,
   },
   rowSubtitle: {
-    color: "#475569",
+    color: appColors.slate600,
     fontSize: 12,
     lineHeight: 17,
   },
   rowChevron: {
-    color: "#334155",
+    color: appColors.slate700,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -335,36 +336,36 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     borderWidth: 1,
-    borderColor: "#DC2626",
+    borderColor: appColors.danger600,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: "#FEF2F2",
+    backgroundColor: appColors.dangerSurface,
   },
   deleteButtonText: {
-    color: "#B91C1C",
+    color: appColors.danger700,
     fontSize: 13,
     fontWeight: "700",
   },
   fieldRow: {
     borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
+    borderBottomColor: appColors.slate200,
     paddingBottom: 8,
   },
   fieldLabel: {
-    color: "#334155",
+    color: appColors.slate700,
     fontSize: 12,
     fontWeight: "700",
     marginBottom: 4,
   },
   fieldValue: {
-    color: "#0F172A",
+    color: appColors.slate900,
     fontSize: 13,
     lineHeight: 19,
     fontFamily: "monospace",
   },
   emptyText: {
-    color: "#64748B",
+    color: appColors.slate500,
     fontSize: 14,
     lineHeight: 20,
   },

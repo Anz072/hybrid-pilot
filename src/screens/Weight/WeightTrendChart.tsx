@@ -20,6 +20,7 @@ import {
   WEIGHT_RANGE_LABELS,
   type WeightRangeKey,
 } from "./weightUtils";
+import { appColors } from "../../theme/colors";
 
 type WeightTrendChartProps = {
   entries: DBWeightEntry[];
@@ -41,16 +42,16 @@ const CHART_TOP_PADDING = 14;
 const CHART_BOTTOM_PADDING = 34;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-const TREND_LINE_COLOR = "#8B5CF6";
-const TREND_HALO_COLOR = "#DDD6FE";
-const DAILY_LINE_COLOR = "#B8B0C9";
-const DAILY_POINT_STROKE = "#A99FC0";
-const DAILY_POINT_FILL = "#FFFFFF";
-const CURRENT_POINT_FILL = "#8B5CF6";
-const GRID_COLOR = "#E5DFEE";
-const AXIS_TEXT_COLOR = "#8C839C";
-const GOAL_BAND_FILL = "#E9E2FF";
-const GOAL_LINE_COLOR = "#B794F4";
+const TREND_LINE_COLOR = appColors.violet500;
+const TREND_HALO_COLOR = appColors.violetSoftBg;
+const DAILY_LINE_COLOR = appColors.raw_hex_B8B0C9;
+const DAILY_POINT_STROKE = appColors.raw_hex_A99FC0;
+const DAILY_POINT_FILL = appColors.white;
+const CURRENT_POINT_FILL = appColors.violet500;
+const GRID_COLOR = appColors.raw_hex_E5DFEE;
+const AXIS_TEXT_COLOR = appColors.plumPlaceholderAlt;
+const GOAL_BAND_FILL = appColors.raw_hex_E9E2FF;
+const GOAL_LINE_COLOR = appColors.raw_hex_B794F4;
 
 const buildLinePath = (points: Array<{ x: number; y: number }>): string =>
   points
@@ -482,7 +483,7 @@ const WeightTrendChart = ({
                     cy={chartData.currentPoint.y}
                     r={4}
                     fill={CURRENT_POINT_FILL}
-                    stroke="#FFFFFF"
+                    stroke={appColors.white}
                     strokeWidth={2}
                   />
                 </>
@@ -591,31 +592,31 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   periodLabel: {
-    color: "#3B3448",
+    color: appColors.plum750,
     fontSize: 14,
     fontWeight: "700",
     marginBottom: 4,
   },
   helperText: {
-    color: "#857C95",
+    color: appColors.raw_hex_857C95,
     fontSize: 12,
     lineHeight: 17,
   },
   logsPill: {
     borderRadius: 999,
-    backgroundColor: "#F1EDF7",
+    backgroundColor: appColors.lavenderSurface,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   logsPillText: {
-    color: "#5C5569",
+    color: appColors.raw_hex_5C5569,
     fontSize: 12,
     fontWeight: "700",
   },
   chartFrame: {
-    backgroundColor: "#F7F4FB",
+    backgroundColor: appColors.foodScreenBg,
     overflow: "hidden",
-    borderColor: "#ECE5F6",
+    borderColor: appColors.foodSectionBg,
     paddingVertical: 6,
   },
   rangeRail: {
@@ -625,7 +626,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 8,
     borderRadius: 999,
-    backgroundColor: "#ECE7F3",
+    backgroundColor: appColors.raw_hex_ECE7F3,
     padding: 6,
   },
   segment: {
@@ -638,8 +639,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   segmentActive: {
-    backgroundColor: "#FFFFFF",
-    shadowColor: "#B8AEC9",
+    backgroundColor: appColors.white,
+    shadowColor: appColors.raw_hex_B8AEC9,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.16,
     shadowRadius: 10,
@@ -649,12 +650,12 @@ const styles = StyleSheet.create({
     opacity: 0.92,
   },
   segmentText: {
-    color: "#675F77",
+    color: appColors.raw_hex_675F77,
     fontSize: 12,
     fontWeight: "700",
   },
   segmentTextActive: {
-    color: "#221C2D",
+    color: appColors.plum900,
   },
   legendCard: {
     marginTop: 14,
@@ -663,11 +664,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 18,
     borderRadius: 20,
-    backgroundColor: "#F4F0F8",
+    backgroundColor: appColors.raw_hex_F4F0F8,
     paddingHorizontal: 16,
     paddingVertical: 15,
     borderWidth: 1,
-    borderColor: "#ECE5F6",
+    borderColor: appColors.foodSectionBg,
   },
   legendItem: {
     flexDirection: "row",
@@ -690,7 +691,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 999,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
     borderWidth: 1.5,
     borderColor: DAILY_POINT_STROKE,
   },
@@ -701,7 +702,7 @@ const styles = StyleSheet.create({
     backgroundColor: TREND_LINE_COLOR,
   },
   legendText: {
-    color: "#4A4258",
+    color: appColors.plum690,
     fontSize: 13,
     fontWeight: "700",
   },

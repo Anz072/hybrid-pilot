@@ -20,6 +20,7 @@ import {
   formatBodySummary,
   formatGoalSummary,
 } from "./onboardingSummary";
+import { appColors } from "../../theme/colors";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "Training">;
 
@@ -38,31 +39,31 @@ const TrainingProfileScreen = ({ navigation, route }: Props) => {
     {
       label: "Running",
       value: "running",
-      icon: <SneakerMoveIcon size={30} color="#0F172A" weight="fill" />,
+      icon: <SneakerMoveIcon size={30} color={appColors.slate900} weight="fill" />,
       note: "Useful for endurance-focused fueling and recovery.",
     },
     {
       label: "Cycling",
       value: "cycling",
-      icon: <BicycleIcon size={30} color="#0F172A" weight="fill" />,
+      icon: <BicycleIcon size={30} color={appColors.slate900} weight="fill" />,
       note: "Great if riding volume changes your energy demands.",
     },
     {
       label: "Gym / Bodybuilding",
       value: "bodybuilding",
-      icon: <BarbellIcon size={30} color="#0F172A" weight="fill" />,
+      icon: <BarbellIcon size={30} color={appColors.slate900} weight="fill" />,
       note: "Helps bias the plan toward performance and muscle retention.",
     },
     {
       label: "CrossFit",
       value: "crossfit",
-      icon: <BarbellIcon size={30} color="#0F172A" weight="fill" />,
+      icon: <BarbellIcon size={30} color={appColors.slate900} weight="fill" />,
       note: "Useful when training mixes strength and conditioning demands.",
     },
     {
       label: "Other",
       value: "other",
-      icon: <BarbellIcon size={30} color="#0F172A" weight="fill" />,
+      icon: <BarbellIcon size={30} color={appColors.slate900} weight="fill" />,
       note: "Pick this if your main training mode is something else.",
     },
   ];
@@ -155,7 +156,7 @@ const TrainingProfileScreen = ({ navigation, route }: Props) => {
                     ]}
                   >
                     {isSelected ? (
-                      <CheckIcon size={14} color="#FFFFFF" weight="bold" />
+                      <CheckIcon size={14} color={appColors.white} weight="bold" />
                     ) : null}
                   </View>
                 </View>
@@ -190,7 +191,7 @@ const TrainingProfileScreen = ({ navigation, route }: Props) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: appColors.slate50,
   },
   content: {
     paddingHorizontal: 22,
@@ -202,8 +203,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: "#9A3412",
-    backgroundColor: "#FFEDD5",
+    color: appColors.amber800,
+    backgroundColor: appColors.amberSurface,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
@@ -212,27 +213,27 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: "800",
-    color: "#0F172A",
+    color: appColors.slate900,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 15,
-    color: "#475569",
+    color: appColors.slate600,
     marginBottom: 18,
   },
   listWrap: {
     gap: 10,
   },
   option: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: appColors.white,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: appColors.slate300,
     borderRadius: 12,
     padding: 14,
   },
   optionSelected: {
-    borderColor: "#0F172A",
-    backgroundColor: "#F8FAFC",
+    borderColor: appColors.slate900,
+    backgroundColor: appColors.slate50,
   },
   optionPressed: {
     opacity: 0.95,
@@ -247,13 +248,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   optionText: {
-    color: "#0F172A",
+    color: appColors.slate900,
     fontWeight: "800",
     fontSize: 17,
     marginBottom: 4,
   },
   optionNote: {
-    color: "#64748B",
+    color: appColors.slate500,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -265,7 +266,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 999,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: appColors.slate100,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -274,18 +275,18 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
-    backgroundColor: "#FFFFFF",
+    borderColor: appColors.slate300,
+    backgroundColor: appColors.white,
     alignItems: "center",
     justifyContent: "center",
   },
   checkBadgeSelected: {
-    backgroundColor: "#0F172A",
-    borderColor: "#0F172A",
+    backgroundColor: appColors.slate900,
+    borderColor: appColors.slate900,
   },
   helper: {
     marginTop: 12,
-    color: "#475569",
+    color: appColors.slate600,
     fontSize: 13,
     textAlign: "center",
   },

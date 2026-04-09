@@ -14,6 +14,7 @@ import {
   formatBodySummary,
   formatGoalSummary,
 } from "./onboardingSummary";
+import { appColors } from "../../theme/colors";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "Activity">;
 
@@ -31,41 +32,41 @@ const ActivityLevelScreen = ({ navigation, route }: Props) => {
       label: "Desk mode",
       value: "sedentary",
       note: "Mostly seated, minimal movement.",
-      accent: "#BFDBFE",
-      bgColor: "#bfdbfe9a",
-      borderColor: "#60a5fa",
+      accent: appColors.raw_hex_BFDBFE,
+      bgColor: appColors.raw_hex_bfdbfe9a,
+      borderColor: appColors.raw_hex_60a5fa,
     },
     {
       label: "Light movement",
       value: "lightly_active",
       note: "Daily steps with occasional activity.",
-      accent: "#A7F3D0",
-      bgColor: "#a7f3d09a",
-      borderColor: "#10b981",
+      accent: appColors.raw_hex_A7F3D0,
+      bgColor: appColors.raw_hex_a7f3d09a,
+      borderColor: appColors.emerald500,
     },
     {
       label: "Regular training",
       value: "moderately_active",
       note: "Frequent workouts through the week.",
-      accent: "#FDE68A",
-      bgColor: "#fde68a9a",
-      borderColor: "#f59e0b",
+      accent: appColors.amberSoft,
+      bgColor: appColors.raw_hex_fde68a9a,
+      borderColor: appColors.raw_hex_f59e0b,
     },
     {
       label: "High output",
       value: "very_active",
       note: "Demanding routine and heavy training volume.",
-      accent: "#FECACA",
-      bgColor: "#fecaca9a",
-      borderColor: "#ef4444",
+      accent: appColors.raw_hex_FECACA,
+      bgColor: appColors.raw_hex_fecaca9a,
+      borderColor: appColors.raw_hex_ef4444,
     },
     {
       label: "Beast mode",
       value: "athlete",
       note: "Performance-centric, high weekly load.",
-      accent: "#DDD6FE",
-      bgColor: "#ddd6fe9a",
-      borderColor: "#7c3aed",
+      accent: appColors.violetSoftBg,
+      bgColor: appColors.raw_hex_ddd6fe9a,
+      borderColor: appColors.violet600,
     },
   ];
 
@@ -88,7 +89,7 @@ const ActivityLevelScreen = ({ navigation, route }: Props) => {
 
       <View style={styles.headerWrap}>
         <View style={styles.headerRow}>
-          <GaugeIcon size={24} color="#0369A1" weight="fill" />
+          <GaugeIcon size={24} color={appColors.sky700} weight="fill" />
           <Text style={styles.eyebrow}>Daily Baseline</Text>
         </View>
         <Text style={styles.title}>How active are you?</Text>
@@ -132,7 +133,7 @@ const ActivityLevelScreen = ({ navigation, route }: Props) => {
                 activity: item.value,
               }}
               value={item.value}
-              borderColor={`#383838`}
+              borderColor={appColors.charcoal}
               navigation={navigation}
               navGoal="Training"
             />
@@ -146,7 +147,7 @@ const ActivityLevelScreen = ({ navigation, route }: Props) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: appColors.slate50,
   },
   content: {
     paddingHorizontal: 22,
@@ -159,7 +160,7 @@ const styles = StyleSheet.create({
     width: 180,
     height: 180,
     borderRadius: 999,
-    backgroundColor: "#E0F2FE",
+    backgroundColor: appColors.skySoftBg,
   },
   bgOrbBottom: {
     position: "absolute",
@@ -168,7 +169,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 999,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: appColors.slate200,
   },
   headerWrap: {
     marginTop: 18,
@@ -186,8 +187,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: "#075985",
-    backgroundColor: "#E0F2FE",
+    color: appColors.sky800,
+    backgroundColor: appColors.skySoftBg,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
@@ -196,13 +197,13 @@ const styles = StyleSheet.create({
     fontSize: 32,
     lineHeight: 38,
     fontWeight: "800",
-    color: "#0F172A",
+    color: appColors.slate900,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 15,
     lineHeight: 22,
-    color: "#475569",
+    color: appColors.slate600,
   },
   listWrap: {
     gap: 10,
@@ -225,8 +226,8 @@ const styles = StyleSheet.create({
   levelButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderColor: "#E2E8F0",
+    backgroundColor: appColors.white,
+    borderColor: appColors.slate200,
     borderRadius: 6,
     borderWidth: 1,
     paddingVertical: 18,
@@ -249,23 +250,23 @@ const styles = StyleSheet.create({
     fontSize: 20,
     letterSpacing: 0.8,
     fontWeight: "800",
-    color: "#0F172A",
+    color: appColors.slate900,
     marginBottom: 3,
     marginTop: 4,
   },
   levelNote: {
     fontSize: 13,
-    color: "#64748B",
+    color: appColors.slate500,
     lineHeight: 18,
   },
   levelText99: {
-    color: "#0F172A",
+    color: appColors.slate900,
     fontWeight: "800",
     fontSize: 15,
     marginBottom: 3,
   },
   levelNote99: {
-    color: "#64748B",
+    color: appColors.slate500,
     fontSize: 13,
     lineHeight: 18,
   },

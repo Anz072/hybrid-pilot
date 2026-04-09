@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { appColors } from "../../theme/colors";
 
 const LoginScreen = () => {
   return (
@@ -18,22 +19,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: '#f5f7fb',
+    backgroundColor: appColors.raw_hex_f5f7fb,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
     marginBottom: 16,
-    color: '#1f2937',
+    color: appColors.gray800,
   },
   button: {
-    backgroundColor: '#0ea5e9',
+    backgroundColor: appColors.sky500,
     borderRadius: 10,
     paddingHorizontal: 20,
     paddingVertical: 12,
   },
   buttonText: {
-    color: '#ffffff',
+    color: appColors.white,
     fontWeight: '600',
   },
 });

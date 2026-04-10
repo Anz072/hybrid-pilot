@@ -8,7 +8,12 @@ import {
   View,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { CaretDownIcon, CaretUpIcon, XIcon } from "phosphor-react-native";
+import {
+  CaretDownIcon,
+  CaretUpIcon,
+  FireIcon,
+  XIcon,
+} from "phosphor-react-native";
 import type { DBUser } from "../../store/DB_TYPES";
 import type { FoodDiaryHourBucket } from "./foodDiaryTypes";
 import FoodDiaryHeroCard from "./FoodDiaryHeroCard";
@@ -160,14 +165,17 @@ const FoodDiaryTimelineItem = ({
                   }`
                 : "No entries yet"}
             </Text>
-            {bucket.entries.length ? (
-              <Text style={styles.hourText}>
-                {`${Math.round(bucket.totals.calories)} kcal | ${formatMacroLine(
-                  bucket.totals,
-                )}`}
-              </Text>
-            ) : null}
           </View>
+            {bucket.entries.length ? (
+              <View
+                style={{ flexDirection: "row", gap: 2, alignItems: "center" }}
+              >
+                <FireIcon size={13} />
+                <Text style={styles.hourText}>
+                  {`${Math.round(bucket.totals.calories)} kcal `}
+                </Text>
+              </View>
+            ) : null}
           <View style={styles.hourHeaderActions}>
             {collapsed ? (
               <CaretDownIcon size={16} />
@@ -363,7 +371,9 @@ const FoodDiaryMainStrip = ({
                 />
                 <Path
                   d={outlinePath}
-                  stroke={selected ? appColors.indigo600 : appColors.violetAccent}
+                  stroke={
+                    selected ? appColors.indigo600 : appColors.violetAccent
+                  }
                   strokeWidth={OUTLINE_WIDTH}
                   fill="none"
                   strokeLinecap="round"
@@ -393,7 +403,9 @@ const FoodDiaryMainStrip = ({
         })}
       </View>
 
-      {totals && user ? <FoodDiaryHeroCard totals={totals} user={user} /> : null}
+      {totals && user ? (
+        <FoodDiaryHeroCard totals={totals} user={user} />
+      ) : null}
 
       <View style={styles.timelineSection}>
         <Text style={styles.sectionTitle}>Timeline</Text>

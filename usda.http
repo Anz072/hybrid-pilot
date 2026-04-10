@@ -1,0 +1,33 @@
+@baseUrl = https://api.nal.usda.gov/fdc/v1
+@apiKey = MeLqcdtcTEaJHBqdytzS24DPwaa3DGE13exRzLga
+
+
+### 🔍 Search generic foods (banana)
+POST {{baseUrl}}/foods/search?api_key={{apiKey}}
+Content-Type: application/json
+
+{
+  "query": "banana",
+  "dataType": ["Foundation", "Survey (FNDDS)", "SR Legacy"],
+  "pageSize": 5,
+  "pageNumber": 1
+}
+
+
+### 🔍 Search chicken breast
+POST {{baseUrl}}/foods/search?api_key={{apiKey}}
+Content-Type: application/json
+
+{
+  "query": "chicken breast",
+  "dataType": ["Foundation", "Survey (FNDDS)", "SR Legacy"],
+  "pageSize": 5
+}
+
+
+### 📦 Get food details (replace fdcId)
+GET {{baseUrl}}/food/1102658?api_key={{apiKey}}
+
+
+### 📦 Another example (rice)
+GET {{baseUrl}}/food/169910?api_key={{apiKey}}

@@ -1,11 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
+  LayoutAnimation,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  UIManager,
   View,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -16,6 +19,8 @@ import type {
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   BarcodeIcon,
+  CaretDownIcon,
+  CaretUpIcon,
   CalendarIcon,
   ForkKnifeIcon,
   MagnifyingGlassIcon,
@@ -29,6 +34,11 @@ import type {
   DBUser,
   SaveFoodItemInput,
 } from "../../store/DB_TYPES";
+import {
+  getFoodSearchSectionState,
+  saveFoodSearchSectionState,
+  type FoodSearchSectionState,
+} from "../../storage/localStore";
 import FoodScreenHeader from "./FoodScreenHeader";
 import FoodBarcodeScannerModal from "./FoodBarcodeScannerModal";
 import type { ScannedFoodLookupResult } from "./FoodBarcodeScannerShared";
@@ -53,6 +63,13 @@ type AddFoodNav = CompositeNavigationProp<
 type SearchFoodResult = SaveFoodItemInput & {
   key: string;
   localId: number | null;
+};
+
+type FoodSearchSectionKey = "favorites" | "recent";
+
+const DEFAULT_SECTION_STATE: FoodSearchSectionState = {
+  favoritesExpanded: true,
+  recentExpanded: true,
 };
 
 const getFoodIdentityKey = ({
@@ -103,6 +120,17 @@ const AddFoodScreen = () => {
   const [favorites, setFavorites] = useState<DBFoodItem[]>([]);
   const [scannerVisible, setScannerVisible] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [sectionState, setSectionState] =
+    useState<FoodSearchSectionState>(DEFAULT_SECTION_STATE);
+
+  useEffect(() => {
+    if (
+      Platform.OS === "android" &&
+      UIManager.setLayoutAnimationEnabledExperimental
+    ) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+  }, []);
 
   const loadStaticLists = useCallback(async () => {
     const currentUser = await DB.getUser();
@@ -168,6 +196,23 @@ const AddFoodScreen = () => {
   useEffect(() => {
     void loadStaticLists();
   }, [loadStaticLists]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSectionState = async () => {
+      const nextState = await getFoodSearchSectionState();
+      if (!cancelled) {
+        setSectionState(nextState);
+      }
+    };
+
+    void loadSectionState();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -299,6 +344,25 @@ const AddFoodScreen = () => {
     [query, results],
   );
 
+  const toggleSection = useCallback((section: FoodSearchSectionKey) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSectionState((current) => {
+      const nextState =
+        section === "favorites"
+          ? {
+              ...current,
+              favoritesExpanded: !current.favoritesExpanded,
+            }
+          : {
+              ...current,
+              recentExpanded: !current.recentExpanded,
+            };
+
+      void saveFoodSearchSectionState(nextState);
+      return nextState;
+    });
+  }, []);
+
   const renderFoodCard = (food: SearchFoodResult, isFavorite: boolean) => (
     <View key={food.key} style={styles.foodCard}>
       <Pressable
@@ -371,33 +435,91 @@ const AddFoodScreen = () => {
     subtitle: string,
     items: SearchFoodResult[],
     emptyText: string,
-  ) => (
-    <View style={styles.sectionCard}>
+    options?: {
+      collapsible?: boolean;
+      expanded?: boolean;
+      onToggle?: () => void;
+    },
+  ) => {
+    const collapsible = options?.collapsible ?? false;
+    const expanded = options?.expanded ?? true;
+    const toggleLabel = expanded ? "Hide" : "Open";
+    const toggleColor = expanded
+      ? appColors.foodAccentText
+      : appColors.foodPrimary;
+
+    const headerContent = (
       <View style={styles.sectionHeaderRow}>
         <View style={styles.sectionHeaderCopy}>
           <Text style={styles.sectionTitle}>{title}</Text>
           <Text style={styles.sectionSubtitle}>{subtitle}</Text>
         </View>
-        {items.length > 0 ? (
-          <View style={styles.countPill}>
-            <Text style={styles.countPillText}>{items.length}</Text>
+        <View style={styles.sectionHeaderMeta}>
+          {items.length > 0 ? (
+            <View style={styles.countPill}>
+              <Text style={styles.countPillText}>{items.length}</Text>
+            </View>
+          ) : null}
+          {collapsible ? (
+            <View
+              style={[
+                styles.togglePill,
+                expanded && styles.togglePillExpanded,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.togglePillText,
+                  expanded && styles.togglePillTextExpanded,
+                ]}
+              >
+                {toggleLabel}
+              </Text>
+              {expanded ? (
+                <CaretUpIcon size={14} color={toggleColor} weight="bold" />
+              ) : (
+                <CaretDownIcon size={14} color={toggleColor} weight="bold" />
+              )}
+            </View>
+          ) : null}
+        </View>
+      </View>
+    );
+
+    return (
+      <View style={styles.sectionCard}>
+        {collapsible ? (
+          <Pressable
+            onPress={options?.onToggle}
+            accessibilityRole="button"
+            accessibilityState={{ expanded }}
+            style={({ pressed }) => [
+              styles.sectionHeaderButton,
+              pressed && styles.cardPressed,
+            ]}
+          >
+            {headerContent}
+          </Pressable>
+        ) : (
+          headerContent
+        )}
+        {expanded ? (
+          <View style={styles.sectionStack}>
+            {items.length === 0 ? (
+              <Text style={styles.emptyText}>{emptyText}</Text>
+            ) : (
+              items.map((item) =>
+                renderFoodCard(
+                  item,
+                  item.localId != null && favoriteIds.has(item.localId),
+                ),
+              )
+            )}
           </View>
         ) : null}
       </View>
-      <View style={styles.sectionStack}>
-        {items.length === 0 ? (
-          <Text style={styles.emptyText}>{emptyText}</Text>
-        ) : (
-          items.map((item) =>
-            renderFoodCard(
-              item,
-              item.localId != null && favoriteIds.has(item.localId),
-            ),
-          )
-        )}
-      </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top + 14 }]}>
@@ -488,12 +610,22 @@ const AddFoodScreen = () => {
               "Fast repeat picks for this diary slot.",
               favoriteResults,
               "No favorite foods yet.",
+              {
+                collapsible: true,
+                expanded: sectionState.favoritesExpanded,
+                onToggle: () => toggleSection("favorites"),
+              },
             )}
             {renderSection(
               "Recent",
               "Foods you logged recently.",
               recentResults,
               "No recent foods yet.",
+              {
+                collapsible: true,
+                expanded: sectionState.recentExpanded,
+                onToggle: () => toggleSection("recent"),
+              },
             )}
           </>
         )}
@@ -661,10 +793,17 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     justifyContent: "space-between",
     gap: 12,
-    marginBottom: 10,
+  },
+  sectionHeaderButton: {
+    borderRadius: 8,
   },
   sectionHeaderCopy: {
     flex: 1,
+  },
+  sectionHeaderMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   sectionTitle: {
     color: appColors.foodText,
@@ -693,12 +832,35 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   sectionStack: {
+    marginTop: 10,
     gap: 8,
   },
   emptyText: {
     color: appColors.foodMuted,
     fontSize: 12,
     lineHeight: 17,
+  },
+  togglePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    borderRadius: 999,
+    backgroundColor: appColors.foodFieldBg,
+    borderWidth: 1,
+    borderColor: appColors.foodBorder,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  togglePillExpanded: {
+    backgroundColor: appColors.foodPillBg,
+  },
+  togglePillText: {
+    color: appColors.foodPrimary,
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  togglePillTextExpanded: {
+    color: appColors.foodAccentText,
   },
   foodCard: {
     flexDirection: "row",

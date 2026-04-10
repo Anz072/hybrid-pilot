@@ -1,7 +1,11 @@
 import React from "react";
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -22,7 +26,7 @@ import {
   BarcodeIcon,
   CalendarIcon,
   CheckCircleIcon,
-  ForkKnifeIcon,
+  ClockIcon,
   StarIcon,
 } from "phosphor-react-native";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
@@ -80,7 +84,7 @@ const buildPreview = (
 const ScannedFoodLogScreen = () => {
   const route = useRoute<ScannedFoodRoute>();
   const navigation = useNavigation<ScannedFoodNav>();
-  const { barcode, contextLabel, date, foodId, loggedAt, mealType, scanStatus } =
+  const { barcode, date, foodId, loggedAt, mealType, scanStatus } =
     route.params;
   const isScannedFlow = scanStatus != null;
 
@@ -89,8 +93,24 @@ const ScannedFoodLogScreen = () => {
   const [quantityValue, setQuantityValue] = React.useState("");
   const [labelValue, setLabelValue] = React.useState(mealType ?? "");
   const [isFavorite, setIsFavorite] = React.useState(false);
+  const [showTimePicker, setShowTimePicker] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
+  const initialLoggedAt = React.useMemo(() => {
+    if (loggedAt) {
+      return loggedAt;
+    }
+
+    const now = new Date();
+    return buildFoodLoggedAt(date, now.getHours(), now.getMinutes());
+  }, [date, loggedAt]);
+  const [loggedAtDate, setLoggedAtDate] = React.useState(
+    () => new Date(initialLoggedAt),
+  );
+
+  React.useEffect(() => {
+    setLoggedAtDate(new Date(initialLoggedAt));
+  }, [initialLoggedAt]);
 
   const loadFood = React.useCallback(async () => {
     setLoading(true);
@@ -135,28 +155,16 @@ const ScannedFoodLogScreen = () => {
     () => (food ? buildPreview(food, quantity) : null),
     [food, quantity],
   );
-  const resolvedLoggedAt = React.useMemo(
-    () => {
-      if (loggedAt) {
-        return loggedAt;
-      }
-
-      const now = new Date();
-      return buildFoodLoggedAt(date, now.getHours(), now.getMinutes());
-    },
-    [date, loggedAt],
+  const loggedTime = React.useMemo(
+    () => formatFoodLoggedTime(loggedAtDate.toISOString()),
+    [loggedAtDate],
   );
-  const resolvedContextLabel = React.useMemo(
-    () => contextLabel?.trim() || formatFoodLoggedTime(resolvedLoggedAt),
-    [contextLabel, resolvedLoggedAt],
-  );
+  const screenDateLabel = React.useMemo(() => formatFoodShortDate(date), [date]);
   const statusLabel =
     scanStatus === "created" ? "Added to library" : "Found in library";
   const screenEyebrow = isScannedFlow ? "Barcode" : "Food";
   const screenTitle = isScannedFlow ? "Add scanned food" : "Review food";
-  const screenSubtitle = isScannedFlow
-    ? `${formatFoodShortDate(date)} | ${resolvedContextLabel}`
-    : `${formatFoodShortDate(date)} | ${resolvedContextLabel}`;
+  const screenSubtitle = `${screenDateLabel} | ${loggedTime}`;
   const heroPills = React.useMemo(() => {
     const pills = [];
 
@@ -184,6 +192,23 @@ const ScannedFoodLogScreen = () => {
 
     return pills;
   }, [barcode, date, isScannedFlow, statusLabel]);
+
+  const handleTimeChange = React.useCallback(
+    (event: DateTimePickerEvent, nextDate?: Date) => {
+      if (Platform.OS === "android") {
+        setShowTimePicker(false);
+      }
+
+      if (event.type !== "set" || !nextDate) {
+        return;
+      }
+
+      const merged = new Date(loggedAtDate);
+      merged.setHours(nextDate.getHours(), nextDate.getMinutes(), 0, 0);
+      setLoggedAtDate(merged);
+    },
+    [loggedAtDate],
+  );
 
   const closeAfterSave = React.useCallback(() => {
     const routes = navigation.getState().routes;
@@ -224,7 +249,7 @@ const ScannedFoodLogScreen = () => {
         userExternalId: user.externalId,
         foodId: food.id,
         date,
-        loggedAt: resolvedLoggedAt,
+        loggedAt: loggedAtDate.toISOString(),
         quantityG: quantity,
         mealType: labelValue.trim() || null,
       });
@@ -237,8 +262,8 @@ const ScannedFoodLogScreen = () => {
     date,
     food,
     labelValue,
+    loggedAtDate,
     quantity,
-    resolvedLoggedAt,
     user,
   ]);
 
@@ -341,13 +366,14 @@ const ScannedFoodLogScreen = () => {
           amountPlaceholder="Amount"
           amountUnit={serving.unit}
           amountValue={quantityValue}
-          detailsSubtitle="Set the amount and slot before adding this food."
+          detailsSubtitle="Set the amount, logged time, and slot before adding this food."
           onChangeAmount={setQuantityValue}
           slot={{
-            icon: <ForkKnifeIcon size={18} color={appColors.foodPrimary} weight="fill" />,
-            label: "Time",
-            value: resolvedContextLabel,
-            trailingText: formatFoodShortDate(date),
+            icon: <ClockIcon size={18} color={appColors.foodPrimary} weight="bold" />,
+            label: "Logged time",
+            value: loggedTime,
+            actionLabel: "Change",
+            onPress: () => setShowTimePicker((current) => !current),
           }}
           labelValue={labelValue}
           onChangeLabel={setLabelValue}
@@ -376,6 +402,15 @@ const ScannedFoodLogScreen = () => {
           primaryActionDisabled={saving}
           primaryActionLabel={saving ? "Adding..." : "Add to diary"}
         />
+
+        {showTimePicker ? (
+          <DateTimePicker
+            value={loggedAtDate}
+            mode="time"
+            display={Platform.OS === "ios" ? "spinner" : "default"}
+            onChange={handleTimeChange}
+          />
+        ) : null}
       </ScrollView>
     </View>
   );

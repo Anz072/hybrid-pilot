@@ -17,6 +17,7 @@ import {
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
+import { useFocusEffect } from "@react-navigation/native";
 import { Swipeable } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -138,8 +139,16 @@ const formatHeaderDateLabel = (value: string) =>
     year: "numeric",
   });
 
-const WeightScreen = () => {
+type WeightScreenProps = {
+  externalRefreshToken?: number;
+};
+
+const WeightScreen = ({
+  externalRefreshToken = 0,
+}: WeightScreenProps) => {
   const insets = useSafeAreaInsets();
+  const hasHydratedOnceRef = React.useRef(false);
+  const lastExternalRefreshTokenRef = React.useRef(externalRefreshToken);
   const [userId, setUserId] = React.useState(FALLBACK_USER_ID);
   const [allEntries, setAllEntries] = React.useState<DBWeightEntry[]>([]);
   const [goal, setGoal] = React.useState<WeightEntryGoal | null>(null);
@@ -208,9 +217,30 @@ const WeightScreen = () => {
     [loadWeightState],
   );
 
+  useFocusEffect(
+    React.useCallback(() => {
+      const nextOptions = hasHydratedOnceRef.current
+        ? { silent: true }
+        : undefined;
+
+      hasHydratedOnceRef.current = true;
+      void hydrate(nextOptions);
+    }, [hydrate]),
+  );
+
   React.useEffect(() => {
-    void hydrate();
-  }, [hydrate]);
+    if (!hasHydratedOnceRef.current) {
+      lastExternalRefreshTokenRef.current = externalRefreshToken;
+      return;
+    }
+
+    if (externalRefreshToken === lastExternalRefreshTokenRef.current) {
+      return;
+    }
+
+    lastExternalRefreshTokenRef.current = externalRefreshToken;
+    void hydrate({ silent: true });
+  }, [externalRefreshToken, hydrate]);
 
   React.useEffect(() => {
     if (!snackbar) {

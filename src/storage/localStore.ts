@@ -10,6 +10,7 @@ import { getDb, initDb } from "./sqlite";
 const KEY_ONBOARDING_COMPLETE = "onboardingComplete";
 const KEY_LOCAL_ACCOUNT = "localAccount";
 const KEY_ONBOARDING_PROFILE = "onboardingProfile";
+const KEY_FOOD_SEARCH_SECTION_STATE = "foodSearchSectionState";
 
 export type AuthProvider = "local";
 
@@ -20,6 +21,11 @@ export type OnboardingProfile = {
   activity: ActivityLevel;
   training: TrainingSelection;
   fuelPlan: FuelPlan;
+};
+
+export type FoodSearchSectionState = {
+  favoritesExpanded: boolean;
+  recentExpanded: boolean;
 };
 
 export type LocalAccount = {
@@ -35,6 +41,11 @@ export type BuildLocalAccountInput = {
   displayName: string;
   email?: string | null;
   birthdate?: string | null;
+};
+
+const DEFAULT_FOOD_SEARCH_SECTION_STATE: FoodSearchSectionState = {
+  favoritesExpanded: true,
+  recentExpanded: true,
 };
 
 const safeParse = <T>(raw: string | null): T | null => {
@@ -101,6 +112,22 @@ export const saveOnboardingProfile = async (profile: OnboardingProfile): Promise
 export const getOnboardingProfile = async (): Promise<OnboardingProfile | null> => {
   const value = await getKv(KEY_ONBOARDING_PROFILE);
   return safeParse<OnboardingProfile>(value);
+};
+
+export const saveFoodSearchSectionState = async (
+  state: FoodSearchSectionState,
+): Promise<void> => {
+  await setKv(KEY_FOOD_SEARCH_SECTION_STATE, JSON.stringify(state));
+};
+
+export const getFoodSearchSectionState = async (): Promise<FoodSearchSectionState> => {
+  const value = await getKv(KEY_FOOD_SEARCH_SECTION_STATE);
+  const parsed = safeParse<Partial<FoodSearchSectionState>>(value);
+
+  return {
+    ...DEFAULT_FOOD_SEARCH_SECTION_STATE,
+    ...(parsed ?? {}),
+  };
 };
 
 export const buildLocalAccount = (input: BuildLocalAccountInput): LocalAccount => {

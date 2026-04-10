@@ -70,6 +70,7 @@ const MainTabNavigator = () => {
   const insets = useSafeAreaInsets();
   const [shortcutsVisible, setShortcutsVisible] = React.useState(false);
   const [weightModalVisible, setWeightModalVisible] = React.useState(false);
+  const [weightRefreshToken, setWeightRefreshToken] = React.useState(0);
   const [barcodeModalScannerVisible, setBarcodeModalScannerVisible] =
     React.useState(false);
   const sheetProgress = React.useRef(new Animated.Value(0)).current;
@@ -161,6 +162,7 @@ const MainTabNavigator = () => {
           clientGeneratedId: entryId,
         });
 
+        setWeightRefreshToken((current) => current + 1);
         setWeightModalVisible(false);
       } catch {
         Alert.alert("Could not save entry", "Please try again.");
@@ -277,7 +279,6 @@ const MainTabNavigator = () => {
         />
         <Tab.Screen
           name="Weight"
-          component={WeightScreen}
           options={{
             tabBarIcon: ({ focused }) => (
               <FireIcon
@@ -286,7 +287,9 @@ const MainTabNavigator = () => {
               />
             ),
           }}
-        />
+        >
+          {() => <WeightScreen externalRefreshToken={weightRefreshToken} />}
+        </Tab.Screen>
         <Tab.Screen
           name="More"
           component={MoreNavigator}

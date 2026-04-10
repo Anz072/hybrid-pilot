@@ -35,6 +35,10 @@ type USDAFoodSearchResponse = {
   foods?: USDAFoodSearchItem[] | null;
 };
 
+type USDAFoodSearchOptions = {
+  pageSize?: number;
+};
+
 class USDA_API {
   usdaApi: AxiosInstance;
   dataType: string[];
@@ -46,20 +50,31 @@ class USDA_API {
     });
 
     this.apiKey = process.env.EXPO_PUBLIC_USDA_API_KEY ?? "";
-    this.dataType = ["Foundation", "Survey (FNDDS)", "SR Legacy"];
+    this.dataType = ["Branded", "Foundation", "Survey (FNDDS)", "SR Legacy"];
   }
 
-  public getFood = async (foodName: string): Promise<SaveFoodItemInput[]> => {
+  public getFood = async (
+    foodName: string,
+    options: USDAFoodSearchOptions = {},
+  ): Promise<SaveFoodItemInput[]> => {
     try {
-      if (!foodName) throw new Error("No foodName provided");
-      if (!this.apiKey) throw new Error("No USDA API key provided");
+      const normalizedFoodName = foodName.trim();
+      const pageSize = options.pageSize ?? 12;
+
+      if (!normalizedFoodName) {
+        return [];
+      }
+
+      if (!this.apiKey) {
+        return [];
+      }
 
       const call = await this.usdaApi.post(
         `/foods/search`,
         {
-          query: foodName.trim(),
+          query: normalizedFoodName,
           dataType: this.dataType,
-          pageSize: 5,
+          pageSize,
           pageNumber: 1,
         },
         {

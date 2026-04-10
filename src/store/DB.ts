@@ -26,6 +26,7 @@ import {
 } from "./foodRepository";
 import {
   addCustomMeal,
+  addQuickAddFoodLog,
   addUserFoodLog,
   copyFoodLogsFromDate,
   deleteCustomMeal,
@@ -33,6 +34,7 @@ import {
   getCustomMeals,
   getUserFoodLogEntriesByDate,
   getUserFoodLogEntryById,
+  updateQuickAddFoodLog,
   updateUserFoodLog,
 } from "./foodLogRepository";
 
@@ -61,8 +63,10 @@ export const DB = {
   getFavoriteFoodItems,
   getRecentFoodItems,
   setFoodItemFavorite,
+  addQuickAddFoodLog,
   addUserFoodLog,
   updateUserFoodLog,
+  updateQuickAddFoodLog,
   deleteUserFoodLog,
   getUserFoodLogEntryById,
   getUserFoodLogEntriesByDate,

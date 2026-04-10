@@ -28,14 +28,16 @@ export type DBUserSettings = {
   userExternalId: string;
   foodDiaryStartHour: number;
   foodDiaryEndHour: number;
+  dailyCalorieOverrides: Array<number | null> | null;
   createdAt: DBIsoDateString;
   updatedAt: DBIsoDateString;
 };
 
 export type SaveUserSettingsInput = {
   userExternalId: string;
-  foodDiaryStartHour: number;
-  foodDiaryEndHour: number;
+  foodDiaryStartHour?: number;
+  foodDiaryEndHour?: number;
+  dailyCalorieOverrides?: Array<number | null> | null;
 };
 
 export type DBWeightLog = {
@@ -255,15 +257,18 @@ export type DBUserFoodFavorite = {
   createdAt: DBIsoDateString;
 };
 
+export type UserFoodLogSource = "food_item" | "quick_add";
+
 export type DBUserFoodLog = {
   id: number;
   userExternalId: string;
-  foodId: number;
+  foodId: number | null;
   date: string;
   loggedAt: DBIsoDateString;
   quantityG: number;
   mealType: string | null;
   createdAt: DBIsoDateString;
+  entrySource: UserFoodLogSource;
 };
 
 export type AddUserFoodLogInput = {
@@ -282,6 +287,52 @@ export type UpdateUserFoodLogInput = {
   mealType?: string | null;
 };
 
+export type DBQuickAddFoodLog = {
+  id: number;
+  userExternalId: string;
+  date: string;
+  loggedAt: DBIsoDateString;
+  mealType: string | null;
+  name: string | null;
+  calories: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  alcoholG: number;
+  systemCalculatedCalories: number | null;
+  isEnergyManuallySet: boolean;
+  createdAt: DBIsoDateString;
+};
+
+export type AddQuickAddFoodLogInput = {
+  userExternalId: string;
+  date: string;
+  loggedAt?: DBIsoDateString;
+  mealType?: string | null;
+  name?: string | null;
+  calories: number;
+  proteinG?: number;
+  carbsG?: number;
+  fatG?: number;
+  alcoholG?: number;
+  systemCalculatedCalories?: number | null;
+  isEnergyManuallySet?: boolean;
+};
+
+export type UpdateQuickAddFoodLogInput = {
+  id: number;
+  loggedAt?: DBIsoDateString | null;
+  mealType?: string | null;
+  name?: string | null;
+  calories: number;
+  proteinG?: number;
+  carbsG?: number;
+  fatG?: number;
+  alcoholG?: number;
+  systemCalculatedCalories?: number | null;
+  isEnergyManuallySet?: boolean;
+};
+
 export type DBUserFoodLogEntry = DBUserFoodLog & {
   foodName: string;
   servingSize: number;
@@ -290,6 +341,10 @@ export type DBUserFoodLogEntry = DBUserFoodLog & {
   proteinG: number;
   carbsG: number;
   fatG: number;
+  alcoholG: number | null;
+  systemCalculatedCalories: number | null;
+  isEnergyManuallySet: boolean;
+  quickAddName: string | null;
 };
 
 export type DBCustomMeal = {

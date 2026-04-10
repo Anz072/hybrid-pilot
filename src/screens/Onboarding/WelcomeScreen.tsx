@@ -16,7 +16,7 @@ const WelcomeScreen = ({ navigation }: Props) => {
 
       <View style={styles.heroRow}>
         <View style={styles.heroIconBadge}>
-          <RocketLaunchIcon size={24} color={appColors.raw_hex_EA580C} weight="fill" />
+          <RocketLaunchIcon size={24} color={appColors.foodPrimary} weight="fill" />
         </View>
         <View style={styles.heroIconBadgeMuted}>
           <BarbellIcon size={20} color={appColors.slate900} weight="fill" />
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
     paddingTop: 56,
     paddingBottom: 30,
     justifyContent: "center",
-    backgroundColor: appColors.raw_hex_FFF8F2, //121212
+    backgroundColor: appColors.slate50,
   },
   bgOrbTop: {
     position: "absolute",
@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
     width: 210,
     height: 210,
     borderRadius: 999,
-    backgroundColor: appColors.dangerSoftBg,
+    backgroundColor: appColors.foodOrbTop,
   },
   bgOrbBottom: {
     position: "absolute",
@@ -88,9 +88,9 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 999,
-    backgroundColor: appColors.amberSurface,
+    backgroundColor: appColors.foodEyebrowBg,
     borderWidth: 1,
-    borderColor: appColors.amber300,
+    borderColor: appColors.foodOrbTop,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -110,8 +110,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: appColors.amber800,
-    backgroundColor: appColors.amberSurface,
+    color: appColors.foodPrimary,
+    backgroundColor: appColors.foodEyebrowBg,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,

@@ -54,19 +54,19 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
       {
         label: "Protein",
         value: Math.max(1, fuelPlan.protein * 4),
-        color: appColors.blue600,
+        color: appColors.primaryAlt,
         grams: fuelPlan.protein,
       },
       {
         label: "Carbs",
         value: Math.max(1, fuelPlan.carbs * 4),
-        color: appColors.teal600,
+        color: appColors.foodPrimary,
         grams: fuelPlan.carbs,
       },
       {
         label: "Fats",
         value: Math.max(1, fuelPlan.fats * 9),
-        color: appColors.raw_hex_D97706,
+        color: appColors.violet400,
         grams: fuelPlan.fats,
       },
     ],

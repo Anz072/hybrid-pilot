@@ -9,12 +9,14 @@ import {
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import {
+  CaretDoubleLeftIcon,
+  CaretDoubleRightIcon,
   CaretDownIcon,
   CaretUpIcon,
   FireIcon,
   XIcon,
 } from "phosphor-react-native";
-import type { DBUser } from "../../store/DB_TYPES";
+import type { DBUser, DBUserFoodLogEntry } from "../../store/DB_TYPES";
 import type { FoodDiaryHourBucket } from "./foodDiaryTypes";
 import FoodDiaryHeroCard from "./FoodDiaryHeroCard";
 import {
@@ -38,7 +40,10 @@ export type FoodDiaryMainStripDay = {
 type FoodDiaryMainStripProps = {
   days: FoodDiaryMainStripDay[];
   selectedDate: Date;
-  targetCalories: number | null;
+  selectedTargetCalories: number | null;
+  targetCaloriesByDate: Record<string, number | null>;
+  weeklyBudgetCalories: number | null;
+  weeklyConsumedCalories: number;
   onNextWeek: () => void;
   onPreviousWeek: () => void;
   onSelectDate: (date: Date) => void;
@@ -48,14 +53,14 @@ type FoodDiaryMainStripProps = {
   selectedHour: number;
   onAddFood: (hour: number) => void;
   onDeleteEntry: (entryId: number) => void;
-  onEditEntry: (entryId: number) => void;
+  onEditEntry: (entry: DBUserFoodLogEntry) => void;
   onSelectHour: (hour: number) => void;
 };
 
 type FoodDiaryTimelineItemProps = {
   onAddFood: (hour: number) => void;
   onDeleteEntry: (entryId: number) => void;
-  onEditEntry: (entryId: number) => void;
+  onEditEntry: (entry: DBUserFoodLogEntry) => void;
   bucket: FoodDiaryHourBucket;
   collapsed: boolean;
   selected: boolean;
@@ -166,16 +171,16 @@ const FoodDiaryTimelineItem = ({
                 : "No entries yet"}
             </Text>
           </View>
-            {bucket.entries.length ? (
-              <View
-                style={{ flexDirection: "row", gap: 2, alignItems: "center" }}
-              >
-                <FireIcon size={13} />
-                <Text style={styles.hourText}>
-                  {`${Math.round(bucket.totals.calories)} kcal `}
-                </Text>
-              </View>
-            ) : null}
+          {bucket.entries.length ? (
+            <View
+              style={{ flexDirection: "row", gap: 2, alignItems: "center" }}
+            >
+              <FireIcon size={13} />
+              <Text style={styles.hourText}>
+                {`${Math.round(bucket.totals.calories)} kcal `}
+              </Text>
+            </View>
+          ) : null}
           <View style={styles.hourHeaderActions}>
             {collapsed ? (
               <CaretDownIcon size={16} />
@@ -199,7 +204,7 @@ const FoodDiaryTimelineItem = ({
                     key={entry.id}
                     style={styles.entryCard}
                     onPress={(event) =>
-                      runWithoutToggling(event, () => onEditEntry(entry.id))
+                      runWithoutToggling(event, () => onEditEntry(entry))
                     }
                   >
                     <View style={styles.entryMain}>
@@ -208,6 +213,11 @@ const FoodDiaryTimelineItem = ({
                           <Text style={styles.entryTitle} numberOfLines={2}>
                             {entry.foodName}
                           </Text>
+                          {entry.entrySource === "quick_add" ? (
+                            <View style={styles.entryTag}>
+                              <Text style={styles.entryTagText}>Quick Add</Text>
+                            </View>
+                          ) : null}
                         </View>
                         <View style={styles.entryActions}>
                           <Pressable
@@ -229,11 +239,12 @@ const FoodDiaryTimelineItem = ({
                         <Text style={styles.entryText}>{time}</Text>
                         <Text style={styles.entryText}>|</Text>
                         <Text style={styles.entryText}>
-                          {formatFoodServing(
-                            entry.quantityG,
-                            entry.servingUnit,
-                          )}{" "}
-                          | {nutrition.calories} kcal
+                          {entry.entrySource === "quick_add"
+                            ? `${entry.mealType?.trim() || "One-time entry"} | ${nutrition.calories} kcal`
+                            : `${formatFoodServing(
+                                entry.quantityG,
+                                entry.servingUnit,
+                              )} | ${nutrition.calories} kcal`}
                         </Text>
                       </View>
                     </View>
@@ -264,7 +275,10 @@ const FoodDiaryTimelineItem = ({
 const FoodDiaryMainStrip = ({
   days,
   selectedDate,
-  targetCalories,
+  selectedTargetCalories,
+  targetCaloriesByDate,
+  weeklyBudgetCalories,
+  weeklyConsumedCalories,
   onNextWeek,
   onPreviousWeek,
   onSelectDate,
@@ -290,6 +304,10 @@ const FoodDiaryMainStrip = ({
       : "";
   const fallbackMaxCalories = Math.max(1, ...days.map((day) => day.calories));
   const todayKey = formatFoodDateKey(new Date());
+  const weeklyRemainingCalories =
+    weeklyBudgetCalories != null
+      ? weeklyBudgetCalories - weeklyConsumedCalories
+      : null;
 
   const toggleHour = React.useCallback(
     (hour: number) => {
@@ -320,7 +338,7 @@ const FoodDiaryMainStrip = ({
             pressed && styles.cardPressed,
           ]}
         >
-          <Text style={styles.navButtonText}>Prev</Text>
+          <CaretDoubleLeftIcon  size={18} color={appColors.lavenderShadow} />
         </Pressable>
         <View style={styles.headerCopy}>
           <Text style={styles.title}>Week view</Text>
@@ -333,7 +351,7 @@ const FoodDiaryMainStrip = ({
             pressed && styles.cardPressed,
           ]}
         >
-          <Text style={styles.navButtonText}>Next</Text>
+          <CaretDoubleRightIcon  size={18} color={appColors.lavenderShadow} />
         </Pressable>
       </View>
 
@@ -341,9 +359,10 @@ const FoodDiaryMainStrip = ({
         {days.map((day) => {
           const selected = day.dateKey === selectedDateKey;
           const isToday = day.dateKey === todayKey;
+          const dayTargetCalories = targetCaloriesByDate[day.dateKey] ?? null;
           const ratioBase =
-            targetCalories != null && targetCalories > 0
-              ? targetCalories
+            dayTargetCalories != null && dayTargetCalories > 0
+              ? dayTargetCalories
               : fallbackMaxCalories;
           const ratio = Math.max(0, Math.min(1, day.calories / ratioBase));
 
@@ -403,8 +422,34 @@ const FoodDiaryMainStrip = ({
         })}
       </View>
 
+      <View style={styles.weekBudgetCard}>
+        <View style={styles.weekBudgetCopy}>
+          <Text style={styles.weekBudgetEyebrow}>Weekly budget</Text>
+          <Text style={styles.weekBudgetValue}>
+            {weeklyBudgetCalories != null
+              ? `${Math.round(weeklyConsumedCalories)} / ${Math.round(
+                  weeklyBudgetCalories,
+                )} kcal`
+              : `${Math.round(weeklyConsumedCalories)} kcal logged`}
+          </Text>
+        </View>
+        <View style={styles.weekBudgetMeta}>
+          <Text style={styles.weekBudgetMetaLabel}>
+            {weeklyRemainingCalories != null
+              ? weeklyRemainingCalories >= 0
+                ? `${Math.round(weeklyRemainingCalories)} left`
+                : `${Math.abs(Math.round(weeklyRemainingCalories))} over`
+              : "Rolling total"}
+          </Text>
+        </View>
+      </View>
+
       {totals && user ? (
-        <FoodDiaryHeroCard totals={totals} user={user} />
+        <FoodDiaryHeroCard
+          energyTargetCalories={selectedTargetCalories}
+          totals={totals}
+          user={user}
+        />
       ) : null}
 
       <View style={styles.timelineSection}>
@@ -460,36 +505,26 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    justifyContent:'center',
     marginBottom: 12,
   },
   headerCopy: {
-    flex: 1,
     alignItems: "center",
   },
   title: {
     color: appColors.foodText,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "900",
     marginBottom: 2,
   },
   subtitle: {
     color: appColors.plumPlaceholder,
-    fontSize: 12,
-    fontWeight: "700",
+    fontSize: 16,
+    fontWeight: "500",
   },
   navButton: {
-    borderRadius: 999,
-    backgroundColor: appColors.raw_hex_F5F1FB,
-    borderWidth: 1,
-    borderColor: appColors.lavenderShadow,
-    paddingHorizontal: 12,
+    paddingHorizontal: 24,
     paddingVertical: 8,
-  },
-  navButtonText: {
-    color: appColors.plum760,
-    fontSize: 12,
-    fontWeight: "800",
   },
   dayRow: {
     flexDirection: "row",
@@ -497,6 +532,45 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 2,
     paddingVertical: 2,
+  },
+  weekBudgetCard: {
+    marginTop: 16,
+    marginBottom: 8,
+    borderRadius: 20,
+    backgroundColor: appColors.foodFieldBg,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  weekBudgetCopy: {
+    flex: 1,
+  },
+  weekBudgetEyebrow: {
+    color: appColors.slate500,
+    fontSize: 11,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
+  weekBudgetValue: {
+    color: appColors.slate900,
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  weekBudgetMeta: {
+    borderRadius: 999,
+    backgroundColor: appColors.white,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  weekBudgetMetaLabel: {
+    color: appColors.foodPrimaryDark,
+    fontSize: 12,
+    fontWeight: "800",
   },
   dayPill: {
     width: PILL_WIDTH,
@@ -678,6 +752,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
+    flexWrap: "wrap",
     gap: 5,
   },
   entryTitle: {
@@ -689,11 +764,27 @@ const styles = StyleSheet.create({
   entryMetaRow: {
     flexDirection: "row",
     gap: 4,
+    flexWrap: "wrap",
   },
   entryText: {
     color: appColors.black30,
     fontSize: 12,
     lineHeight: 17,
+  },
+  entryTag: {
+    borderRadius: 999,
+    backgroundColor: appColors.foodPillBg,
+    borderWidth: 1,
+    borderColor: appColors.foodBorder,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  entryTagText: {
+    color: appColors.foodPrimary,
+    fontSize: 10,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   entryActions: {
     justifyContent: "space-between",

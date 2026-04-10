@@ -1,45 +1,26 @@
 import React from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { MinusIcon, PlusIcon } from "phosphor-react-native";
-import type { FoodDiaryHourBucket } from "./foodDiaryTypes";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { formatFoodHourLabel } from "./foodUtils";
 import { appColors } from "../../theme/colors";
 
 type FoodDiaryMoreSectionProps = {
-  hourBuckets: FoodDiaryHourBucket[];
   selectedHour: number;
-  visibleEndHour: number;
-  visibleStartHour: number;
-  onChangeEnd: (next: number) => void;
-  onChangeStart: (next: number) => void;
-  onAddFood: (hour: number) => void;
   onCopyYesterday: () => void;
+  onQuickAddFood: () => void;
   onCreateCustomFood: () => void;
-  onResetHours: () => void;
-  onSelectHour: (hour: number) => void;
 };
 
 const FoodDiaryMoreSection = ({
-  hourBuckets,
   selectedHour,
-  visibleEndHour,
-  visibleStartHour,
-  onChangeEnd,
-  onChangeStart,
-  onAddFood,
   onCopyYesterday,
+  onQuickAddFood,
   onCreateCustomFood,
-  onResetHours,
-  onSelectHour,
 }: FoodDiaryMoreSectionProps) => {
   return (
     <View style={styles.card}>
-      <Text style={styles.sectionTitle}>More</Text>
-      <Text style={styles.sectionText}>
-        Support actions that stay out of the way.
-      </Text>
+      <Text style={styles.sectionTitle}>More Actions</Text>
       <View style={styles.stack}>
-        <Pressable
+        {/* <Pressable
           onPress={() => onAddFood(selectedHour)}
           style={({ pressed }) => [
             styles.moreRow,
@@ -56,8 +37,8 @@ const FoodDiaryMoreSection = ({
           <View style={styles.morePill}>
             <Text style={styles.morePillText}>Add food</Text>
           </View>
-        </Pressable>
-        <View style={styles.preferenceCard}>
+        </Pressable> */}
+        {/* <View style={styles.preferenceCard}>
           <View style={styles.preferenceHeader}>
             <View style={styles.moreCopy}>
               <Text style={styles.moreTitle}>Quick slot</Text>
@@ -106,92 +87,31 @@ const FoodDiaryMoreSection = ({
               );
             })}
           </ScrollView>
+        </View> */}
+        <View style={styles.infoCard}>
+          <Text style={styles.moreTitle}>Timeline hours moved</Text>
+          <Text style={styles.moreText}>
+            Adjust the visible diary range from More in the Debug Menu.
+          </Text>
         </View>
-        <View style={styles.preferenceCard}>
-          <View style={styles.preferenceHeader}>
-            <View style={styles.moreCopy}>
-              <Text style={styles.moreTitle}>Timeline hours</Text>
-              <Text style={styles.moreText}>
-                Your diary will remember this visible range.
-              </Text>
-            </View>
-            <Pressable
-              onPress={onResetHours}
-              style={({ pressed }) => [
-                styles.resetPill,
-                pressed && styles.cardPressed,
-              ]}
-            >
-              <Text style={styles.resetPillText}>Reset</Text>
-            </Pressable>
+        <Pressable
+          onPress={onQuickAddFood}
+          style={({ pressed }) => [
+            styles.moreRow,
+            styles.moreRowAccent,
+            pressed && styles.cardPressed,
+          ]}
+        >
+          <View style={styles.moreCopy}>
+            <Text style={styles.moreTitle}>Quick add</Text>
+            <Text style={styles.moreText}>
+              Log calories or macros directly into {formatFoodHourLabel(selectedHour)} without saving a food.
+            </Text>
           </View>
-          <View style={styles.rangeRow}>
-            <View style={styles.rangeCell}>
-              <Text style={styles.smallLabel}>From</Text>
-              <View style={styles.rangeStepper}>
-                <Pressable
-                  onPress={() => onChangeStart(visibleStartHour - 1)}
-                  disabled={visibleStartHour <= 0}
-                  style={({ pressed }) => [
-                    styles.stepperButton,
-                    visibleStartHour <= 0 && styles.dimmed,
-                    pressed && visibleStartHour > 0 && styles.cardPressed,
-                  ]}
-                >
-                  <MinusIcon size={16} color={appColors.foodAccentText} weight="bold" />
-                </Pressable>
-                <Text style={styles.rangeValue}>
-                  {formatFoodHourLabel(visibleStartHour)}
-                </Text>
-                <Pressable
-                  onPress={() => onChangeStart(visibleStartHour + 1)}
-                  disabled={visibleStartHour >= visibleEndHour - 1}
-                  style={({ pressed }) => [
-                    styles.stepperButton,
-                    visibleStartHour >= visibleEndHour - 1 && styles.dimmed,
-                    pressed &&
-                      visibleStartHour < visibleEndHour - 1 &&
-                      styles.cardPressed,
-                  ]}
-                >
-                  <PlusIcon size={16} color={appColors.foodAccentText} weight="bold" />
-                </Pressable>
-              </View>
-            </View>
-            <View style={styles.rangeCell}>
-              <Text style={styles.smallLabel}>To</Text>
-              <View style={styles.rangeStepper}>
-                <Pressable
-                  onPress={() => onChangeEnd(visibleEndHour - 1)}
-                  disabled={visibleEndHour <= visibleStartHour + 1}
-                  style={({ pressed }) => [
-                    styles.stepperButton,
-                    visibleEndHour <= visibleStartHour + 1 && styles.dimmed,
-                    pressed &&
-                      visibleEndHour > visibleStartHour + 1 &&
-                      styles.cardPressed,
-                  ]}
-                >
-                  <MinusIcon size={16} color={appColors.foodAccentText} weight="bold" />
-                </Pressable>
-                <Text style={styles.rangeValue}>
-                  {formatFoodHourLabel(visibleEndHour)}
-                </Text>
-                <Pressable
-                  onPress={() => onChangeEnd(visibleEndHour + 1)}
-                  disabled={visibleEndHour >= 23}
-                  style={({ pressed }) => [
-                    styles.stepperButton,
-                    visibleEndHour >= 23 && styles.dimmed,
-                    pressed && visibleEndHour < 23 && styles.cardPressed,
-                  ]}
-                >
-                  <PlusIcon size={16} color={appColors.foodAccentText} weight="bold" />
-                </Pressable>
-              </View>
-            </View>
+          <View style={[styles.morePill, styles.morePillAccent]}>
+            <Text style={styles.morePillText}>Quick</Text>
           </View>
-        </View>
+        </Pressable>
         <Pressable
           onPress={onCopyYesterday}
           style={({ pressed }) => [
@@ -242,7 +162,7 @@ const styles = StyleSheet.create({
     color: appColors.foodText,
     fontSize: 22,
     fontWeight: "900",
-    marginBottom: 4,
+    marginBottom: 14,
   },
   sectionText: {
     color: appColors.foodMuted,
@@ -253,70 +173,10 @@ const styles = StyleSheet.create({
   stack: {
     gap: 10,
   },
-  preferenceCard: {
+  infoCard: {
     borderRadius: 18,
     backgroundColor: appColors.foodFieldBg,
-    borderWidth: 1,
-    borderColor: appColors.lavenderBorder,
     padding: 14,
-  },
-  preferenceHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 12,
-  },
-  resetPill: {
-    borderRadius: 999,
-    backgroundColor: appColors.foodEyebrowBg,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  resetPillText: {
-    color: appColors.foodPrimary,
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  rangeRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  rangeCell: {
-    flex: 1,
-    borderRadius: 12,
-    backgroundColor: appColors.white,
-    padding: 12,
-  },
-  smallLabel: {
-    textAlign: "center",
-    color: appColors.foodLabel,
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-    marginBottom: 8,
-  },
-  rangeStepper: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-  },
-  stepperButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 999,
-    backgroundColor: appColors.lavenderPanel,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  dimmed: {
-    opacity: 0.45,
-  },
-  rangeValue: {
-    color: appColors.foodText,
-    fontSize: 14,
-    fontWeight: "700",
   },
   hourRow: {
     gap: 10,
@@ -326,8 +186,6 @@ const styles = StyleSheet.create({
     width: 64,
     borderRadius: 8,
     backgroundColor: appColors.raw_hex_F7F3FC,
-    borderWidth: 1,
-    borderColor: appColors.raw_hex_E9E2F7,
     paddingHorizontal: 4,
     paddingVertical: 4,
   },
@@ -359,9 +217,12 @@ const styles = StyleSheet.create({
     gap: 12,
     borderRadius: 18,
     backgroundColor: appColors.foodFieldBg,
-    borderWidth: 1,
-    borderColor: appColors.lavenderBorder,
     padding: 14,
+  },
+  moreRowAccent: {
+    backgroundColor: appColors.foodPillBg,
+    borderWidth: 1,
+    borderColor: appColors.foodBorder,
   },
   selectedSlotRow: {
     backgroundColor: appColors.raw_hex_F4F0FF,
@@ -386,6 +247,9 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.foodPrimaryDark,
     paddingHorizontal: 12,
     paddingVertical: 8,
+  },
+  morePillAccent: {
+    backgroundColor: appColors.foodPrimary,
   },
   morePillText: {
     color: appColors.white,

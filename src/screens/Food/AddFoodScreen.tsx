@@ -2,13 +2,11 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   LayoutAnimation,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  UIManager,
   View,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -23,6 +21,7 @@ import {
   CaretUpIcon,
   CalendarIcon,
   ForkKnifeIcon,
+  LightningIcon,
   MagnifyingGlassIcon,
 } from "phosphor-react-native";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
@@ -72,6 +71,11 @@ const DEFAULT_SECTION_STATE: FoodSearchSectionState = {
   recentExpanded: true,
 };
 
+const SEARCH_DEBOUNCE_MS = 350;
+const REMOTE_SEARCH_MIN_QUERY_LENGTH = 3;
+const REMOTE_BARCODE_QUERY_PATTERN = /^\d{8,}$/;
+const MAX_SEARCH_RESULTS = 30;
+
 const getFoodIdentityKey = ({
   barcode,
   name,
@@ -106,6 +110,212 @@ const fromDbFoodItem = (food: DBFoodItem): SearchFoodResult => {
   return toSearchFoodResult(saveInput, id);
 };
 
+const normalizeSearchText = (value?: string | null) =>
+  (value ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+const compactSearchText = (value?: string | null) =>
+  normalizeSearchText(value).replace(/\s+/g, "");
+
+const singularizeSearchWord = (value: string) => {
+  if (value.endsWith("ies") && value.length > 4) {
+    return `${value.slice(0, -3)}y`;
+  }
+
+  if (value.endsWith("s") && value.length > 3) {
+    return value.slice(0, -1);
+  }
+
+  return null;
+};
+
+const getSearchVariants = (query: string) => {
+  const normalizedQuery = normalizeSearchText(query);
+  if (!normalizedQuery) {
+    return [];
+  }
+
+  const variants = new Set<string>([normalizedQuery]);
+
+  if (!normalizedQuery.includes(" ")) {
+    const singular = singularizeSearchWord(normalizedQuery);
+    if (singular) {
+      variants.add(singular);
+    }
+  }
+
+  return [...variants];
+};
+
+const shouldSearchRemotely = (query: string) =>
+  query.length >= REMOTE_SEARCH_MIN_QUERY_LENGTH ||
+  REMOTE_BARCODE_QUERY_PATTERN.test(query);
+
+const getSearchResultDedupeKeys = (food: SearchFoodResult) => {
+  const dedupeKeys = new Set<string>([`identity:${getFoodIdentityKey(food)}`]);
+  const barcode = food.barcode?.trim();
+
+  if (barcode) {
+    dedupeKeys.add(`barcode:${barcode}`);
+  }
+
+  if (food.source !== "custom" && food.source !== "manual") {
+    const displayKey = compactSearchText(`${food.brand ?? ""} ${food.name}`);
+    if (displayKey) {
+      dedupeKeys.add(`display:${displayKey}`);
+    }
+  }
+
+  return [...dedupeKeys];
+};
+
+const scoreSearchFoodResult = (food: SearchFoodResult, query: string) => {
+  const queryVariants = getSearchVariants(query);
+  const compactQueryVariants = queryVariants.map(compactSearchText);
+  const tokenSet = new Set<string>();
+
+  for (const variant of queryVariants) {
+    variant
+      .split(" ")
+      .filter(Boolean)
+      .forEach((token) => tokenSet.add(token));
+  }
+
+  const tokens = [...tokenSet];
+  const normalizedName = normalizeSearchText(food.name);
+  const normalizedBrand = normalizeSearchText(food.brand);
+  const normalizedCombined = normalizeSearchText(
+    `${food.brand ?? ""} ${food.name}`,
+  );
+  const compactName = compactSearchText(food.name);
+  const compactCombined = compactSearchText(`${food.brand ?? ""} ${food.name}`);
+  const exactBarcodeMatch =
+    food.barcode?.trim() != null && food.barcode?.trim() === query.trim();
+
+  let score = 0;
+
+  if (exactBarcodeMatch) {
+    score += 1400;
+  }
+
+  if (queryVariants.some((variant) => normalizedName === variant)) {
+    score += 950;
+  }
+
+  if (queryVariants.some((variant) => normalizedCombined === variant)) {
+    score += 900;
+  }
+
+  if (queryVariants.some((variant) => normalizedBrand === variant)) {
+    score += 480;
+  }
+
+  if (
+    compactQueryVariants.some(
+      (variant) =>
+        variant.length > 0 &&
+        (compactName === variant || compactCombined.includes(variant)),
+    )
+  ) {
+    score += 760;
+  }
+
+  if (queryVariants.some((variant) => normalizedName.startsWith(variant))) {
+    score += 620;
+  }
+
+  if (queryVariants.some((variant) => normalizedCombined.startsWith(variant))) {
+    score += 540;
+  }
+
+  if (queryVariants.some((variant) => normalizedBrand.startsWith(variant))) {
+    score += 320;
+  }
+
+  if (queryVariants.some((variant) => normalizedName.includes(variant))) {
+    score += 300;
+  }
+
+  if (queryVariants.some((variant) => normalizedCombined.includes(variant))) {
+    score += 240;
+  }
+
+  if (queryVariants.some((variant) => normalizedBrand.includes(variant))) {
+    score += 140;
+  }
+
+  const matchedTokenCount = tokens.filter((token) =>
+    normalizedCombined.includes(token),
+  ).length;
+
+  score += matchedTokenCount * 70;
+
+  if (tokens.length > 0 && matchedTokenCount === tokens.length) {
+    score += 220;
+  }
+
+  if (food.localId != null) {
+    score += 130;
+  }
+
+  if (food.source === "usda") {
+    score += 30;
+  }
+
+  if (food.verified) {
+    score += 20;
+  }
+
+  if (food.brand) {
+    score += 8;
+  }
+
+  if (!food.isComplete) {
+    score -= 25;
+  }
+
+  return score;
+};
+
+const rankSearchResults = (query: string, results: SearchFoodResult[]) => {
+  const scoredResults = [...results].sort((left, right) => {
+    const scoreDifference =
+      scoreSearchFoodResult(right, query) - scoreSearchFoodResult(left, query);
+
+    if (scoreDifference !== 0) {
+      return scoreDifference;
+    }
+
+    if ((right.localId != null) !== (left.localId != null)) {
+      return Number(right.localId != null) - Number(left.localId != null);
+    }
+
+    return left.name.localeCompare(right.name);
+  });
+
+  const seen = new Set<string>();
+  const uniqueResults: SearchFoodResult[] = [];
+
+  for (const result of scoredResults) {
+    const dedupeKeys = getSearchResultDedupeKeys(result);
+
+    if (dedupeKeys.some((key) => seen.has(key))) {
+      continue;
+    }
+
+    uniqueResults.push(result);
+    dedupeKeys.forEach((key) => seen.add(key));
+
+    if (uniqueResults.length >= MAX_SEARCH_RESULTS) {
+      break;
+    }
+  }
+
+  return uniqueResults;
+};
+
 const AddFoodScreen = () => {
   const route = useRoute<AddFoodRoute>();
   const navigation = useNavigation<AddFoodNav>();
@@ -122,15 +332,7 @@ const AddFoodScreen = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [sectionState, setSectionState] =
     useState<FoodSearchSectionState>(DEFAULT_SECTION_STATE);
-
-  useEffect(() => {
-    if (
-      Platform.OS === "android" &&
-      UIManager.setLayoutAnimationEnabledExperimental
-    ) {
-      UIManager.setLayoutAnimationEnabledExperimental(true);
-    }
-  }, []);
+  const searchCacheRef = React.useRef(new Map<string, SearchFoodResult[]>());
 
   const loadStaticLists = useCallback(async () => {
     const currentUser = await DB.getUser();
@@ -152,28 +354,37 @@ const AddFoodScreen = () => {
   }, []);
 
   const searchFoods = useCallback(async (normalizedQuery: string) => {
+    const cachedResults = searchCacheRef.current.get(normalizedQuery);
+    if (cachedResults) {
+      return cachedResults;
+    }
+
     const [localRows, remoteRows] = await Promise.all([
       DB.searchFoodItems(normalizedQuery, 40),
-      API.usdaAPI.getFood(normalizedQuery),
+      shouldSearchRemotely(normalizedQuery)
+        ? API.usdaAPI.getFood(normalizedQuery, { pageSize: 12 })
+        : Promise.resolve([]),
     ]);
 
     const localResults = localRows.map(fromDbFoodItem);
-    const localKeys = new Set(localResults.map(getFoodIdentityKey));
+    const localKeys = new Set(localResults.flatMap(getSearchResultDedupeKeys));
     const remoteResults = remoteRows
       .filter(
         (food) =>
-          !localKeys.has(
-            getFoodIdentityKey({
-              source: food.source,
-              sourceId: food.sourceId,
-              barcode: food.barcode,
-              name: food.name,
-            }),
+          getSearchResultDedupeKeys(toSearchFoodResult(food, null)).every(
+            (key) => !localKeys.has(key),
           ),
       )
       .map((food) => toSearchFoodResult(food, null));
 
-    return [...localResults, ...remoteResults];
+    const rankedResults = rankSearchResults(normalizedQuery, [
+      ...localResults,
+      ...remoteResults,
+    ]);
+
+    searchCacheRef.current.set(normalizedQuery, rankedResults);
+
+    return rankedResults;
   }, []);
 
   const persistFoodIfNeeded = useCallback(async (food: SearchFoodResult) => {
@@ -189,6 +400,7 @@ const AddFoodScreen = () => {
         item.key === food.key ? { ...item, localId: savedId } : item,
       ),
     );
+    searchCacheRef.current.clear();
 
     return savedId;
   }, []);
@@ -225,6 +437,13 @@ const AddFoodScreen = () => {
         return;
       }
 
+      const cachedResults = searchCacheRef.current.get(normalized);
+      if (cachedResults) {
+        setResults(cachedResults);
+        setIsSearching(false);
+        return;
+      }
+
       setIsSearching(true);
       const rows = await searchFoods(normalized);
       if (!cancelled) {
@@ -235,7 +454,7 @@ const AddFoodScreen = () => {
 
     const timeout = setTimeout(() => {
       void run();
-    }, 250);
+    }, SEARCH_DEBOUNCE_MS);
 
     return () => {
       cancelled = true;
@@ -298,6 +517,15 @@ const AddFoodScreen = () => {
     });
   }, [date, mealType, navigation, resolvedContextLabel, resolvedLoggedAt]);
 
+  const openQuickAddFood = useCallback(() => {
+    navigation.navigate("QuickAddFood", {
+      contextLabel: resolvedContextLabel,
+      date,
+      loggedAt: resolvedLoggedAt,
+      mealType,
+    });
+  }, [date, mealType, navigation, resolvedContextLabel, resolvedLoggedAt]);
+
   const openFoodEditor = async (food: SearchFoodResult) => {
     if (!user) {
       Alert.alert(
@@ -331,6 +559,7 @@ const AddFoodScreen = () => {
 
     const foodId = await persistFoodIfNeeded(food);
     await DB.setFoodItemFavorite(user.externalId, foodId, !isFavorite);
+    searchCacheRef.current.clear();
     await Promise.all([
       loadStaticLists(),
       query.trim()
@@ -535,9 +764,24 @@ const AddFoodScreen = () => {
           <View style={styles.heroHeaderRow}>
             <View style={styles.heroHeaderCopy}>
               <Text style={styles.heroText}>
-                Search your library, scan a barcode, or open a custom food.
+                Search your library, quick add a one-off entry, scan a barcode, or open a custom food.
               </Text>
             </View>
+          </View>
+          <View style={styles.heroActionRow}>
+            <Pressable
+              onPress={openQuickAddFood}
+              style={({ pressed }) => [
+                styles.heroAction,
+                styles.heroActionPrimary,
+                pressed && styles.cardPressed,
+              ]}
+            >
+              <LightningIcon size={15} color={appColors.white} weight="fill" />
+              <Text style={[styles.heroActionText, styles.heroActionTextPrimary]}>
+                Quick Add
+              </Text>
+            </Pressable>
             <Pressable
               onPress={openCreateCustomFood}
               style={({ pressed }) => [
@@ -590,9 +834,9 @@ const AddFoodScreen = () => {
           <Text style={styles.searchHint}>
             {query.trim()
               ? isSearching
-                ? "Searching your foods and USDA..."
-                : `${activeResults.length} matches across local foods and USDA.`
-              : "Search above or pick from favorites and recent below."}
+                ? "Searching your foods and USDA branded + generic foods..."
+                : `${activeResults.length} matches across local foods and USDA results.`
+              : "Search above or pick from favorites and recent below. Previously scanned Open Food Facts items also show up here once saved."}
           </Text>
         </View>
 
@@ -676,12 +920,16 @@ const styles = StyleSheet.create({
   heroHeaderRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    justifyContent: "space-between",
     gap: 12,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   heroHeaderCopy: {
     flex: 1,
+  },
+  heroActionRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 12,
   },
   heroEyebrow: {
     alignSelf: "flex-start",
@@ -726,15 +974,28 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   heroAction: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
     borderRadius: 999,
-    backgroundColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.white,
+    borderWidth: 1,
+    borderColor: appColors.foodBorder,
     paddingHorizontal: 12,
     paddingVertical: 9,
   },
+  heroActionPrimary: {
+    backgroundColor: appColors.foodPrimaryDark,
+    borderColor: appColors.foodPrimaryDark,
+  },
   heroActionText: {
-    color: appColors.white,
+    color: appColors.foodPrimaryDark,
     fontSize: 12,
     fontWeight: "800",
+  },
+  heroActionTextPrimary: {
+    color: appColors.white,
   },
   searchRow: {
     flexDirection: "row",

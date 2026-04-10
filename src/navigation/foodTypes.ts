@@ -24,5 +24,12 @@ export type FoodStackParamList = {
     loggedAt?: string | null;
     contextLabel?: string | null;
   };
+  QuickAddFood: {
+    date: string;
+    mealType?: string | null;
+    loggedAt?: string | null;
+    contextLabel?: string | null;
+    entryId?: number;
+  };
   FoodLibrary: { date?: string; mealType?: string } | undefined;
 };

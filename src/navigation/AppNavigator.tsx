@@ -13,6 +13,7 @@ import LoginScreen from "../screens/Auth/LoginScreen";
 import OnboardingNavigator from "./OnboardingNavigator";
 import AddFoodScreen from "../screens/Food/AddFoodScreen";
 import CreateCustomFoodScreen from "../screens/Food/CreateCustomFoodScreen";
+import QuickAddFoodScreen from "../screens/Food/QuickAddFoodScreen";
 import ScannedFoodLogScreen from "../screens/Food/ScannedFoodLogScreen";
 import { getOnboardingComplete } from "../storage/localStore";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
@@ -27,6 +28,7 @@ export type RootStackParamList = {
   AddFood: FoodStackParamList["AddFood"];
   ScannedFood: FoodStackParamList["ScannedFood"];
   CreateCustomFood: FoodStackParamList["CreateCustomFood"];
+  QuickAddFood: FoodStackParamList["QuickAddFood"];
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -129,6 +131,14 @@ const AppNavigator = () => {
             <Stack.Screen
               name="CreateCustomFood"
               component={CreateCustomFoodScreen}
+              options={{
+                animation: "slide_from_bottom",
+                presentation: "fullScreenModal",
+              }}
+            />
+            <Stack.Screen
+              name="QuickAddFood"
+              component={QuickAddFoodScreen}
               options={{
                 animation: "slide_from_bottom",
                 presentation: "fullScreenModal",

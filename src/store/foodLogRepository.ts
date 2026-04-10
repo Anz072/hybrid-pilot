@@ -1,9 +1,11 @@
 import { getDb, initDb } from "../storage/sqlite";
 import type {
   AddCustomMealInput,
+  AddQuickAddFoodLogInput,
   AddUserFoodLogInput,
   DBCustomMeal,
   DBUserFoodLogEntry,
+  UpdateQuickAddFoodLogInput,
   UpdateUserFoodLogInput,
 } from "./DB_TYPES";
 
@@ -20,6 +22,78 @@ const combineDateKeyWithTime = (dateKey: string, timeSource: string) => {
     source.getMilliseconds(),
   ).toISOString();
 };
+
+const toQuickAddEntryId = (id: number) => -Math.abs(id);
+const fromQuickAddEntryId = (id: number) => Math.abs(id);
+const isQuickAddEntryId = (id: number) => id < 0;
+
+type RawFoodLogEntryRow = Omit<DBUserFoodLogEntry, "isEnergyManuallySet"> & {
+  isEnergyManuallySet: boolean | number;
+};
+
+const mapFoodLogEntryRow = (
+  row: RawFoodLogEntryRow | null,
+): DBUserFoodLogEntry | null => {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    ...row,
+    isEnergyManuallySet: Boolean(row.isEnergyManuallySet),
+  };
+};
+
+const NORMAL_FOOD_LOG_SELECT = `
+  SELECT
+    l.id,
+    l.user_external_id AS userExternalId,
+    l.food_id AS foodId,
+    l.date,
+    l.logged_at AS loggedAt,
+    l.quantity_g AS quantityG,
+    l.meal_type AS mealType,
+    l.created_at AS createdAt,
+    'food_item' AS entrySource,
+    f.name AS foodName,
+    COALESCE(f.serving_size_value, f.serving_size) AS servingSize,
+    COALESCE(f.serving_size_unit, f.serving_unit) AS servingUnit,
+    COALESCE(f.calories, 0) AS calories,
+    COALESCE(f.protein_g, 0) AS proteinG,
+    COALESCE(f.carbs_g, 0) AS carbsG,
+    COALESCE(f.fat_g, 0) AS fatG,
+    NULL AS alcoholG,
+    NULL AS systemCalculatedCalories,
+    0 AS isEnergyManuallySet,
+    NULL AS quickAddName
+  FROM user_food_log l
+  JOIN food_items f ON f.id = l.food_id
+`;
+
+const QUICK_ADD_FOOD_LOG_SELECT = `
+  SELECT
+    -q.id AS id,
+    q.user_external_id AS userExternalId,
+    NULL AS foodId,
+    q.date,
+    q.logged_at AS loggedAt,
+    1 AS quantityG,
+    q.meal_type AS mealType,
+    q.created_at AS createdAt,
+    'quick_add' AS entrySource,
+    COALESCE(NULLIF(TRIM(q.name), ''), 'Quick Add') AS foodName,
+    1 AS servingSize,
+    'entry' AS servingUnit,
+    q.calories AS calories,
+    q.protein_g AS proteinG,
+    q.carbs_g AS carbsG,
+    q.fat_g AS fatG,
+    q.alcohol_g AS alcoholG,
+    q.system_calculated_calories AS systemCalculatedCalories,
+    q.is_energy_manually_set AS isEnergyManuallySet,
+    q.name AS quickAddName
+  FROM user_quick_food_log q
+`;
 
 export const addUserFoodLog = async (
   input: AddUserFoodLogInput,
@@ -44,6 +118,51 @@ export const addUserFoodLog = async (
   );
 };
 
+export const addQuickAddFoodLog = async (
+  input: AddQuickAddFoodLogInput,
+): Promise<number> => {
+  await initDb();
+  const db = await getDb();
+  const now = new Date().toISOString();
+  const loggedAt = input.loggedAt ?? now;
+
+  const result = await db.runAsync(
+    `
+    INSERT INTO user_quick_food_log (
+      user_external_id,
+      date,
+      logged_at,
+      meal_type,
+      name,
+      calories,
+      protein_g,
+      carbs_g,
+      fat_g,
+      alcohol_g,
+      system_calculated_calories,
+      is_energy_manually_set,
+      created_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+    input.userExternalId,
+    input.date,
+    loggedAt,
+    input.mealType ?? null,
+    input.name?.trim() || null,
+    input.calories,
+    input.proteinG ?? 0,
+    input.carbsG ?? 0,
+    input.fatG ?? 0,
+    input.alcoholG ?? 0,
+    input.systemCalculatedCalories ?? null,
+    input.isEnergyManuallySet ? 1 : 0,
+    now,
+  );
+
+  return toQuickAddEntryId(result.lastInsertRowId);
+};
+
 export const updateUserFoodLog = async (
   input: UpdateUserFoodLogInput,
 ): Promise<void> => {
@@ -63,9 +182,53 @@ export const updateUserFoodLog = async (
   );
 };
 
+export const updateQuickAddFoodLog = async (
+  input: UpdateQuickAddFoodLogInput,
+): Promise<void> => {
+  await initDb();
+  const db = await getDb();
+
+  await db.runAsync(
+    `
+    UPDATE user_quick_food_log
+    SET
+      logged_at = COALESCE(?, logged_at),
+      meal_type = ?,
+      name = ?,
+      calories = ?,
+      protein_g = ?,
+      carbs_g = ?,
+      fat_g = ?,
+      alcohol_g = ?,
+      system_calculated_calories = ?,
+      is_energy_manually_set = ?
+    WHERE id = ?
+    `,
+    input.loggedAt ?? null,
+    input.mealType ?? null,
+    input.name?.trim() || null,
+    input.calories,
+    input.proteinG ?? 0,
+    input.carbsG ?? 0,
+    input.fatG ?? 0,
+    input.alcoholG ?? 0,
+    input.systemCalculatedCalories ?? null,
+    input.isEnergyManuallySet ? 1 : 0,
+    fromQuickAddEntryId(input.id),
+  );
+};
+
 export const deleteUserFoodLog = async (id: number): Promise<void> => {
   await initDb();
   const db = await getDb();
+
+  if (isQuickAddEntryId(id)) {
+    await db.runAsync(
+      `DELETE FROM user_quick_food_log WHERE id = ?`,
+      fromQuickAddEntryId(id),
+    );
+    return;
+  }
 
   await db.runAsync(`DELETE FROM user_food_log WHERE id = ?`, id);
 };
@@ -76,31 +239,29 @@ export const getUserFoodLogEntryById = async (
   await initDb();
   const db = await getDb();
 
-  return db.getFirstAsync<DBUserFoodLogEntry>(
+  if (isQuickAddEntryId(id)) {
+    const row = await db.getFirstAsync<RawFoodLogEntryRow>(
+      `
+      ${QUICK_ADD_FOOD_LOG_SELECT}
+      WHERE q.id = ?
+      LIMIT 1
+      `,
+      fromQuickAddEntryId(id),
+    );
+
+    return mapFoodLogEntryRow(row);
+  }
+
+  const row = await db.getFirstAsync<RawFoodLogEntryRow>(
     `
-    SELECT
-      l.id,
-      l.user_external_id AS userExternalId,
-      l.food_id AS foodId,
-      l.date,
-      l.logged_at AS loggedAt,
-      l.quantity_g AS quantityG,
-      l.meal_type AS mealType,
-      l.created_at AS createdAt,
-      f.name AS foodName,
-      COALESCE(f.serving_size_value, f.serving_size) AS servingSize,
-      COALESCE(f.serving_size_unit, f.serving_unit) AS servingUnit,
-      COALESCE(f.calories, 0) AS calories,
-      COALESCE(f.protein_g, 0) AS proteinG,
-      COALESCE(f.carbs_g, 0) AS carbsG,
-      COALESCE(f.fat_g, 0) AS fatG
-    FROM user_food_log l
-    JOIN food_items f ON f.id = l.food_id
+    ${NORMAL_FOOD_LOG_SELECT}
     WHERE l.id = ?
     LIMIT 1
     `,
     id,
   );
+
+  return mapFoodLogEntryRow(row);
 };
 
 export const getUserFoodLogEntriesByDate = async (
@@ -110,32 +271,29 @@ export const getUserFoodLogEntriesByDate = async (
   await initDb();
   const db = await getDb();
 
-  return db.getAllAsync<DBUserFoodLogEntry>(
+  const rows = await db.getAllAsync<RawFoodLogEntryRow>(
     `
-    SELECT
-      l.id,
-      l.user_external_id AS userExternalId,
-      l.food_id AS foodId,
-      l.date,
-      l.logged_at AS loggedAt,
-      l.quantity_g AS quantityG,
-      l.meal_type AS mealType,
-      l.created_at AS createdAt,
-      f.name AS foodName,
-      COALESCE(f.serving_size_value, f.serving_size) AS servingSize,
-      COALESCE(f.serving_size_unit, f.serving_unit) AS servingUnit,
-      COALESCE(f.calories, 0) AS calories,
-      COALESCE(f.protein_g, 0) AS proteinG,
-      COALESCE(f.carbs_g, 0) AS carbsG,
-      COALESCE(f.fat_g, 0) AS fatG
-    FROM user_food_log l
-    JOIN food_items f ON f.id = l.food_id
-    WHERE l.user_external_id = ? AND l.date = ?
-    ORDER BY datetime(COALESCE(l.logged_at, l.created_at)) ASC
+    SELECT *
+    FROM (
+      ${NORMAL_FOOD_LOG_SELECT}
+      WHERE l.user_external_id = ? AND l.date = ?
+
+      UNION ALL
+
+      ${QUICK_ADD_FOOD_LOG_SELECT}
+      WHERE q.user_external_id = ? AND q.date = ?
+    )
+    ORDER BY datetime(COALESCE(loggedAt, createdAt)) ASC
     `,
     userExternalId,
     date,
+    userExternalId,
+    date,
   );
+
+  return rows
+    .map(mapFoodLogEntryRow)
+    .filter((entry): entry is DBUserFoodLogEntry => entry != null);
 };
 
 export const copyFoodLogsFromDate = async (
@@ -166,6 +324,39 @@ export const copyFoodLogsFromDate = async (
     userExternalId,
     fromDate,
   );
+  const sourceQuickEntries = await db.getAllAsync<{
+    alcoholG: number;
+    calories: number;
+    carbsG: number;
+    createdAt: string;
+    fatG: number;
+    isEnergyManuallySet: number;
+    loggedAt: string | null;
+    mealType: string | null;
+    name: string | null;
+    proteinG: number;
+    systemCalculatedCalories: number | null;
+  }>(
+    `
+    SELECT
+      meal_type AS mealType,
+      name,
+      calories,
+      protein_g AS proteinG,
+      carbs_g AS carbsG,
+      fat_g AS fatG,
+      alcohol_g AS alcoholG,
+      system_calculated_calories AS systemCalculatedCalories,
+      is_energy_manually_set AS isEnergyManuallySet,
+      logged_at AS loggedAt,
+      created_at AS createdAt
+    FROM user_quick_food_log
+    WHERE user_external_id = ? AND date = ?
+    ORDER BY datetime(COALESCE(logged_at, created_at)) ASC
+    `,
+    userExternalId,
+    fromDate,
+  );
 
   for (const entry of sourceEntries) {
     const now = new Date().toISOString();
@@ -182,6 +373,45 @@ export const copyFoodLogsFromDate = async (
       combineDateKeyWithTime(toDate, sourceTime),
       entry.quantityG,
       entry.mealType,
+      now,
+    );
+  }
+
+  for (const entry of sourceQuickEntries) {
+    const now = new Date().toISOString();
+    const sourceTime = entry.loggedAt ?? entry.createdAt;
+
+    await db.runAsync(
+      `
+      INSERT INTO user_quick_food_log (
+        user_external_id,
+        date,
+        logged_at,
+        meal_type,
+        name,
+        calories,
+        protein_g,
+        carbs_g,
+        fat_g,
+        alcohol_g,
+        system_calculated_calories,
+        is_energy_manually_set,
+        created_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      userExternalId,
+      toDate,
+      combineDateKeyWithTime(toDate, sourceTime),
+      entry.mealType,
+      entry.name,
+      entry.calories,
+      entry.proteinG,
+      entry.carbsG,
+      entry.fatG,
+      entry.alcoholG,
+      entry.systemCalculatedCalories,
+      entry.isEnergyManuallySet,
       now,
     );
   }

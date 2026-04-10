@@ -65,6 +65,18 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
 
     try {
       const nextEntry = await DB.getUserFoodLogEntryById(route.params.entryId);
+
+      if (nextEntry?.entrySource === "quick_add") {
+        navigation.replace("QuickAddFood", {
+          entryId: nextEntry.id,
+          date: nextEntry.date,
+          loggedAt: nextEntry.loggedAt,
+          mealType: nextEntry.mealType ?? null,
+          contextLabel: formatFoodLoggedTime(nextEntry.loggedAt),
+        });
+        return;
+      }
+
       setEntry(nextEntry);
 
       if (!nextEntry) {
@@ -77,7 +89,7 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
     } finally {
       setLoading(false);
     }
-  }, [route.params.entryId]);
+  }, [navigation, route.params.entryId]);
 
   React.useEffect(() => {
     void loadEntry();

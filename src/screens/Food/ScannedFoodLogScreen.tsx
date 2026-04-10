@@ -29,10 +29,11 @@ import {
   ClockIcon,
   StarIcon,
 } from "phosphor-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
 import { DB } from "../../store/DB";
-import type { DBFoodItem, DBUser } from "../../store/DB_TYPES";
+import type { DBFoodItem } from "../../store/DB_TYPES";
 import FoodEntryForm from "./FoodEntryForm";
 import FoodScreenHeader from "./FoodScreenHeader";
 import {
@@ -47,6 +48,15 @@ import {
   type FoodNutritionTotals,
 } from "./foodUtils";
 import { appColors } from "../../theme/colors";
+import { MacroBar } from "./FoodDiaryHeroCard";
+import { useAppSelector } from "../../store/hooks";
+import {
+  getMicronutrientTargets,
+  MICRONUTRIENT_TARGETS,
+  MicronutrientSex,
+  OpenFoodMapMicronutrientKey,
+} from "../../engine/micronutrients";
+import { getAgeToday } from "../../helpers";
 
 type ScannedFoodRoute = RouteProp<FoodStackParamList, "ScannedFood">;
 type ScannedFoodNav = CompositeNavigationProp<
@@ -84,12 +94,20 @@ const buildPreview = (
 const ScannedFoodLogScreen = () => {
   const route = useRoute<ScannedFoodRoute>();
   const navigation = useNavigation<ScannedFoodNav>();
+  const insets = useSafeAreaInsets();
   const { barcode, date, foodId, loggedAt, mealType, scanStatus } =
     route.params;
   const isScannedFlow = scanStatus != null;
+  const user = useAppSelector((state) => state.user.currentUser);
+
+  const microTargets = user
+    ? getMicronutrientTargets({
+        sex: String(user.gender) as MicronutrientSex,
+        age: getAgeToday(new Date(user?.birthdate || "1996-10-01")),
+      })
+    : MICRONUTRIENT_TARGETS.generic;
 
   const [food, setFood] = React.useState<DBFoodItem | null>(null);
-  const [user, setUser] = React.useState<DBUser | null>(null);
   const [quantityValue, setQuantityValue] = React.useState("");
   const [labelValue, setLabelValue] = React.useState(mealType ?? "");
   const [isFavorite, setIsFavorite] = React.useState(false);
@@ -116,20 +134,16 @@ const ScannedFoodLogScreen = () => {
     setLoading(true);
 
     try {
-      const [currentUser, nextFood] = await Promise.all([
-        DB.getUser(),
-        DB.getFoodItemById(foodId),
-      ]);
+      const nextFood = await DB.getFoodItemById(foodId);
 
-      setUser(currentUser);
       setFood(nextFood);
 
       if (nextFood) {
         setQuantityValue(String(getFoodDefaultLogAmount(nextFood)));
       }
 
-      if (currentUser && nextFood) {
-        const favoriteIds = await DB.getFavoriteFoodIds(currentUser.externalId);
+      if (user && nextFood) {
+        const favoriteIds = await DB.getFavoriteFoodIds(user.externalId);
         setIsFavorite(favoriteIds.includes(nextFood.id));
       } else {
         setIsFavorite(false);
@@ -137,7 +151,7 @@ const ScannedFoodLogScreen = () => {
     } finally {
       setLoading(false);
     }
-  }, [foodId]);
+  }, [foodId, user]);
 
   React.useEffect(() => {
     void loadFood();
@@ -159,7 +173,10 @@ const ScannedFoodLogScreen = () => {
     () => formatFoodLoggedTime(loggedAtDate.toISOString()),
     [loggedAtDate],
   );
-  const screenDateLabel = React.useMemo(() => formatFoodShortDate(date), [date]);
+  const screenDateLabel = React.useMemo(
+    () => formatFoodShortDate(date),
+    [date],
+  );
   const statusLabel =
     scanStatus === "created" ? "Added to library" : "Found in library";
   const screenEyebrow = isScannedFlow ? "Barcode" : "Food";
@@ -172,21 +189,31 @@ const ScannedFoodLogScreen = () => {
       pills.push({
         key: "status",
         label: statusLabel,
-        icon: <CheckCircleIcon size={14} color={appColors.foodPrimary} weight="fill" />,
+        icon: (
+          <CheckCircleIcon
+            size={14}
+            color={appColors.foodPrimary}
+            weight="fill"
+          />
+        ),
       });
     }
 
     pills.push({
       key: "date",
       label: formatFoodShortDate(date),
-      icon: <CalendarIcon size={14} color={appColors.foodPrimary} weight="bold" />,
+      icon: (
+        <CalendarIcon size={14} color={appColors.foodPrimary} weight="bold" />
+      ),
     });
 
     if (barcode) {
       pills.push({
         key: "barcode",
         label: barcode,
-        icon: <BarcodeIcon size={14} color={appColors.foodPrimary} weight="bold" />,
+        icon: (
+          <BarcodeIcon size={14} color={appColors.foodPrimary} weight="bold" />
+        ),
       });
     }
 
@@ -224,7 +251,10 @@ const ScannedFoodLogScreen = () => {
 
   const toggleFavorite = React.useCallback(async () => {
     if (!user || !food) {
-      Alert.alert("No account found", "Create or restore a user before saving foods.");
+      Alert.alert(
+        "No account found",
+        "Create or restore a user before saving foods.",
+      );
       return;
     }
 
@@ -234,12 +264,18 @@ const ScannedFoodLogScreen = () => {
 
   const saveLog = React.useCallback(async () => {
     if (!user || !food) {
-      Alert.alert("No account found", "Create or restore a user before adding food.");
+      Alert.alert(
+        "No account found",
+        "Create or restore a user before adding food.",
+      );
       return;
     }
 
     if (!Number.isFinite(quantity) || quantity <= 0) {
-      Alert.alert("Invalid quantity", "Enter a positive quantity before logging.");
+      Alert.alert(
+        "Invalid quantity",
+        "Enter a positive quantity before logging.",
+      );
       return;
     }
 
@@ -257,15 +293,7 @@ const ScannedFoodLogScreen = () => {
     } finally {
       setSaving(false);
     }
-  }, [
-    closeAfterSave,
-    date,
-    food,
-    labelValue,
-    loggedAtDate,
-    quantity,
-    user,
-  ]);
+  }, [closeAfterSave, date, food, labelValue, loggedAtDate, quantity, user]);
 
   if (loading) {
     return (
@@ -276,7 +304,9 @@ const ScannedFoodLogScreen = () => {
             eyebrow={screenEyebrow}
             title={screenTitle}
             subtitle={
-              isScannedFlow ? "Loading the scanned food..." : "Loading food details..."
+              isScannedFlow
+                ? "Loading the scanned food..."
+                : "Loading food details..."
             }
             onBack={() => navigation.goBack()}
           />
@@ -325,7 +355,10 @@ const ScannedFoodLogScreen = () => {
 
       <ScrollView
         style={styles.screen}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: 148 + Math.max(insets.bottom, 12) },
+        ]}
         keyboardShouldPersistTaps="handled"
       >
         <FoodEntryForm
@@ -353,7 +386,9 @@ const ScannedFoodLogScreen = () => {
               void toggleFavorite();
             },
           }}
-          previewCaloriesText={preview ? `${preview.calories.toFixed(0)} kcal` : "--"}
+          previewCaloriesText={
+            preview ? `${preview.calories.toFixed(0)} kcal` : "--"
+          }
           previewSummaryText={
             preview
               ? `${formatFoodMacro(preview.proteinG, "P")} | ${formatFoodMacro(
@@ -369,7 +404,13 @@ const ScannedFoodLogScreen = () => {
           detailsSubtitle="Set the amount, logged time, and slot before adding this food."
           onChangeAmount={setQuantityValue}
           slot={{
-            icon: <ClockIcon size={18} color={appColors.foodPrimary} weight="bold" />,
+            icon: (
+              <ClockIcon
+                size={18}
+                color={appColors.foodPrimary}
+                weight="bold"
+              />
+            ),
             label: "Logged time",
             value: loggedTime,
             actionLabel: "Change",
@@ -401,8 +442,28 @@ const ScannedFoodLogScreen = () => {
           }}
           primaryActionDisabled={saving}
           primaryActionLabel={saving ? "Adding..." : "Add to diary"}
+          showPrimaryAction={false}
         />
-
+        <Text style={styles.title}>Micro Nutrients</Text>
+        {(
+          Object.entries(microTargets) as [
+            OpenFoodMapMicronutrientKey,
+            number,
+          ][]
+        ).map(([key, target]) => (
+          <MacroBar
+            key={key}
+            accent={appColors.foodPrimary}
+            consumed={food?.[key] ?? 0}
+            target={target}
+            label={key
+              .slice(0, -2)
+              .split(/(?=[A-Z])/)
+              .map((w) => w[0].toUpperCase() + w.slice(1))
+              .join(" ")}
+            unit={key.endsWith("Ug") ? "ug" : "mg"}
+          />
+        ))}
         {showTimePicker ? (
           <DateTimePicker
             value={loggedAtDate}
@@ -410,8 +471,31 @@ const ScannedFoodLogScreen = () => {
             display={Platform.OS === "ios" ? "spinner" : "default"}
             onChange={handleTimeChange}
           />
-        ) : null}
+          ) : null}
       </ScrollView>
+
+      <View
+        style={[
+          styles.stickyFooter,
+          { paddingBottom: Math.max(insets.bottom, 12) },
+        ]}
+      >
+        <Pressable
+          onPress={() => {
+            void saveLog();
+          }}
+          disabled={saving}
+          style={({ pressed }) => [
+            styles.stickyPrimaryButton,
+            saving && styles.disabled,
+            pressed && !saving && styles.cardPressed,
+          ]}
+        >
+          <Text style={styles.stickyPrimaryButtonText}>
+            {saving ? "Adding..." : "Add to diary"}
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 };
@@ -421,9 +505,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: appColors.foodScreenBg,
   },
+  title: {
+    color: appColors.foodText,
+    fontSize: 24,
+    fontWeight: "900",
+    marginTop: 16,
+    marginBottom: 12,
+  },
   content: {
     paddingHorizontal: 18,
-    paddingBottom: 36,
   },
   bgOrbTop: {
     position: "absolute",
@@ -454,6 +544,29 @@ const styles = StyleSheet.create({
     color: appColors.foodMuted,
     fontSize: 13,
     fontWeight: "700",
+  },
+  stickyFooter: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    left: 0,
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    backgroundColor: appColors.whiteOverlay96,
+    borderTopWidth: 1,
+    borderTopColor: appColors.foodSoftBorder,
+  },
+  stickyPrimaryButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 999,
+    backgroundColor: appColors.foodPrimaryDark,
+    paddingVertical: 13,
+  },
+  stickyPrimaryButtonText: {
+    color: appColors.white,
+    fontSize: 14,
+    fontWeight: "800",
   },
   primaryButton: {
     alignItems: "center",

@@ -26,6 +26,7 @@ import {
   FireIcon,
   ForkKnifeIcon,
   HouseSimpleIcon,
+  LightningIcon,
   MagnifyingGlassIcon,
   PlusIcon,
   ScalesIcon,
@@ -113,12 +114,28 @@ const MainTabNavigator = () => {
   }, [closeShortcuts]);
 
   const handleShortcutPress = React.useCallback(
-    (shortcut: "search" | "barcode" | "weight") => {
-      console.log(`[Shortcuts] ${shortcut} pressed`);
+    (shortcut: "search" | "barcode" | "weight" | "quick_add") => {
       if (shortcut === "weight") {
         closeShortcuts(() => setWeightModalVisible(true));
       } else if (shortcut === "barcode") {
         closeShortcuts(() => setBarcodeModalScannerVisible(true));
+      } else if (shortcut === "quick_add") {
+        const now = new Date();
+        const date = formatFoodDateKey(now);
+        const loggedAt = buildFoodLoggedAt(
+          date,
+          now.getHours(),
+          now.getMinutes(),
+        );
+
+        closeShortcuts(() =>
+          rootNavigation.navigate("QuickAddFood", {
+            contextLabel: formatFoodLoggedTime(loggedAt),
+            date,
+            loggedAt,
+            mealType: null,
+          }),
+        );
       } else if (shortcut === "search") {
         const now = new Date();
         const date = formatFoodDateKey(now);
@@ -379,6 +396,23 @@ const MainTabNavigator = () => {
               </Pressable>
 
               <Pressable
+                onPress={() => handleShortcutPress("quick_add")}
+                style={({ pressed }) => [
+                  styles.shortcutCard,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <View style={styles.shortcutIconWrap}>
+                  <LightningIcon
+                    size={26}
+                    color={appColors.white}
+                    weight="fill"
+                  />
+                </View>
+                <Text style={styles.shortcutLabel}>Quick Add</Text>
+              </Pressable>
+
+              <Pressable
                 onPress={() => handleShortcutPress("barcode")}
                 style={({ pressed }) => [
                   styles.shortcutCard,
@@ -446,10 +480,9 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 999,
-    // backgroundColor: "#1F1831",
-    backgroundColor: appColors.raw_hex_bfbdc5,
+    backgroundColor: appColors.foodPrimary,
     borderWidth: 3,
-    borderColor: appColors.raw_hex_b3b1b9,
+    borderColor: appColors.foodEyebrowBg,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -506,11 +539,12 @@ const styles = StyleSheet.create({
   },
   shortcutsGrid: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     gap: 14,
   },
   shortcutCard: {
-    flex: 1,
+    width: "47%",
     alignItems: "center",
     gap: 12,
   },

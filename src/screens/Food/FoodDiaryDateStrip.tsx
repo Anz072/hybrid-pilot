@@ -9,6 +9,7 @@ import {
 import { DBUser } from "../../store/DB_TYPES";
 import FoodDiaryHeroCard from "./FoodDiaryHeroCard";
 import { appColors } from "../../theme/colors";
+import { CaretLeftIcon } from "phosphor-react-native";
 
 export type FoodDiaryDateStripDay = {
   date: Date;
@@ -193,7 +194,13 @@ const FoodDiaryDateStrip = ({
           );
         })}
       </View>
-      {totals && user && <FoodDiaryHeroCard totals={totals} user={user} />}
+      {totals && user && (
+        <FoodDiaryHeroCard
+          energyTargetCalories={targetCalories}
+          totals={totals}
+          user={user}
+        />
+      )}
     </View>
   );
 };

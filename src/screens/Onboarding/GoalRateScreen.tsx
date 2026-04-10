@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 999,
-    backgroundColor: appColors.amberSoft,
+    backgroundColor: appColors.foodOrbBottom,
     opacity: 0.3,
   },
   headerWrap: {

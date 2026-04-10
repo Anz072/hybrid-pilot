@@ -172,9 +172,37 @@ export const formatFoodSourceLabel = (source: string): string => {
   }
 };
 
+export const calculateQuickAddCaloriesFromMacros = ({
+  alcoholG = 0,
+  carbsG = 0,
+  fatG = 0,
+  proteinG = 0,
+}: {
+  alcoholG?: number | null;
+  carbsG?: number | null;
+  fatG?: number | null;
+  proteinG?: number | null;
+}): number =>
+  roundTo(
+    (proteinG ?? 0) * 4 +
+      (carbsG ?? 0) * 4 +
+      (fatG ?? 0) * 9 +
+      (alcoholG ?? 0) * 7,
+    0,
+  );
+
 export const calculateLoggedNutrition = (
   entry: DBUserFoodLogEntry,
 ): FoodNutritionTotals => {
+  if (entry.entrySource === "quick_add") {
+    return {
+      calories: roundTo(entry.calories, 0),
+      proteinG: roundTo(entry.proteinG),
+      carbsG: roundTo(entry.carbsG),
+      fatG: roundTo(entry.fatG),
+    };
+  }
+
   const factor = entry.servingSize > 0 ? entry.quantityG / entry.servingSize : 1;
 
   return {
@@ -190,6 +218,14 @@ export const sumLoggedNutrition = (
 ): FoodNutritionTotals => {
   const totals = entries.reduce<FoodNutritionTotals>(
     (accumulator, entry) => {
+      if (entry.entrySource === "quick_add") {
+        accumulator.calories += entry.calories;
+        accumulator.proteinG += entry.proteinG;
+        accumulator.carbsG += entry.carbsG;
+        accumulator.fatG += entry.fatG;
+        return accumulator;
+      }
+
       const factor =
         entry.servingSize > 0 ? entry.quantityG / entry.servingSize : 1;
 

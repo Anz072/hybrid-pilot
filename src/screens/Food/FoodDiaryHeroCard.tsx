@@ -17,11 +17,12 @@ type MacroBarProps = {
 };
 
 type FoodDiaryHeroCardProps = {
+  energyTargetCalories: number | null;
   totals: FoodNutritionTotals;
   user: DBUser | null;
 };
 
-const MacroBar = ({
+export const MacroBar = ({
   accent,
   consumed,
   label,
@@ -73,6 +74,7 @@ const MacroBar = ({
 };
 
 const FoodDiaryHeroCard = ({
+  energyTargetCalories,
   totals,
   user,
 }: FoodDiaryHeroCardProps) => {
@@ -84,7 +86,7 @@ const FoodDiaryHeroCard = ({
           consumed={Number(totals.calories.toFixed(0))}
           label="Energy"
           places={0}
-          target={user?.calorieAllowance ?? null}
+          target={energyTargetCalories}
           unit="kcal"
         />
         <MacroBar

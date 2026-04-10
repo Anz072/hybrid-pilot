@@ -1,88 +1,449 @@
-import { useNavigation } from "@react-navigation/native";
+import React from "react";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { StyleSheet, Text, View, Image, Pressable } from "react-native";
+import {
+  BarbellIcon,
+  BugIcon,
+  ClockIcon,
+  DatabaseIcon,
+  ForkKnifeIcon,
+  TargetIcon,
+} from "phosphor-react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  buildEffectiveCalorieTargetsForDates,
+  getWeeklyCalorieBudget,
+} from "../../engine/calorieTargets";
 import type { MoreParamList } from "../../navigation/MoreNavigator";
+import { DB } from "../../store/DB";
 import { useAppSelector } from "../../store/hooks";
 import { appColors } from "../../theme/colors";
+import { formatFoodHourLabel } from "../Food/foodUtils";
+import CalorieBudgetChart from "./CalorieBudgetChart";
+import {
+  formatActivityLevelLabel,
+  formatGoalLabel,
+  formatTrainingSummary,
+} from "./userProfileOptions";
 
 type MoreScreenNav = NativeStackNavigationProp<MoreParamList, "MoreMainScreen">;
+
+const buildCurrentWeekDates = (reference: Date): Date[] => {
+  const weekStart = new Date(reference);
+  weekStart.setHours(12, 0, 0, 0);
+  weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const next = new Date(weekStart);
+    next.setDate(weekStart.getDate() + index);
+    return next;
+  });
+};
+
+type MoreActionRowProps = {
+  description: string;
+  icon: React.ReactNode;
+  onPress: () => void;
+  title: string;
+  value: string;
+};
+
+const MoreActionRow = ({
+  description,
+  icon,
+  onPress,
+  title,
+  value,
+}: MoreActionRowProps) => {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.actionRow,
+        pressed && styles.actionRowPressed,
+      ]}
+    >
+      <View style={styles.actionIcon}>{icon}</View>
+      <View style={styles.actionCopy}>
+        <Text style={styles.actionTitle}>{title}</Text>
+        <Text style={styles.actionDescription}>{description}</Text>
+      </View>
+      <View style={styles.actionMeta}>
+        <Text style={styles.actionValue}>{value}</Text>
+        <Text style={styles.actionArrow}>{">"}</Text>
+      </View>
+    </Pressable>
+  );
+};
 
 const MoreScreen = () => {
   const user = useAppSelector((state) => state.user.currentUser);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<MoreScreenNav>();
+  const [settings, setSettings] = React.useState<Awaited<
+    ReturnType<typeof DB.getUserSettings>
+  > | null>(null);
+  const weekDates = React.useMemo(() => buildCurrentWeekDates(new Date()), []);
+
+  const loadSettings = React.useCallback(async () => {
+    if (!user) {
+      setSettings(null);
+      return;
+    }
+
+    try {
+      const nextSettings = await DB.getUserSettings(user.externalId);
+      setSettings(nextSettings);
+    } catch {
+      setSettings(null);
+    }
+  }, [user]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      void loadSettings();
+    }, [loadSettings]),
+  );
+
+  const weeklyValues = React.useMemo(
+    () =>
+      buildEffectiveCalorieTargetsForDates({
+        dates: weekDates,
+        baseCalories: user?.calorieAllowance ?? null,
+        settings,
+      }),
+    [settings, user?.calorieAllowance, weekDates],
+  );
+  const weeklyBudget = React.useMemo(
+    () =>
+      getWeeklyCalorieBudget({
+        dates: weekDates,
+        baseCalories: user?.calorieAllowance ?? null,
+        settings,
+      }),
+    [settings, user?.calorieAllowance, weekDates],
+  );
+  const diaryHoursLabel = React.useMemo(() => {
+    if (!settings) {
+      return "07:00 - 22:00";
+    }
+
+    return `${formatFoodHourLabel(settings.foodDiaryStartHour)} - ${formatFoodHourLabel(settings.foodDiaryEndHour)}`;
+  }, [settings]);
 
   return (
-    <View style={[styles.content, { paddingTop: insets.top + 16 }]}>
-      <View style={styles.heroCard}>
-        <View style={styles.heroTopBar}>
-          <Text style={styles.heroTitle}>Settings</Text>
-          <Text style={styles.heroTitle}>Hello, {user?.displayName}</Text>
-          <Image
-            source={require("../../../assets/images/temp-profile-pic.jpg")}
-            style={{ width: 100, height: 100 }}
+    <View style={styles.screen}>
+      <View style={styles.orbTop} />
+      <View style={styles.orbBottom} />
+
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: insets.top + 16,
+            paddingBottom: insets.bottom + 28,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.heroCard}>
+          <Text style={styles.eyebrow}>Settings</Text>
+          <Text style={styles.heroTitle}>
+            {user?.displayName ? `Hello, ${user.displayName}` : "Settings"}
+          </Text>
+
+          <View style={styles.heroMetrics}>
+            <View style={styles.metricCard}>
+              <Text style={styles.metricLabel}>Avg Daily Target</Text>
+              <Text style={styles.metricValue}>
+                {weeklyBudget != null ? `${Math.round(weeklyBudget / 7)} kcal` : "--"}
+              </Text>
+            </View>
+            <View style={styles.metricCard}>
+              <Text style={styles.metricLabel}>Weekly Budget</Text>
+              <Text style={styles.metricValue}>
+                {weeklyBudget != null ? `${Math.round(weeklyBudget)} kcal` : "--"}
+              </Text>
+            </View>
+            <View style={styles.metricCard}>
+              <Text style={styles.metricLabel}>Goal</Text>
+              <Text style={styles.metricValueSmall}>
+                {formatGoalLabel(user?.goal)}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <CalorieBudgetChart
+          highlightDate={new Date()}
+          title="Weekly budget preview"
+          values={weeklyValues}
+        />
+
+        <Text style={styles.sectionTitle}>User Settings</Text>
+        <View style={styles.sectionCard}>
+          <MoreActionRow
+            description="Manually change the base daily energy target and reset it back to automatic when needed."
+            icon={
+              <ForkKnifeIcon
+                size={18}
+                color={appColors.foodPrimaryDark}
+                weight="fill"
+              />
+            }
+            onPress={() => navigation.navigate("CalorieAllowanceSettingsScreen")}
+            title="Calorie allowance"
+            value={
+              user?.calorieAllowance != null
+                ? `${user.calorieAllowance} kcal`
+                : "Not set"
+            }
+          />
+          <MoreActionRow
+            description="Update weight loss, maintain, or gain together with your activity baseline and rebuild the automatic fuel plan."
+            icon={
+              <TargetIcon
+                size={18}
+                color={appColors.foodPrimaryDark}
+                weight="fill"
+              />
+            }
+            onPress={() => navigation.navigate("AdjustGoalSettingsScreen")}
+            title="Adjust goal"
+            value={`${formatGoalLabel(user?.goal)} / ${formatActivityLevelLabel(
+              user?.activityLevel,
+            )}`}
+          />
+          <MoreActionRow
+            description="Keep your training profile aligned with what you actually do week to week."
+            icon={
+              <BarbellIcon
+                size={18}
+                color={appColors.foodPrimaryDark}
+                weight="fill"
+              />
+            }
+            onPress={() => navigation.navigate("TrainingTypesSettingsScreen")}
+            title="Training types"
+            value={formatTrainingSummary(user?.trainingTypes)}
+          />
+          <MoreActionRow
+            description="Set different calorie targets for different weekdays while keeping the weekly budget visible."
+            icon={
+              <ForkKnifeIcon
+                size={18}
+                color={appColors.foodPrimaryDark}
+                weight="fill"
+              />
+            }
+            onPress={() => navigation.navigate("CalorieScheduleScreen")}
+            title="Daily calorie schedule"
+            value={
+              settings?.dailyCalorieOverrides?.some((item) => item != null)
+                ? "Custom schedule"
+                : "Base target only"
+            }
           />
         </View>
-        <View>
-          <Text style={styles.title}>DEBUG MENU</Text>
-          <Pressable onPress={() => navigation.navigate("SettingsScreen")}>
-            <View style={styles.button}>
-              <Text style={styles.buttonText}>Debug</Text>
-            </View>
-          </Pressable>
-          <Pressable onPress={() => navigation.navigate("FoodLibrary")}>
-            <View style={styles.button}>
-              <Text style={styles.buttonText}>Local Food Item Library</Text>
-            </View>
-          </Pressable>
+
+        <Text style={styles.sectionTitle}>Debug Menu</Text>
+        <View style={styles.sectionCard}>
+          <MoreActionRow
+            description="Edit the visible Food Diary timeline hours from the debug area instead of inside the diary."
+            icon={
+              <ClockIcon
+                size={18}
+                color={appColors.foodPrimaryDark}
+                weight="fill"
+              />
+            }
+            onPress={() => navigation.navigate("DiaryHoursDebugScreen")}
+            title="Diary timeline hours"
+            value={diaryHoursLabel}
+          />
+          <MoreActionRow
+            description="Inspect database counts, seed sample data, and run debug presets."
+            icon={
+              <BugIcon
+                size={18}
+                color={appColors.foodPrimaryDark}
+                weight="fill"
+              />
+            }
+            onPress={() => navigation.navigate("SettingsScreen")}
+            title="Debug tools"
+            value="Open"
+          />
+          <MoreActionRow
+            description="Browse saved local food items already stored on the device."
+            icon={
+              <DatabaseIcon
+                size={18}
+                color={appColors.foodPrimaryDark}
+                weight="fill"
+              />
+            }
+            onPress={() => navigation.navigate("FoodLibrary")}
+            title="Local Food Item Library"
+            value="Browse"
+          />
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: appColors.slate50,
+  },
   content: {
     paddingHorizontal: 20,
+  },
+  orbTop: {
+    position: "absolute",
+    top: -78,
+    right: -54,
+    width: 200,
+    height: 200,
+    borderRadius: 999,
+    backgroundColor: appColors.foodOrbTop,
+  },
+  orbBottom: {
+    position: "absolute",
+    left: -70,
+    bottom: -92,
+    width: 230,
+    height: 230,
+    borderRadius: 999,
+    backgroundColor: appColors.foodOrbBottom,
   },
   heroCard: {
     backgroundColor: appColors.white,
     borderRadius: 8,
-    paddingVertical: 20,
-    paddingHorizontal: 6,
-    marginBottom: 18,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: appColors.slate200,
+    marginBottom: 14,
   },
-  heroTopBar: {
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 44,
-    marginBottom: 18,
+  eyebrow: {
+    alignSelf: "flex-start",
+    color: appColors.foodPrimaryDark,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    backgroundColor: appColors.foodEyebrowBg,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 999,
+    marginBottom: 12,
   },
   heroTitle: {
-    color: appColors.plum900,
-    fontSize: 24,
-    lineHeight: 28,
+    color: appColors.slate900,
+    fontSize: 31,
+    lineHeight: 36,
     fontWeight: "800",
-    textAlign: "center",
+    marginBottom: 8,
   },
-  button: {
-    paddingVertical: 14,
-    paddingHorizontal: 4,
-    marginHorizontal: 6,
-    borderTopWidth: 1,
-    borderColor: appColors.raw_hex_ececec,
+  heroMetrics: {
+    marginTop: 18,
+    flexDirection: "row",
+    gap: 10,
   },
-  buttonText: {
-    fontSize: 14,
+  metricCard: {
+    flex: 1,
+    borderRadius: 8,
+    backgroundColor: appColors.foodFieldBg,
+    padding: 14,
+  },
+  metricLabel: {
+    color: appColors.slate500,
+    fontSize: 11,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: 8,
+  },
+  metricValue: {
+    color: appColors.slate900,
+    fontSize: 16,
     fontWeight: "600",
-    letterSpacing: 2,
   },
-  title: {
-    fontWeight: "700",
-    fontSize: 18,
-    marginBottom: 12,
-    marginTop: 24,
+  metricValueSmall: {
+    color: appColors.slate900,
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: "800",
+  },
+  sectionTitle: {
+    color: appColors.slate900,
+    fontSize: 20,
+    fontWeight: "800",
+    marginTop: 18,
+    marginBottom: 10,
+  },
+  sectionCard: {
+    backgroundColor: appColors.white,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: appColors.slate200,
+    overflow: "hidden",
+  },
+  actionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: appColors.slate100,
+  },
+  actionRowPressed: {
+    opacity: 0.94,
+  },
+  actionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: appColors.foodEyebrowBg,
+  },
+  actionCopy: {
+    flex: 1,
+  },
+  actionTitle: {
+    color: appColors.slate900,
+    fontSize: 15,
+    fontWeight: "800",
+    marginBottom: 4,
+  },
+  actionDescription: {
+    color: appColors.slate600,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  actionMeta: {
+    alignItems: "flex-end",
+    gap: 4,
+    marginLeft: 8,
+  },
+  actionValue: {
+    color: appColors.foodPrimaryDark,
+    fontSize: 12,
+    fontWeight: "800",
+    textAlign: "right",
+  },
+  actionArrow: {
+    color: appColors.slate400,
+    fontSize: 22,
+    lineHeight: 22,
+    fontWeight: "400",
   },
 });
+
 export default MoreScreen;

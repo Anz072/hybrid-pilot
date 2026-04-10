@@ -76,6 +76,7 @@ type FoodEntryFormProps = {
   primaryActionIcon?: React.ReactNode;
   primaryActionLabel: string;
   secondaryAction?: FoodEntryFormSecondaryAction;
+  showPrimaryAction?: boolean;
   slot: FoodEntryFormSlot;
 };
 
@@ -111,6 +112,7 @@ const FoodEntryForm = ({
   primaryActionIcon,
   primaryActionLabel,
   secondaryAction,
+  showPrimaryAction = true,
   slot,
 }: FoodEntryFormProps) => {
   const renderSlotContent = () => (
@@ -244,18 +246,20 @@ const FoodEntryForm = ({
         </View>
       </View>
 
-      <Pressable
-        onPress={onPrimaryAction}
-        disabled={primaryActionDisabled}
-        style={({ pressed }) => [
-          styles.primaryButton,
-          primaryActionDisabled && styles.disabled,
-          pressed && !primaryActionDisabled && styles.cardPressed,
-        ]}
-      >
-        {primaryActionIcon}
-        <Text style={styles.primaryButtonText}>{primaryActionLabel}</Text>
-      </Pressable>
+      {showPrimaryAction ? (
+        <Pressable
+          onPress={onPrimaryAction}
+          disabled={primaryActionDisabled}
+          style={({ pressed }) => [
+            styles.primaryButton,
+            primaryActionDisabled && styles.disabled,
+            pressed && !primaryActionDisabled && styles.cardPressed,
+          ]}
+        >
+          {primaryActionIcon}
+          <Text style={styles.primaryButtonText}>{primaryActionLabel}</Text>
+        </Pressable>
+      ) : null}
 
       {secondaryAction ? (
         <Pressable

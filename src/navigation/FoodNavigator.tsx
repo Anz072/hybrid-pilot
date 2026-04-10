@@ -5,6 +5,7 @@ import AddFoodScreen from "../screens/Food/AddFoodScreen";
 import EditFoodEntryScreen from "../screens/Food/EditFoodEntryScreen";
 import type { FoodStackParamList } from "./foodTypes";
 import CreateCustomFoodScreen from "../screens/Food/CreateCustomFoodScreen";
+import QuickAddFoodScreen from "../screens/Food/QuickAddFoodScreen";
 import ScannedFoodLogScreen from "../screens/Food/ScannedFoodLogScreen";
 
 const Stack = createNativeStackNavigator<FoodStackParamList>();
@@ -37,6 +38,7 @@ const FoodNavigator = () => {
         name="CreateCustomFood"
         component={CreateCustomFoodScreen}
       />
+      <Stack.Screen name="QuickAddFood" component={QuickAddFoodScreen} />
     </Stack.Navigator>
   );
 };

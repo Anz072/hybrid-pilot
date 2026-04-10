@@ -468,6 +468,43 @@ const migrations: Migration[] = [
     `);
     },
   },
+  {
+    version: 15,
+    name: "user_settings_daily_calorie_overrides",
+    up: async (db) => {
+      await db.execAsync(`
+      ALTER TABLE user_settings ADD COLUMN daily_calorie_overrides TEXT;
+    `);
+    },
+  },
+  {
+    version: 16,
+    name: "user_quick_food_log",
+    up: async (db) => {
+      await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS user_quick_food_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_external_id TEXT NOT NULL,
+        date TEXT NOT NULL,
+        logged_at TEXT NOT NULL,
+        meal_type TEXT,
+        name TEXT,
+        calories REAL NOT NULL,
+        protein_g REAL NOT NULL DEFAULT 0,
+        carbs_g REAL NOT NULL DEFAULT 0,
+        fat_g REAL NOT NULL DEFAULT 0,
+        alcohol_g REAL NOT NULL DEFAULT 0,
+        system_calculated_calories REAL,
+        is_energy_manually_set INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY(user_external_id) REFERENCES users(external_id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_user_quick_food_log_user_date
+      ON user_quick_food_log(user_external_id, date DESC);
+    `);
+    },
+  },
 ];
 
 const trackedTables = [
@@ -481,6 +518,7 @@ const trackedTables = [
   "food_items",
   "user_food_favorites",
   "user_food_log",
+  "user_quick_food_log",
   "activities",
   "custom_meals",
 ] as const;

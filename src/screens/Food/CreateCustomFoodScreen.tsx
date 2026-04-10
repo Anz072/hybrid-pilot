@@ -37,6 +37,7 @@ import {
   formatFoodLoggedTime,
   formatFoodMacro,
   formatFoodShortDate,
+  normalizePositiveFoodInput,
 } from "./foodUtils";
 import { appColors } from "../../theme/colors";
 
@@ -219,6 +220,12 @@ const CreateCustomFoodScreen = () => {
   );
   const parsedCarbs = React.useMemo(() => parseLocalizedNumber(carbs), [carbs]);
   const parsedFat = React.useMemo(() => parseLocalizedNumber(fat), [fat]);
+  const handleServingBlur = React.useCallback(() => {
+    setServingSize((current) => normalizePositiveFoodInput(current, 100));
+  }, []);
+  const handleCaloriesBlur = React.useCallback(() => {
+    setCalories((current) => normalizePositiveFoodInput(current, 1, 0));
+  }, []);
 
   const updateOptionalNutrient = React.useCallback(
     (key: keyof DBFoodNutrientDetails, value: string) => {
@@ -275,13 +282,16 @@ const CreateCustomFoodScreen = () => {
     }
 
     if (
-      [parsedServing, parsedCalories, parsedProtein, parsedCarbs, parsedFat].some(
+      [parsedServing, parsedCalories].some(
+        (value) => Number.isNaN(value) || value <= 0,
+      ) ||
+      [parsedProtein, parsedCarbs, parsedFat].some(
         (value) => Number.isNaN(value) || value < 0,
-      ) || parsedServing <= 0
+      )
     ) {
       Alert.alert(
         "Invalid numbers",
-        "Use a positive serving size and non-negative values for the nutrition fields.",
+        "Use a positive serving size and calories value. Macros can be zero, but they cannot be negative.",
       );
       return;
     }
@@ -451,6 +461,7 @@ const CreateCustomFoodScreen = () => {
                 placeholderTextColor={appColors.foodPlaceholder}
                 value={servingSize}
                 onChangeText={setServingSize}
+                onBlur={handleServingBlur}
                 keyboardType="decimal-pad"
               />
               <View style={styles.unitPill}>
@@ -474,6 +485,7 @@ const CreateCustomFoodScreen = () => {
                   placeholderTextColor={appColors.foodPlaceholder}
                   value={calories}
                   onChangeText={setCalories}
+                  onBlur={handleCaloriesBlur}
                   keyboardType="decimal-pad"
                 />
               </View>

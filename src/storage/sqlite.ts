@@ -505,6 +505,54 @@ const migrations: Migration[] = [
     `);
     },
   },
+  {
+    version: 17,
+    name: "user_recipes",
+    up: async (db) => {
+      await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS user_recipes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_external_id TEXT NOT NULL,
+        created_by_user_external_id TEXT NOT NULL,
+        linked_food_id INTEGER NOT NULL,
+        build_method TEXT NOT NULL DEFAULT 'scratch',
+        name TEXT NOT NULL,
+        description TEXT,
+        link_url TEXT,
+        prep_time_min REAL,
+        cook_time_min REAL,
+        servings REAL NOT NULL DEFAULT 1,
+        steps_json TEXT NOT NULL DEFAULT '[]',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY(user_external_id) REFERENCES users(external_id),
+        FOREIGN KEY(created_by_user_external_id) REFERENCES users(external_id),
+        FOREIGN KEY(linked_food_id) REFERENCES food_items(id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_user_recipes_user_updated
+      ON user_recipes(user_external_id, updated_at DESC);
+
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_user_recipes_linked_food
+      ON user_recipes(linked_food_id);
+
+      CREATE TABLE IF NOT EXISTS user_recipe_ingredients (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        recipe_id INTEGER NOT NULL,
+        food_id INTEGER NOT NULL,
+        amount REAL NOT NULL,
+        amount_unit TEXT,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY(recipe_id) REFERENCES user_recipes(id),
+        FOREIGN KEY(food_id) REFERENCES food_items(id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_user_recipe_ingredients_recipe_sort
+      ON user_recipe_ingredients(recipe_id, sort_order ASC);
+    `);
+    },
+  },
 ];
 
 const trackedTables = [
@@ -519,6 +567,8 @@ const trackedTables = [
   "user_food_favorites",
   "user_food_log",
   "user_quick_food_log",
+  "user_recipes",
+  "user_recipe_ingredients",
   "activities",
   "custom_meals",
 ] as const;
@@ -711,6 +761,8 @@ export const resetDb = async (): Promise<void> => {
     DROP TABLE IF EXISTS activities;
     DROP TABLE IF EXISTS user_food_favorites;
     DROP TABLE IF EXISTS user_food_log;
+    DROP TABLE IF EXISTS user_recipe_ingredients;
+    DROP TABLE IF EXISTS user_recipes;
     DROP TABLE IF EXISTS custom_meals;
     DROP TABLE IF EXISTS food_items;
     DROP TABLE IF EXISTS weight_goals;

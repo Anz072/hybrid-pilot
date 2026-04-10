@@ -7,6 +7,7 @@ type FoodDiaryMoreSectionProps = {
   selectedHour: number;
   onCopyYesterday: () => void;
   onQuickAddFood: () => void;
+  onCreateRecipe: () => void;
   onCreateCustomFood: () => void;
 };
 
@@ -14,6 +15,7 @@ const FoodDiaryMoreSection = ({
   selectedHour,
   onCopyYesterday,
   onQuickAddFood,
+  onCreateRecipe,
   onCreateCustomFood,
 }: FoodDiaryMoreSectionProps) => {
   return (
@@ -88,12 +90,6 @@ const FoodDiaryMoreSection = ({
             })}
           </ScrollView>
         </View> */}
-        <View style={styles.infoCard}>
-          <Text style={styles.moreTitle}>Timeline hours moved</Text>
-          <Text style={styles.moreText}>
-            Adjust the visible diary range from More in the Debug Menu.
-          </Text>
-        </View>
         <Pressable
           onPress={onQuickAddFood}
           style={({ pressed }) => [
@@ -110,6 +106,23 @@ const FoodDiaryMoreSection = ({
           </View>
           <View style={[styles.morePill, styles.morePillAccent]}>
             <Text style={styles.morePillText}>Quick</Text>
+          </View>
+        </Pressable>
+        <Pressable
+          onPress={onCreateRecipe}
+          style={({ pressed }) => [
+            styles.moreRow,
+            pressed && styles.cardPressed,
+          ]}
+        >
+          <View style={styles.moreCopy}>
+            <Text style={styles.moreTitle}>Create recipe</Text>
+            <Text style={styles.moreText}>
+              Build a reusable recipe and log one serving into {formatFoodHourLabel(selectedHour)}.
+            </Text>
+          </View>
+          <View style={styles.morePill}>
+            <Text style={styles.morePillText}>Recipe</Text>
           </View>
         </Pressable>
         <Pressable

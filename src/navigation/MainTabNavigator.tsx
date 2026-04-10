@@ -22,6 +22,7 @@ import MoreNavigator, { type MoreParamList } from "./MoreNavigator";
 import type { RootStackParamList } from "./AppNavigator";
 import {
   BarcodeIcon,
+  CookingPotIcon,
   DotsThreeCircleIcon,
   FireIcon,
   ForkKnifeIcon,
@@ -58,7 +59,7 @@ export type MainTabParamList = {
 
 const FOCUSED_COLOR = appColors.tabFocused;
 const UNFOCUSED_COLOR = appColors.neutral900;
-const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.3);
+const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.6);
 const Tab = createBottomTabNavigator<MainTabParamList>();
 type RootNavigation = NativeStackNavigationProp<RootStackParamList>;
 
@@ -114,7 +115,7 @@ const MainTabNavigator = () => {
   }, [closeShortcuts]);
 
   const handleShortcutPress = React.useCallback(
-    (shortcut: "search" | "barcode" | "weight" | "quick_add") => {
+    (shortcut: "search" | "barcode" | "weight" | "quick_add" | "recipe") => {
       if (shortcut === "weight") {
         closeShortcuts(() => setWeightModalVisible(true));
       } else if (shortcut === "barcode") {
@@ -130,6 +131,23 @@ const MainTabNavigator = () => {
 
         closeShortcuts(() =>
           rootNavigation.navigate("QuickAddFood", {
+            contextLabel: formatFoodLoggedTime(loggedAt),
+            date,
+            loggedAt,
+            mealType: null,
+          }),
+        );
+      } else if (shortcut === "recipe") {
+        const now = new Date();
+        const date = formatFoodDateKey(now);
+        const loggedAt = buildFoodLoggedAt(
+          date,
+          now.getHours(),
+          now.getMinutes(),
+        );
+
+        closeShortcuts(() =>
+          rootNavigation.navigate("CreateRecipe", {
             contextLabel: formatFoodLoggedTime(loggedAt),
             date,
             loggedAt,
@@ -413,6 +431,23 @@ const MainTabNavigator = () => {
               </Pressable>
 
               <Pressable
+                onPress={() => handleShortcutPress("recipe")}
+                style={({ pressed }) => [
+                  styles.shortcutCard,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <View style={styles.shortcutIconWrap}>
+                  <CookingPotIcon
+                    size={26}
+                    color={appColors.white}
+                    weight="fill"
+                  />
+                </View>
+                <Text style={styles.shortcutLabel}>Recipe</Text>
+              </Pressable>
+
+              <Pressable
                 onPress={() => handleShortcutPress("barcode")}
                 style={({ pressed }) => [
                   styles.shortcutCard,
@@ -544,7 +579,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   shortcutCard: {
-    width: "47%",
+    width: "30%",
     alignItems: "center",
     gap: 12,
   },
@@ -558,8 +593,9 @@ const styles = StyleSheet.create({
   },
   shortcutLabel: {
     color: appColors.white,
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "800",
+    textAlign: "center",
   },
   pressed: {
     opacity: 0.88,

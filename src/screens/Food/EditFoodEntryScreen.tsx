@@ -32,6 +32,7 @@ import {
   formatFoodMacro,
   formatFoodServing,
   formatFoodShortDate,
+  normalizePositiveFoodInput,
 } from "./foodUtils";
 import { appColors } from "../../theme/colors";
 
@@ -110,6 +111,15 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
       quantityG: quantity,
     });
   }, [entry, quantity]);
+  const handleQuantityBlur = React.useCallback(() => {
+    if (!entry) {
+      return;
+    }
+
+    setQuantityValue((current) =>
+      normalizePositiveFoodInput(current, entry.quantityG),
+    );
+  }, [entry]);
 
   const handleTimeChange = React.useCallback(
     (event: DateTimePickerEvent, nextDate?: Date) => {
@@ -276,6 +286,7 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
             amountValue={quantityValue}
             detailsSubtitle="Adjust the amount, logged time, or label for this entry."
             onChangeAmount={setQuantityValue}
+            onAmountBlur={handleQuantityBlur}
             slot={{
               icon: <ClockIcon size={18} color={appColors.foodPrimary} weight="bold" />,
               label: "Logged time",

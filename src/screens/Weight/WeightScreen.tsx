@@ -44,6 +44,7 @@ import WeightTrendChart from "./WeightTrendChart";
 import {
   DEFAULT_GOAL_BAND_KG,
   type WeightRangeKey,
+  collapseEntriesByLocalDate,
   computeGoalProgress,
   computeMovingAverage,
   computeWeeklyPaceToGoal,
@@ -53,7 +54,6 @@ import {
   formatWeightKg,
   generateUuid,
   getLocalDateKey,
-  groupEntriesByLocalDate,
   parseDateOnly,
   parseLocalizedWeight,
   roundWeightKg,
@@ -76,12 +76,6 @@ type InsightCardProps = {
   value: string;
   detail: string;
   explanation: string;
-};
-
-type HistorySection = {
-  title: string;
-  key: string;
-  data: DBWeightEntry[];
 };
 
 const confirmAsync = (
@@ -252,7 +246,10 @@ const WeightScreen = ({
   }, [snackbar]);
 
   const activeEntries = React.useMemo(
-    () => allEntries.filter((entry) => entry.deletedAt == null),
+    () =>
+      collapseEntriesByLocalDate(
+        allEntries.filter((entry) => entry.deletedAt == null),
+      ),
     [allEntries],
   );
 
@@ -305,14 +302,16 @@ const WeightScreen = ({
           previewGoal,
         )
       : null;
-  const historySections = React.useMemo<HistorySection[]>(
-    () => groupEntriesByLocalDate(historyEntries),
-    [historyEntries],
+  const visibleHistorySections = React.useMemo(
+    () =>
+      hideHistory
+        ? []
+        : [{ title: "", key: "history", data: historyEntries }],
+    [hideHistory, historyEntries],
   );
-  const visibleHistorySections = hideHistory ? [] : historySections;
   const collapsedHistoryText =
     historyEntries.length > 0
-      ? `History is hidden. Expand to browse ${historyEntries.length} entries in your full log.`
+      ? `History is hidden. Expand to browse ${historyEntries.length} daily check-ins. Saving again on the same day replaces the earlier entry.`
       : "History is hidden. Log your first weight entry to build a timeline.";
 
   const consistencyPerWeek = React.useMemo(() => {
@@ -967,7 +966,7 @@ const WeightScreen = ({
               <Text style={styles.dashboardSectionTitle}>History</Text>
               <Text style={styles.sectionCaption}>
                 {historyEntries.length > 0
-                  ? `${historyEntries.length} entries in your log.`
+                  ? `${historyEntries.length} daily check-ins. New saves on the same day replace the earlier entry.`
                   : "Your weight history will appear here once you log an entry."}
               </Text>
             </View>
@@ -1003,7 +1002,7 @@ const WeightScreen = ({
       <SectionList
         sections={visibleHistorySections}
         keyExtractor={(item) => item.id}
-        stickySectionHeadersEnabled={!hideHistory}
+        stickySectionHeadersEnabled={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -1027,11 +1026,6 @@ const WeightScreen = ({
             </View>
           )
         }
-        renderSectionHeader={({ section }) => (
-          <View style={styles.stickyHeader}>
-            <Text style={styles.stickyHeaderText}>{section.title}</Text>
-          </View>
-        )}
         renderItem={({ item }) => {
           const selected = item.id === selectedEntryId;
           const statusLabel =

@@ -7,6 +7,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { Swipeable } from "react-native-gesture-handler";
 import Svg, { Path } from "react-native-svg";
 import {
   CaretDoubleLeftIcon,
@@ -14,7 +15,7 @@ import {
   CaretDownIcon,
   CaretUpIcon,
   FireIcon,
-  XIcon,
+  TrashIcon,
 } from "phosphor-react-native";
 import type { DBUser, DBUserFoodLogEntry } from "../../store/DB_TYPES";
 import type { FoodDiaryHourBucket } from "./foodDiaryTypes";
@@ -200,55 +201,61 @@ const FoodDiaryTimelineItem = ({
                 );
 
                 return (
-                  <Pressable
+                  <Swipeable
                     key={entry.id}
-                    style={styles.entryCard}
-                    onPress={(event) =>
-                      runWithoutToggling(event, () => onEditEntry(entry))
-                    }
+                    overshootRight={false}
+                    renderRightActions={() => (
+                      <Pressable
+                        onPress={() => onDeleteEntry(entry.id)}
+                        style={({ pressed }) => [
+                          styles.deleteSwipe,
+                          pressed && styles.cardPressed,
+                        ]}
+                        accessibilityLabel={`Delete ${entry.foodName} entry`}
+                      >
+                        <TrashIcon
+                          size={18}
+                          color={appColors.white}
+                          weight="bold"
+                        />
+                        <Text style={styles.deleteSwipeText}>Delete</Text>
+                      </Pressable>
+                    )}
                   >
-                    <View style={styles.entryMain}>
-                      <View style={styles.rowBetween}>
-                        <View style={styles.entryCopy}>
-                          <Text style={styles.entryTitle} numberOfLines={2}>
-                            {entry.foodName}
+                    <Pressable
+                      style={styles.entryCard}
+                      onPress={(event) =>
+                        runWithoutToggling(event, () => onEditEntry(entry))
+                      }
+                    >
+                      <View style={styles.entryMain}>
+                        <View style={styles.rowBetween}>
+                          <View style={styles.entryCopy}>
+                            <Text style={styles.entryTitle} numberOfLines={2}>
+                              {entry.foodName}
+                            </Text>
+                            {entry.entrySource === "quick_add" ? (
+                              <View style={styles.entryTag}>
+                                <Text style={styles.entryTagText}>Quick Add</Text>
+                              </View>
+                            ) : null}
+                          </View>
+                        </View>
+                        <View style={styles.entryMetaRow}>
+                          <Text style={styles.entryText}>{time}</Text>
+                          <Text style={styles.entryText}>|</Text>
+                          <Text style={styles.entryText}>
+                            {entry.entrySource === "quick_add"
+                              ? `${entry.mealType?.trim() || "One-time entry"} | ${nutrition.calories} kcal`
+                              : `${formatFoodServing(
+                                  entry.quantityG,
+                                  entry.servingUnit,
+                                )} | ${nutrition.calories} kcal`}
                           </Text>
-                          {entry.entrySource === "quick_add" ? (
-                            <View style={styles.entryTag}>
-                              <Text style={styles.entryTagText}>Quick Add</Text>
-                            </View>
-                          ) : null}
-                        </View>
-                        <View style={styles.entryActions}>
-                          <Pressable
-                            onPress={(event) =>
-                              runWithoutToggling(event, () =>
-                                onDeleteEntry(entry.id),
-                              )
-                            }
-                            style={({ pressed }) => [
-                              styles.iconButton,
-                              pressed && styles.cardPressed,
-                            ]}
-                          >
-                            <XIcon size={18} color={appColors.neutral300} />
-                          </Pressable>
                         </View>
                       </View>
-                      <View style={styles.entryMetaRow}>
-                        <Text style={styles.entryText}>{time}</Text>
-                        <Text style={styles.entryText}>|</Text>
-                        <Text style={styles.entryText}>
-                          {entry.entrySource === "quick_add"
-                            ? `${entry.mealType?.trim() || "One-time entry"} | ${nutrition.calories} kcal`
-                            : `${formatFoodServing(
-                                entry.quantityG,
-                                entry.servingUnit,
-                              )} | ${nutrition.calories} kcal`}
-                        </Text>
-                      </View>
-                    </View>
-                  </Pressable>
+                    </Pressable>
+                  </Swipeable>
                 );
               })
             ) : (
@@ -631,6 +638,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "900",
     marginBottom: 12,
+    marginTop: 18,
   },
   timeline: {
     gap: 8,
@@ -786,14 +794,19 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
-  entryActions: {
-    justifyContent: "space-between",
-    gap: 8,
-    marginTop: -5,
-  },
-  iconButton: {
+  deleteSwipe: {
+    width: 96,
+    borderRadius: 8,
+    backgroundColor: appColors.danger700,
     alignItems: "center",
     justifyContent: "center",
+    gap: 6,
+    marginLeft: 8,
+  },
+  deleteSwipeText: {
+    color: appColors.white,
+    fontSize: 12,
+    fontWeight: "800",
   },
   cardPressed: {
     opacity: 0.9,

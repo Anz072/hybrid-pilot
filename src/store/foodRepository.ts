@@ -15,11 +15,12 @@ const FOOD_SOURCES: FoodSource[] = [
   "open_food_facts",
   "import",
   "usda",
+  "recipe",
 ];
 
 const NUTRITION_BASES: NutritionBasis[] = ["100g", "100ml", "serving"];
 
-const FOOD_NUTRIENT_COLUMNS = [
+export const FOOD_NUTRIENT_COLUMNS = [
   ["fiberG", "fiber_g"],
   ["sugarG", "sugar_g"],
   ["addedSugarsG", "added_sugars_g"],

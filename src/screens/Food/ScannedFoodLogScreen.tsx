@@ -45,6 +45,7 @@ import {
   formatFoodSourceLabel,
   getFoodDefaultLogAmount,
   getFoodResolvedServing,
+  normalizePositiveFoodInput,
   type FoodNutritionTotals,
 } from "./foodUtils";
 import { appColors } from "../../theme/colors";
@@ -169,6 +170,15 @@ const ScannedFoodLogScreen = () => {
     () => (food ? buildPreview(food, quantity) : null),
     [food, quantity],
   );
+  const handleQuantityBlur = React.useCallback(() => {
+    if (!food) {
+      return;
+    }
+
+    setQuantityValue((current) =>
+      normalizePositiveFoodInput(current, getFoodDefaultLogAmount(food)),
+    );
+  }, [food]);
   const loggedTime = React.useMemo(
     () => formatFoodLoggedTime(loggedAtDate.toISOString()),
     [loggedAtDate],
@@ -403,6 +413,7 @@ const ScannedFoodLogScreen = () => {
           amountValue={quantityValue}
           detailsSubtitle="Set the amount, logged time, and slot before adding this food."
           onChangeAmount={setQuantityValue}
+          onAmountBlur={handleQuantityBlur}
           slot={{
             icon: (
               <ClockIcon

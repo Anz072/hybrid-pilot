@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     color: appColors.foodText,
     fontSize: 22,
     fontWeight: "900",
-    marginBottom: 12,
+    marginBottom: 16,
   },
   sectionText: {
     color: appColors.foodMuted,

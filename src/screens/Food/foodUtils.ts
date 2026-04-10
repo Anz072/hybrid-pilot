@@ -124,6 +124,27 @@ export const formatFoodNumber = (
   return `${roundTo(value, places).toFixed(places)}${suffix}`;
 };
 
+export const normalizePositiveFoodInput = (
+  value: string,
+  fallback: number,
+  places = 1,
+): string => {
+  const parsed = Number(value.trim().replace(",", "."));
+
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return value;
+  }
+
+  const safeFallback =
+    Number.isFinite(fallback) && fallback > 0 ? roundTo(fallback, places) : 1;
+
+  if (Number.isInteger(safeFallback)) {
+    return String(safeFallback);
+  }
+
+  return String(safeFallback);
+};
+
 export const getFoodResolvedServing = (
   food: Pick<DBFoodItem, "nutritionBasis" | "servingSizeValue" | "servingSizeUnit">,
 ) => {
@@ -153,6 +174,8 @@ export const formatFoodMacro = (
 
 export const formatFoodSourceLabel = (source: string): string => {
   switch (source) {
+    case "recipe":
+      return "Recipe";
     case "custom":
       return "Custom";
     case "manual":

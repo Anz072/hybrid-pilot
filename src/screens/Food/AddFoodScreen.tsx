@@ -20,6 +20,7 @@ import {
   CaretDownIcon,
   CaretUpIcon,
   CalendarIcon,
+  CookingPotIcon,
   ForkKnifeIcon,
   LightningIcon,
   MagnifyingGlassIcon,
@@ -65,6 +66,7 @@ type SearchFoodResult = SaveFoodItemInput & {
 };
 
 type FoodSearchSectionKey = "favorites" | "recent";
+type FoodSearchMode = "all" | "recipes";
 
 const DEFAULT_SECTION_STATE: FoodSearchSectionState = {
   favoritesExpanded: true,
@@ -75,6 +77,9 @@ const SEARCH_DEBOUNCE_MS = 350;
 const REMOTE_SEARCH_MIN_QUERY_LENGTH = 3;
 const REMOTE_BARCODE_QUERY_PATTERN = /^\d{8,}$/;
 const MAX_SEARCH_RESULTS = 30;
+
+const getSearchCacheKey = (mode: FoodSearchMode, query: string) =>
+  `${mode}:${query}`;
 
 const getFoodIdentityKey = ({
   barcode,
@@ -328,8 +333,10 @@ const AddFoodScreen = () => {
   const [results, setResults] = useState<SearchFoodResult[]>([]);
   const [recent, setRecent] = useState<DBFoodItem[]>([]);
   const [favorites, setFavorites] = useState<DBFoodItem[]>([]);
+  const [recipes, setRecipes] = useState<DBFoodItem[]>([]);
   const [scannerVisible, setScannerVisible] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [searchMode, setSearchMode] = useState<FoodSearchMode>("all");
   const [sectionState, setSectionState] =
     useState<FoodSearchSectionState>(DEFAULT_SECTION_STATE);
   const searchCacheRef = React.useRef(new Map<string, SearchFoodResult[]>());
@@ -338,54 +345,69 @@ const AddFoodScreen = () => {
     const currentUser = await DB.getUser();
     setUser(currentUser);
 
+    const recipeFoodsPromise = DB.listFoodItems({
+      source: "recipe",
+      limit: 60,
+    });
+
     if (!currentUser) {
+      setRecipes(await recipeFoodsPromise);
       setRecent([]);
       setFavorites([]);
       return;
     }
 
-    const [recentFoods, favoriteFoods] = await Promise.all([
+    const [recentFoods, favoriteFoods, recipeFoods] = await Promise.all([
       DB.getRecentFoodItems(currentUser.externalId, 10),
       DB.getFavoriteFoodItems(currentUser.externalId, 10),
+      recipeFoodsPromise,
     ]);
 
     setRecent(recentFoods);
     setFavorites(favoriteFoods);
+    setRecipes(recipeFoods);
   }, []);
 
-  const searchFoods = useCallback(async (normalizedQuery: string) => {
-    const cachedResults = searchCacheRef.current.get(normalizedQuery);
-    if (cachedResults) {
-      return cachedResults;
-    }
+  const searchFoods = useCallback(
+    async (normalizedQuery: string, mode: FoodSearchMode) => {
+      const cacheKey = getSearchCacheKey(mode, normalizedQuery);
+      const cachedResults = searchCacheRef.current.get(cacheKey);
+      if (cachedResults) {
+        return cachedResults;
+      }
 
-    const [localRows, remoteRows] = await Promise.all([
-      DB.searchFoodItems(normalizedQuery, 40),
-      shouldSearchRemotely(normalizedQuery)
-        ? API.usdaAPI.getFood(normalizedQuery, { pageSize: 12 })
-        : Promise.resolve([]),
-    ]);
+      const [localRows, remoteRows] = await Promise.all([
+        DB.searchFoodItems(normalizedQuery, 40),
+        mode === "all" && shouldSearchRemotely(normalizedQuery)
+          ? API.usdaAPI.getFood(normalizedQuery, { pageSize: 12 })
+          : Promise.resolve([]),
+      ]);
 
-    const localResults = localRows.map(fromDbFoodItem);
-    const localKeys = new Set(localResults.flatMap(getSearchResultDedupeKeys));
-    const remoteResults = remoteRows
-      .filter(
-        (food) =>
-          getSearchResultDedupeKeys(toSearchFoodResult(food, null)).every(
-            (key) => !localKeys.has(key),
-          ),
-      )
-      .map((food) => toSearchFoodResult(food, null));
+      const localResults = localRows
+        .filter((food) =>
+          mode === "recipes" ? food.source === "recipe" : true,
+        )
+        .map(fromDbFoodItem);
+      const localKeys = new Set(localResults.flatMap(getSearchResultDedupeKeys));
+      const remoteResults = remoteRows
+        .filter(
+          (food) =>
+            getSearchResultDedupeKeys(toSearchFoodResult(food, null)).every(
+              (key) => !localKeys.has(key),
+            ),
+        )
+        .map((food) => toSearchFoodResult(food, null));
 
-    const rankedResults = rankSearchResults(normalizedQuery, [
-      ...localResults,
-      ...remoteResults,
-    ]);
+      const rankedResults = rankSearchResults(normalizedQuery, [
+        ...localResults,
+        ...remoteResults,
+      ]);
+      searchCacheRef.current.set(cacheKey, rankedResults);
 
-    searchCacheRef.current.set(normalizedQuery, rankedResults);
-
-    return rankedResults;
-  }, []);
+      return rankedResults;
+    },
+    [],
+  );
 
   const persistFoodIfNeeded = useCallback(async (food: SearchFoodResult) => {
     if (food.localId != null) {
@@ -437,7 +459,9 @@ const AddFoodScreen = () => {
         return;
       }
 
-      const cachedResults = searchCacheRef.current.get(normalized);
+      const cachedResults = searchCacheRef.current.get(
+        getSearchCacheKey(searchMode, normalized),
+      );
       if (cachedResults) {
         setResults(cachedResults);
         setIsSearching(false);
@@ -445,7 +469,7 @@ const AddFoodScreen = () => {
       }
 
       setIsSearching(true);
-      const rows = await searchFoods(normalized);
+      const rows = await searchFoods(normalized, searchMode);
       if (!cancelled) {
         setResults(rows);
         setIsSearching(false);
@@ -460,7 +484,7 @@ const AddFoodScreen = () => {
       cancelled = true;
       clearTimeout(timeout);
     };
-  }, [query, searchFoods]);
+  }, [query, searchFoods, searchMode]);
 
   const favoriteIds = useMemo(
     () => new Set(favorites.map((food) => food.id)),
@@ -473,6 +497,7 @@ const AddFoodScreen = () => {
   );
 
   const recentResults = useMemo(() => recent.map(fromDbFoodItem), [recent]);
+  const recipeResults = useMemo(() => recipes.map(fromDbFoodItem), [recipes]);
 
   const resolvedLoggedAt = useMemo(() => {
     if (loggedAt) {
@@ -526,6 +551,15 @@ const AddFoodScreen = () => {
     });
   }, [date, mealType, navigation, resolvedContextLabel, resolvedLoggedAt]);
 
+  const openCreateRecipe = useCallback(() => {
+    navigation.navigate("CreateRecipe", {
+      contextLabel: resolvedContextLabel,
+      date,
+      loggedAt: resolvedLoggedAt,
+      mealType,
+    });
+  }, [date, mealType, navigation, resolvedContextLabel, resolvedLoggedAt]);
+
   const openFoodEditor = async (food: SearchFoodResult) => {
     if (!user) {
       Alert.alert(
@@ -563,15 +597,25 @@ const AddFoodScreen = () => {
     await Promise.all([
       loadStaticLists(),
       query.trim()
-        ? searchFoods(query.trim()).then(setResults)
+        ? searchFoods(query.trim(), searchMode).then(setResults)
         : Promise.resolve(),
     ]);
   };
 
-  const activeResults = useMemo(
-    () => (query.trim() ? results : []),
-    [query, results],
-  );
+  const activeResults = useMemo(() => {
+    if (query.trim()) {
+      return results;
+    }
+
+    if (searchMode === "recipes") {
+      return recipeResults;
+    }
+
+    return [];
+  }, [query, recipeResults, results, searchMode]);
+  const searchPlaceholder =
+    searchMode === "recipes" ? "Search recipes" : "Search foods";
+  const shouldShowScanner = searchMode === "all";
 
   const toggleSection = useCallback((section: FoodSearchSectionKey) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -764,7 +808,7 @@ const AddFoodScreen = () => {
           <View style={styles.heroHeaderRow}>
             <View style={styles.heroHeaderCopy}>
               <Text style={styles.heroText}>
-                Search your library, quick add a one-off entry, scan a barcode, or open a custom food.
+                Search your library, quick add a one-off entry, create a recipe, scan a barcode, or open a custom food.
               </Text>
             </View>
           </View>
@@ -783,6 +827,20 @@ const AddFoodScreen = () => {
               </Text>
             </Pressable>
             <Pressable
+              onPress={openCreateRecipe}
+              style={({ pressed }) => [
+                styles.heroAction,
+                pressed && styles.cardPressed,
+              ]}
+            >
+              <CookingPotIcon
+                size={15}
+                color={appColors.foodPrimaryDark}
+                weight="fill"
+              />
+              <Text style={styles.heroActionText}>Recipe</Text>
+            </Pressable>
+            <Pressable
               onPress={openCreateCustomFood}
               style={({ pressed }) => [
                 styles.heroAction,
@@ -790,6 +848,51 @@ const AddFoodScreen = () => {
               ]}
             >
               <Text style={styles.heroActionText}>Custom</Text>
+            </Pressable>
+          </View>
+          <View style={styles.searchModeRow}>
+            <Pressable
+              onPress={() => setSearchMode("all")}
+              style={({ pressed }) => [
+                styles.searchModePill,
+                searchMode === "all" && styles.searchModePillActive,
+                pressed && styles.cardPressed,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.searchModeText,
+                  searchMode === "all" && styles.searchModeTextActive,
+                ]}
+              >
+                All foods
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setSearchMode("recipes")}
+              style={({ pressed }) => [
+                styles.searchModePill,
+                searchMode === "recipes" && styles.searchModePillActive,
+                pressed && styles.cardPressed,
+              ]}
+            >
+              <CookingPotIcon
+                size={14}
+                color={
+                  searchMode === "recipes"
+                    ? appColors.white
+                    : appColors.foodPrimary
+                }
+                weight="fill"
+              />
+              <Text
+                style={[
+                  styles.searchModeText,
+                  searchMode === "recipes" && styles.searchModeTextActive,
+                ]}
+              >
+                Recipes
+              </Text>
             </Pressable>
           </View>
           <View style={styles.contextRow}>
@@ -813,7 +916,7 @@ const AddFoodScreen = () => {
             <View style={styles.searchInputWrap}>
               <MagnifyingGlassIcon size={18} color={appColors.foodPlaceholder} weight="bold" />
               <TextInput
-                placeholder="Search foods"
+                placeholder={searchPlaceholder}
                 placeholderTextColor={appColors.foodPlaceholder}
                 value={query}
                 onChangeText={setQuery}
@@ -821,18 +924,26 @@ const AddFoodScreen = () => {
                 returnKeyType="search"
               />
             </View>
-            <Pressable
-              onPress={() => setScannerVisible(true)}
-              style={({ pressed }) => [
-                styles.scanButton,
-                pressed && styles.cardPressed,
-              ]}
-            >
-              <BarcodeIcon size={20} color={appColors.white} weight="bold" />
-            </Pressable>
+            {shouldShowScanner ? (
+              <Pressable
+                onPress={() => setScannerVisible(true)}
+                style={({ pressed }) => [
+                  styles.scanButton,
+                  pressed && styles.cardPressed,
+                ]}
+              >
+                <BarcodeIcon size={20} color={appColors.white} weight="bold" />
+              </Pressable>
+            ) : null}
           </View>
           <Text style={styles.searchHint}>
-            {query.trim()
+            {searchMode === "recipes"
+              ? query.trim()
+                ? isSearching
+                  ? "Searching your saved recipes..."
+                  : `${activeResults.length} saved recipes match this search.`
+                : "Browse only your saved recipes here, or search to filter them by name."
+              : query.trim()
               ? isSearching
                 ? "Searching your foods and USDA branded + generic foods..."
                 : `${activeResults.length} matches across local foods and USDA results.`
@@ -842,10 +953,21 @@ const AddFoodScreen = () => {
 
         {query.trim() ? (
           renderSection(
-            "Results",
-            "Pick a match and confirm the amount.",
+            searchMode === "recipes" ? "Recipes" : "Results",
+            searchMode === "recipes"
+              ? "Saved recipes matching your search."
+              : "Pick a match and confirm the amount.",
             activeResults,
-            "No foods matched that search yet.",
+            searchMode === "recipes"
+              ? "No recipes matched that search yet."
+              : "No foods matched that search yet.",
+          )
+        ) : searchMode === "recipes" ? (
+          renderSection(
+            "Recipes",
+            "Saved recipes you can add like any other food item.",
+            activeResults,
+            "No recipes yet. Create one above and it will show up here.",
           )
         ) : (
           <>
@@ -928,8 +1050,38 @@ const styles = StyleSheet.create({
   },
   heroActionRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
     marginBottom: 12,
+  },
+  searchModeRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 12,
+  },
+  searchModePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderRadius: 999,
+    backgroundColor: appColors.foodFieldBg,
+    borderWidth: 1,
+    borderColor: appColors.foodBorder,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  searchModePillActive: {
+    backgroundColor: appColors.foodPrimaryDark,
+    borderColor: appColors.foodPrimaryDark,
+  },
+  searchModeText: {
+    color: appColors.foodPrimary,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  searchModeTextActive: {
+    color: appColors.white,
   },
   heroEyebrow: {
     alignSelf: "flex-start",

@@ -37,6 +37,7 @@ import {
   calculateQuickAddCaloriesFromMacros,
   formatFoodLoggedTime,
   formatFoodShortDate,
+  normalizePositiveFoodInput,
 } from "./foodUtils";
 
 type QuickAddRoute = RouteProp<FoodStackParamList, "QuickAddFood">;
@@ -159,6 +160,17 @@ const QuickAddFoodScreen = () => {
     () => toSafeNumber(displayedEnergyValue),
     [displayedEnergyValue],
   );
+  const requiredEnergyFallback = React.useMemo(() => {
+    if (entry?.calories != null && entry.calories > 0) {
+      return entry.calories;
+    }
+
+    if (macroCalculatedCalories > 0) {
+      return macroCalculatedCalories;
+    }
+
+    return 1;
+  }, [entry?.calories, macroCalculatedCalories]);
   const resolvedName = nameValue.trim() || "Quick Add";
   const helperText = isEnergyManuallySet
     ? `System calculates ${macroCalculatedCalories.toFixed(0)} kcal from macros.`
@@ -271,6 +283,26 @@ const QuickAddFoodScreen = () => {
     route.params.entryId,
     route.params.mealType,
     user,
+  ]);
+
+  const handleEnergyBlur = React.useCallback(() => {
+    if (isEnergyManuallySet) {
+      setEnergyValue((current) =>
+        normalizePositiveFoodInput(current, requiredEnergyFallback, 0),
+      );
+      return;
+    }
+
+    if (macroCalculatedCalories <= 0) {
+      setEnergyValue(
+        normalizePositiveFoodInput("", requiredEnergyFallback, 0),
+      );
+      setIsEnergyManuallySet(true);
+    }
+  }, [
+    isEnergyManuallySet,
+    macroCalculatedCalories,
+    requiredEnergyFallback,
   ]);
 
   if (loading) {
@@ -406,6 +438,7 @@ const QuickAddFoodScreen = () => {
                   setEnergyValue(value);
                   setIsEnergyManuallySet(value.trim().length > 0);
                 }}
+                onBlur={handleEnergyBlur}
                 keyboardType="decimal-pad"
                 placeholder="0"
                 placeholderTextColor={appColors.foodPlaceholder}

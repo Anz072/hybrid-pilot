@@ -66,6 +66,7 @@ type FoodEntryFormProps = {
   nutritionItems: FoodEntryFormNutritionItem[];
   onBack: () => void;
   onChangeAmount: (value: string) => void;
+  onAmountBlur?: () => void;
   onChangeLabel: (value: string) => void;
   onPrimaryAction: () => void;
   previewCaloriesText: string;
@@ -102,6 +103,7 @@ const FoodEntryForm = ({
   nutritionItems,
   onBack,
   onChangeAmount,
+  onAmountBlur,
   onChangeLabel,
   onPrimaryAction,
   previewCaloriesText,
@@ -195,6 +197,7 @@ const FoodEntryForm = ({
             style={styles.input}
             value={amountValue}
             onChangeText={onChangeAmount}
+            onBlur={onAmountBlur}
             keyboardType={amountKeyboardType}
             placeholder={amountPlaceholder}
             placeholderTextColor={appColors.foodPlaceholder}

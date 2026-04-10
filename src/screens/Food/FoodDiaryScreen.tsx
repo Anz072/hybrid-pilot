@@ -368,6 +368,14 @@ const FoodDiaryScreen = () => {
             void copyYesterday();
           }}
           onQuickAddFood={() => openQuickAddAtHour(selectedHour)}
+          onCreateRecipe={() =>
+            navigation.navigate("CreateRecipe", {
+              contextLabel: formatFoodHourLabel(selectedHour),
+              date: dateKey,
+              loggedAt: buildFoodLoggedAt(dateKey, selectedHour),
+              mealType: null,
+            })
+          }
           onCreateCustomFood={() =>
             navigation.navigate("CreateCustomFood", {
               contextLabel: formatFoodHourLabel(selectedHour),

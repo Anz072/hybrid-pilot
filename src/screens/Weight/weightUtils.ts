@@ -108,6 +108,44 @@ export const formatLocalDateTimeLabel = (localIso: string): string =>
     minute: "2-digit",
   });
 
+export const collapseEntriesByLocalDate = (
+  entries: DBWeightEntry[],
+): DBWeightEntry[] => {
+  const latestByDate = new Map<string, DBWeightEntry>();
+
+  for (const entry of entries) {
+    const dateKey = getLocalDateKey(entry.measuredAtLocalIso);
+    const current = latestByDate.get(dateKey);
+
+    if (!current) {
+      latestByDate.set(dateKey, entry);
+      continue;
+    }
+
+    const entryMeasuredAt = new Date(entry.measuredAt).getTime();
+    const currentMeasuredAt = new Date(current.measuredAt).getTime();
+
+    if (entryMeasuredAt > currentMeasuredAt) {
+      latestByDate.set(dateKey, entry);
+      continue;
+    }
+
+    if (entryMeasuredAt === currentMeasuredAt) {
+      const entryUpdatedAt = new Date(entry.updatedAt).getTime();
+      const currentUpdatedAt = new Date(current.updatedAt).getTime();
+
+      if (entryUpdatedAt >= currentUpdatedAt) {
+        latestByDate.set(dateKey, entry);
+      }
+    }
+  }
+
+  return Array.from(latestByDate.values()).sort(
+    (left, right) =>
+      new Date(right.measuredAt).getTime() - new Date(left.measuredAt).getTime(),
+  );
+};
+
 export const computeEmaSeries = (
   entries: DBWeightEntry[],
   smoothing = 0.35,

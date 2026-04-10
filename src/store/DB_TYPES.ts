@@ -124,7 +124,13 @@ export type SaveWeightGoalInput = {
   goalBandKg?: number | null;
 };
 
-export type FoodSource = "custom" | "manual" | "open_food_facts" | "import" | "usda";
+export type FoodSource =
+  | "custom"
+  | "manual"
+  | "open_food_facts"
+  | "import"
+  | "usda"
+  | "recipe";
 
 export type NutritionBasis = "100g" | "100ml" | "serving";
 
@@ -255,6 +261,55 @@ export type DBUserFoodFavorite = {
   userExternalId: string;
   foodId: number;
   createdAt: DBIsoDateString;
+};
+
+export type RecipeBuildMethod = "scratch" | "link" | "ai";
+
+export type DBRecipe = {
+  id: number;
+  userExternalId: string;
+  createdByUserExternalId: string;
+  linkedFoodId: number;
+  buildMethod: RecipeBuildMethod;
+  name: string;
+  description: string | null;
+  linkUrl: string | null;
+  prepTimeMin: number | null;
+  cookTimeMin: number | null;
+  servings: number;
+  steps: string[];
+  createdAt: DBIsoDateString;
+  updatedAt: DBIsoDateString;
+};
+
+export type DBRecipeIngredient = {
+  id: number;
+  recipeId: number;
+  foodId: number;
+  amount: number;
+  amountUnit: string | null;
+  sortOrder: number;
+  createdAt: DBIsoDateString;
+};
+
+export type CreateUserRecipeIngredientInput = {
+  food: DBFoodItem;
+  foodId: number;
+  amount: number;
+};
+
+export type CreateUserRecipeInput = {
+  userExternalId: string;
+  createdByUserExternalId: string;
+  buildMethod?: RecipeBuildMethod;
+  name: string;
+  description?: string | null;
+  linkUrl?: string | null;
+  prepTimeMin?: number | null;
+  cookTimeMin?: number | null;
+  servings: number;
+  steps?: string[];
+  ingredients: CreateUserRecipeIngredientInput[];
 };
 
 export type UserFoodLogSource = "food_item" | "quick_add";

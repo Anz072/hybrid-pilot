@@ -1,14 +1,9 @@
 import React from "react";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import type { KeyboardTypeOptions } from "react-native";
 import FoodScreenHeader from "./FoodScreenHeader";
 import { appColors } from "../../theme/colors";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export type FoodEntryFormPill = {
   key: string;
@@ -117,9 +112,11 @@ const FoodEntryForm = ({
   showPrimaryAction = true,
   slot,
 }: FoodEntryFormProps) => {
+  const insets = useSafeAreaInsets();
   const renderSlotContent = () => (
     <>
       {slot.icon ? <View style={styles.slotIcon}>{slot.icon}</View> : null}
+
       <View style={styles.slotCopy}>
         <Text style={styles.slotLabel}>{slot.label}</Text>
         <Text style={styles.slotValue}>{slot.value}</Text>
@@ -134,14 +131,7 @@ const FoodEntryForm = ({
 
   return (
     <>
-      <FoodScreenHeader
-        eyebrow={headerEyebrow}
-        title={headerTitle}
-        subtitle={headerSubtitle}
-        onBack={onBack}
-      />
-
-      <View style={styles.heroCard}>
+      <View style={[styles.cardX, { paddingTop: insets.top + 14 }]}>
         <View style={styles.heroHeaderRow}>
           <View style={styles.heroHeaderCopy}>
             <Text style={styles.heroEyebrow}>{heroEyebrow}</Text>
@@ -169,7 +159,6 @@ const FoodEntryForm = ({
             </Pressable>
           ) : null}
         </View>
-
         {heroPills.length > 0 ? (
           <View style={styles.pillRow}>
             {heroPills.map((pill) => (
@@ -180,14 +169,6 @@ const FoodEntryForm = ({
             ))}
           </View>
         ) : null}
-
-        <View style={styles.previewStrip}>
-          <Text style={styles.previewValue}>{previewCaloriesText}</Text>
-          <Text style={styles.previewText}>{previewSummaryText}</Text>
-        </View>
-      </View>
-
-      <View style={styles.card}>
         <Text style={styles.sectionTitle}>{detailsTitle}</Text>
         <Text style={styles.sectionSubtitle}>{detailsSubtitle}</Text>
 
@@ -224,16 +205,7 @@ const FoodEntryForm = ({
           <View style={styles.slotRow}>{renderSlotContent()}</View>
         )}
 
-        <Text style={[styles.fieldLabel, styles.fieldLabelSpacing]}>
-          {labelFieldLabel}
-        </Text>
-        <TextInput
-          style={styles.input}
-          value={labelValue}
-          onChangeText={onChangeLabel}
-          placeholder={labelPlaceholder}
-          placeholderTextColor={appColors.foodPlaceholder}
-        />
+   
       </View>
 
       <View style={styles.card}>
@@ -387,6 +359,12 @@ const styles = StyleSheet.create({
     color: appColors.foodPreviewText,
     fontSize: 12,
     lineHeight: 16,
+  },
+  cardX: {
+    backgroundColor: appColors.white,
+    borderRadius: 8,
+    padding: 14,
+    marginBottom: 16,
   },
   card: {
     backgroundColor: appColors.white,

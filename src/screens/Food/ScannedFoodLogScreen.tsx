@@ -170,6 +170,13 @@ const ScannedFoodLogScreen = () => {
     () => (food ? buildPreview(food, quantity) : null),
     [food, quantity],
   );
+  const micronutrientFactor = React.useMemo(() => {
+    if (!serving || !Number.isFinite(quantity) || quantity <= 0) {
+      return 0;
+    }
+
+    return serving.value > 0 ? quantity / serving.value : 1;
+  }, [quantity, serving]);
   const handleQuantityBlur = React.useCallback(() => {
     if (!food) {
       return;
@@ -455,7 +462,7 @@ const ScannedFoodLogScreen = () => {
           primaryActionLabel={saving ? "Adding..." : "Add to diary"}
           showPrimaryAction={false}
         />
-        <Text style={styles.title}>Micro Nutrients</Text>
+        <Text style={styles.title}>Micronutrients</Text>
         {(
           Object.entries(microTargets) as [
             OpenFoodMapMicronutrientKey,
@@ -465,7 +472,7 @@ const ScannedFoodLogScreen = () => {
           <MacroBar
             key={key}
             accent={appColors.foodPrimary}
-            consumed={food?.[key] ?? 0}
+            consumed={Number(food?.[key] ?? 0) * micronutrientFactor}
             target={target}
             label={key
               .slice(0, -2)

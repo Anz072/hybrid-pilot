@@ -356,7 +356,7 @@ const QuickAddFoodScreen = () => {
           style={styles.screen}
           contentContainerStyle={[
             styles.content,
-            { paddingBottom: Math.max(36, insets.bottom + 20) },
+            { paddingBottom: Math.max(176, insets.bottom + 152) },
           ]}
           keyboardShouldPersistTaps="handled"
         >
@@ -526,6 +526,22 @@ const QuickAddFoodScreen = () => {
             />
           </View>
 
+          {showTimePicker ? (
+            <DateTimePicker
+              value={loggedAtDate}
+              mode="time"
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              onChange={handleTimeChange}
+            />
+          ) : null}
+        </ScrollView>
+
+        <View
+          style={[
+            styles.footer,
+            { paddingBottom: Math.max(insets.bottom, 16) },
+          ]}
+        >
           <Pressable
             onPress={() => void handleSave()}
             disabled={saving}
@@ -546,16 +562,7 @@ const QuickAddFoodScreen = () => {
                   : "Log quick add"}
             </Text>
           </Pressable>
-
-          {showTimePicker ? (
-            <DateTimePicker
-              value={loggedAtDate}
-              mode="time"
-              display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={handleTimeChange}
-            />
-          ) : null}
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </View>
   );
@@ -797,6 +804,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
   },
+  footer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    backgroundColor: appColors.whiteOverlay96,
+    borderTopWidth: 1,
+    borderTopColor: appColors.foodBorder,
+  },
   primaryButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -805,7 +823,6 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: appColors.foodPrimaryDark,
     paddingVertical: 13,
-    marginBottom: 12,
   },
   primaryButtonText: {
     color: appColors.white,

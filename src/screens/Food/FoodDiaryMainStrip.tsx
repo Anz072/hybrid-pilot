@@ -223,7 +223,10 @@ const FoodDiaryTimelineItem = ({
                     )}
                   >
                     <Pressable
-                      style={styles.entryCard}
+                      style={[
+                        styles.entryCard,
+                        bucket.entries.length > 1 && styles.entryCardWithDivider,
+                      ]}
                       onPress={(event) =>
                         runWithoutToggling(event, () => onEditEntry(entry))
                       }
@@ -311,10 +314,7 @@ const FoodDiaryMainStrip = ({
       : "";
   const fallbackMaxCalories = Math.max(1, ...days.map((day) => day.calories));
   const todayKey = formatFoodDateKey(new Date());
-  const weeklyRemainingCalories =
-    weeklyBudgetCalories != null
-      ? weeklyBudgetCalories - weeklyConsumedCalories
-      : null;
+
 
   const toggleHour = React.useCallback(
     (hour: number) => {
@@ -427,28 +427,6 @@ const FoodDiaryMainStrip = ({
             </Pressable>
           );
         })}
-      </View>
-
-      <View style={styles.weekBudgetCard}>
-        <View style={styles.weekBudgetCopy}>
-          <Text style={styles.weekBudgetEyebrow}>Weekly budget</Text>
-          <Text style={styles.weekBudgetValue}>
-            {weeklyBudgetCalories != null
-              ? `${Math.round(weeklyConsumedCalories)} / ${Math.round(
-                  weeklyBudgetCalories,
-                )} kcal`
-              : `${Math.round(weeklyConsumedCalories)} kcal logged`}
-          </Text>
-        </View>
-        <View style={styles.weekBudgetMeta}>
-          <Text style={styles.weekBudgetMetaLabel}>
-            {weeklyRemainingCalories != null
-              ? weeklyRemainingCalories >= 0
-                ? `${Math.round(weeklyRemainingCalories)} left`
-                : `${Math.abs(Math.round(weeklyRemainingCalories))} over`
-              : "Rolling total"}
-          </Text>
-        </View>
       </View>
 
       {totals && user ? (
@@ -723,7 +701,7 @@ const styles = StyleSheet.create({
     maxWidth: 210,
   },
   stack: {
-    gap: 10,
+    // gap: 10,
     marginTop: 12,
   },
   emptyState: {
@@ -748,10 +726,13 @@ const styles = StyleSheet.create({
   entryCard: {
     flexDirection: "row",
     gap: 12,
-    borderRadius: 8,
     backgroundColor: appColors.white,
     paddingHorizontal: 10,
     paddingVertical: 6,
+  },
+  entryCardWithDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: appColors.slate300,
   },
   entryMain: {
     flex: 1,
@@ -761,13 +742,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flexWrap: "wrap",
-    gap: 5,
   },
   entryTitle: {
     color: appColors.foodText,
-    fontSize: 16,
+    fontSize: 14,
     marginBottom: 4,
-    fontWeight: "700",
+    fontWeight: "500",
   },
   entryMetaRow: {
     flexDirection: "row",

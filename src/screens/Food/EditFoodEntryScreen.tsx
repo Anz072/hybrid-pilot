@@ -21,10 +21,13 @@ import {
   PencilSimpleIcon,
   TrashIcon,
 } from "phosphor-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
 import { DB } from "../../store/DB";
-import type { DBUserFoodLogEntry } from "../../store/DB_TYPES";
+import type { DBFoodItem, DBUserFoodLogEntry } from "../../store/DB_TYPES";
+import { useAppSelector } from "../../store/hooks";
 import FoodEntryForm from "./FoodEntryForm";
+import { MacroBar } from "./FoodDiaryHeroCard";
 import FoodScreenHeader from "./FoodScreenHeader";
 import {
   calculateLoggedNutrition,
@@ -34,6 +37,13 @@ import {
   formatFoodShortDate,
   normalizePositiveFoodInput,
 } from "./foodUtils";
+import {
+  getMicronutrientTargets,
+  MICRONUTRIENT_TARGETS,
+  MicronutrientSex,
+  OpenFoodMapMicronutrientKey,
+} from "../../engine/micronutrients";
+import { getAgeToday } from "../../helpers";
 import { appColors } from "../../theme/colors";
 
 type Props = NativeStackScreenProps<FoodStackParamList, "EditFoodEntry">;
@@ -53,13 +63,27 @@ const formatPreviewValue = (
 };
 
 const EditFoodEntryScreen = ({ navigation, route }: Props) => {
+  const insets = useSafeAreaInsets();
+  const user = useAppSelector((state) => state.user.currentUser);
   const [entry, setEntry] = React.useState<DBUserFoodLogEntry | null>(null);
+  const [food, setFood] = React.useState<DBFoodItem | null>(null);
   const [quantityValue, setQuantityValue] = React.useState("");
   const [mealTypeValue, setMealTypeValue] = React.useState("");
   const [loggedAtDate, setLoggedAtDate] = React.useState(new Date());
   const [showTimePicker, setShowTimePicker] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
+
+  const microTargets = React.useMemo(
+    () =>
+      user
+        ? getMicronutrientTargets({
+            sex: String(user.gender) as MicronutrientSex,
+            age: getAgeToday(new Date(user.birthdate || "1996-10-01")),
+          })
+        : MICRONUTRIENT_TARGETS.generic,
+    [user],
+  );
 
   const loadEntry = React.useCallback(async () => {
     setLoading(true);
@@ -79,6 +103,11 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
       }
 
       setEntry(nextEntry);
+      setFood(
+        nextEntry?.foodId != null
+          ? await DB.getFoodItemById(nextEntry.foodId)
+          : null,
+      );
 
       if (!nextEntry) {
         return;
@@ -182,6 +211,16 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
     ]);
   }, [entry, navigation]);
 
+  const loggedTime = formatFoodLoggedTime(loggedAtDate.toISOString());
+  const loggedDate = formatFoodShortDate(loggedAtDate);
+  const micronutrientFactor = React.useMemo(() => {
+    if (!food || !Number.isFinite(quantity) || quantity <= 0) {
+      return 0;
+    }
+
+    return entry && entry.servingSize > 0 ? quantity / entry.servingSize : 1;
+  }, [entry, food, quantity]);
+
   if (loading) {
     return (
       <View style={styles.screen}>
@@ -227,9 +266,6 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
     );
   }
 
-  const loggedTime = formatFoodLoggedTime(loggedAtDate.toISOString());
-  const loggedDate = formatFoodShortDate(loggedAtDate);
-
   return (
     <View style={styles.screen}>
       <View style={styles.bgOrbTop} />
@@ -241,7 +277,10 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
       >
         <ScrollView
           style={styles.screen}
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: Math.max(176, insets.bottom + 152) },
+          ]}
           keyboardShouldPersistTaps="handled"
         >
           <FoodEntryForm
@@ -256,6 +295,17 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
               entry.servingUnit,
             )} | ${entry.calories.toFixed(0)} kcal`}
             heroPills={[
+              {
+                key: "mode",
+                label: "Edit",
+                icon: (
+                  <PencilSimpleIcon
+                    size={14}
+                    color={appColors.foodPrimary}
+                    weight="bold"
+                  />
+                ),
+              },
               {
                 key: "date",
                 label: loggedDate,
@@ -323,13 +373,33 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
               <PencilSimpleIcon size={16} color={appColors.white} weight="bold" />
             }
             primaryActionLabel={saving ? "Saving..." : "Save changes"}
-            secondaryAction={{
-              label: "Delete entry",
-              icon: <TrashIcon size={16} color={appColors.danger700} weight="bold" />,
-              onPress: handleDelete,
-              tone: "danger",
-            }}
+            showPrimaryAction={false}
           />
+
+          {food ? (
+            <>
+              <Text style={styles.title}>Micronutrients</Text>
+              {(
+                Object.entries(microTargets) as [
+                  OpenFoodMapMicronutrientKey,
+                  number,
+                ][]
+              ).map(([key, target]) => (
+                <MacroBar
+                  key={key}
+                  accent={appColors.foodPrimary}
+                  consumed={(food[key] ?? 0) * micronutrientFactor}
+                  target={target}
+                  label={key
+                    .slice(0, -2)
+                    .split(/(?=[A-Z])/)
+                    .map((word) => word[0].toUpperCase() + word.slice(1))
+                    .join(" ")}
+                  unit={key.endsWith("Ug") ? "ug" : "mg"}
+                />
+              ))}
+            </>
+          ) : null}
 
           {showTimePicker ? (
             <DateTimePicker
@@ -340,6 +410,41 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
             />
           ) : null}
         </ScrollView>
+
+        <View
+          style={[
+            styles.footer,
+            { paddingBottom: Math.max(insets.bottom, 12) },
+          ]}
+        >
+          <Pressable
+            onPress={handleDelete}
+            style={({ pressed }) => [
+              styles.secondaryButton,
+              pressed && styles.cardPressed,
+            ]}
+          >
+            <TrashIcon size={16} color={appColors.danger700} weight="bold" />
+            <Text style={styles.secondaryButtonText}>Delete entry</Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => {
+              void handleSave();
+            }}
+            disabled={saving}
+            style={({ pressed }) => [
+              styles.primaryButton,
+              saving && styles.disabled,
+              pressed && !saving && styles.cardPressed,
+            ]}
+          >
+            <PencilSimpleIcon size={16} color={appColors.white} weight="bold" />
+            <Text style={styles.primaryButtonText}>
+              {saving ? "Saving..." : "Save changes"}
+            </Text>
+          </Pressable>
+        </View>
       </KeyboardAvoidingView>
     </View>
   );
@@ -350,9 +455,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: appColors.foodScreenBg,
   },
+  title: {
+    color: appColors.foodText,
+    fontSize: 24,
+    fontWeight: "900",
+    marginTop: 16,
+    marginBottom: 12,
+  },
   content: {
     paddingHorizontal: 18,
-    paddingBottom: 36,
   },
   bgOrbTop: {
     position: "absolute",
@@ -384,18 +495,50 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
   },
+  footer: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    left: 0,
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    gap: 10,
+    backgroundColor: appColors.whiteOverlay96,
+    borderTopWidth: 1,
+    borderTopColor: appColors.foodSoftBorder,
+  },
   primaryButton: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 8,
     borderRadius: 999,
     backgroundColor: appColors.foodPrimaryDark,
     paddingVertical: 13,
-    marginBottom: 12,
   },
   primaryButtonText: {
     color: appColors.white,
     fontSize: 14,
     fontWeight: "800",
+  },
+  secondaryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderRadius: 999,
+    backgroundColor: appColors.white,
+    borderWidth: 1,
+    borderColor: appColors.dangerBorder,
+    paddingVertical: 13,
+  },
+  secondaryButtonText: {
+    color: appColors.danger700,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  disabled: {
+    opacity: 0.58,
   },
   cardPressed: {
     opacity: 0.9,

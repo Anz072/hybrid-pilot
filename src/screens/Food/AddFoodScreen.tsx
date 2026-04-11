@@ -337,8 +337,9 @@ const AddFoodScreen = () => {
   const [scannerVisible, setScannerVisible] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [searchMode, setSearchMode] = useState<FoodSearchMode>("all");
-  const [sectionState, setSectionState] =
-    useState<FoodSearchSectionState>(DEFAULT_SECTION_STATE);
+  const [sectionState, setSectionState] = useState<FoodSearchSectionState>(
+    DEFAULT_SECTION_STATE,
+  );
   const searchCacheRef = React.useRef(new Map<string, SearchFoodResult[]>());
 
   const loadStaticLists = useCallback(async () => {
@@ -388,13 +389,14 @@ const AddFoodScreen = () => {
           mode === "recipes" ? food.source === "recipe" : true,
         )
         .map(fromDbFoodItem);
-      const localKeys = new Set(localResults.flatMap(getSearchResultDedupeKeys));
+      const localKeys = new Set(
+        localResults.flatMap(getSearchResultDedupeKeys),
+      );
       const remoteResults = remoteRows
-        .filter(
-          (food) =>
-            getSearchResultDedupeKeys(toSearchFoodResult(food, null)).every(
-              (key) => !localKeys.has(key),
-            ),
+        .filter((food) =>
+          getSearchResultDedupeKeys(toSearchFoodResult(food, null)).every(
+            (key) => !localKeys.has(key),
+          ),
         )
         .map((food) => toSearchFoodResult(food, null));
 
@@ -735,10 +737,7 @@ const AddFoodScreen = () => {
           ) : null}
           {collapsible ? (
             <View
-              style={[
-                styles.togglePill,
-                expanded && styles.togglePillExpanded,
-              ]}
+              style={[styles.togglePill, expanded && styles.togglePillExpanded]}
             >
               <Text
                 style={[
@@ -805,14 +804,8 @@ const AddFoodScreen = () => {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.heroCard}>
-          <View style={styles.heroHeaderRow}>
-            <View style={styles.heroHeaderCopy}>
-              <Text style={styles.heroText}>
-                Search your library, quick add a one-off entry, create a recipe, scan a barcode, or open a custom food.
-              </Text>
-            </View>
-          </View>
-          <View style={styles.heroActionRow}>
+          <View style={styles.heroHeaderRow}></View>
+          {/* <View style={styles.heroActionRow}>
             <Pressable
               onPress={openQuickAddFood}
               style={({ pressed }) => [
@@ -838,7 +831,7 @@ const AddFoodScreen = () => {
                 color={appColors.foodPrimaryDark}
                 weight="fill"
               />
-              <Text style={styles.heroActionText}>Recipe</Text>
+              <Text style={styles.heroActionText}> Create a Recipe</Text>
             </Pressable>
             <Pressable
               onPress={openCreateCustomFood}
@@ -849,7 +842,7 @@ const AddFoodScreen = () => {
             >
               <Text style={styles.heroActionText}>Custom</Text>
             </Pressable>
-          </View>
+          </View> */}
           <View style={styles.searchModeRow}>
             <Pressable
               onPress={() => setSearchMode("all")}
@@ -896,16 +889,6 @@ const AddFoodScreen = () => {
             </Pressable>
           </View>
           <View style={styles.contextRow}>
-            <View style={styles.contextPill}>
-              <ForkKnifeIcon size={14} color={appColors.foodPrimary} weight="fill" />
-              <Text style={styles.contextPillText}>{resolvedContextLabel}</Text>
-            </View>
-            <View style={styles.contextPill}>
-              <CalendarIcon size={14} color={appColors.foodPrimary} weight="bold" />
-              <Text style={styles.contextPillText}>
-                {formatFoodShortDate(date)}
-              </Text>
-            </View>
             {mealType ? (
               <View style={styles.contextPill}>
                 <Text style={styles.contextPillText}>{mealType}</Text>
@@ -914,7 +897,11 @@ const AddFoodScreen = () => {
           </View>
           <View style={styles.searchRow}>
             <View style={styles.searchInputWrap}>
-              <MagnifyingGlassIcon size={18} color={appColors.foodPlaceholder} weight="bold" />
+              <MagnifyingGlassIcon
+                size={18}
+                color={appColors.foodPlaceholder}
+                weight="bold"
+              />
               <TextInput
                 placeholder={searchPlaceholder}
                 placeholderTextColor={appColors.foodPlaceholder}
@@ -942,12 +929,12 @@ const AddFoodScreen = () => {
                 ? isSearching
                   ? "Searching your saved recipes..."
                   : `${activeResults.length} saved recipes match this search.`
-                : "Browse only your saved recipes here, or search to filter them by name."
+                : ""
               : query.trim()
-              ? isSearching
-                ? "Searching your foods and USDA branded + generic foods..."
-                : `${activeResults.length} matches across local foods and USDA results.`
-              : "Search above or pick from favorites and recent below. Previously scanned Open Food Facts items also show up here once saved."}
+                ? isSearching
+                  ? "Searching your foods and USDA branded + generic foods..."
+                  : `${activeResults.length} matches across local foods and USDA results.`
+                : ""}
           </Text>
         </View>
 
@@ -1055,21 +1042,20 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   searchModeRow: {
+    width: "100%",
     flexDirection: "row",
-    gap: 8,
     marginBottom: 12,
   },
   searchModePill: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    borderRadius: 999,
     backgroundColor: appColors.foodFieldBg,
     borderWidth: 1,
     borderColor: appColors.foodBorder,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    paddingVertical: 12,
   },
   searchModePillActive: {
     backgroundColor: appColors.foodPrimaryDark,

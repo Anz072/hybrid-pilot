@@ -285,7 +285,7 @@ const CalorieScheduleScreen = ({ navigation }: Props) => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: appColors.slate50,
+    backgroundColor: appColors.surfaceCanvas,
   },
   content: {
     paddingHorizontal: 20,
@@ -309,19 +309,19 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.foodOrbBottom,
   },
   card: {
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceCard,
     borderRadius: 8,
     padding: 18,
     marginTop: 14,
   },
   cardTitle: {
-    color: appColors.slate900,
+    color: appColors.slate200,
     fontSize: 17,
     fontWeight: "800",
     marginBottom: 6,
   },
   cardText: {
-    color: appColors.slate600,
+    color: appColors.slate200,
     fontSize: 13,
     lineHeight: 19,
   },
@@ -365,12 +365,12 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   dayTitle: {
-    color: appColors.slate900,
+    color: appColors.white,
     fontSize: 15,
     fontWeight: "800",
   },
   daySubtitle: {
-    color: appColors.slate500,
+    color: appColors.slate200,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -393,20 +393,20 @@ const styles = StyleSheet.create({
   dayValueWrap: {
     flex: 1,
     borderRadius: 8,
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceRaised,
     paddingVertical: 10,
     paddingHorizontal: 12,
     alignItems: "center",
     justifyContent: "center",
   },
   dayValue: {
-    color: appColors.slate900,
+    color: appColors.white,
     fontSize: 22,
     lineHeight: 26,
     fontWeight: "800",
   },
   dayUnit: {
-    color: appColors.slate500,
+    color: appColors.slate200,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",

@@ -118,8 +118,12 @@ const FoodDiaryHeroCard = ({
 
 const styles = StyleSheet.create({
   hero: {
-    backgroundColor: appColors.whiteOverlay96,
-    paddingHorizontal: 6,
+    backgroundColor: appColors.surfaceCard,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     marginTop: 16,
   },
   progressPanel: {
@@ -160,7 +164,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     height: 6,
     borderRadius: 999,
-    backgroundColor: appColors.raw_hex_E5E1EC,
+    backgroundColor: appColors.surfaceGhostStrong,
     overflow: "hidden",
   },
   progressFill: {

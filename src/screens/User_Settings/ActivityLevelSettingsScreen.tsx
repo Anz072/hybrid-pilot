@@ -386,7 +386,7 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: appColors.slate50,
+    backgroundColor: appColors.surfaceCanvas,
   },
   content: {
     paddingHorizontal: 20,
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.foodOrbBottom,
   },
   card: {
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceCard,
     borderRadius: 24,
     padding: 18,
     borderWidth: 1,
@@ -428,13 +428,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cardTitle: {
-    color: appColors.slate900,
+    color: appColors.white,
     fontSize: 17,
     fontWeight: "800",
     marginBottom: 4,
   },
   cardText: {
-    color: appColors.slate600,
+    color: appColors.slate200,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   previewLabel: {
-    color: appColors.slate500,
+    color: appColors.slate200,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   previewValue: {
-    color: appColors.slate900,
+    color: appColors.white,
     fontSize: 15,
     lineHeight: 20,
     fontWeight: "800",
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    color: appColors.slate900,
+    color: appColors.white,
     fontSize: 18,
     fontWeight: "800",
   },
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
   },
   optionCard: {
     borderRadius: 20,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceRaised,
     padding: 14,
     flexDirection: "row",
     gap: 12,
@@ -511,13 +511,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   optionTitle: {
-    color: appColors.slate900,
+    color: appColors.white,
     fontSize: 16,
     fontWeight: "800",
     marginBottom: 4,
   },
   optionText: {
-    color: appColors.slate600,
+    color: appColors.slate200,
     fontSize: 13,
     lineHeight: 18,
   },

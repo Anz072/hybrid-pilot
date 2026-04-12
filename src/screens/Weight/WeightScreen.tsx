@@ -896,7 +896,7 @@ const WeightScreen = ({
             <Text style={styles.subtleText}>{goalSummaryText}</Text>
           </View>
           <View style={[styles.pill, styles.goalLauncherPill]}>
-            <TargetIcon size={14} color={appColors.slate900} weight="bold" />
+            <TargetIcon size={14} color={appColors.textPrimary} weight="bold" />
             <Text style={styles.pillText}>{goalLauncherLabel}</Text>
           </View>
         </View>
@@ -992,7 +992,7 @@ const WeightScreen = ({
   if (loading) {
     return (
       <View style={styles.centerState}>
-        <ActivityIndicator size="small" color={appColors.slate900} />
+        <ActivityIndicator size="small" color={appColors.foodPrimary} />
       </View>
     );
   }
@@ -1099,7 +1099,11 @@ const WeightScreen = ({
                     </Text>
                   </View>
                   <View style={styles.rowAction}>
-                    <PencilSimpleIcon size={18} color={appColors.slate600} weight="bold" />
+                    <PencilSimpleIcon
+                      size={18}
+                      color={appColors.textSecondary}
+                      weight="bold"
+                    />
                   </View>
                 </View>
 
@@ -1147,7 +1151,7 @@ const WeightScreen = ({
               ]}
               accessibilityLabel="Close goal editor"
             >
-              <XIcon size={18} color={appColors.slate900} weight="bold" />
+              <XIcon size={18} color={appColors.textPrimary} weight="bold" />
             </Pressable>
           </View>
 
@@ -1202,7 +1206,11 @@ const WeightScreen = ({
                     pressed && styles.cardPressed,
                   ]}
                 >
-                  <CalendarIcon size={16} color={appColors.slate900} weight="bold" />
+                  <CalendarIcon
+                    size={16}
+                    color={appColors.textPrimary}
+                    weight="bold"
+                  />
                   <Text style={styles.inlineButtonText}>
                     {targetDate
                       ? targetDate.toLocaleDateString(undefined, {
@@ -1312,19 +1320,19 @@ const WeightScreen = ({
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: appColors.slate900,
+    backgroundColor: appColors.revolutLight,
     width: 64,
     height: 64,
     borderRadius: 32,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 6,
-    borderColor: appColors.blueBrand,
-    shadowColor: appColors.slate900,
+    borderWidth: 2,
+    borderColor: appColors.borderSoft,
+    shadowColor: "transparent",
     shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.22,
-    shadowRadius: 22,
-    elevation: 10,
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
   buttonDisabled: {
     opacity: 0.5,
@@ -1334,7 +1342,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.96 }],
   },
   buttonText: {
-    color: appColors.white,
+    color: appColors.revolutDark,
     fontSize: 34,
     lineHeight: 34,
     fontWeight: "700",
@@ -1343,27 +1351,29 @@ const styles = StyleSheet.create({
   },
   screen: {
     flex: 1,
-    backgroundColor: appColors.lavenderSurfaceStrong,
+    backgroundColor: appColors.surfaceCanvas,
   },
   centerState: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.lavenderSurfaceStrong,
+    backgroundColor: appColors.surfaceCanvas,
   },
   content: {
     paddingHorizontal: 20,
   },
   card: {
-    backgroundColor: appColors.white,
-    borderRadius: 8,
+    backgroundColor: appColors.surfaceCard,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
     padding: 12,
     marginBottom: 18,
-    shadowColor: appColors.raw_hex_8F84A9,
+    shadowColor: "transparent",
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    elevation: 2,
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
   cardPressed: {
     opacity: 0.92,
@@ -1375,8 +1385,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   heroCard: {
-    backgroundColor: appColors.white,
-    borderRadius: 8,
+    backgroundColor: appColors.surfaceCard,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
     paddingVertical: 20,
     paddingHorizontal: 6,
     marginBottom: 16,
@@ -1395,7 +1407,7 @@ const styles = StyleSheet.create({
     borderRadius: 21,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.lavenderSurface,
+    backgroundColor: appColors.surfaceGhost,
   },
   heroStatRow: {
     flexDirection: "row",
@@ -1506,7 +1518,7 @@ const styles = StyleSheet.create({
     color: appColors.plum900,
     fontSize: 24,
     lineHeight: 28,
-    fontWeight: "800",
+    fontWeight: "500",
     textAlign: "center",
   },
   pill: {
@@ -1524,7 +1536,7 @@ const styles = StyleSheet.create({
   },
   expandInsightLike: {},
   pillText: {
-    color: appColors.raw_hex_2C2537,
+    color: appColors.textPrimary,
     fontSize: 13,
     fontWeight: "700",
     flexShrink: 1,
@@ -1541,7 +1553,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   metric: {
-    color: appColors.slate900,
+    color: appColors.textPrimary,
     fontSize: 44,
     lineHeight: 48,
     fontWeight: "900",
@@ -1560,7 +1572,7 @@ const styles = StyleSheet.create({
   },
   metricUnit: {
     fontSize: 20,
-    color: appColors.slate700,
+    color: appColors.textSecondary,
   },
   metricRow: {
     flexDirection: "row",
@@ -1638,7 +1650,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   label: {
-    color: appColors.slate500,
+    color: appColors.textMuted,
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 0.8,
@@ -1655,25 +1667,25 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: appColors.slate300,
+    borderColor: appColors.borderStrong,
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 14,
     fontSize: 20,
     fontWeight: "800",
-    color: appColors.slate900,
-    backgroundColor: appColors.white,
+    color: appColors.textPrimary,
+    backgroundColor: appColors.surfaceField,
   },
   unitPill: {
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 14,
-    backgroundColor: appColors.slate50,
+    backgroundColor: appColors.surfaceGhost,
     borderWidth: 1,
-    borderColor: appColors.slate300,
+    borderColor: appColors.borderSoft,
   },
   unitText: {
-    color: appColors.slate900,
+    color: appColors.textPrimary,
     fontSize: 16,
     fontWeight: "800",
   },
@@ -1689,14 +1701,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     borderWidth: 1,
-    borderColor: appColors.slate300,
+    borderColor: appColors.borderStrong,
     borderRadius: 12,
-    backgroundColor: appColors.slate50,
+    backgroundColor: appColors.surfaceField,
     paddingHorizontal: 12,
     paddingVertical: 12,
   },
   inlineButtonText: {
-    color: appColors.slate900,
+    color: appColors.textPrimary,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -1709,7 +1721,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   textButtonText: {
-    color: appColors.slate600,
+    color: appColors.textSecondary,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -1725,14 +1737,14 @@ const styles = StyleSheet.create({
   },
   softPanel: {
     flex: 1,
-    backgroundColor: appColors.slate50,
+    backgroundColor: appColors.surfaceCardAlt,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: appColors.slate200,
+    borderColor: appColors.borderSoft,
     padding: 12,
   },
   panelLabel: {
-    color: appColors.slate500,
+    color: appColors.textMuted,
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
@@ -1740,12 +1752,12 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   panelValue: {
-    color: appColors.slate900,
+    color: appColors.textPrimary,
     fontSize: 16,
     fontWeight: "800",
   },
   panelText: {
-    color: appColors.slate900,
+    color: appColors.textPrimary,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "700",
@@ -1754,13 +1766,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   stickyHeader: {
-    backgroundColor: appColors.slate50,
+    backgroundColor: appColors.surfaceCanvas,
     paddingHorizontal: 20,
     paddingTop: 4,
     paddingBottom: 8,
   },
   stickyHeaderText: {
-    color: appColors.slate700,
+    color: appColors.textSecondary,
     fontSize: 13,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -1788,8 +1800,10 @@ const styles = StyleSheet.create({
   historyRow: {
     marginHorizontal: 20,
     marginBottom: 8,
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceCardAlt,
     borderRadius: 18,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
@@ -1803,12 +1817,12 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   historyValue: {
-    color: appColors.slate900,
+    color: appColors.textPrimary,
     fontSize: 18,
     fontWeight: "800",
   },
   historyMeta: {
-    color: appColors.slate500,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 16,
   },
@@ -1827,7 +1841,7 @@ const styles = StyleSheet.create({
   },
   statusChip: {
     borderRadius: 999,
-    backgroundColor: appColors.slate200,
+    backgroundColor: appColors.surfaceGhost,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
@@ -1835,7 +1849,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.amberSoftStrong,
   },
   statusChipText: {
-    color: appColors.slate700,
+    color: appColors.textSecondary,
     fontSize: 11,
     fontWeight: "800",
   },
@@ -1868,7 +1882,7 @@ const styles = StyleSheet.create({
   },
   goalModalScreen: {
     flex: 1,
-    backgroundColor: appColors.lavenderSurfaceStrong,
+    backgroundColor: appColors.surfaceCanvas,
   },
   goalModalHeader: {
     paddingHorizontal: 20,
@@ -1879,7 +1893,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   goalModalTitle: {
-    color: appColors.slate900,
+    color: appColors.textPrimary,
     fontSize: 28,
     fontWeight: "900",
     marginTop: 10,
@@ -1890,9 +1904,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceGhost,
     borderWidth: 1,
-    borderColor: appColors.slate200,
+    borderColor: appColors.borderSoft,
   },
   goalModalContent: {
     paddingHorizontal: 20,
@@ -1903,7 +1917,7 @@ const styles = StyleSheet.create({
     left: 20,
     right: 20,
     borderRadius: 16,
-    backgroundColor: appColors.slate900,
+    backgroundColor: appColors.surfaceRaised,
     paddingHorizontal: 16,
     paddingVertical: 14,
     flexDirection: "row",
@@ -1918,15 +1932,15 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   insightCard: {
-    backgroundColor: appColors.raw_hex_FBF9FE,
-    borderRadius: 6,
+    backgroundColor: appColors.surfaceCardAlt,
+    borderRadius: 20,
     padding: 14,
     borderWidth: 1,
-    borderColor: appColors.raw_hex_EEE8F5,
+    borderColor: appColors.borderSoft,
   },
   insightCardExpanded: {
-    backgroundColor: appColors.raw_hex_F7F2FD,
-    borderColor: appColors.raw_hex_E1D6F3,
+    backgroundColor: appColors.surfaceRaised,
+    borderColor: appColors.borderStrong,
   },
   insightTopRow: {
     flexDirection: "row",
@@ -1955,7 +1969,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   insightDetail: {
-    color: appColors.raw_hex_857B95,
+    color: appColors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -1974,7 +1988,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    backgroundColor: appColors.lavenderSurface,
+    backgroundColor: appColors.surfaceGhost,
     borderWidth: 1,
     borderColor: appColors.foodBorder,
   },
@@ -2005,15 +2019,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   insightExpandedText: {
-    color: appColors.plumMutedStrong,
+    color: appColors.textSecondary,
     fontSize: 13,
     lineHeight: 19,
   },
   goalCard: {
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceCard,
   },
   sectionCard: {
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceCard,
   },
   sectionHeaderRow: {
     flexDirection: "row",
@@ -2028,7 +2042,7 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.raw_hex_F3EEF8,
+    backgroundColor: appColors.surfaceGhost,
   },
   collapsedSectionText: {
     color: appColors.plumSoft,

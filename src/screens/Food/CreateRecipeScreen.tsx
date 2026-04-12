@@ -40,6 +40,7 @@ import type { FoodStackParamList } from "../../navigation/foodTypes";
 import { DB } from "../../store/DB";
 import type {
   DBFoodItem,
+  DBRecipeDetails,
   RecipeBuildMethod,
   SaveFoodItemInput,
 } from "../../store/DB_TYPES";
@@ -388,6 +389,8 @@ const CreateRecipeScreen = () => {
   const insets = useSafeAreaInsets();
   const user = useAppSelector((state) => state.user.currentUser);
   const searchCacheRef = React.useRef(new Map<string, SearchFoodResult[]>());
+  const editingRecipeId = route.params.recipeId ?? null;
+  const isEditing = editingRecipeId != null;
 
   const [method, setMethod] = React.useState<RecipeBuildMethod>("scratch");
   const [name, setName] = React.useState("");
@@ -408,7 +411,14 @@ const CreateRecipeScreen = () => {
     [],
   );
   const [steps, setSteps] = React.useState<string[]>([]);
+  const [recipeDetails, setRecipeDetails] =
+    React.useState<DBRecipeDetails | null>(null);
+  const [loadingRecipe, setLoadingRecipe] = React.useState(isEditing);
+  const [recipeLoadError, setRecipeLoadError] = React.useState<string | null>(
+    null,
+  );
   const [saving, setSaving] = React.useState(false);
+  const [deleting, setDeleting] = React.useState(false);
 
   const resolvedLoggedAt = React.useMemo(() => {
     if (route.params.loggedAt) {
@@ -488,6 +498,75 @@ const CreateRecipeScreen = () => {
     }),
     [recipeTotals, resolvedServings],
   );
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    if (!isEditing || editingRecipeId == null) {
+      setRecipeDetails(null);
+      setLoadingRecipe(false);
+      setRecipeLoadError(null);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const loadRecipe = async () => {
+      try {
+        setLoadingRecipe(true);
+        setRecipeLoadError(null);
+
+        const loadedRecipe = await DB.getUserRecipeDetailsById(editingRecipeId);
+
+        if (!loadedRecipe) {
+          throw new Error("That recipe could not be found.");
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        setRecipeDetails(loadedRecipe);
+        setMethod(loadedRecipe.buildMethod);
+        setName(loadedRecipe.name);
+        setServingsValue(formatNumberInput(loadedRecipe.servings));
+        setPreparedWeightValue(
+          formatNumberInput(loadedRecipe.preparedFoodWeightG),
+        );
+        setPrepTimeValue(formatNumberInput(loadedRecipe.prepTimeMin));
+        setCookTimeValue(formatNumberInput(loadedRecipe.cookTimeMin));
+        setLinkValue(loadedRecipe.linkUrl ?? "");
+        setDescriptionValue(loadedRecipe.description ?? "");
+        setIngredients(
+          loadedRecipe.ingredients.map((ingredient) => ({
+            key: `${ingredient.id}-${ingredient.foodId}`,
+            foodId: ingredient.foodId,
+            food: ingredient.food,
+            amountValue: formatNumberInput(ingredient.amount),
+          })),
+        );
+        setSteps(loadedRecipe.steps);
+        setIngredientQuery("");
+        setIngredientResults([]);
+      } catch (error) {
+        if (!cancelled) {
+          setRecipeLoadError(
+            error instanceof Error ? error.message : "Please try again.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingRecipe(false);
+        }
+      }
+    };
+
+    void loadRecipe();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editingRecipeId, isEditing]);
 
   const searchFoods = React.useCallback(async (query: string) => {
     const normalizedQuery = query.trim();
@@ -749,6 +828,11 @@ const CreateRecipeScreen = () => {
   }, []);
 
   const closeAfterSave = React.useCallback(() => {
+    if (isEditing) {
+      navigation.goBack();
+      return;
+    }
+
     const routes = navigation.getState().routes;
     const previousRoute = routes[routes.length - 2];
 
@@ -758,7 +842,7 @@ const CreateRecipeScreen = () => {
     }
 
     navigation.goBack();
-  }, [navigation]);
+  }, [isEditing, navigation]);
 
   const handleSave = React.useCallback(
     async () => {
@@ -816,9 +900,10 @@ const CreateRecipeScreen = () => {
       try {
         setSaving(true);
 
-        const savedRecipe = await DB.createUserRecipe({
+        const payload = {
           userExternalId: user.externalId,
-          createdByUserExternalId: user.externalId,
+          createdByUserExternalId:
+            recipeDetails?.createdByUserExternalId ?? user.externalId,
           buildMethod: method,
           name: recipeName,
           description: descriptionValue.trim() || null,
@@ -829,12 +914,21 @@ const CreateRecipeScreen = () => {
           preparedFoodWeightG: resolvedPreparedWeight,
           steps: steps.map((step) => step.trim()).filter(Boolean),
           ingredients: ingredientInputs,
-        });
+        };
+
+        if (isEditing && editingRecipeId != null) {
+          await DB.updateUserRecipe({
+            recipeId: editingRecipeId,
+            ...payload,
+          });
+        } else {
+          await DB.createUserRecipe(payload);
+        }
 
         closeAfterSave();
       } catch (error) {
         Alert.alert(
-          "Could not save recipe",
+          isEditing ? "Could not update recipe" : "Could not save recipe",
           error instanceof Error ? error.message : "Please try again.",
         );
       } finally {
@@ -845,20 +939,57 @@ const CreateRecipeScreen = () => {
       closeAfterSave,
       cookTimeValue,
       descriptionValue,
+      editingRecipeId,
       ingredients,
+      isEditing,
       linkValue,
       method,
       parsedServings,
+      recipeDetails?.createdByUserExternalId,
       resolvedPreparedWeight,
-      prepTimeValue,
       recipeName,
-      resolvedLoggedAt,
-      route.params.date,
-      route.params.mealType,
+      prepTimeValue,
       steps,
       user,
     ],
   );
+
+  const handleDeleteRecipe = React.useCallback(() => {
+    if (!isEditing || editingRecipeId == null || deleting) {
+      return;
+    }
+
+    Alert.alert(
+      "Delete recipe?",
+      "This will remove the saved recipe and its linked food item from your local app.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              try {
+                setDeleting(true);
+                await DB.deleteUserRecipe(editingRecipeId);
+                navigation.goBack();
+              } catch (error) {
+                Alert.alert(
+                  "Could not delete recipe",
+                  error instanceof Error ? error.message : "Please try again.",
+                );
+              } finally {
+                setDeleting(false);
+              }
+            })();
+          },
+        },
+      ],
+    );
+  }, [deleting, editingRecipeId, isEditing, navigation]);
 
   return (
     <View style={styles.screen}>
@@ -877,110 +1008,68 @@ const CreateRecipeScreen = () => {
           ]}
           keyboardShouldPersistTaps="handled"
         >
-          {/* <FoodScreenHeader
-            title="Create a recipe"
+          <FoodScreenHeader
+            title={isEditing ? "Edit recipe" : "Create recipe"}
             onBack={() => navigation.goBack()}
-          /> */}
+          />
 
-          {/* <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Build method</Text>
-            <Text style={styles.sectionSubtitle}>
-              Start with the scratch builder now. Link import and AI import can
-              plug into the same recipe flow later.
-            </Text>
-            <View style={styles.methodStack}>
-              {RECIPE_METHODS.map((option) => {
-                const selected = method === option.value;
-                const disabled = !option.available;
-
-                return (
-                  <Pressable
-                    key={option.value}
-                    onPress={() => {
-                      if (option.available) {
-                        setMethod(option.value);
-                        return;
-                      }
-
-                      Alert.alert(
-                        "Coming soon",
-                        `${option.title} is planned next, but the scratch builder is ready now.`,
-                      );
-                    }}
-                    style={({ pressed }) => [
-                      styles.methodCard,
-                      selected && styles.methodCardSelected,
-                      disabled && styles.methodCardDisabled,
-                      pressed && styles.cardPressed,
-                    ]}
-                  >
-                    <View style={styles.methodIconWrap}>
-                      {option.value === "scratch" ? (
-                        <CookingPotIcon
-                          size={20}
-                          color={selected ? appColors.white : appColors.foodPrimaryDark}
-                          weight="fill"
-                        />
-                      ) : option.value === "link" ? (
-                        <LinkSimpleIcon
-                          size={20}
-                          color={selected ? appColors.white : appColors.foodPrimaryDark}
-                          weight="bold"
-                        />
-                      ) : (
-                        <SparkleIcon
-                          size={20}
-                          color={selected ? appColors.white : appColors.foodPrimaryDark}
-                          weight="fill"
-                        />
-                      )}
-                    </View>
-                    <View style={styles.methodCopy}>
-                      <View style={styles.methodTitleRow}>
-                        <Text
-                          style={[
-                            styles.methodTitle,
-                            selected && styles.methodTitleSelected,
-                          ]}
-                        >
-                          {option.title}
-                        </Text>
-                        <View
-                          style={[
-                            styles.methodBadge,
-                            selected && styles.methodBadgeSelected,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.methodBadgeText,
-                              selected && styles.methodBadgeTextSelected,
-                            ]}
-                          >
-                            {option.badge}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text
-                        style={[
-                          styles.methodDescription,
-                          selected && styles.methodDescriptionSelected,
-                        ]}
-                      >
-                        {option.description}
-                      </Text>
-                    </View>
-                  </Pressable>
-                );
-              })}
+          {loadingRecipe ? (
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>Loading recipe</Text>
+              <Text style={styles.sectionSubtitle}>
+                Pulling the saved ingredients and recipe details into the editor.
+              </Text>
             </View>
-          </View> */}
-
-          <View style={[styles.card, { paddingTop: insets.top + 14 }]}>
+          ) : recipeLoadError ? (
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>Recipe unavailable</Text>
+              <Text style={styles.sectionSubtitle}>{recipeLoadError}</Text>
+            </View>
+          ) : (
+            <>
+          <View style={styles.card}>
             <View
               style={styles.heroHeaderRow}
             >
-              <Text style={styles.heroTitle}>Quick Add</Text>
+              <View style={styles.heroHeaderCopy}>
+                <Text style={styles.heroEyebrow}>
+                  {isEditing ? "Saved recipe" : "Recipe builder"}
+                </Text>
+                <Text style={styles.heroTitle}>
+                  {isEditing ? "Edit recipe" : "Create recipe"}
+                </Text>
+                <Text style={styles.heroMeta}>
+                  {isEditing
+                    ? "Update ingredients, servings, and preparation details. Saved changes show anywhere this recipe is used."
+                    : `Build a saved recipe for ${resolvedContextLabel}.`}
+                </Text>
+              </View>
+              {isEditing ? (
+                <View style={styles.contextPill}>
+                  <Text style={styles.contextPillText}>Edit</Text>
+                </View>
+              ) : null}
+            </View>
+
+            <View style={styles.heroPillsRow}>
+              <View style={styles.contextPill}>
+                <CalendarIcon
+                  size={14}
+                  color={appColors.foodPrimary}
+                  weight="bold"
+                />
+                <Text style={styles.contextPillText}>
+                  {formatFoodShortDate(route.params.date)}
+                </Text>
+              </View>
+              <View style={styles.contextPill}>
+                <ClockIcon
+                  size={14}
+                  color={appColors.foodPrimary}
+                  weight="bold"
+                />
+                <Text style={styles.contextPillText}>{resolvedContextLabel}</Text>
+              </View>
             </View>
 
             <Text style={styles.sectionTitle}>Details</Text>
@@ -1399,30 +1488,56 @@ const CreateRecipeScreen = () => {
               </View>
             )}
           </View>
+            </>
+          )}
         </ScrollView>
 
-        <View
-          style={[
-            styles.footer,
-            { paddingBottom: Math.max(insets.bottom, 16) },
-          ]}
-        >
-          <Pressable
-            onPress={() => {
-              void handleSave();
-            }}
-            disabled={saving}
-            style={({ pressed }) => [
-              styles.primaryButton,
-              saving && styles.disabled,
-              pressed && !saving && styles.cardPressed,
+        {!loadingRecipe && !recipeLoadError ? (
+          <View
+            style={[
+              styles.footer,
+              { paddingBottom: Math.max(insets.bottom, 16) },
             ]}
           >
-            <Text style={styles.primaryButtonText}>
-              {saving ? "Saving..." : "Create a Recipe"}
-            </Text>
-          </Pressable>
-        </View>
+            {isEditing ? (
+              <Pressable
+                onPress={handleDeleteRecipe}
+                disabled={deleting || saving}
+                style={({ pressed }) => [
+                  styles.secondaryButton,
+                  styles.deleteButton,
+                  (deleting || saving) && styles.disabled,
+                  pressed && !deleting && !saving && styles.cardPressed,
+                ]}
+              >
+                <Text style={[styles.secondaryButtonText, styles.deleteButtonText]}>
+                  {deleting ? "Deleting..." : "Delete recipe"}
+                </Text>
+              </Pressable>
+            ) : null}
+            <Pressable
+              onPress={() => {
+                void handleSave();
+              }}
+              disabled={saving || deleting}
+              style={({ pressed }) => [
+                styles.primaryButton,
+                (saving || deleting) && styles.disabled,
+                pressed && !saving && !deleting && styles.cardPressed,
+              ]}
+            >
+              <Text style={styles.primaryButtonText}>
+                {saving
+                  ? isEditing
+                    ? "Saving changes..."
+                    : "Saving..."
+                  : isEditing
+                    ? "Save changes"
+                    : "Create a recipe"}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
       </KeyboardAvoidingView>
 
       <FoodBarcodeScannerModal
@@ -1461,13 +1576,15 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.foodOrbBottom,
   },
   heroCard: {
-    backgroundColor: appColors.white,
-    borderRadius: 8,
-    padding: 14,
+    backgroundColor: appColors.surfaceCard,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
+    padding: 16,
     marginBottom: 16,
   },
   heroHeaderCopy: {
-    marginBottom: 12,
+    flex: 1,
   },
   heroEyebrow: {
     alignSelf: "flex-start",
@@ -1480,8 +1597,8 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     color: appColors.foodText,
-    fontSize: 18,
-    fontWeight: "900",
+    fontSize: 22,
+    fontWeight: "500",
     marginBottom: 4,
   },
   heroHeaderRow: {
@@ -1519,10 +1636,10 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   previewStrip: {
-    borderRadius: 8,
+    borderRadius: 20,
     backgroundColor: appColors.foodPrimaryDark,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
   },
   previewValue: {
     color: appColors.white,
@@ -1542,16 +1659,18 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   card: {
-    backgroundColor: appColors.white,
-    borderRadius: 8,
-    padding: 14,
+    backgroundColor: appColors.surfaceCard,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
+    padding: 16,
     marginBottom: 16,
   },
   sectionTitle: {
     color: appColors.foodText,
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: "500",
-    marginBottom: 10,
+    marginBottom: 12,
   },
   sectionSubtitle: {
     color: appColors.foodMuted,
@@ -1565,11 +1684,11 @@ const styles = StyleSheet.create({
   methodCard: {
     flexDirection: "row",
     gap: 12,
-    borderRadius: 8,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: appColors.foodBorder,
     backgroundColor: appColors.foodFieldBg,
-    padding: 12,
+    padding: 14,
   },
   methodCardSelected: {
     backgroundColor: appColors.foodPrimaryDark,
@@ -1584,7 +1703,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceGhost,
   },
   methodCopy: {
     flex: 1,
@@ -1599,7 +1718,7 @@ const styles = StyleSheet.create({
   methodTitle: {
     color: appColors.foodText,
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "600",
     flex: 1,
   },
   methodTitleSelected: {
@@ -1615,7 +1734,7 @@ const styles = StyleSheet.create({
   },
   methodBadge: {
     borderRadius: 999,
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceGhost,
     paddingHorizontal: 9,
     paddingVertical: 5,
   },
@@ -1647,10 +1766,10 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     borderColor: appColors.foodBorder,
-    borderRadius: 4,
+    borderRadius: 16,
     backgroundColor: appColors.foodFieldBg,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
     color: appColors.foodText,
     fontSize: 14,
     fontWeight: "700",
@@ -1693,12 +1812,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    borderRadius: 8,
+    borderRadius: 18,
     backgroundColor: appColors.foodSurfaceAlt,
     borderWidth: 1,
     borderColor: appColors.foodSoftBorder,
-    paddingHorizontal: 10,
-    paddingVertical: 9,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
   },
   searchResultCopy: {
     flex: 1,
@@ -1748,10 +1867,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   ingredientCard: {
-    borderRadius: 8,
-    backgroundColor: appColors.white,
-    paddingHorizontal: 8,
-    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: appColors.surfaceCardAlt,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
   },
   ingredientPressable: {
     marginBottom: 6,
@@ -1820,9 +1941,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   unitPill: {
-    borderRadius: 8,
+    borderRadius: 9999,
     backgroundColor: appColors.foodPillBg,
-    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
+    paddingHorizontal: 14,
     paddingVertical: 12,
   },
   unitText: {
@@ -1839,8 +1962,10 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     marginTop: 12,
-    borderRadius: 4,
-    backgroundColor: appColors.foodSurfaceAlt,
+    borderRadius: 18,
+    backgroundColor: appColors.surfaceCardAlt,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 8,
@@ -1890,11 +2015,11 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   stepCard: {
-    borderRadius: 8,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: appColors.foodBorder,
     backgroundColor: appColors.foodFieldBg,
-    padding: 10,
+    padding: 12,
   },
   stepHeaderRow: {
     flexDirection: "row",
@@ -1922,7 +2047,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceGhost,
     borderWidth: 1,
     borderColor: appColors.foodBorder,
   },
@@ -1956,35 +2081,42 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 12,
     gap: 10,
-    backgroundColor: appColors.whiteOverlay96,
+    backgroundColor: appColors.surfaceOverlay,
     borderTopWidth: 1,
-    borderTopColor: appColors.foodBorder,
+    borderTopColor: appColors.borderSoft,
   },
   secondaryButton: {
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 999,
-    backgroundColor: appColors.foodPillBg,
-    borderWidth: 1,
-    borderColor: appColors.foodBorder,
-    paddingVertical: 13,
+    borderRadius: 9999,
+    backgroundColor: appColors.surfaceGhost,
+    borderWidth: 2,
+    borderColor: appColors.whiteOverlay18,
+    paddingVertical: 14,
   },
   secondaryButtonText: {
-    color: appColors.foodPrimaryDark,
+    color: appColors.textPrimary,
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "600",
+  },
+  deleteButton: {
+    backgroundColor: appColors.dangerSurface,
+    borderColor: appColors.danger600,
+  },
+  deleteButtonText: {
+    color: appColors.danger700,
   },
   primaryButton: {
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 999,
-    backgroundColor: appColors.foodPrimaryDark,
-    paddingVertical: 13,
+    borderRadius: 9999,
+    backgroundColor: appColors.revolutLight,
+    paddingVertical: 14,
   },
   primaryButtonText: {
-    color: appColors.white,
+    color: appColors.revolutDark,
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   disabled: {
     opacity: 0.58,

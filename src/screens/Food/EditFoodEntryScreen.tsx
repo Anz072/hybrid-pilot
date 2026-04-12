@@ -453,7 +453,7 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: appColors.foodScreenBg,
+    backgroundColor: appColors.surfaceCanvas,
   },
   title: {
     color: appColors.foodText,

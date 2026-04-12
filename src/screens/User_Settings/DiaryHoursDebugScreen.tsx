@@ -141,11 +141,6 @@ const DiaryHoursDebugScreen = ({ navigation }: Props) => {
                     The timeline will open between these hours each time.
                   </Text>
                 </View>
-                <View style={styles.statusPill}>
-                  <Text style={styles.statusText}>
-                    {saving ? "Saving" : "Live"}
-                  </Text>
-                </View>
               </View>
 
               <View style={styles.rangeRow}>
@@ -276,7 +271,7 @@ const DiaryHoursDebugScreen = ({ navigation }: Props) => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: appColors.slate50,
+    backgroundColor: appColors.surfaceCanvas,
   },
   content: {
     paddingHorizontal: 20,
@@ -307,7 +302,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   card: {
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceCard,
     borderRadius: 24,
     padding: 18,
     borderWidth: 1,
@@ -333,13 +328,13 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   cardTitle: {
-    color: appColors.slate900,
+    color: appColors.white,
     fontSize: 17,
     fontWeight: "800",
     marginBottom: 6,
   },
   cardText: {
-    color: appColors.slate600,
+    color: appColors.slate200,
     fontSize: 13,
     lineHeight: 19,
   },
@@ -385,7 +380,7 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   rangeValue: {
-    color: appColors.slate900,
+    color: appColors.white,
     fontSize: 16,
     fontWeight: "800",
   },
@@ -410,7 +405,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   helperText: {
-    color: appColors.slate600,
+    color: appColors.slate200,
     fontSize: 13,
     lineHeight: 19,
   },

@@ -9,7 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
 import type {
   CompositeNavigationProp,
   RouteProp,
@@ -432,6 +432,38 @@ const AddFoodScreen = () => {
     void loadStaticLists();
   }, [loadStaticLists]);
 
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+
+      const refresh = async () => {
+        searchCacheRef.current.clear();
+        await loadStaticLists();
+
+        const normalized = query.trim();
+        if (!normalized) {
+          return;
+        }
+
+        setIsSearching(true);
+        const refreshedResults = await searchFoods(normalized, searchMode);
+
+        if (!active) {
+          return;
+        }
+
+        setResults(refreshedResults);
+        setIsSearching(false);
+      };
+
+      void refresh();
+
+      return () => {
+        active = false;
+      };
+    }, [loadStaticLists, query, searchFoods, searchMode]),
+  );
+
   useEffect(() => {
     let cancelled = false;
 
@@ -561,6 +593,29 @@ const AddFoodScreen = () => {
     });
   }, [date, mealType, navigation, resolvedContextLabel, resolvedLoggedAt]);
 
+  const openRecipeEditor = useCallback(
+    (food: SearchFoodResult) => {
+      const recipeId = Number(food.sourceId);
+
+      if (food.source !== "recipe" || !Number.isFinite(recipeId)) {
+        Alert.alert(
+          "Recipe unavailable",
+          "That saved recipe could not be opened for editing.",
+        );
+        return;
+      }
+
+      navigation.navigate("CreateRecipe", {
+        contextLabel: resolvedContextLabel,
+        date,
+        loggedAt: resolvedLoggedAt,
+        mealType,
+        recipeId,
+      });
+    },
+    [date, mealType, navigation, resolvedContextLabel, resolvedLoggedAt],
+  );
+
   const openFoodEditor = async (food: SearchFoodResult) => {
     if (!user) {
       Alert.alert(
@@ -637,72 +692,80 @@ const AddFoodScreen = () => {
     });
   }, []);
 
-  const renderFoodCard = (food: SearchFoodResult, isFavorite: boolean) => (
-    <View key={food.key} style={styles.foodCard}>
-      <Pressable
-        style={styles.foodBody}
-        onPress={() => void openFoodEditor(food)}
-      >
-        <View style={styles.foodTopRow}>
-          <View style={styles.foodBadgeRow}>
-            <View style={styles.foodBadge}>
-              <Text style={styles.foodBadgeText}>
-                {formatFoodSourceLabel(food.source)}
-              </Text>
-            </View>
-            {food.verified ? (
-              <View style={styles.foodBadge}>
-                <Text style={styles.foodBadgeText}>Verified</Text>
-              </View>
-            ) : null}
-          </View>
-          <Text style={styles.foodCalories}>
-            {formatFoodNumber(food.calories, " kcal")}
-          </Text>
-        </View>
-        <Text style={styles.foodName} numberOfLines={2}>
-          {food.name}
-        </Text>
-        <Text style={styles.foodMeta} numberOfLines={1}>
-          {food.brand ? `${food.brand} | ` : ""}
-          {formatFoodItemServing(food)} serving
-        </Text>
-        <Text style={styles.foodMacroText}>
-          {formatFoodMacro(food.proteinG, "P")} |{" "}
-          {formatFoodMacro(food.carbsG, "C")} |{" "}
-          {formatFoodMacro(food.fatG, "F")}
-        </Text>
-      </Pressable>
-      <View style={styles.foodActionColumn}>
+  const renderFoodCard = (food: SearchFoodResult, isFavorite: boolean) => {
+    const isRecipe = food.source === "recipe";
+
+    return (
+      <View key={food.key} style={styles.foodCard}>
         <Pressable
-          onPress={() => void toggleFavorite(food, isFavorite)}
-          style={({ pressed }) => [
-            styles.secondaryAction,
-            isFavorite && styles.secondaryActionActive,
-            pressed && styles.cardPressed,
-          ]}
+          style={styles.foodBody}
+          onPress={() => void openFoodEditor(food)}
         >
-          <Text
-            style={[
-              styles.secondaryActionText,
-              isFavorite && styles.secondaryActionTextActive,
+          <View style={styles.foodTopRow}>
+            <View style={styles.foodBadgeRow}>
+              <View style={styles.foodBadge}>
+                <Text style={styles.foodBadgeText}>
+                  {formatFoodSourceLabel(food.source)}
+                </Text>
+              </View>
+              {food.verified ? (
+                <View style={styles.foodBadge}>
+                  <Text style={styles.foodBadgeText}>Verified</Text>
+                </View>
+              ) : null}
+            </View>
+            <Text style={styles.foodCalories}>
+              {formatFoodNumber(food.calories, " kcal")}
+            </Text>
+          </View>
+          <Text style={styles.foodName} numberOfLines={2}>
+            {food.name}
+          </Text>
+          <Text style={styles.foodMeta} numberOfLines={1}>
+            {food.brand ? `${food.brand} | ` : ""}
+            {formatFoodItemServing(food)} serving
+          </Text>
+          <Text style={styles.foodMacroText}>
+            {formatFoodMacro(food.proteinG, "P")} |{" "}
+            {formatFoodMacro(food.carbsG, "C")} |{" "}
+            {formatFoodMacro(food.fatG, "F")}
+          </Text>
+        </Pressable>
+        <View style={styles.foodActionColumn}>
+          <Pressable
+            onPress={() =>
+              isRecipe
+                ? openRecipeEditor(food)
+                : void toggleFavorite(food, isFavorite)
+            }
+            style={({ pressed }) => [
+              styles.secondaryAction,
+              !isRecipe && isFavorite && styles.secondaryActionActive,
+              pressed && styles.cardPressed,
             ]}
           >
-            {isFavorite ? "Saved" : "Save"}
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={() => void openFoodEditor(food)}
-          style={({ pressed }) => [
-            styles.primaryAction,
-            pressed && styles.cardPressed,
-          ]}
-        >
-          <Text style={styles.primaryActionText}>Open</Text>
-        </Pressable>
+            <Text
+              style={[
+                styles.secondaryActionText,
+                !isRecipe && isFavorite && styles.secondaryActionTextActive,
+              ]}
+            >
+              {isRecipe ? "Edit" : isFavorite ? "Saved" : "Save"}
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => void openFoodEditor(food)}
+            style={({ pressed }) => [
+              styles.primaryAction,
+              pressed && styles.cardPressed,
+            ]}
+          >
+            <Text style={styles.primaryActionText}>Open</Text>
+          </Pressable>
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   const renderSection = (
     title: string,
@@ -1006,9 +1069,11 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.foodOrbBottom,
   },
   heroCard: {
-    backgroundColor: appColors.white,
-    borderRadius: 8,
-    padding: 14,
+    backgroundColor: appColors.surfaceCard,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
+    padding: 16,
     marginBottom: 16,
   },
   heroHeaderRow: {
@@ -1032,8 +1097,8 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   morePill: {
-    borderRadius: 999,
-    backgroundColor: appColors.foodPrimaryDark,
+    borderRadius: 9999,
+    backgroundColor: appColors.revolutLight,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
@@ -1047,7 +1112,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   morePillText: {
-    color: appColors.white,
+    color: appColors.revolutDark,
     fontSize: 12,
     fontWeight: "800",
   },
@@ -1112,8 +1177,8 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     color: appColors.foodText,
-    fontSize: 18,
-    fontWeight: "900",
+    fontSize: 22,
+    fontWeight: "500",
     marginBottom: 4,
   },
   heroText: {
@@ -1126,21 +1191,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    borderRadius: 999,
-    backgroundColor: appColors.white,
-    borderWidth: 1,
-    borderColor: appColors.foodBorder,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    borderRadius: 9999,
+    backgroundColor: appColors.surfaceGhost,
+    borderWidth: 2,
+    borderColor: appColors.whiteOverlay18,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
   },
   heroActionPrimary: {
     backgroundColor: appColors.foodPrimaryDark,
     borderColor: appColors.foodPrimaryDark,
   },
   heroActionText: {
-    color: appColors.foodPrimaryDark,
+    color: appColors.textPrimary,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   heroActionTextPrimary: {
     color: appColors.white,
@@ -1173,8 +1238,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    borderRadius: 18,
-    backgroundColor: appColors.foodFieldBg,
+    borderRadius: 20,
+    backgroundColor: appColors.surfaceCardAlt,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
     padding: 14,
   },
   moreRowAccent: {
@@ -1190,12 +1257,12 @@ const styles = StyleSheet.create({
     minWidth: 50,
     flexDirection: "row",
     gap: 6,
-    borderRadius: 8,
+    borderRadius: 9999,
     backgroundColor: appColors.foodPrimaryDark,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
   },
   scanButtonText: {
     color: appColors.white,
@@ -1209,9 +1276,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   sectionCard: {
-    backgroundColor: appColors.white,
-    borderRadius: 8,
-    padding: 14,
+    backgroundColor: appColors.surfaceCard,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
+    padding: 16,
     marginBottom: 16,
   },
   sectionHeaderRow: {
@@ -1291,12 +1360,12 @@ const styles = StyleSheet.create({
   foodCard: {
     flexDirection: "row",
     gap: 10,
-    borderRadius: 8,
+    borderRadius: 20,
     backgroundColor: appColors.foodSurfaceAlt,
     borderWidth: 1,
     borderColor: appColors.foodSoftBorder,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
   },
   foodBody: {
     flex: 1,
@@ -1315,7 +1384,7 @@ const styles = StyleSheet.create({
   },
   foodBadge: {
     borderRadius: 999,
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceGhost,
     borderWidth: 1,
     borderColor: appColors.foodBorder,
     paddingHorizontal: 7,
@@ -1360,7 +1429,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     borderColor: appColors.foodBorder,
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceGhost,
     paddingHorizontal: 10,
     paddingVertical: 7,
   },
@@ -1379,15 +1448,15 @@ const styles = StyleSheet.create({
     minWidth: 62,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 999,
-    backgroundColor: appColors.foodPrimaryDark,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    borderRadius: 9999,
+    backgroundColor: appColors.revolutLight,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   primaryActionText: {
-    color: appColors.white,
+    color: appColors.revolutDark,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   cardPressed: {
     opacity: 0.9,

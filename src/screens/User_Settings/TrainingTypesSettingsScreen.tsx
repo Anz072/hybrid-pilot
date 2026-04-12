@@ -171,7 +171,7 @@ const TrainingTypesSettingsScreen = ({ navigation }: Props) => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: appColors.slate50,
+    backgroundColor: appColors.surfaceCanvas,
   },
   content: {
     paddingHorizontal: 20,
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.foodOrbBottom,
   },
   card: {
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceCard,
     borderRadius: 24,
     padding: 18,
     borderWidth: 1,
@@ -210,13 +210,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cardTitle: {
-    color: appColors.slate900,
+    color: appColors.white,
     fontSize: 17,
     fontWeight: "800",
     marginBottom: 4,
   },
   cardText: {
-    color: appColors.slate600,
+    color: appColors.white,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -225,12 +225,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     borderRadius: 999,
-    backgroundColor: appColors.foodEyebrowBg,
+    backgroundColor: appColors.surfaceRaised,
     paddingHorizontal: 12,
     paddingVertical: 9,
   },
   metricPillText: {
-    color: appColors.foodPrimaryDark,
+    color: appColors.white,
     fontSize: 12,
     fontWeight: "800",
   },
@@ -258,13 +258,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   optionTitle: {
-    color: appColors.slate900,
+    color: appColors.white,
     fontSize: 16,
     fontWeight: "800",
     marginBottom: 4,
   },
   optionText: {
-    color: appColors.slate600,
+    color: appColors.slate200,
     fontSize: 13,
     lineHeight: 18,
   },

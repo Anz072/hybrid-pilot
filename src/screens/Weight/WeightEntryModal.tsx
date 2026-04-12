@@ -194,7 +194,7 @@ const WeightEntryModal = ({
             ]}
             accessibilityLabel="Close weight entry"
           >
-            <XIcon size={24} color={appColors.black30} />
+            <XIcon size={24} color={appColors.textSecondary} />
           </Pressable>
         </View>
 
@@ -240,7 +240,11 @@ const WeightEntryModal = ({
                 ]}
                 accessibilityLabel="Select measurement date"
               >
-                <ClockIcon size={16} color={appColors.slate900} weight="bold" />
+                <ClockIcon
+                  size={16}
+                  color={appColors.textPrimary}
+                  weight="bold"
+                />
                 <Text style={styles.dateButtonText}>
                   {measuredAtDate.toLocaleDateString(undefined, {
                     month: "short",
@@ -257,7 +261,11 @@ const WeightEntryModal = ({
                 ]}
                 accessibilityLabel="Select measurement time"
               >
-                <ClockIcon size={16} color={appColors.slate900} weight="bold" />
+                <ClockIcon
+                  size={16}
+                  color={appColors.textPrimary}
+                  weight="bold"
+                />
                 <Text style={styles.dateButtonText}>
                   {measuredAtDate.toLocaleTimeString(undefined, {
                     hour: "numeric",
@@ -340,21 +348,21 @@ const WeightEntryModal = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: appColors.slate50,
+    backgroundColor: appColors.surfaceCanvas,
   },
   primaryButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    borderRadius: 999,
-    backgroundColor: appColors.foodPrimaryDark,
-    paddingVertical: 13,
+    borderRadius: 9999,
+    backgroundColor: appColors.revolutLight,
+    paddingVertical: 14,
   },
   primaryButtonText: {
-    color: appColors.white,
+    color: appColors.revolutDark,
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   disabled: {
     opacity: 0.58,
@@ -384,8 +392,8 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     color: appColors.foodText,
-    fontSize: 18,
-    fontWeight: "900",
+    fontSize: 22,
+    fontWeight: "500",
     marginBottom: 4,
   },
   closeButton: {
@@ -394,6 +402,9 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: appColors.surfaceGhost,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
   },
   closeButtonPressed: {
     opacity: 0.9,
@@ -403,14 +414,14 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   card: {
-    backgroundColor: appColors.white,
-    borderRadius: 8,
+    backgroundColor: appColors.surfaceCard,
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: appColors.slate200,
+    borderColor: appColors.borderSoft,
     padding: 16,
   },
   label: {
-    color: appColors.slate500,
+    color: appColors.textMuted,
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 0.8,
@@ -426,24 +437,27 @@ const styles = StyleSheet.create({
   weightInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: appColors.slate300,
-    borderRadius: 8,
+    borderColor: appColors.borderStrong,
+    borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 14,
     fontSize: 22,
     fontWeight: "800",
-    color: appColors.slate900,
-    backgroundColor: appColors.white,
+    color: appColors.textPrimary,
+    backgroundColor: appColors.surfaceField,
   },
   unitPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 18,
-    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 16,
+    borderRadius: 9999,
+    backgroundColor: appColors.surfaceGhost,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
   },
   unitText: {
     fontSize: 20,
     fontWeight: "600",
-    color: appColors.slate900,
+    color: appColors.textPrimary,
   },
   dateRow: {
     flexDirection: "row",
@@ -456,30 +470,30 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    backgroundColor: appColors.slate50,
+    backgroundColor: appColors.surfaceField,
     borderWidth: 1,
-    borderColor: appColors.slate300,
-    borderRadius: 8,
+    borderColor: appColors.borderStrong,
+    borderRadius: 16,
   },
   dateButtonPressed: {
     opacity: 0.9,
   },
   dateButtonText: {
-    color: appColors.slate900,
+    color: appColors.textPrimary,
     fontSize: 14,
     fontWeight: "700",
   },
   notesInput: {
     minHeight: 96,
     borderWidth: 1,
-    borderColor: appColors.slate300,
-    borderRadius: 8,
+    borderColor: appColors.borderStrong,
+    borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 12,
     textAlignVertical: "top",
-    color: appColors.slate900,
+    color: appColors.textPrimary,
     fontSize: 15,
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceField,
   },
   deleteButton: {
     marginTop: 18,

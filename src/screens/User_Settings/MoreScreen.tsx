@@ -19,6 +19,7 @@ import type { MoreParamList } from "../../navigation/MoreNavigator";
 import { DB } from "../../store/DB";
 import { useAppSelector } from "../../store/hooks";
 import { appColors } from "../../theme/colors";
+import { appTypography } from "../../theme/typography";
 import { formatFoodHourLabel } from "../Food/foodUtils";
 import CalorieBudgetChart from "./CalorieBudgetChart";
 import {
@@ -298,7 +299,7 @@ const MoreScreen = () => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: appColors.slate50,
+    backgroundColor: appColors.surfaceCanvas,
   },
   content: {
     paddingHorizontal: 20,
@@ -322,31 +323,26 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.foodOrbBottom,
   },
   heroCard: {
-    backgroundColor: appColors.white,
-    borderRadius: 8,
+    backgroundColor: appColors.surfaceCard,
+    borderRadius: 28,
     padding: 20,
     borderWidth: 1,
-    borderColor: appColors.slate200,
+    borderColor: appColors.borderSoft,
     marginBottom: 14,
   },
   eyebrow: {
     alignSelf: "flex-start",
-    color: appColors.foodPrimaryDark,
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    backgroundColor: appColors.foodEyebrowBg,
-    paddingHorizontal: 10,
+    ...appTypography.label,
+    color: appColors.textSecondary,
+    backgroundColor: appColors.surfaceGhost,
+    paddingHorizontal: 12,
     paddingVertical: 7,
-    borderRadius: 999,
+    borderRadius: 9999,
     marginBottom: 12,
   },
   heroTitle: {
-    color: appColors.slate900,
-    fontSize: 31,
-    lineHeight: 36,
-    fontWeight: "800",
+    ...appTypography.displaySection,
+    color: appColors.textPrimary,
     marginBottom: 8,
   },
   heroMetrics: {
@@ -361,36 +357,33 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   metricLabel: {
-    color: appColors.slate500,
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
+    ...appTypography.label,
+    color: appColors.textMuted,
     marginBottom: 8,
   },
   metricValue: {
-    color: appColors.slate900,
+    color: appColors.textPrimary,
     fontSize: 16,
     fontWeight: "600",
   },
   metricValueSmall: {
-    color: appColors.slate900,
+    color: appColors.textPrimary,
     fontSize: 14,
     lineHeight: 18,
     fontWeight: "800",
   },
   sectionTitle: {
-    color: appColors.slate900,
+    color: appColors.textPrimary,
     fontSize: 20,
-    fontWeight: "800",
+    fontWeight: "500",
     marginTop: 18,
     marginBottom: 10,
   },
   sectionCard: {
-    backgroundColor: appColors.white,
-    borderRadius: 8,
+    backgroundColor: appColors.surfaceCard,
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: appColors.slate200,
+    borderColor: appColors.borderSoft,
     overflow: "hidden",
   },
   actionRow: {
@@ -400,7 +393,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: appColors.slate100,
+    borderBottomColor: appColors.borderSoft,
   },
   actionRowPressed: {
     opacity: 0.94,
@@ -417,13 +410,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   actionTitle: {
-    color: appColors.slate900,
+    color: appColors.textPrimary,
     fontSize: 15,
-    fontWeight: "800",
+    fontWeight: "600",
     marginBottom: 4,
   },
   actionDescription: {
-    color: appColors.slate600,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
   },
@@ -439,7 +432,7 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   actionArrow: {
-    color: appColors.slate400,
+    color: appColors.textMuted,
     fontSize: 22,
     lineHeight: 22,
     fontWeight: "400",

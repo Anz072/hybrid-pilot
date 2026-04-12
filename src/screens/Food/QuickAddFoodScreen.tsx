@@ -393,7 +393,10 @@ const QuickAddFoodScreen = () => {
                 <Text style={styles.contextPillText}>
                   {formatFoodLoggedTime(loggedAtDate.toISOString())}
                 </Text>
-                <PencilSimpleIcon size={16} color={appColors.slate700} />
+                <PencilSimpleIcon
+                  size={16}
+                  color={appColors.revolutDark}
+                />
               </Pressable>
             </View>
             <View style={styles.energyLabelContainer}>
@@ -550,9 +553,11 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.foodOrbBottom,
   },
   heroCard: {
-    backgroundColor: appColors.white,
-    borderRadius: 8,
-    padding: 14,
+    backgroundColor: appColors.surfaceCard,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
+    padding: 16,
     marginBottom: 16,
   },
   heroHeaderRow: {
@@ -576,8 +581,8 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     color: appColors.foodText,
-    fontSize: 18,
-    fontWeight: "900",
+    fontSize: 22,
+    fontWeight: "500",
     marginBottom: 4,
   },
   heroMeta: {
@@ -626,10 +631,10 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   previewStrip: {
-    borderRadius: 8,
+    borderRadius: 20,
     backgroundColor: appColors.foodPrimaryDark,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
   },
   previewValue: {
     color: appColors.white,
@@ -643,9 +648,11 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   card: {
-    backgroundColor: appColors.white,
-    borderRadius: 8,
-    padding: 14,
+    backgroundColor: appColors.surfaceCard,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
+    padding: 16,
     marginBottom: 16,
   },
   sectionTitle: {
@@ -685,19 +692,21 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     borderColor: appColors.foodPrimaryDark,
-    borderRadius: 8,
+    borderRadius: 16,
     backgroundColor: appColors.foodFieldBg,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 13,
     color: appColors.foodText,
     fontSize: 20,
     fontWeight: "800",
   },
   unitPill: {
-    borderRadius: 4,
+    borderRadius: 9999,
     backgroundColor: appColors.foodPillBg,
-    paddingHorizontal: 18,
-    paddingVertical: 20,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
   },
   unitText: {
     color: appColors.foodPrimary,
@@ -724,7 +733,7 @@ const styles = StyleSheet.create({
     gap: 8,
     borderWidth: 1,
     borderColor: appColors.foodBorder,
-    borderRadius: 8,
+    borderRadius: 16,
     backgroundColor: appColors.foodFieldBg,
     paddingHorizontal: 12,
   },
@@ -735,7 +744,7 @@ const styles = StyleSheet.create({
     gap: 8,
     borderWidth: 1,
     borderColor: appColors.foodBorder,
-    borderRadius: 8,
+    borderRadius: 16,
     backgroundColor: appColors.foodFieldBg,
     paddingHorizontal: 12,
   },
@@ -754,10 +763,10 @@ const styles = StyleSheet.create({
   textInput: {
     borderWidth: 1,
     borderColor: appColors.foodBorder,
-    borderRadius: 8,
+    borderRadius: 16,
     backgroundColor: appColors.foodFieldBg,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
     color: appColors.foodText,
     fontSize: 14,
     fontWeight: "700",
@@ -769,23 +778,23 @@ const styles = StyleSheet.create({
     bottom: 0,
     paddingHorizontal: 18,
     paddingTop: 12,
-    backgroundColor: appColors.whiteOverlay96,
+    backgroundColor: appColors.surfaceOverlay,
     borderTopWidth: 1,
-    borderTopColor: appColors.foodBorder,
+    borderTopColor: appColors.borderSoft,
   },
   primaryButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    borderRadius: 999,
-    backgroundColor: appColors.foodPrimaryDark,
-    paddingVertical: 13,
+    borderRadius: 9999,
+    backgroundColor: appColors.revolutLight,
+    paddingVertical: 14,
   },
   primaryButtonText: {
-    color: appColors.white,
+    color: appColors.revolutDark,
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   disabled: {
     opacity: 0.58,

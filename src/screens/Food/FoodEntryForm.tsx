@@ -130,7 +130,7 @@ const FoodEntryForm = ({
 
   return (
     <>
-      <View style={[styles.cardX, { paddingTop: insets.top + 14 }]}>
+      <View style={[styles.cardX, { marginTop: insets.top + 14 }]}>
         <View style={styles.heroHeaderRow}>
           <View style={styles.heroHeaderCopy}>
             <Text style={styles.heroEyebrow}>{heroEyebrow}</Text>
@@ -262,7 +262,7 @@ const FoodEntryForm = ({
 
 const styles = StyleSheet.create({
   heroCard: {
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceCard,
     borderRadius: 8,
     padding: 14,
     marginBottom: 16,
@@ -360,13 +360,13 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   cardX: {
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceCard,
     borderRadius: 8,
     padding: 14,
     marginBottom: 16,
   },
   card: {
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceCard,
     borderRadius: 8,
     padding: 14,
     marginBottom: 16,

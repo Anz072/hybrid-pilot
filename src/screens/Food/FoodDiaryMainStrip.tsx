@@ -518,9 +518,11 @@ const FoodDiaryMainStrip = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: appColors.white,
-    borderRadius: 8,
-    padding: 14,
+    backgroundColor: appColors.surfaceCard,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
+    padding: 16,
     marginBottom: 16,
   },
   header: {
@@ -533,19 +535,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   title: {
-    color: appColors.foodText,
-    fontSize: 12,
-    fontWeight: "900",
-    marginBottom: 2,
+    color: appColors.textSecondary,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    marginBottom: 4,
   },
   subtitle: {
-    color: appColors.plumPlaceholder,
-    fontSize: 16,
+    color: appColors.textPrimary,
+    fontSize: 20,
     fontWeight: "500",
   },
   navButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 8,
+    borderRadius: 9999,
+    backgroundColor: appColors.surfaceGhost,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
   },
   dayRow: {
     flexDirection: "row",
@@ -570,7 +578,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   weekBudgetEyebrow: {
-    color: appColors.slate500,
+    color: appColors.textMuted,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -578,13 +586,15 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   weekBudgetValue: {
-    color: appColors.slate900,
+    color: appColors.textPrimary,
     fontSize: 15,
     fontWeight: "800",
   },
   weekBudgetMeta: {
     borderRadius: 999,
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceGhost,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
@@ -696,14 +706,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   hourCard: {
-    borderRadius: 8,
+    borderRadius: 20,
     backgroundColor: appColors.foodSurfaceAlt,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
     padding: 10,
   },
   hourCardActive: {
     borderWidth: 1,
-    borderColor: appColors.lavenderRowBorder,
-    backgroundColor: appColors.foodPillBg,
+    borderColor: appColors.foodPrimary,
+    backgroundColor: appColors.surfaceRaised,
   },
   hourHeader: {
     flexDirection: "row",
@@ -741,15 +753,15 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   emptyState: {
-    borderRadius: 14,
-    backgroundColor: appColors.white,
+    borderRadius: 18,
+    backgroundColor: appColors.surfaceCardAlt,
     borderWidth: 1,
-    borderColor: appColors.foodTimelineBorder,
+    borderColor: appColors.borderSoft,
     paddingHorizontal: 12,
     paddingVertical: 12,
   },
-    nonEmptyState: {
-    backgroundColor: appColors.white,
+  nonEmptyState: {
+    backgroundColor: appColors.surfaceCardAlt,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
@@ -767,13 +779,13 @@ const styles = StyleSheet.create({
   entryCard: {
     flexDirection: "row",
     gap: 12,
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceCardAlt,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
   entryCardWithDivider: {
     borderBottomWidth: 1,
-    borderBottomColor: appColors.slate300,
+    borderBottomColor: appColors.borderSoft,
   },
   entryMain: {
     flex: 1,
@@ -796,7 +808,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   entryText: {
-    color: appColors.black30,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
   },

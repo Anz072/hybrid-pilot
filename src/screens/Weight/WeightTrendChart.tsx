@@ -242,15 +242,15 @@ const WeightTrendChart = ({
       return "Trend needs more data.";
     }
 
-    if (displayEntries.length < sortedEntries.length) {
-      if (range === "ALL") {
-        return "Showing representative snapshots across your full history.";
-      }
+    // if (displayEntries.length < sortedEntries.length) {
+    //   if (range === "ALL") {
+    //     return "Showing representative snapshots across your full history.";
+    //   }
 
-      return range === "1Y"
-        ? "Showing weekly snapshots for a cleaner long-range view."
-        : "Showing simplified snapshots for a cleaner long-range view.";
-    }
+    //   return range === "1Y"
+    //     ? "Showing weekly snapshots for a cleaner long-range view."
+    //     : "Showing simplified snapshots for a cleaner long-range view.";
+    // }
 
     return "";
   }, [displayEntries.length, range, sortedEntries.length]);
@@ -639,12 +639,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   segmentActive: {
-    backgroundColor: appColors.white,
-    shadowColor: appColors.raw_hex_B8AEC9,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.16,
     shadowRadius: 10,
-    elevation: 2,
+    backgroundColor: appColors.blue600
   },
   segmentPressed: {
     opacity: 0.92,

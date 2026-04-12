@@ -22,6 +22,8 @@ import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { hydrateUserFromDb } from "../store/userSlice";
 import type { FoodStackParamList } from "./foodTypes";
 import { appColors } from "../theme/colors";
+import { appNavigationTheme } from "../theme/navigationTheme";
+import { appTypography } from "../theme/typography";
 
 export type RootStackParamList = {
   Onboarding: undefined;
@@ -81,7 +83,7 @@ const AppNavigator = () => {
   if (isHydrating) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={appColors.slate900} />
+        <ActivityIndicator size="large" color={appColors.foodPrimary} />
         {bootstrapError ? (
           <Text style={styles.loadingError}>{bootstrapError}</Text>
         ) : null}
@@ -111,7 +113,7 @@ const AppNavigator = () => {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={appNavigationTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!hasCompletedOnboarding ? (
           <Stack.Screen name="Onboarding">
@@ -186,35 +188,35 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 12,
-    backgroundColor: appColors.white,
+    gap: 14,
+    backgroundColor: appColors.surfaceCanvas,
     padding: 24,
   },
   loadingError: {
+    ...appTypography.body,
     color: appColors.dangerText,
-    fontSize: 14,
-    fontWeight: "700",
     textAlign: "center",
+    maxWidth: 320,
   },
   errorTitle: {
-    color: appColors.slate900,
-    fontSize: 20,
-    fontWeight: "900",
+    ...appTypography.displayCard,
+    color: appColors.textPrimary,
     textAlign: "center",
   },
   retryButton: {
-    backgroundColor: appColors.slate900,
-    borderRadius: 999,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    backgroundColor: appColors.surfaceGhost,
+    borderRadius: 9999,
+    borderWidth: 2,
+    borderColor: appColors.revolutLight,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
   },
   retryButtonPressed: {
-    opacity: 0.86,
+    opacity: 0.85,
   },
   retryButtonText: {
-    color: appColors.white,
-    fontSize: 14,
-    fontWeight: "800",
+    ...appTypography.button,
+    color: appColors.textPrimary,
   },
 });
 

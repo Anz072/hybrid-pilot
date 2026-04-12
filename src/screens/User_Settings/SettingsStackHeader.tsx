@@ -2,6 +2,7 @@ import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { CaretLeftIcon } from "phosphor-react-native";
 import { appColors } from "../../theme/colors";
+import { appTypography } from "../../theme/typography";
 
 type SettingsStackHeaderProps = {
   eyebrow?: string;
@@ -25,7 +26,7 @@ const SettingsStackHeader = ({
           pressed && styles.backButtonPressed,
         ]}
       >
-        <CaretLeftIcon size={18} color={appColors.slate900} weight="bold" />
+        <CaretLeftIcon size={18} color={appColors.textPrimary} weight="bold" />
       </Pressable>
 
       {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
@@ -46,9 +47,9 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceGhost,
     borderWidth: 1,
-    borderColor: appColors.slate200,
+    borderColor: appColors.borderSoft,
     marginBottom: 18,
   },
   backButtonPressed: {
@@ -56,28 +57,22 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     alignSelf: "flex-start",
-    color: appColors.foodPrimaryDark,
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    backgroundColor: appColors.foodEyebrowBg,
-    paddingHorizontal: 10,
+    ...appTypography.label,
+    color: appColors.textSecondary,
+    backgroundColor: appColors.surfaceGhost,
+    paddingHorizontal: 12,
     paddingVertical: 7,
-    borderRadius: 999,
+    borderRadius: 9999,
     marginBottom: 12,
   },
   title: {
-    color: appColors.slate900,
-    fontSize: 31,
-    lineHeight: 36,
-    fontWeight: "800",
+    ...appTypography.displaySection,
+    color: appColors.textPrimary,
     marginBottom: 8,
   },
   subtitle: {
-    color: appColors.slate600,
-    fontSize: 15,
-    lineHeight: 22,
+    ...appTypography.body,
+    color: appColors.textSecondary,
   },
 });
 

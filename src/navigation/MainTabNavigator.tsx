@@ -46,6 +46,7 @@ import {
   formatFoodLoggedTime,
 } from "../screens/Food/foodUtils";
 import { appColors } from "../theme/colors";
+import { appTypography } from "../theme/typography";
 
 export type MainTabParamList = {
   Home: undefined;
@@ -57,9 +58,9 @@ export type MainTabParamList = {
   Library: undefined;
 };
 
-const FOCUSED_COLOR = appColors.tabFocused;
-const UNFOCUSED_COLOR = appColors.neutral900;
-const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.35);
+const FOCUSED_COLOR = appColors.textPrimary;
+const UNFOCUSED_COLOR = appColors.textMuted;
+const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.41);
 const Tab = createBottomTabNavigator<MainTabParamList>();
 type RootNavigation = NativeStackNavigationProp<RootStackParamList>;
 
@@ -268,6 +269,7 @@ const MainTabNavigator = () => {
               <HouseSimpleIcon
                 size={24}
                 color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
+                weight={focused ? "bold" : "light"}
               />
             ),
           }}
@@ -288,6 +290,7 @@ const MainTabNavigator = () => {
               <ForkKnifeIcon
                 size={24}
                 color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
+                weight={focused ? "bold" : "light"}
               />
             ),
           }}
@@ -306,7 +309,11 @@ const MainTabNavigator = () => {
                 ]}
               >
                 <View style={styles.shortcutTabButton}>
-                  <PlusIcon size={26} color={appColors.white} weight="bold" />
+                  <PlusIcon
+                    size={26}
+                    color={appColors.revolutDark}
+                    weight="bold"
+                  />
                 </View>
               </Pressable>
             ),
@@ -319,6 +326,7 @@ const MainTabNavigator = () => {
               <FireIcon
                 size={24}
                 color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
+                weight={focused ? "bold" : "light"}
               />
             ),
           }}
@@ -341,6 +349,7 @@ const MainTabNavigator = () => {
               <DotsThreeCircleIcon
                 size={24}
                 color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
+                weight={focused ? "bold" : "light"}
               />
             ),
           }}
@@ -373,6 +382,7 @@ const MainTabNavigator = () => {
               },
             ]}
           >
+            <View style={styles.sheetHandle} />
             <View style={styles.sheetHeader}>
               <View style={styles.headerSpacer} />
 
@@ -387,7 +397,7 @@ const MainTabNavigator = () => {
                   pressed && styles.pressed,
                 ]}
               >
-                <XIcon size={24} color={appColors.black30} />
+                <XIcon size={24} color={appColors.textSecondary} />
               </Pressable>
             </View>
 
@@ -402,7 +412,7 @@ const MainTabNavigator = () => {
                 ]}
               >
                 <View style={styles.shortcutIconWrap}>
-                  <LightningIcon size={26} color={appColors.foodText} />
+                  <LightningIcon size={26} color={appColors.textPrimary} />
                 </View>
                 <Text style={styles.shortcutLabel}>Quick Add</Text>
               </Pressable>
@@ -417,7 +427,7 @@ const MainTabNavigator = () => {
                 <View style={styles.shortcutIconWrap}>
                   <MagnifyingGlassIcon
                     size={26}
-                    color={appColors.foodText}
+                    color={appColors.textPrimary}
                     weight="bold"
                   />
                 </View>
@@ -432,7 +442,7 @@ const MainTabNavigator = () => {
                 ]}
               >
                 <View style={styles.shortcutIconWrap}>
-                  <BarcodeIcon size={26} color={appColors.foodText} />
+                  <BarcodeIcon size={26} color={appColors.textPrimary} />
                 </View>
                 <Text style={styles.shortcutLabel}>Barcode</Text>
               </Pressable>
@@ -445,7 +455,7 @@ const MainTabNavigator = () => {
                 ]}
               >
                 <View style={styles.shortcutIconWrap}>
-                  <ScalesIcon size={26} color={appColors.foodText} />
+                  <ScalesIcon size={26} color={appColors.textPrimary} />
                 </View>
                 <Text style={styles.shortcutLabel}>Weight</Text>
               </Pressable>
@@ -458,13 +468,12 @@ const MainTabNavigator = () => {
                 ]}
               >
                 <View style={styles.shortcutIconWrap}>
-                  <CookingPotIcon size={26} color={appColors.foodText} />
+                  <CookingPotIcon size={26} color={appColors.textPrimary} />
                 </View>
                 <Text style={styles.shortcutLabel}>Recipe</Text>
               </Pressable>
 
-               <View style={styles.shortcutCard}>
-                </View>
+              <View style={styles.shortcutCard}></View>
             </View>
           </Animated.View>
         </View>
@@ -491,12 +500,12 @@ const styles = StyleSheet.create({
   },
   placeholderScreen: {
     flex: 1,
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceCanvas,
   },
   tabBar: {
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceBase,
     borderTopWidth: 1,
-    borderTopColor: appColors.raw_hex_E9E1F7,
+    borderTopColor: appColors.borderSoft,
     paddingTop: 8,
   },
   shortcutTabSlot: {
@@ -508,9 +517,9 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 999,
-    backgroundColor: appColors.foodPrimary,
+    backgroundColor: appColors.revolutLight,
     borderWidth: 3,
-    borderColor: appColors.foodEyebrowBg,
+    borderColor: appColors.surfaceBase,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -523,9 +532,11 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.tabScrim,
   },
   sheet: {
-    backgroundColor: appColors.white,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    backgroundColor: appColors.surfaceBase,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    borderTopWidth: 1,
+    borderTopColor: appColors.borderSoft,
     paddingHorizontal: 20,
     paddingTop: 10,
   },
@@ -534,7 +545,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 5,
     borderRadius: 999,
-    backgroundColor: appColors.tabSurface,
+    backgroundColor: appColors.textMuted,
     marginBottom: 16,
   },
   sheetHeader: {
@@ -549,19 +560,21 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: appColors.surfaceGhost,
+    borderWidth: 2,
+    borderColor: appColors.whiteOverlay18,
   },
   headerSpacer: {
     width: 42,
     height: 42,
   },
   sheetTitle: {
-    color: appColors.foodText,
-    fontSize: 16,
-    fontWeight: "700",
+    ...appTypography.label,
+    color: appColors.textSecondary,
   },
   sheetDivider: {
     height: 1,
-    backgroundColor: appColors.slate300,
+    backgroundColor: appColors.borderSoft,
     marginTop: 2,
     marginBottom: 18,
   },
@@ -580,14 +593,15 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 999,
-    backgroundColor: appColors.gray300,
+    backgroundColor: appColors.surfaceCardAlt,
+    borderWidth: 1,
+    borderColor: appColors.borderStrong,
     alignItems: "center",
     justifyContent: "center",
   },
   shortcutLabel: {
-    color: appColors.foodText,
-    fontSize: 13,
-    fontWeight: "500",
+    ...appTypography.bodySmall,
+    color: appColors.textPrimary,
     textAlign: "center",
   },
   pressed: {

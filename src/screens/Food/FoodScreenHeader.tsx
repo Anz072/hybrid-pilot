@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowLeftIcon } from "phosphor-react-native";
 import { appColors } from "../../theme/colors";
+import { appTypography } from "../../theme/typography";
 
 type FoodScreenHeaderProps = {
   eyebrow?: string;
@@ -57,45 +58,38 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: appColors.whiteOverlay90,
-    borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 9999,
+    backgroundColor: appColors.surfaceGhost,
+    borderWidth: 2,
+    borderColor: appColors.whiteOverlay18,
   },
   backButtonPressed: {
-    opacity: 0.88,
+    opacity: 0.85,
   },
   backText: {
-    color: appColors.foodInk,
-    fontSize: 13,
-    fontWeight: "800",
+    ...appTypography.bodySmall,
+    color: appColors.textPrimary,
   },
   eyebrow: {
     alignSelf: "flex-start",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    color: appColors.foodPrimary,
-    backgroundColor: appColors.foodEyebrowBg,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
+    ...appTypography.label,
+    color: appColors.textSecondary,
+    backgroundColor: appColors.surfaceGhost,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 9999,
     marginBottom: 12,
   },
   title: {
-    fontSize: 32,
-    lineHeight: 38,
-    fontWeight: "900",
-    color: appColors.plum950,
-    marginBottom: 6,
+    ...appTypography.displaySection,
+    color: appColors.textPrimary,
+    marginBottom: 8,
   },
   subtitle: {
-    color: appColors.foodMuted,
-    fontSize: 15,
-    lineHeight: 22,
+    ...appTypography.body,
+    color: appColors.textSecondary,
   },
 });
 

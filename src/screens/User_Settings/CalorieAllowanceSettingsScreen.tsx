@@ -316,7 +316,7 @@ const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: appColors.slate50,
+    backgroundColor: appColors.surfaceCanvas,
   },
   content: {
     paddingHorizontal: 20,
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.foodOrbBottom,
   },
   card: {
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceCard,
     borderRadius: 24,
     padding: 18,
     borderWidth: 1,
@@ -348,13 +348,13 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   cardTitle: {
-    color: appColors.slate900,
+    color: appColors.white,
     fontSize: 17,
     fontWeight: "800",
     marginBottom: 6,
   },
   cardText: {
-    color: appColors.slate600,
+    color: appColors.slate200,
     fontSize: 13,
     lineHeight: 19,
   },
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   input: {
-    color: appColors.slate900,
+    color: appColors.white,
     fontSize: 34,
     lineHeight: 38,
     fontWeight: "800",
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   statValue: {
-    color: appColors.slate900,
+    color: appColors.white,
     fontSize: 18,
     fontWeight: "800",
   },

@@ -80,15 +80,17 @@ const FoodDiaryMoreSection = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: appColors.whiteOverlay96,
-    borderRadius: 8,
+    backgroundColor: appColors.surfaceCard,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
     padding: 16,
     marginBottom: 16,
   },
   sectionTitle: {
     color: appColors.foodText,
     fontSize: 22,
-    fontWeight: "900",
+    fontWeight: "500",
     marginBottom: 14,
   },
   sectionText: {
@@ -142,8 +144,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    borderRadius: 18,
-    backgroundColor: appColors.foodFieldBg,
+    borderRadius: 20,
+    backgroundColor: appColors.surfaceCardAlt,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
     padding: 14,
   },
   moreRowAccent: {
@@ -170,8 +174,8 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   morePill: {
-    borderRadius: 999,
-    backgroundColor: appColors.foodPrimaryDark,
+    borderRadius: 9999,
+    backgroundColor: appColors.revolutLight,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
@@ -179,7 +183,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.foodPrimary,
   },
   morePillText: {
-    color: appColors.white,
+    color: appColors.revolutDark,
     fontSize: 12,
     fontWeight: "800",
   },

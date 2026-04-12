@@ -83,20 +83,20 @@ const CalorieBudgetChart = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceCard,
     borderRadius: 24,
     padding: 18,
     borderWidth: 1,
-    borderColor: appColors.slate200,
+    borderColor: appColors.borderSoft,
   },
   title: {
-    color: appColors.slate900,
+    color: appColors.textPrimary,
     fontSize: 17,
-    fontWeight: "800",
+    fontWeight: "600",
     marginBottom: 16,
   },
   subtitle: {
-    color: appColors.slate600,
+    color: appColors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
     marginBottom: 16,
@@ -121,19 +121,19 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   barValue: {
-    color: appColors.slate500,
+    color: appColors.textMuted,
     fontSize: 11,
     fontWeight: "700",
   },
   barValueHighlighted: {
-    color: appColors.foodPrimaryDark,
+    color: appColors.textPrimary,
   },
   barTrack: {
     width: "100%",
     height: CHART_BAR_MAX_HEIGHT,
     justifyContent: "flex-end",
     borderRadius: 14,
-    backgroundColor: appColors.slate100,
+    backgroundColor: appColors.surfaceGhost,
     padding: 4,
   },
   barFill: {
@@ -145,17 +145,17 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.foodPrimary,
   },
   barLabel: {
-    color: appColors.slate500,
+    color: appColors.textMuted,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
     letterSpacing: 0.6,
   },
   barLabelHighlighted: {
-    color: appColors.foodPrimaryDark,
+    color: appColors.textPrimary,
   },
   empty: {
-    color: appColors.slate500,
+    color: appColors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
   },

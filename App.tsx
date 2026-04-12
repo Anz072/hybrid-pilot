@@ -24,10 +24,12 @@ import {
 } from "@expo-google-fonts/inter";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
 
 import AppNavigator from "./src/navigation/AppNavigator";
 import { store } from "./src/store/appStore";
 import { applyInterFontDefaults } from "./src/theme/applyInterFontDefaults";
+import { appColors } from "./src/theme/colors";
 import { SpriteAnimator } from "./src/splash/spriteAnimator";
 
 applyInterFontDefaults();
@@ -35,7 +37,7 @@ applyInterFontDefaults();
 SplashScreen.preventAutoHideAsync();
 
 export default function App() {
-  const [showAnimatedSplash, setShowAnimatedSplash] = useState(true);
+  const [showAnimatedSplash, setShowAnimatedSplash] = useState(false);
 
   const [fontsLoaded, fontError] = useFonts({
     Inter_100Thin,
@@ -86,9 +88,10 @@ export default function App() {
   if (showAnimatedSplash) {
     return (
       <View
-        style={{ flex: 1, backgroundColor: "#ffffff" }}
+        style={{ flex: 1, backgroundColor: appColors.surfaceCanvas }}
         onLayout={onLayoutRootView}
       >
+        <StatusBar style="light" />
         <View
           style={{
             flex: 1,
@@ -111,6 +114,7 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
+      <StatusBar style="light" />
       <Provider store={store}>
         <AppNavigator />
       </Provider>

@@ -59,7 +59,7 @@ export type MainTabParamList = {
 
 const FOCUSED_COLOR = appColors.tabFocused;
 const UNFOCUSED_COLOR = appColors.neutral900;
-const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.6);
+const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.35);
 const Tab = createBottomTabNavigator<MainTabParamList>();
 type RootNavigation = NativeStackNavigationProp<RootStackParamList>;
 
@@ -373,12 +373,10 @@ const MainTabNavigator = () => {
               },
             ]}
           >
-            <View style={styles.sheetHandle} />
-
             <View style={styles.sheetHeader}>
               <View style={styles.headerSpacer} />
 
-              <Text style={styles.sheetTitle}>Shortcuts</Text>
+              <Text style={styles.sheetTitle}>SHORTCUTS</Text>
 
               <Pressable
                 accessibilityRole="button"
@@ -389,13 +387,26 @@ const MainTabNavigator = () => {
                   pressed && styles.pressed,
                 ]}
               >
-                <XIcon size={22} color={appColors.white} weight="bold" />
+                <XIcon size={24} color={appColors.black30} />
               </Pressable>
             </View>
 
             <View style={styles.sheetDivider} />
 
             <View style={styles.shortcutsGrid}>
+              <Pressable
+                onPress={() => handleShortcutPress("quick_add")}
+                style={({ pressed }) => [
+                  styles.shortcutCard,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <View style={styles.shortcutIconWrap}>
+                  <LightningIcon size={26} color={appColors.foodText} />
+                </View>
+                <Text style={styles.shortcutLabel}>Quick Add</Text>
+              </Pressable>
+
               <Pressable
                 onPress={() => handleShortcutPress("search")}
                 style={({ pressed }) => [
@@ -406,45 +417,11 @@ const MainTabNavigator = () => {
                 <View style={styles.shortcutIconWrap}>
                   <MagnifyingGlassIcon
                     size={26}
-                    color={appColors.white}
+                    color={appColors.foodText}
                     weight="bold"
                   />
                 </View>
                 <Text style={styles.shortcutLabel}>Search</Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => handleShortcutPress("quick_add")}
-                style={({ pressed }) => [
-                  styles.shortcutCard,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <View style={styles.shortcutIconWrap}>
-                  <LightningIcon
-                    size={26}
-                    color={appColors.white}
-                    weight="fill"
-                  />
-                </View>
-                <Text style={styles.shortcutLabel}>Quick Add</Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => handleShortcutPress("recipe")}
-                style={({ pressed }) => [
-                  styles.shortcutCard,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <View style={styles.shortcutIconWrap}>
-                  <CookingPotIcon
-                    size={26}
-                    color={appColors.white}
-                    weight="fill"
-                  />
-                </View>
-                <Text style={styles.shortcutLabel}>Recipe</Text>
               </Pressable>
 
               <Pressable
@@ -455,7 +432,7 @@ const MainTabNavigator = () => {
                 ]}
               >
                 <View style={styles.shortcutIconWrap}>
-                  <BarcodeIcon size={26} color={appColors.white} weight="bold" />
+                  <BarcodeIcon size={26} color={appColors.foodText} />
                 </View>
                 <Text style={styles.shortcutLabel}>Barcode</Text>
               </Pressable>
@@ -468,10 +445,26 @@ const MainTabNavigator = () => {
                 ]}
               >
                 <View style={styles.shortcutIconWrap}>
-                  <ScalesIcon size={26} color={appColors.white} weight="bold" />
+                  <ScalesIcon size={26} color={appColors.foodText} />
                 </View>
                 <Text style={styles.shortcutLabel}>Weight</Text>
               </Pressable>
+
+              <Pressable
+                onPress={() => handleShortcutPress("recipe")}
+                style={({ pressed }) => [
+                  styles.shortcutCard,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <View style={styles.shortcutIconWrap}>
+                  <CookingPotIcon size={26} color={appColors.foodText} />
+                </View>
+                <Text style={styles.shortcutLabel}>Recipe</Text>
+              </Pressable>
+
+               <View style={styles.shortcutCard}>
+                </View>
             </View>
           </Animated.View>
         </View>
@@ -530,7 +523,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.tabScrim,
   },
   sheet: {
-    backgroundColor: appColors.tabSheet,
+    backgroundColor: appColors.white,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingHorizontal: 20,
@@ -554,7 +547,6 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 999,
-    backgroundColor: appColors.tabBackdrop,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -563,14 +555,15 @@ const styles = StyleSheet.create({
     height: 42,
   },
   sheetTitle: {
-    color: appColors.white,
-    fontSize: 28,
-    fontWeight: "900",
+    color: appColors.foodText,
+    fontSize: 16,
+    fontWeight: "700",
   },
   sheetDivider: {
     height: 1,
-    backgroundColor: appColors.tabButton,
-    marginBottom: 22,
+    backgroundColor: appColors.slate300,
+    marginTop: 2,
+    marginBottom: 18,
   },
   shortcutsGrid: {
     flexDirection: "row",
@@ -587,14 +580,14 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 999,
-    backgroundColor: appColors.tabCard,
+    backgroundColor: appColors.gray300,
     alignItems: "center",
     justifyContent: "center",
   },
   shortcutLabel: {
-    color: appColors.white,
+    color: appColors.foodText,
     fontSize: 13,
-    fontWeight: "800",
+    fontWeight: "500",
     textAlign: "center",
   },
   pressed: {

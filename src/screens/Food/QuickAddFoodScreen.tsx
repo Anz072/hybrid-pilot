@@ -13,7 +13,11 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useNavigation, useRoute, StackActions } from "@react-navigation/native";
+import {
+  useNavigation,
+  useRoute,
+  StackActions,
+} from "@react-navigation/native";
 import type {
   CompositeNavigationProp,
   RouteProp,
@@ -22,6 +26,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   CalendarIcon,
   ClockIcon,
+  FireIcon,
   PencilSimpleIcon,
 } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -84,7 +89,11 @@ const QuickAddFoodScreen = () => {
     }
 
     const now = new Date();
-    return buildFoodLoggedAt(route.params.date, now.getHours(), now.getMinutes());
+    return buildFoodLoggedAt(
+      route.params.date,
+      now.getHours(),
+      now.getMinutes(),
+    );
   }, [route.params.date, route.params.loggedAt]);
   const [loggedAtDate, setLoggedAtDate] = React.useState(
     () => new Date(resolvedLoggedAt),
@@ -137,10 +146,16 @@ const QuickAddFoodScreen = () => {
     };
   }, [route.params.entryId]);
 
-  const proteinG = React.useMemo(() => toSafeNumber(proteinValue), [proteinValue]);
+  const proteinG = React.useMemo(
+    () => toSafeNumber(proteinValue),
+    [proteinValue],
+  );
   const fatG = React.useMemo(() => toSafeNumber(fatValue), [fatValue]);
   const carbsG = React.useMemo(() => toSafeNumber(carbsValue), [carbsValue]);
-  const alcoholG = React.useMemo(() => toSafeNumber(alcoholValue), [alcoholValue]);
+  const alcoholG = React.useMemo(
+    () => toSafeNumber(alcoholValue),
+    [alcoholValue],
+  );
   const macroCalculatedCalories = React.useMemo(
     () =>
       calculateQuickAddCaloriesFromMacros({
@@ -223,7 +238,10 @@ const QuickAddFoodScreen = () => {
     }
 
     if (!Number.isFinite(calories) || calories <= 0) {
-      Alert.alert("Energy required", "Enter a valid energy value before saving.");
+      Alert.alert(
+        "Energy required",
+        "Enter a valid energy value before saving.",
+      );
       return;
     }
 
@@ -294,16 +312,10 @@ const QuickAddFoodScreen = () => {
     }
 
     if (macroCalculatedCalories <= 0) {
-      setEnergyValue(
-        normalizePositiveFoodInput("", requiredEnergyFallback, 0),
-      );
+      setEnergyValue(normalizePositiveFoodInput("", requiredEnergyFallback, 0));
       setIsEnergyManuallySet(true);
     }
-  }, [
-    isEnergyManuallySet,
-    macroCalculatedCalories,
-    requiredEnergyFallback,
-  ]);
+  }, [isEnergyManuallySet, macroCalculatedCalories, requiredEnergyFallback]);
 
   if (loading) {
     return (
@@ -344,7 +356,7 @@ const QuickAddFoodScreen = () => {
   }
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top + 14 }]}>
       <View style={styles.bgOrbTop} />
       <View style={styles.bgOrbBottom} />
 
@@ -360,40 +372,12 @@ const QuickAddFoodScreen = () => {
           ]}
           keyboardShouldPersistTaps="handled"
         >
-          <FoodScreenHeader
-            eyebrow="Quick Add"
-            title={route.params.entryId ? "Edit quick add" : "Quick add entry"}
-            subtitle={`${formatFoodShortDate(route.params.date)} | ${formatFoodLoggedTime(
-              loggedAtDate.toISOString(),
-            )}`}
-            onBack={() => navigation.goBack()}
-          />
-
-          <View style={styles.heroCard}>
+          <View style={styles.card}>
             <View style={styles.heroHeaderRow}>
-              <View style={styles.heroHeaderCopy}>
-                <Text style={styles.heroEyebrow}>One-Time Entry</Text>
-                <Text style={styles.heroTitle}>{resolvedName}</Text>
-                <Text style={styles.heroMeta}>
-                  Logs directly to your diary without saving a permanent food item.
-                </Text>
-              </View>
-              <View style={styles.heroPill}>
-                <Text style={styles.heroPillText}>{contextLabel}</Text>
-              </View>
+              <Text style={styles.heroTitle}>Quick Add</Text>
             </View>
 
             <View style={styles.heroPillsRow}>
-              <View style={styles.contextPill}>
-                <CalendarIcon
-                  size={14}
-                  color={appColors.foodPrimary}
-                  weight="bold"
-                />
-                <Text style={styles.contextPillText}>
-                  {formatFoodShortDate(route.params.date)}
-                </Text>
-              </View>
               <Pressable
                 onPress={() => setShowTimePicker((current) => !current)}
                 style={({ pressed }) => [
@@ -409,27 +393,15 @@ const QuickAddFoodScreen = () => {
                 <Text style={styles.contextPillText}>
                   {formatFoodLoggedTime(loggedAtDate.toISOString())}
                 </Text>
-                <Text style={styles.contextPillAction}>Change</Text>
+                <PencilSimpleIcon size={16} color={appColors.slate700} />
               </Pressable>
             </View>
-
-            <View style={styles.previewStrip}>
-              <Text style={styles.previewValue}>{calories.toFixed(0)} kcal</Text>
-              <Text style={styles.previewText}>
-                {`${proteinG.toFixed(0)}P | ${carbsG.toFixed(0)}C | ${fatG.toFixed(
-                  0,
-                )}F${alcoholG > 0 ? ` | ${alcoholG.toFixed(0)}A` : ""}`}
-              </Text>
+            <View style={styles.energyLabelContainer}>
+              <View style={{ marginBottom: 8 }}>
+                <FireIcon size={14} />
+              </View>
+              <Text style={styles.fieldLabel}>Energy</Text>
             </View>
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Energy</Text>
-            <Text style={styles.sectionSubtitle}>
-              Energy is required. If you type protein, fat, carbs, or alcohol first, the energy field updates automatically.
-            </Text>
-
-            <Text style={styles.fieldLabel}>Energy</Text>
             <View style={styles.energyRow}>
               <TextInput
                 style={styles.energyInput}
@@ -452,10 +424,6 @@ const QuickAddFoodScreen = () => {
 
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Macros</Text>
-            <Text style={styles.sectionSubtitle}>
-              Empty macro fields save as zero. Name is optional and defaults to Quick Add in your diary.
-            </Text>
-
             <View style={styles.macroGrid}>
               <View style={styles.macroField}>
                 <Text style={styles.fieldLabel}>Protein</Text>
@@ -501,19 +469,6 @@ const QuickAddFoodScreen = () => {
                   <Text style={styles.nutrientUnit}>g</Text>
                 </View>
               </View>
-            </View>
-
-            <Text style={[styles.fieldLabel, styles.fieldSpacing]}>Alcohol</Text>
-            <View style={styles.nutrientInputWrapWide}>
-              <TextInput
-                style={styles.nutrientInput}
-                value={alcoholValue}
-                onChangeText={setAlcoholValue}
-                keyboardType="decimal-pad"
-                placeholder="0"
-                placeholderTextColor={appColors.foodPlaceholder}
-              />
-              <Text style={styles.nutrientUnit}>g</Text>
             </View>
 
             <Text style={[styles.fieldLabel, styles.fieldSpacing]}>Name</Text>
@@ -623,7 +578,7 @@ const styles = StyleSheet.create({
     color: appColors.foodText,
     fontSize: 18,
     fontWeight: "900",
-    marginBottom: 3,
+    marginBottom: 4,
   },
   heroMeta: {
     color: appColors.foodMuted,
@@ -697,7 +652,7 @@ const styles = StyleSheet.create({
     color: appColors.foodText,
     fontSize: 14,
     fontWeight: "900",
-    marginBottom: 2,
+    marginBottom: 10,
   },
   sectionSubtitle: {
     color: appColors.foodMuted,
@@ -705,16 +660,21 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     marginBottom: 10,
   },
+  energyLabelContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+  },
   fieldLabel: {
     color: appColors.foodLabel,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
     letterSpacing: 0.6,
-    marginBottom: 6,
+    marginBottom: 8,
   },
   fieldSpacing: {
-    marginTop: 10,
+    marginTop: 16,
   },
   energyRow: {
     flexDirection: "row",
@@ -734,12 +694,10 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   unitPill: {
-    borderRadius: 8,
+    borderRadius: 4,
     backgroundColor: appColors.foodPillBg,
-    borderWidth: 1,
-    borderColor: appColors.foodBorder,
-    paddingHorizontal: 12,
-    paddingVertical: 13,
+    paddingHorizontal: 18,
+    paddingVertical: 20,
   },
   unitText: {
     color: appColors.foodPrimary,

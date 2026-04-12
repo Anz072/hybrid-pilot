@@ -5,7 +5,7 @@ import { ArrowLeftIcon } from "phosphor-react-native";
 import { appColors } from "../../theme/colors";
 
 type FoodScreenHeaderProps = {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   subtitle?: string;
   onBack?: () => void;
@@ -37,7 +37,7 @@ const FoodScreenHeader = ({
           <View />
         )}
       </View>
-      <Text style={styles.eyebrow}>{eyebrow}</Text>
+      {eyebrow && <Text style={styles.eyebrow}>{eyebrow}</Text>}
       <Text style={styles.title}>{title}</Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
     </View>

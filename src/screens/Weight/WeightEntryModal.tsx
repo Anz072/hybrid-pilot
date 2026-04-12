@@ -15,7 +15,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ClockIcon, XIcon } from "phosphor-react-native";
+import { ClockIcon, PencilSimpleIcon, XIcon } from "phosphor-react-native";
 import type { DBWeightEntry } from "../../store/DB_TYPES";
 import OnboardingPrimaryButton from "../Onboarding/OnboardingPrimaryButton";
 import {
@@ -65,7 +65,8 @@ const WeightEntryModal = ({
 }: WeightEntryModalProps) => {
   const insets = useSafeAreaInsets();
   const initialDate = React.useMemo(
-    () => (initialEntry ? new Date(initialEntry.measuredAtLocalIso) : new Date()),
+    () =>
+      initialEntry ? new Date(initialEntry.measuredAtLocalIso) : new Date(),
     [initialEntry],
   );
   const [value, setValue] = React.useState(
@@ -75,13 +76,16 @@ const WeightEntryModal = ({
   const [notes, setNotes] = React.useState(initialEntry?.notes ?? "");
   const [showDatePicker, setShowDatePicker] = React.useState(false);
   const [showTimePicker, setShowTimePicker] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
     if (!visible) {
       return;
     }
 
-    const nextDate = initialEntry ? new Date(initialEntry.measuredAtLocalIso) : new Date();
+    const nextDate = initialEntry
+      ? new Date(initialEntry.measuredAtLocalIso)
+      : new Date();
     setValue(initialEntry ? formatWeightKg(initialEntry.valueOriginal) : "");
     setMeasuredAtDate(nextDate);
     setNotes(initialEntry?.notes ?? "");
@@ -128,7 +132,11 @@ const WeightEntryModal = ({
     }
 
     const merged = new Date(measuredAtDate);
-    merged.setFullYear(nextDate.getFullYear(), nextDate.getMonth(), nextDate.getDate());
+    merged.setFullYear(
+      nextDate.getFullYear(),
+      nextDate.getMonth(),
+      nextDate.getDate(),
+    );
     setMeasuredAtDate(merged);
   };
 
@@ -147,21 +155,25 @@ const WeightEntryModal = ({
   };
 
   const handleSave = () => {
-    Keyboard.dismiss();
-    const parsed = parseLocalizedWeight(value);
-    if (parsed == null) {
-      Alert.alert("Invalid weight", "Enter a valid number in kilograms.");
-      return;
-    }
+    try {
+      setSaving(true);
+      const parsed = parseLocalizedWeight(value);
+      if (parsed == null) {
+        Alert.alert("Invalid weight", "Enter a valid number in kilograms.");
+        return;
+      }
 
-    onSave({
-      valueOriginal: parsed,
-      measuredAt: measuredAtDate.toISOString(),
-      measuredAtLocalIso: toLocalIsoWithOffset(measuredAtDate),
-      zoneOffsetMinutes: getZoneOffsetMinutes(measuredAtDate),
-      notes: notes.trim().length > 0 ? notes.trim() : null,
-      source: "manual",
-    });
+      onSave({
+        valueOriginal: parsed,
+        measuredAt: measuredAtDate.toISOString(),
+        measuredAtLocalIso: toLocalIsoWithOffset(measuredAtDate),
+        zoneOffsetMinutes: getZoneOffsetMinutes(measuredAtDate),
+        notes: notes.trim().length > 0 ? notes.trim() : null,
+        source: "manual",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -173,28 +185,32 @@ const WeightEntryModal = ({
     >
       <View style={styles.container}>
         <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-          <View>
-            <Text style={styles.eyebrow}>
-              {mode === "create" ? "Add Entry" : "Edit Entry"}
-            </Text>
-            <Text style={styles.title}>
-              {mode === "create" ? "Log weight" : "Update weight entry"}
-            </Text>
-          </View>
+          <View />
           <Pressable
             onPress={handleRequestClose}
-            style={({ pressed }) => [styles.closeButton, pressed && styles.closeButtonPressed]}
+            style={({ pressed }) => [
+              styles.closeButton,
+              pressed && styles.closeButtonPressed,
+            ]}
             accessibilityLabel="Close weight entry"
           >
-            <XIcon size={18} color={appColors.slate900} weight="bold" />
+            <XIcon size={24} color={appColors.black30} />
           </Pressable>
         </View>
 
         <ScrollView
-          contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: insets.bottom + 24 },
+          ]}
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.card}>
+            <View>
+              <Text style={styles.heroTitle}>
+                {mode === "create" ? "Log weight" : "Update weight entry"}
+              </Text>
+            </View>
             <Text style={styles.label}>Weight</Text>
             <View style={styles.weightRow}>
               <TextInput
@@ -280,7 +296,21 @@ const WeightEntryModal = ({
             />
           </View>
 
-          <OnboardingPrimaryButton label="Save" onPress={handleSave} />
+          {/* <OnboardingPrimaryButton label="Save" onPress={handleSave} /> */}
+          <Pressable
+            onPress={() => void handleSave()}
+            disabled={saving}
+            style={({ pressed }) => [
+              styles.primaryButton,
+              saving && styles.disabled,
+              pressed && !saving && styles.cardPressed,
+            ]}
+          >
+            <PencilSimpleIcon size={16} color={appColors.white} weight="bold" />
+            <Text style={styles.primaryButtonText}>
+              Log Weight
+            </Text>
+          </Pressable>
           {mode === "edit" && onDelete ? (
             <Pressable
               onPress={() =>
@@ -312,6 +342,26 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: appColors.slate50,
   },
+  primaryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderRadius: 999,
+    backgroundColor: appColors.foodPrimaryDark,
+    paddingVertical: 13,
+  },
+  primaryButtonText: {
+    color: appColors.white,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  disabled: {
+    opacity: 0.58,
+  },
+  cardPressed: {
+    opacity: 0.9,
+  },
   header: {
     paddingHorizontal: 20,
     paddingBottom: 12,
@@ -332,18 +382,16 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     marginBottom: 10,
   },
-  title: {
-    fontSize: 30,
-    fontWeight: "800",
-    color: appColors.slate900,
+  heroTitle: {
+    color: appColors.foodText,
+    fontSize: 18,
+    fontWeight: "900",
+    marginBottom: 4,
   },
   closeButton: {
     width: 40,
     height: 40,
     borderRadius: 999,
-    backgroundColor: appColors.white,
-    borderWidth: 1,
-    borderColor: appColors.slate300,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -356,7 +404,7 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: appColors.white,
-    borderRadius: 16,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: appColors.slate200,
     padding: 16,
@@ -379,7 +427,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     borderColor: appColors.slate300,
-    borderRadius: 12,
+    borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 14,
     fontSize: 22,
@@ -388,16 +436,13 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.white,
   },
   unitPill: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: appColors.slate50,
-    borderWidth: 1,
-    borderColor: appColors.slate300,
+    paddingHorizontal: 12,
+    paddingVertical: 18,
+    borderRadius: 8,
   },
   unitText: {
-    fontSize: 16,
-    fontWeight: "800",
+    fontSize: 20,
+    fontWeight: "600",
     color: appColors.slate900,
   },
   dateRow: {
@@ -414,7 +459,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.slate50,
     borderWidth: 1,
     borderColor: appColors.slate300,
-    borderRadius: 12,
+    borderRadius: 8,
   },
   dateButtonPressed: {
     opacity: 0.9,
@@ -428,7 +473,7 @@ const styles = StyleSheet.create({
     minHeight: 96,
     borderWidth: 1,
     borderColor: appColors.slate300,
-    borderRadius: 12,
+    borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
     textAlignVertical: "top",

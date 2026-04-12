@@ -37,7 +37,11 @@ const FoodBarcodeScannerModal = ({
 
   const isWithinScanWindow = React.useCallback(
     (result: BarcodeScanningResult) => {
-      if (!scanWindow) {
+      if (
+        !scanWindow ||
+        scanWindow.width <= 0 ||
+        scanWindow.height <= 0
+      ) {
         return false;
       }
 

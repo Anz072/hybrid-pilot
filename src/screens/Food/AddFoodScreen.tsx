@@ -39,7 +39,6 @@ import {
   saveFoodSearchSectionState,
   type FoodSearchSectionState,
 } from "../../storage/localStore";
-import FoodScreenHeader from "./FoodScreenHeader";
 import FoodBarcodeScannerModal from "./FoodBarcodeScannerModal";
 import type { ScannedFoodLookupResult } from "./FoodBarcodeScannerShared";
 import {
@@ -722,6 +721,8 @@ const AddFoodScreen = () => {
     const toggleColor = expanded
       ? appColors.foodAccentText
       : appColors.foodPrimary;
+    const shouldShowNoResultsExtra =
+      subtitle === "Pick a match and confirm the amount." && items.length === 0;
 
     const headerContent = (
       <View style={styles.sectionHeaderRow}>
@@ -778,7 +779,30 @@ const AddFoodScreen = () => {
         {expanded ? (
           <View style={styles.sectionStack}>
             {items.length === 0 ? (
-              <Text style={styles.emptyText}>{emptyText}</Text>
+              <>
+                <Text style={styles.emptyText}>{emptyText}</Text>
+                {shouldShowNoResultsExtra ? (
+                  <View>
+                    <Pressable
+                      onPress={openCreateCustomFood}
+                      style={({ pressed }) => [
+                        styles.moreRow,
+                        pressed && styles.cardPressed,
+                      ]}
+                    >
+                      <View style={styles.moreCopy}>
+                        <Text style={styles.moreTitle}>Create custom food</Text>
+                        <Text style={styles.moreText}>
+                          Add a new item for {resolvedContextLabel}.
+                        </Text>
+                      </View>
+                      <View style={styles.morePill}>
+                        <Text style={styles.morePillText}>New</Text>
+                      </View>
+                    </Pressable>
+                  </View>
+                ) : null}
+              </>
             ) : (
               items.map((item) =>
                 renderFoodCard(
@@ -804,45 +828,6 @@ const AddFoodScreen = () => {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.heroCard}>
-          <View style={styles.heroHeaderRow}></View>
-          {/* <View style={styles.heroActionRow}>
-            <Pressable
-              onPress={openQuickAddFood}
-              style={({ pressed }) => [
-                styles.heroAction,
-                styles.heroActionPrimary,
-                pressed && styles.cardPressed,
-              ]}
-            >
-              <LightningIcon size={15} color={appColors.white} weight="fill" />
-              <Text style={[styles.heroActionText, styles.heroActionTextPrimary]}>
-                Quick Add
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={openCreateRecipe}
-              style={({ pressed }) => [
-                styles.heroAction,
-                pressed && styles.cardPressed,
-              ]}
-            >
-              <CookingPotIcon
-                size={15}
-                color={appColors.foodPrimaryDark}
-                weight="fill"
-              />
-              <Text style={styles.heroActionText}> Create a Recipe</Text>
-            </Pressable>
-            <Pressable
-              onPress={openCreateCustomFood}
-              style={({ pressed }) => [
-                styles.heroAction,
-                pressed && styles.cardPressed,
-              ]}
-            >
-              <Text style={styles.heroActionText}>Custom</Text>
-            </Pressable>
-          </View> */}
           <View style={styles.searchModeRow}>
             <Pressable
               onPress={() => setSearchMode("all")}
@@ -1035,11 +1020,36 @@ const styles = StyleSheet.create({
   heroHeaderCopy: {
     flex: 1,
   },
+    moreTitle: {
+    color: appColors.foodText,
+    fontSize: 15,
+    fontWeight: "900",
+    marginBottom: 4,
+  },
+  moreText: {
+    color: appColors.foodMuted,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  morePill: {
+    borderRadius: 999,
+    backgroundColor: appColors.foodPrimaryDark,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
   heroActionRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
     marginBottom: 12,
+  },
+   moreCopy: {
+    flex: 1,
+  },
+  morePillText: {
+    color: appColors.white,
+    fontSize: 12,
+    fontWeight: "800",
   },
   searchModeRow: {
     width: "100%",
@@ -1158,6 +1168,23 @@ const styles = StyleSheet.create({
     color: appColors.foodText,
     fontSize: 14,
     fontWeight: "700",
+  },
+  moreRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 18,
+    backgroundColor: appColors.foodFieldBg,
+    padding: 14,
+  },
+  moreRowAccent: {
+    backgroundColor: appColors.foodPillBg,
+    borderWidth: 1,
+    borderColor: appColors.foodBorder,
+  },
+  selectedSlotRow: {
+    backgroundColor: appColors.raw_hex_F4F0FF,
+    borderColor: appColors.raw_hex_DCD2F8,
   },
   scanButton: {
     minWidth: 50,

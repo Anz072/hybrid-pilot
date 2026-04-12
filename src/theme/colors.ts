@@ -47,6 +47,19 @@ const danger = {
   border: "#F5B2C0",
 } as const;
 
+export const gray = {
+  50:  "#F9FAFB",
+  100: "#F3F4F6",
+  200: "#E5E7EB",
+  300: "#D1D5DB",
+  400: "#9CA3AF",
+  500: "#6B7280",
+  600: "#4B5563",
+  700: "#374151",
+  800: "#1F2933",
+  900: "#111827"
+};
+
 const brandOverlay18 = "rgba(110, 65, 255, 0.18)";
 const brandOverlay34 = "rgba(110, 65, 255, 0.34)";
 const brandOverlay38 = "rgba(110, 65, 255, 0.38)";
@@ -67,9 +80,14 @@ export const appColors = {
   slate200: neutral[200],
   slate100: neutral[100],
   slate50: neutral[50],
-  gray900: neutral[900],
-  gray800: neutral[800],
-  gray500: neutral[500],
+  gray900: gray[900],
+  gray800: gray[800],
+  gray500: gray[500],
+  gray400: gray[400],
+  gray300: gray[300],
+  gray200: gray[200],
+  gray100: gray[100],
+  gray50: gray[50],
   neutral900: neutral[900],
   neutral300: neutral[300],
   black30: "#0000004D",

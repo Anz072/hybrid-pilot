@@ -420,12 +420,6 @@ export const FoodBarcodeScannerScaffold = ({
         >
           <View style={styles.headerRow}>
             <View style={styles.headerGroup}>
-              <View style={styles.headerBadge}>
-                <Text style={styles.headerBadgeText}>Barcode Scanner</Text>
-              </View>
-              <View style={styles.backendBadge}>
-                <Text style={styles.backendBadgeText}>Expo Camera</Text>
-              </View>
             </View>
             <Pressable
               onPress={onClose}
@@ -447,19 +441,6 @@ export const FoodBarcodeScannerScaffold = ({
             >
               <View style={styles.scanLine} />
             </View>
-          </View>
-
-          <View style={styles.footerCard}>
-            <Text style={styles.footerTitle}>Scan a barcode</Text>
-            <Text style={styles.footerText}>
-              Keep the barcode centered inside the finder frame. Only codes in
-              that window will trigger a lookup.
-            </Text>
-            <Text style={styles.footerHint}>
-              {locked
-                ? "Looking up the scanned barcode..."
-                : "Expo Camera is active for this session."}
-            </Text>
           </View>
         </View>
 
@@ -565,7 +546,6 @@ export const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    justifyContent: "space-between",
     paddingHorizontal: 20,
   },
   headerRow: {
@@ -619,6 +599,7 @@ export const styles = StyleSheet.create({
     borderColor: appColors.whiteOverlay18,
   },
   finderWrap: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -626,8 +607,9 @@ export const styles = StyleSheet.create({
     width: "86%",
     aspectRatio: 1.2,
     maxWidth: 320,
-    borderRadius: 28,
-    borderWidth: 2,
+    alignSelf: "center",
+    borderRadius: 8,
+    borderWidth: 1,
     borderColor: appColors.raw_rgba255_255_255_0_82,
     backgroundColor: appColors.raw_rgba255_255_255_0_04,
     overflow: "hidden",

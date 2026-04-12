@@ -1,7 +1,6 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import type { KeyboardTypeOptions } from "react-native";
-import FoodScreenHeader from "./FoodScreenHeader";
 import { appColors } from "../../theme/colors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 

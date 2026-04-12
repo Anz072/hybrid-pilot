@@ -10,13 +10,20 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { StackActions, useNavigation, useRoute } from "@react-navigation/native";
+import {
+  StackActions,
+  useNavigation,
+  useRoute,
+} from "@react-navigation/native";
 import type {
   CompositeNavigationProp,
   RouteProp,
 } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { Swipeable } from "react-native-gesture-handler";
 import {
+  BarcodeIcon,
+  CaretRightIcon,
   CalendarIcon,
   ClockIcon,
   CookingPotIcon,
@@ -38,7 +45,9 @@ import type {
 } from "../../store/DB_TYPES";
 import { useAppSelector } from "../../store/hooks";
 import { appColors } from "../../theme/colors";
+import FoodBarcodeScannerModal from "./FoodBarcodeScannerModal";
 import FoodScreenHeader from "./FoodScreenHeader";
+import type { ScannedFoodLookupResult } from "./FoodBarcodeScannerShared";
 import {
   buildFoodLoggedAt,
   formatFoodItemServing,
@@ -86,25 +95,26 @@ const RECIPE_METHODS: RecipeMethodOption[] = [
     available: true,
     badge: "Ready",
   },
-  {
-    value: "link",
-    title: "Import from link",
-    description: "Paste a recipe URL and convert it into a saved recipe later.",
-    available: false,
-    badge: "Soon",
-  },
-  {
-    value: "ai",
-    title: "Import with AI",
-    description: "Turn text or photos into recipe ingredients in a later update.",
-    available: false,
-    badge: "Soon",
-  },
+  // {
+  //   value: "link",
+  //   title: "Import from link",
+  //   description: "Paste a recipe URL and convert it into a saved recipe later.",
+  //   available: false,
+  //   badge: "Soon",
+  // },
+  // {
+  //   value: "ai",
+  //   title: "Import with AI",
+  //   description: "Turn text or photos into recipe ingredients in a later update.",
+  //   available: false,
+  //   badge: "Soon",
+  // },
 ];
 
 const SEARCH_DEBOUNCE_MS = 260;
 const MAX_SEARCH_RESULTS = 18;
 const REMOTE_SEARCH_MIN_QUERY_LENGTH = 2;
+const REMOTE_BARCODE_QUERY_PATTERN = /^\d{8,}$/;
 
 const parseLocalizedNumber = (value: string): number =>
   Number(value.trim().replace(",", "."));
@@ -134,6 +144,40 @@ const normalizeSearchText = (value?: string | null) =>
 
 const compactSearchText = (value?: string | null) =>
   normalizeSearchText(value).replace(/\s+/g, "");
+
+const singularizeSearchWord = (value: string) => {
+  if (value.endsWith("ies") && value.length > 4) {
+    return `${value.slice(0, -3)}y`;
+  }
+
+  if (value.endsWith("s") && value.length > 3) {
+    return value.slice(0, -1);
+  }
+
+  return null;
+};
+
+const getSearchVariants = (query: string) => {
+  const normalizedQuery = normalizeSearchText(query);
+  if (!normalizedQuery) {
+    return [];
+  }
+
+  const variants = new Set<string>([normalizedQuery]);
+
+  if (!normalizedQuery.includes(" ")) {
+    const singular = singularizeSearchWord(normalizedQuery);
+    if (singular) {
+      variants.add(singular);
+    }
+  }
+
+  return [...variants];
+};
+
+const shouldSearchRemotely = (query: string) =>
+  query.length >= REMOTE_SEARCH_MIN_QUERY_LENGTH ||
+  REMOTE_BARCODE_QUERY_PATTERN.test(query);
 
 const getFoodIdentityKey = (
   food: Pick<SearchFoodResult, "barcode" | "name" | "source" | "sourceId">,
@@ -184,50 +228,87 @@ const getSearchDedupeKeys = (food: SearchFoodResult) => {
 };
 
 const scoreSearchFoodResult = (food: SearchFoodResult, query: string) => {
-  const normalizedQuery = normalizeSearchText(query);
-  const compactQuery = compactSearchText(query);
+  const queryVariants = getSearchVariants(query);
+  const compactQueryVariants = queryVariants.map(compactSearchText);
+  const tokenSet = new Set<string>();
+
+  for (const variant of queryVariants) {
+    variant
+      .split(" ")
+      .filter(Boolean)
+      .forEach((token) => tokenSet.add(token));
+  }
+
+  const tokens = [...tokenSet];
   const normalizedName = normalizeSearchText(food.name);
   const normalizedBrand = normalizeSearchText(food.brand);
-  const normalizedCombined = normalizeSearchText(`${food.brand ?? ""} ${food.name}`);
+  const normalizedCombined = normalizeSearchText(
+    `${food.brand ?? ""} ${food.name}`,
+  );
+  const compactName = compactSearchText(food.name);
   const compactCombined = compactSearchText(`${food.brand ?? ""} ${food.name}`);
   const exactBarcodeMatch = food.barcode?.trim() === query.trim();
 
   let score = 0;
 
   if (exactBarcodeMatch) {
-    score += 1200;
+    score += 1400;
   }
 
-  if (normalizedName === normalizedQuery) {
+  if (queryVariants.some((variant) => normalizedName === variant)) {
+    score += 950;
+  }
+
+  if (queryVariants.some((variant) => normalizedCombined === variant)) {
     score += 900;
   }
 
-  if (normalizedCombined === normalizedQuery) {
-    score += 860;
+  if (queryVariants.some((variant) => normalizedBrand === variant)) {
+    score += 480;
   }
 
-  if (normalizedName.startsWith(normalizedQuery)) {
-    score += 520;
+  if (
+    compactQueryVariants.some(
+      (variant) =>
+        variant.length > 0 &&
+        (compactName === variant || compactCombined.includes(variant)),
+    )
+  ) {
+    score += 760;
   }
 
-  if (normalizedCombined.startsWith(normalizedQuery)) {
-    score += 460;
+  if (queryVariants.some((variant) => normalizedName.startsWith(variant))) {
+    score += 620;
   }
 
-  if (normalizedName.includes(normalizedQuery)) {
-    score += 260;
+  if (queryVariants.some((variant) => normalizedCombined.startsWith(variant))) {
+    score += 540;
   }
 
-  if (normalizedCombined.includes(normalizedQuery)) {
-    score += 220;
+  if (queryVariants.some((variant) => normalizedBrand.startsWith(variant))) {
+    score += 320;
   }
 
-  if (normalizedBrand.includes(normalizedQuery)) {
+  if (queryVariants.some((variant) => normalizedName.includes(variant))) {
+    score += 300;
+  }
+
+  if (queryVariants.some((variant) => normalizedCombined.includes(variant))) {
+    score += 240;
+  }
+
+  if (queryVariants.some((variant) => normalizedBrand.includes(variant))) {
     score += 140;
   }
 
-  if (compactQuery && compactCombined.includes(compactQuery)) {
-    score += 280;
+  const matchedTokenCount = tokens.filter((token) =>
+    normalizedCombined.includes(token),
+  ).length;
+
+  score += matchedTokenCount * 70;
+
+  if (tokens.length > 0 && matchedTokenCount === tokens.length) {
+    score += 220;
   }
 
   if (food.localId != null) {
@@ -311,14 +392,21 @@ const CreateRecipeScreen = () => {
   const [method, setMethod] = React.useState<RecipeBuildMethod>("scratch");
   const [name, setName] = React.useState("");
   const [servingsValue, setServingsValue] = React.useState("1");
+  const [preparedWeightValue, setPreparedWeightValue] = React.useState("");
   const [prepTimeValue, setPrepTimeValue] = React.useState("");
   const [cookTimeValue, setCookTimeValue] = React.useState("");
   const [linkValue, setLinkValue] = React.useState("");
   const [descriptionValue, setDescriptionValue] = React.useState("");
   const [ingredientQuery, setIngredientQuery] = React.useState("");
-  const [ingredientResults, setIngredientResults] = React.useState<SearchFoodResult[]>([]);
-  const [ingredientSearchLoading, setIngredientSearchLoading] = React.useState(false);
-  const [ingredients, setIngredients] = React.useState<RecipeIngredientDraft[]>([]);
+  const [ingredientResults, setIngredientResults] = React.useState<
+    SearchFoodResult[]
+  >([]);
+  const [ingredientSearchLoading, setIngredientSearchLoading] =
+    React.useState(false);
+  const [scannerVisible, setScannerVisible] = React.useState(false);
+  const [ingredients, setIngredients] = React.useState<RecipeIngredientDraft[]>(
+    [],
+  );
   const [steps, setSteps] = React.useState<string[]>([]);
   const [saving, setSaving] = React.useState(false);
 
@@ -328,7 +416,11 @@ const CreateRecipeScreen = () => {
     }
 
     const now = new Date();
-    return buildFoodLoggedAt(route.params.date, now.getHours(), now.getMinutes());
+    return buildFoodLoggedAt(
+      route.params.date,
+      now.getHours(),
+      now.getMinutes(),
+    );
   }, [route.params.date, route.params.loggedAt]);
 
   const resolvedContextLabel = React.useMemo(() => {
@@ -344,8 +436,14 @@ const CreateRecipeScreen = () => {
     () => toSafeNumber(servingsValue),
     [servingsValue],
   );
+  const parsedPreparedWeight = React.useMemo(
+    () => toSafeNumber(preparedWeightValue),
+    [preparedWeightValue],
+  );
   const recipeName = name.trim();
   const resolvedServings = parsedServings > 0 ? parsedServings : 1;
+  const resolvedPreparedWeight =
+    parsedPreparedWeight > 0 ? parsedPreparedWeight : null;
 
   const recipeTotals = React.useMemo(() => {
     return ingredients.reduce(
@@ -356,12 +454,30 @@ const CreateRecipeScreen = () => {
         accumulator.proteinG += (ingredient.food.proteinG ?? 0) * factor;
         accumulator.carbsG += (ingredient.food.carbsG ?? 0) * factor;
         accumulator.fatG += (ingredient.food.fatG ?? 0) * factor;
-        accumulator.totalAmount += amount;
+        accumulator.totalWeightG += amount;
         return accumulator;
       },
-      { calories: 0, proteinG: 0, carbsG: 0, fatG: 0, totalAmount: 0 },
+      { calories: 0, proteinG: 0, carbsG: 0, fatG: 0, totalWeightG: 0 },
     );
   }, [ingredients]);
+
+  const recipeWeightMetrics = React.useMemo(() => {
+    const ingredientTotalWeightG = recipeTotals.totalWeightG;
+    const effectiveRecipeWeightG =
+      resolvedPreparedWeight ??
+      (ingredientTotalWeightG > 0 ? ingredientTotalWeightG : null);
+    const gramsPerServing =
+      effectiveRecipeWeightG != null && effectiveRecipeWeightG > 0
+        ? effectiveRecipeWeightG / resolvedServings
+        : null;
+
+    return {
+      ingredientTotalWeightG,
+      effectiveRecipeWeightG,
+      gramsPerServing,
+      usesPreparedWeight: resolvedPreparedWeight != null,
+    };
+  }, [recipeTotals.totalWeightG, resolvedPreparedWeight, resolvedServings]);
 
   const perServingNutrition = React.useMemo(
     () => ({
@@ -382,7 +498,7 @@ const CreateRecipeScreen = () => {
 
     const [localRows, remoteRows] = await Promise.all([
       DB.searchFoodItems(normalizedQuery, 30),
-      normalizedQuery.length >= REMOTE_SEARCH_MIN_QUERY_LENGTH
+      shouldSearchRemotely(normalizedQuery)
         ? API.usdaAPI.getFood(normalizedQuery, { pageSize: 12 })
         : Promise.resolve([]),
     ]);
@@ -440,79 +556,89 @@ const CreateRecipeScreen = () => {
     };
   }, [ingredientQuery, searchFoods]);
 
-  const persistFoodResult = React.useCallback(async (result: SearchFoodResult) => {
-    if (result.localId != null && result.localFood) {
-      return { foodId: result.localId, food: result.localFood };
-    }
-
-    if (result.localId != null) {
-      const existing = await DB.getFoodItemById(result.localId);
-      if (existing) {
-        return { foodId: result.localId, food: existing };
+  const persistFoodResult = React.useCallback(
+    async (result: SearchFoodResult) => {
+      if (result.localId != null && result.localFood) {
+        return { foodId: result.localId, food: result.localFood };
       }
-    }
 
-    const {
-      key: _key,
-      localId: _localId,
-      localFood: _localFood,
-      ...saveInput
-    } = result;
-    const savedId = await DB.saveFoodItem(saveInput);
-    const savedFood = await DB.getFoodItemById(savedId);
+      if (result.localId != null) {
+        const existing = await DB.getFoodItemById(result.localId);
+        if (existing) {
+          return { foodId: result.localId, food: existing };
+        }
+      }
 
-    if (!savedFood) {
-      throw new Error("Ingredient could not be saved.");
-    }
+      const {
+        key: _key,
+        localId: _localId,
+        localFood: _localFood,
+        ...saveInput
+      } = result;
+      const savedId = await DB.saveFoodItem(saveInput);
+      const savedFood = await DB.getFoodItemById(savedId);
 
-    setIngredientResults((current) =>
-      current.map((item) =>
-        item.key === result.key
-          ? { ...item, localId: savedId, localFood: savedFood }
-          : item,
-      ),
-    );
-    searchCacheRef.current.clear();
+      if (!savedFood) {
+        throw new Error("Ingredient could not be saved.");
+      }
 
-    return { foodId: savedId, food: savedFood };
-  }, []);
+      setIngredientResults((current) =>
+        current.map((item) =>
+          item.key === result.key
+            ? { ...item, localId: savedId, localFood: savedFood }
+            : item,
+        ),
+      );
+      searchCacheRef.current.clear();
+
+      return { foodId: savedId, food: savedFood };
+    },
+    [],
+  );
+
+  const addPersistedIngredient = React.useCallback(
+    (persisted: { foodId: number; food: DBFoodItem }) => {
+      const defaultServing = getFoodResolvedServing(persisted.food).value;
+
+      setIngredients((current) => {
+        const existingIndex = current.findIndex(
+          (ingredient) => ingredient.foodId === persisted.foodId,
+        );
+
+        if (existingIndex >= 0) {
+          const next = [...current];
+          const existing = next[existingIndex];
+          next[existingIndex] = {
+            ...existing,
+            amountValue: formatNumberInput(
+              toSafeNumber(existing.amountValue) + defaultServing,
+            ),
+          };
+          return next;
+        }
+
+        return [
+          ...current,
+          {
+            key: `${persisted.foodId}-${Date.now()}`,
+            foodId: persisted.foodId,
+            food: persisted.food,
+            amountValue: formatNumberInput(defaultServing),
+          },
+        ];
+      });
+
+      setIngredientQuery("");
+      setIngredientResults([]);
+    },
+    [],
+  );
 
   const handleAddIngredient = React.useCallback(
     async (result: SearchFoodResult) => {
       try {
         const persisted = await persistFoodResult(result);
-        const defaultServing = getFoodResolvedServing(persisted.food).value;
-
-        setIngredients((current) => {
-          const existingIndex = current.findIndex(
-            (ingredient) => ingredient.foodId === persisted.foodId,
-          );
-
-          if (existingIndex >= 0) {
-            const next = [...current];
-            const existing = next[existingIndex];
-            next[existingIndex] = {
-              ...existing,
-              amountValue: formatNumberInput(
-                toSafeNumber(existing.amountValue) + defaultServing,
-              ),
-            };
-            return next;
-          }
-
-          return [
-            ...current,
-            {
-              key: `${persisted.foodId}-${Date.now()}`,
-              foodId: persisted.foodId,
-              food: persisted.food,
-              amountValue: formatNumberInput(defaultServing),
-            },
-          ];
-        });
-
-        setIngredientQuery("");
-        setIngredientResults([]);
+        addPersistedIngredient(persisted);
       } catch (error) {
         Alert.alert(
           "Could not add ingredient",
@@ -520,7 +646,36 @@ const CreateRecipeScreen = () => {
         );
       }
     },
-    [persistFoodResult],
+    [addPersistedIngredient, persistFoodResult],
+  );
+
+  const handleScannedIngredientResolved = React.useCallback(
+    async (result: ScannedFoodLookupResult) => {
+      setScannerVisible(false);
+
+      try {
+        const food = await DB.getFoodItemById(result.foodId);
+
+        if (!food) {
+          Alert.alert(
+            "Could not add ingredient",
+            "That scanned food could not be loaded yet.",
+          );
+          return;
+        }
+
+        addPersistedIngredient({
+          foodId: result.foodId,
+          food,
+        });
+      } catch (error) {
+        Alert.alert(
+          "Could not add ingredient",
+          error instanceof Error ? error.message : "Please try again.",
+        );
+      }
+    },
+    [addPersistedIngredient],
   );
 
   const updateIngredientAmount = React.useCallback(
@@ -559,6 +714,24 @@ const CreateRecipeScreen = () => {
     );
   }, []);
 
+  const openIngredientDetails = React.useCallback(
+    (ingredient: RecipeIngredientDraft) => {
+      navigation.navigate("FoodReadOnly", {
+        foodId: ingredient.foodId,
+        quantity: toSafeNumber(ingredient.amountValue),
+        contextLabel: resolvedContextLabel,
+        date: route.params.date,
+        loggedAt: resolvedLoggedAt,
+      });
+    },
+    [
+      navigation,
+      resolvedContextLabel,
+      resolvedLoggedAt,
+      route.params.date,
+    ],
+  );
+
   const addStep = React.useCallback(() => {
     setSteps((current) => [...current, ""]);
   }, []);
@@ -570,7 +743,9 @@ const CreateRecipeScreen = () => {
   }, []);
 
   const removeStep = React.useCallback((index: number) => {
-    setSteps((current) => current.filter((_, stepIndex) => stepIndex !== index));
+    setSteps((current) =>
+      current.filter((_, stepIndex) => stepIndex !== index),
+    );
   }, []);
 
   const closeAfterSave = React.useCallback(() => {
@@ -586,7 +761,7 @@ const CreateRecipeScreen = () => {
   }, [navigation]);
 
   const handleSave = React.useCallback(
-    async (shouldAddToDiary: boolean) => {
+    async () => {
       if (!user) {
         Alert.alert(
           "No account found",
@@ -651,20 +826,10 @@ const CreateRecipeScreen = () => {
           prepTimeMin: prepTime > 0 ? prepTime : null,
           cookTimeMin: cookTime > 0 ? cookTime : null,
           servings: parsedServings,
+          preparedFoodWeightG: resolvedPreparedWeight,
           steps: steps.map((step) => step.trim()).filter(Boolean),
           ingredients: ingredientInputs,
         });
-
-        if (shouldAddToDiary) {
-          await DB.addUserFoodLog({
-            userExternalId: user.externalId,
-            foodId: savedRecipe.linkedFoodId,
-            date: route.params.date,
-            loggedAt: resolvedLoggedAt,
-            quantityG: 1,
-            mealType: route.params.mealType ?? null,
-          });
-        }
 
         closeAfterSave();
       } catch (error) {
@@ -684,6 +849,7 @@ const CreateRecipeScreen = () => {
       linkValue,
       method,
       parsedServings,
+      resolvedPreparedWeight,
       prepTimeValue,
       recipeName,
       resolvedLoggedAt,
@@ -711,66 +877,12 @@ const CreateRecipeScreen = () => {
           ]}
           keyboardShouldPersistTaps="handled"
         >
-          <FoodScreenHeader
-            eyebrow="Recipe"
-            title="Create recipe"
-            subtitle={`${formatFoodShortDate(route.params.date)} | ${resolvedContextLabel}`}
+          {/* <FoodScreenHeader
+            title="Create a recipe"
             onBack={() => navigation.goBack()}
-          />
+          /> */}
 
-          <View style={styles.heroCard}>
-            <View style={styles.heroHeaderCopy}>
-              <Text style={styles.heroEyebrow}>Saved Recipe</Text>
-              <Text style={styles.heroTitle}>{recipeName || "Your new recipe"}</Text>
-              <Text style={styles.heroMeta}>
-                Recipes save as their own items, track who created them, and can
-                be logged later like any other food.
-              </Text>
-            </View>
-
-            <View style={styles.heroPillsRow}>
-              <View style={styles.contextPill}>
-                <CalendarIcon size={14} color={appColors.foodPrimary} weight="bold" />
-                <Text style={styles.contextPillText}>
-                  {formatFoodShortDate(route.params.date)}
-                </Text>
-              </View>
-              <View style={styles.contextPill}>
-                <ClockIcon size={14} color={appColors.foodPrimary} weight="bold" />
-                <Text style={styles.contextPillText}>{resolvedContextLabel}</Text>
-              </View>
-              <View style={styles.contextPill}>
-                <CookingPotIcon
-                  size={14}
-                  color={appColors.foodPrimary}
-                  weight="fill"
-                />
-                <Text style={styles.contextPillText}>
-                  {ingredients.length} ingredients
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.previewStrip}>
-              <Text style={styles.previewValue}>
-                {formatFoodNumber(perServingNutrition.calories, " kcal")}
-              </Text>
-              <Text style={styles.previewText}>
-                {`${formatFoodMacro(perServingNutrition.proteinG, "P")} | ${formatFoodMacro(
-                  perServingNutrition.carbsG,
-                  "C",
-                )} | ${formatFoodMacro(perServingNutrition.fatG, "F")}`}
-              </Text>
-              <Text style={styles.previewSubtext}>
-                {`${formatFoodNumber(recipeTotals.calories, " kcal")} total across ${formatFoodNumber(
-                  resolvedServings,
-                  resolvedServings === 1 ? " serving" : " servings",
-                )}`}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.card}>
+          {/* <View style={styles.card}>
             <Text style={styles.sectionTitle}>Build method</Text>
             <Text style={styles.sectionSubtitle}>
               Start with the scratch builder now. Link import and AI import can
@@ -862,14 +974,17 @@ const CreateRecipeScreen = () => {
                 );
               })}
             </View>
-          </View>
+          </View> */}
 
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Recipe details</Text>
-            <Text style={styles.sectionSubtitle}>
-              Name the recipe and choose how many servings the finished recipe
-              makes.
-            </Text>
+          <View style={[styles.card, { paddingTop: insets.top + 14 }]}>
+            <View
+              style={styles.heroHeaderRow}
+            >
+              <Text style={styles.heroTitle}>Quick Add</Text>
+            </View>
+
+            <Text style={styles.sectionTitle}>Details</Text>
+
             <Text style={styles.fieldLabel}>Recipe name</Text>
             <TextInput
               style={styles.textInput}
@@ -878,23 +993,82 @@ const CreateRecipeScreen = () => {
               value={name}
               onChangeText={setName}
             />
-            <Text style={[styles.fieldLabel, styles.fieldSpacing]}>Servings</Text>
-            <View style={styles.inlineInputRow}>
-              <TextInput
-                style={styles.textInput}
-                placeholder="1"
-                placeholderTextColor={appColors.foodPlaceholder}
-                value={servingsValue}
-                onChangeText={setServingsValue}
-                onBlur={() =>
-                  setServingsValue((current) =>
-                    normalizePositiveFoodInput(current, 1, 1),
-                  )
-                }
-                keyboardType="decimal-pad"
-              />
-              <View style={styles.unitPill}>
-                <Text style={styles.unitText}>servings</Text>
+
+            <View style={[styles.twoUpGrid, styles.fieldSpacing]}>
+              <View style={styles.twoUpCell}>
+                <Text style={styles.fieldLabel}>Servings</Text>
+                <View style={styles.inlineInputRow}>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="1"
+                    placeholderTextColor={appColors.foodPlaceholder}
+                    value={servingsValue}
+                    onChangeText={setServingsValue}
+                    onBlur={() =>
+                      setServingsValue((current) =>
+                        normalizePositiveFoodInput(current, 1, 1),
+                      )
+                    }
+                    keyboardType="decimal-pad"
+                  />
+                  <View style={styles.unitPill}>
+                    <Text style={styles.unitText}>servings</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.twoUpCell}>
+                <Text style={styles.fieldLabel}>Prepared weight</Text>
+                <View style={styles.inlineInputRow}>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="Optional"
+                    placeholderTextColor={appColors.foodPlaceholder}
+                    value={preparedWeightValue}
+                    onChangeText={setPreparedWeightValue}
+                    onBlur={() =>
+                      setPreparedWeightValue((current) => {
+                        const next = toSafeNumber(current);
+                        return next > 0 ? formatNumberInput(next) : "";
+                      })
+                    }
+                    keyboardType="decimal-pad"
+                  />
+                  <View style={styles.unitPill}>
+                    <Text style={styles.unitText}>g</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.metricCard}>
+              <View style={styles.metricRow}>
+                <Text style={styles.metricLabel}>Ingredient weight</Text>
+                <Text style={styles.metricValue}>
+                  {formatFoodNumber(
+                    recipeWeightMetrics.ingredientTotalWeightG,
+                    " g",
+                  )}
+                </Text>
+              </View>
+              <View style={styles.metricRow}>
+                <Text style={styles.metricLabel}>Prepared recipe weight</Text>
+                <Text style={styles.metricValue}>
+                  {recipeWeightMetrics.usesPreparedWeight
+                    ? formatFoodNumber(resolvedPreparedWeight, " g")
+                    : "Using ingredient total"}
+                </Text>
+              </View>
+              <View style={styles.metricRow}>
+                <Text style={styles.metricLabel}>Weight per serving</Text>
+                <Text style={styles.metricValue}>
+                  {recipeWeightMetrics.gramsPerServing != null
+                    ? formatFoodNumber(
+                        recipeWeightMetrics.gramsPerServing,
+                        " g",
+                      )
+                    : "--"}
+                </Text>
               </View>
             </View>
           </View>
@@ -902,23 +1076,34 @@ const CreateRecipeScreen = () => {
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Ingredients</Text>
             <Text style={styles.sectionSubtitle}>
-              Search your saved foods and USDA foods, then set the amount used in
-              the full recipe.
+              Search or scan ingredients, tap a result to add it, and swipe
+              saved ingredient rows left to remove them.
             </Text>
-            <View style={styles.searchInputWrap}>
-              <MagnifyingGlassIcon
-                size={18}
-                color={appColors.foodPlaceholder}
-                weight="bold"
-              />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search ingredients"
-                placeholderTextColor={appColors.foodPlaceholder}
-                value={ingredientQuery}
-                onChangeText={setIngredientQuery}
-                returnKeyType="search"
-              />
+            <View style={styles.searchRow}>
+              <View style={styles.searchInputWrap}>
+                <MagnifyingGlassIcon
+                  size={18}
+                  color={appColors.foodPlaceholder}
+                  weight="bold"
+                />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search ingredients"
+                  placeholderTextColor={appColors.foodPlaceholder}
+                  value={ingredientQuery}
+                  onChangeText={setIngredientQuery}
+                  returnKeyType="search"
+                />
+              </View>
+              <Pressable
+                onPress={() => setScannerVisible(true)}
+                style={({ pressed }) => [
+                  styles.scanButton,
+                  pressed && styles.cardPressed,
+                ]}
+              >
+                <BarcodeIcon size={18} color={appColors.white} weight="bold" />
+              </Pressable>
             </View>
 
             {ingredientQuery.trim() ? (
@@ -943,26 +1128,26 @@ const CreateRecipeScreen = () => {
                     ]}
                   >
                     <View style={styles.searchResultCopy}>
-                      <View style={styles.resultBadgeRow}>
-                        <View style={styles.resultBadge}>
-                          <Text style={styles.resultBadgeText}>
-                            {formatFoodSourceLabel(result.source)}
-                          </Text>
-                        </View>
+                      <View style={styles.resultTopRow}>
+                        <Text style={styles.resultTitle} numberOfLines={1}>
+                          {result.name}
+                        </Text>
                         <Text style={styles.resultCalories}>
                           {formatFoodNumber(result.calories, " kcal")}
                         </Text>
                       </View>
-                      <Text style={styles.resultTitle} numberOfLines={2}>
-                        {result.name}
-                      </Text>
                       <Text style={styles.resultMeta} numberOfLines={1}>
                         {result.brand ? `${result.brand} | ` : ""}
+                        {formatFoodSourceLabel(result.source)} |{" "}
                         {formatFoodItemServing(result)}
                       </Text>
                     </View>
                     <View style={styles.addButton}>
-                      <PlusIcon size={16} color={appColors.white} weight="bold" />
+                      <PlusIcon
+                        size={16}
+                        color={appColors.white}
+                        weight="bold"
+                      />
                     </View>
                   </Pressable>
                 ))}
@@ -984,63 +1169,108 @@ const CreateRecipeScreen = () => {
                   const fat = (ingredient.food.fatG ?? 0) * factor;
 
                   return (
-                    <View key={ingredient.key} style={styles.ingredientCard}>
-                      <View style={styles.ingredientHeaderRow}>
-                        <View style={styles.ingredientCopy}>
-                          <Text style={styles.ingredientTitle}>
-                            {ingredient.food.name}
-                          </Text>
-                          <Text style={styles.ingredientMeta}>
-                            {ingredient.food.brand
-                              ? `${ingredient.food.brand} | `
-                              : ""}
-                            {formatFoodSourceLabel(ingredient.food.source)} |{" "}
-                            {formatFoodItemServing(ingredient.food)}
-                          </Text>
-                        </View>
+                    <Swipeable
+                      key={ingredient.key}
+                      overshootRight={false}
+                      renderRightActions={() => (
                         <Pressable
                           onPress={() => removeIngredient(ingredient.key)}
                           style={({ pressed }) => [
-                            styles.iconButton,
+                            styles.deleteSwipe,
+                            pressed && styles.cardPressed,
+                          ]}
+                          accessibilityLabel={`Delete ${ingredient.food.name} ingredient`}
+                        >
+                          <TrashIcon
+                            size={18}
+                            color={appColors.white}
+                            weight="bold"
+                          />
+                          <Text style={styles.deleteSwipeText}>Delete</Text>
+                        </Pressable>
+                      )}
+                    >
+                      <View style={styles.ingredientCard}>
+                        <Pressable
+                          onPress={() => openIngredientDetails(ingredient)}
+                          style={({ pressed }) => [
+                            styles.ingredientPressable,
                             pressed && styles.cardPressed,
                           ]}
                         >
-                          <TrashIcon
-                            size={16}
-                            color={appColors.dangerText}
-                            weight="bold"
-                          />
-                        </Pressable>
-                      </View>
+                          <View style={styles.ingredientHeaderRow}>
+                            <View style={styles.ingredientCopy}>
+                              <Text
+                                style={styles.ingredientTitle}
+                                numberOfLines={1}
+                                ellipsizeMode="tail"
+                              >
+                                {ingredient.food.name}
+                              </Text>
+                              <Text
+                                style={styles.ingredientMeta}
+                                numberOfLines={1}
+                                ellipsizeMode="tail"
+                              >
+                                {ingredient.food.brand
+                                  ? `${ingredient.food.brand} | `
+                                  : ""}
+                                {formatFoodSourceLabel(ingredient.food.source)} |{" "}
+                                {formatFoodItemServing(ingredient.food)}
+                              </Text>
+                            </View>
+                            <CaretRightIcon
+                              size={14}
+                              color={appColors.foodPrimary}
+                              weight="bold"
+                            />
+                          </View>
 
-                      <Text style={styles.fieldLabel}>Amount in recipe</Text>
-                      <View style={styles.inlineInputRow}>
-                        <TextInput
-                          style={styles.textInput}
-                          value={ingredient.amountValue}
-                          onChangeText={(value) =>
-                            updateIngredientAmount(ingredient.key, value)
-                          }
-                          onBlur={() => normalizeIngredientAmount(ingredient.key)}
-                          keyboardType="decimal-pad"
-                          placeholder={formatNumberInput(serving.value)}
-                          placeholderTextColor={appColors.foodPlaceholder}
-                        />
-                        <View style={styles.unitPill}>
-                          <Text style={styles.unitText}>{serving.unit}</Text>
+                          <Text style={styles.ingredientPreviewText}>
+                            {`${formatFoodNumber(amount, ` ${serving.unit}`)} | ${formatFoodNumber(
+                              calories,
+                              " kcal",
+                            )} | ${formatFoodMacro(
+                              protein,
+                              "P",
+                            )} | ${formatFoodMacro(
+                              carbs,
+                              "C",
+                            )} | ${formatFoodMacro(fat, "F")}`}
+                          </Text>
+                        </Pressable>
+
+                        <View style={styles.ingredientAmountRow}>
+                          <Text style={styles.ingredientAmountLabel}>Amount</Text>
+                          <View style={styles.ingredientAmountInputWrap}>
+                            <TextInput
+                              style={[
+                                styles.textInput,
+                                styles.ingredientAmountInput,
+                              ]}
+                              value={ingredient.amountValue}
+                              onChangeText={(value) =>
+                                updateIngredientAmount(ingredient.key, value)
+                              }
+                              onBlur={() =>
+                                normalizeIngredientAmount(ingredient.key)
+                              }
+                              keyboardType="decimal-pad"
+                              placeholder={formatNumberInput(serving.value)}
+                              placeholderTextColor={appColors.foodPlaceholder}
+                            />
+                            <View
+                              style={[
+                                styles.unitPill,
+                                styles.ingredientAmountUnitPill,
+                              ]}
+                            >
+                              <Text style={styles.unitText}>{serving.unit}</Text>
+                            </View>
+                          </View>
                         </View>
                       </View>
-
-                      <Text style={styles.ingredientPreviewText}>
-                        {`${formatFoodNumber(amount, ` ${serving.unit}`)} | ${formatFoodNumber(
-                          calories,
-                          " kcal",
-                        )} | ${formatFoodMacro(protein, "P")} | ${formatFoodMacro(
-                          carbs,
-                          "C",
-                        )} | ${formatFoodMacro(fat, "F")}`}
-                      </Text>
-                    </View>
+                    </Swipeable>
                   );
                 })
               )}
@@ -1049,11 +1279,6 @@ const CreateRecipeScreen = () => {
 
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Preparation</Text>
-            <Text style={styles.sectionSubtitle}>
-              Optional context for editing, importing, or sharing the recipe
-              later.
-            </Text>
-
             <View style={styles.twoUpGrid}>
               <View style={styles.twoUpCell}>
                 <Text style={styles.fieldLabel}>Prep time</Text>
@@ -1117,7 +1342,9 @@ const CreateRecipeScreen = () => {
 
             <View style={styles.stepsHeaderRow}>
               <View style={styles.stepsHeaderCopy}>
-                <Text style={[styles.fieldLabel, styles.stepsLabel]}>Steps</Text>
+                <Text style={[styles.fieldLabel, styles.stepsLabel]}>
+                  Steps
+                </Text>
                 <Text style={styles.stepsSubtitle}>
                   Add preparation steps if you want the recipe saved with
                   instructions.
@@ -1182,23 +1409,7 @@ const CreateRecipeScreen = () => {
         >
           <Pressable
             onPress={() => {
-              void handleSave(true);
-            }}
-            disabled={saving}
-            style={({ pressed }) => [
-              styles.secondaryButton,
-              saving && styles.disabled,
-              pressed && !saving && styles.cardPressed,
-            ]}
-          >
-            <Text style={styles.secondaryButtonText}>
-              {saving ? "Saving..." : "Create & add"}
-            </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => {
-              void handleSave(false);
+              void handleSave();
             }}
             disabled={saving}
             style={({ pressed }) => [
@@ -1208,11 +1419,17 @@ const CreateRecipeScreen = () => {
             ]}
           >
             <Text style={styles.primaryButtonText}>
-              {saving ? "Saving..." : "Create"}
+              {saving ? "Saving..." : "Create a Recipe"}
             </Text>
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+
+      <FoodBarcodeScannerModal
+        visible={scannerVisible}
+        onClose={() => setScannerVisible(false)}
+        onFoodResolved={handleScannedIngredientResolved}
+      />
     </View>
   );
 };
@@ -1263,9 +1480,16 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     color: appColors.foodText,
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "900",
     marginBottom: 4,
+  },
+  heroHeaderRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 12,
   },
   heroMeta: {
     color: appColors.foodMuted,
@@ -1325,9 +1549,9 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: appColors.foodText,
-    fontSize: 14,
-    fontWeight: "900",
-    marginBottom: 2,
+    fontSize: 16,
+    fontWeight: "500",
+    marginBottom: 10,
   },
   sectionSubtitle: {
     color: appColors.foodMuted,
@@ -1423,7 +1647,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     borderColor: appColors.foodBorder,
-    borderRadius: 8,
+    borderRadius: 4,
     backgroundColor: appColors.foodFieldBg,
     paddingHorizontal: 12,
     paddingVertical: 11,
@@ -1431,7 +1655,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
   },
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
   searchInputWrap: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
@@ -1452,7 +1682,7 @@ const styles = StyleSheet.create({
   resultsWrap: {
     marginTop: 10,
     marginBottom: 12,
-    gap: 8,
+    gap: 6,
   },
   resultsMeta: {
     color: appColors.foodMuted,
@@ -1462,96 +1692,127 @@ const styles = StyleSheet.create({
   searchResultCard: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
     borderRadius: 8,
     backgroundColor: appColors.foodSurfaceAlt,
     borderWidth: 1,
     borderColor: appColors.foodSoftBorder,
-    padding: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
   },
   searchResultCopy: {
     flex: 1,
+    minWidth: 0,
   },
-  resultBadgeRow: {
+  resultTopRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
-    marginBottom: 5,
-  },
-  resultBadge: {
-    borderRadius: 999,
-    backgroundColor: appColors.white,
-    borderWidth: 1,
-    borderColor: appColors.foodBorder,
-    paddingHorizontal: 7,
-    paddingVertical: 4,
-  },
-  resultBadgeText: {
-    color: appColors.foodPrimary,
-    fontSize: 10,
-    fontWeight: "800",
+    marginBottom: 2,
   },
   resultCalories: {
-    color: appColors.foodInk,
-    fontSize: 12,
+    color: appColors.foodPrimaryDark,
+    fontSize: 11,
     fontWeight: "800",
   },
   resultTitle: {
     color: appColors.foodText,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "800",
-    marginBottom: 3,
+    flex: 1,
+    marginRight: 8,
   },
   resultMeta: {
     color: appColors.foodMeta,
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 11,
+    lineHeight: 15,
   },
   addButton: {
-    width: 34,
-    height: 34,
+    width: 30,
+    height: 30,
     borderRadius: 999,
     backgroundColor: appColors.foodPrimaryDark,
     alignItems: "center",
     justifyContent: "center",
   },
+  scanButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: appColors.foodPrimaryDark,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   ingredientList: {
-    gap: 10,
+    gap: 6,
   },
   ingredientCard: {
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.foodBorder,
-    backgroundColor: appColors.foodFieldBg,
-    padding: 12,
+    backgroundColor: appColors.white,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+  },
+  ingredientPressable: {
+    marginBottom: 6,
   },
   ingredientHeaderRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 10,
-    marginBottom: 10,
+    gap: 8,
   },
   ingredientCopy: {
     flex: 1,
+    minWidth: 0,
+    flexDirection: "column",
   },
   ingredientTitle: {
     color: appColors.foodText,
-    fontSize: 14,
-    fontWeight: "900",
-    marginBottom: 3,
+    fontSize: 15,
+    fontWeight: "700",
+    flexShrink: 1,
+    marginBottom: 2,
   },
   ingredientMeta: {
     color: appColors.foodMuted,
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 11,
+    flexShrink: 1,
+    lineHeight: 15,
   },
   ingredientPreviewText: {
     color: appColors.foodPrimary,
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: "700",
-    marginTop: 8,
+    marginTop: 4,
+  },
+  ingredientAmountRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  ingredientAmountLabel: {
+    color: appColors.foodLabel,
+    fontSize: 10,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    width: 52,
+  },
+  ingredientAmountInputWrap: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  ingredientAmountInput: {
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    fontSize: 13,
+  },
+  ingredientAmountUnitPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 10,
   },
   inlineInputRow: {
     flexDirection: "row",
@@ -1561,10 +1822,8 @@ const styles = StyleSheet.create({
   unitPill: {
     borderRadius: 8,
     backgroundColor: appColors.foodPillBg,
-    borderWidth: 1,
-    borderColor: appColors.foodBorder,
     paddingHorizontal: 12,
-    paddingVertical: 11,
+    paddingVertical: 12,
   },
   unitText: {
     color: appColors.foodPrimary,
@@ -1577,6 +1836,33 @@ const styles = StyleSheet.create({
   },
   twoUpCell: {
     flex: 1,
+  },
+  metricCard: {
+    marginTop: 12,
+    borderRadius: 4,
+    backgroundColor: appColors.foodSurfaceAlt,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  metricRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  metricLabel: {
+    flex: 1,
+    color: appColors.foodMuted,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  metricValue: {
+    color: appColors.foodPrimaryDark,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: "900",
+    textAlign: "right",
   },
   multilineInput: {
     minHeight: 96,
@@ -1647,6 +1933,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: appColors.foodPrimaryDark,
+  },
+  deleteSwipe: {
+    width: 96,
+    borderRadius: 8,
+    backgroundColor: appColors.danger700,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginLeft: 8,
+  },
+  deleteSwipeText: {
+    color: appColors.white,
+    fontSize: 12,
+    fontWeight: "800",
   },
   footer: {
     position: "absolute",

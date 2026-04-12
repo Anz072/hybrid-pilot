@@ -308,8 +308,25 @@ export type CreateUserRecipeInput = {
   prepTimeMin?: number | null;
   cookTimeMin?: number | null;
   servings: number;
+  preparedFoodWeightG?: number | null;
   steps?: string[];
   ingredients: CreateUserRecipeIngredientInput[];
+};
+
+export type UpdateUserRecipeInput = CreateUserRecipeInput & {
+  recipeId: number;
+};
+
+export type DBRecipeIngredientDetail = DBRecipeIngredient & {
+  food: DBFoodItem;
+};
+
+export type DBRecipeDetails = DBRecipe & {
+  ingredients: DBRecipeIngredientDetail[];
+  ingredientTotalWeightG: number | null;
+  preparedFoodWeightG: number | null;
+  effectiveRecipeWeightG: number | null;
+  gramsPerServing: number | null;
 };
 
 export type UserFoodLogSource = "food_item" | "quick_add";

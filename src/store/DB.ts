@@ -24,7 +24,12 @@ import {
   searchFoodItems,
   setFoodItemFavorite,
 } from "./foodRepository";
-import { createUserRecipe } from "./recipeRepository";
+import {
+  createUserRecipe,
+  deleteUserRecipe,
+  getUserRecipeDetailsById,
+  updateUserRecipe,
+} from "./recipeRepository";
 import {
   addCustomMeal,
   addQuickAddFoodLog,
@@ -65,6 +70,9 @@ export const DB = {
   getRecentFoodItems,
   setFoodItemFavorite,
   createUserRecipe,
+  getUserRecipeDetailsById,
+  updateUserRecipe,
+  deleteUserRecipe,
   addQuickAddFoodLog,
   addUserFoodLog,
   updateUserFoodLog,

@@ -17,6 +17,13 @@ export type FoodStackParamList = {
     contextLabel?: string | null;
   };
   ScannedFood: ScannedFoodLogParams;
+  FoodReadOnly: {
+    foodId: number;
+    quantity: number;
+    date: string;
+    loggedAt?: string | null;
+    contextLabel?: string | null;
+  };
   EditFoodEntry: { entryId: number };
   CreateCustomFood: {
     date: string;
@@ -29,6 +36,7 @@ export type FoodStackParamList = {
     mealType?: string | null;
     loggedAt?: string | null;
     contextLabel?: string | null;
+    recipeId?: number;
   };
   QuickAddFood: {
     date: string;

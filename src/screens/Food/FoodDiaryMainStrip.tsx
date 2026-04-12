@@ -15,6 +15,8 @@ import {
   CaretDownIcon,
   CaretUpIcon,
   FireIcon,
+  PlusCircleIcon,
+  PlusIcon,
   TrashIcon,
 } from "phosphor-react-native";
 import type { DBUser, DBUserFoodLogEntry } from "../../store/DB_TYPES";
@@ -194,73 +196,100 @@ const FoodDiaryTimelineItem = ({
         {!collapsed ? (
           <View style={styles.stack}>
             {bucket.entries.length >= 1 ? (
-              bucket.entries.map((entry) => {
-                const nutrition = calculateLoggedNutrition(entry);
-                const time = formatFoodLoggedTime(
-                  entry.loggedAt ?? entry.createdAt,
-                );
+              <View>
+                {bucket.entries.map((entry) => {
+                  const nutrition = calculateLoggedNutrition(entry);
+                  const time = formatFoodLoggedTime(
+                    entry.loggedAt ?? entry.createdAt,
+                  );
 
-                return (
-                  <Swipeable
-                    key={entry.id}
-                    overshootRight={false}
-                    renderRightActions={() => (
-                      <Pressable
-                        onPress={() => onDeleteEntry(entry.id)}
-                        style={({ pressed }) => [
-                          styles.deleteSwipe,
-                          pressed && styles.cardPressed,
-                        ]}
-                        accessibilityLabel={`Delete ${entry.foodName} entry`}
-                      >
-                        <TrashIcon
-                          size={18}
-                          color={appColors.white}
-                          weight="bold"
-                        />
-                        <Text style={styles.deleteSwipeText}>Delete</Text>
-                      </Pressable>
-                    )}
-                  >
-                    <Pressable
-                      style={[
-                        styles.entryCard,
-                        bucket.entries.length > 1 && styles.entryCardWithDivider,
-                      ]}
-                      onPress={(event) =>
-                        runWithoutToggling(event, () => onEditEntry(entry))
-                      }
+                  return (
+                    <Swipeable
+                      key={entry.id}
+                      overshootRight={false}
+                      renderRightActions={() => (
+                        <Pressable
+                          onPress={() => onDeleteEntry(entry.id)}
+                          style={({ pressed }) => [
+                            styles.deleteSwipe,
+                            pressed && styles.cardPressed,
+                          ]}
+                          accessibilityLabel={`Delete ${entry.foodName} entry`}
+                        >
+                          <TrashIcon
+                            size={18}
+                            color={appColors.white}
+                            weight="bold"
+                          />
+                          <Text style={styles.deleteSwipeText}>Delete</Text>
+                        </Pressable>
+                      )}
                     >
-                      <View style={styles.entryMain}>
-                        <View style={styles.rowBetween}>
-                          <View style={styles.entryCopy}>
-                            <Text style={styles.entryTitle} numberOfLines={2}>
-                              {entry.foodName}
+                      <Pressable
+                        style={[
+                          styles.entryCard,
+                          bucket.entries.length > 1 &&
+                            styles.entryCardWithDivider,
+                        ]}
+                        onPress={(event) =>
+                          runWithoutToggling(event, () => onEditEntry(entry))
+                        }
+                      >
+                        <View style={styles.entryMain}>
+                          <View style={styles.rowBetween}>
+                            <View style={styles.entryCopy}>
+                              <Text style={styles.entryTitle} numberOfLines={2}>
+                                {entry.foodName}
+                              </Text>
+                              {entry.entrySource === "quick_add" ? (
+                                <View style={styles.entryTag}>
+                                  <Text style={styles.entryTagText}>
+                                    Quick Add
+                                  </Text>
+                                </View>
+                              ) : null}
+                            </View>
+                          </View>
+
+                          <View style={styles.entryMetaRow}>
+                            <Text style={styles.entryText}>{time}</Text>
+                            <Text style={styles.entryText}>|</Text>
+                            <Text style={styles.entryText}>
+                              {entry.entrySource === "quick_add"
+                                ? `${entry.mealType?.trim() || "One-time entry"} | ${nutrition.calories} kcal`
+                                : `${formatFoodServing(
+                                    entry.quantityG,
+                                    entry.servingUnit,
+                                  )} | ${nutrition.calories} kcal`}
                             </Text>
-                            {entry.entrySource === "quick_add" ? (
-                              <View style={styles.entryTag}>
-                                <Text style={styles.entryTagText}>Quick Add</Text>
-                              </View>
-                            ) : null}
                           </View>
                         </View>
-                        <View style={styles.entryMetaRow}>
-                          <Text style={styles.entryText}>{time}</Text>
-                          <Text style={styles.entryText}>|</Text>
-                          <Text style={styles.entryText}>
-                            {entry.entrySource === "quick_add"
-                              ? `${entry.mealType?.trim() || "One-time entry"} | ${nutrition.calories} kcal`
-                              : `${formatFoodServing(
-                                  entry.quantityG,
-                                  entry.servingUnit,
-                                )} | ${nutrition.calories} kcal`}
-                          </Text>
-                        </View>
-                      </View>
-                    </Pressable>
-                  </Swipeable>
-                );
-              })
+                      </Pressable>
+                    </Swipeable>
+                  );
+                })}
+
+                <Pressable
+                  onPress={(event) =>
+                    runWithoutToggling(event, () => onAddFood(bucket.hour))
+                  }
+                  style={({ pressed }) => [
+                    styles.nonEmptyState,
+                    pressed && styles.cardPressed,
+                  ]}
+                >
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      gap: 2,
+                      alignItems: "center",
+                    }}
+                  >
+                    <PlusCircleIcon size={14} color={appColors.foodPrimary} />
+                    <Text style={styles.emptyStateAction}>Tap to add more</Text>
+                  </View>
+                </Pressable>
+              </View>
             ) : (
               <Pressable
                 onPress={(event) =>
@@ -272,7 +301,16 @@ const FoodDiaryTimelineItem = ({
                 ]}
               >
                 <Text style={styles.emptyStateText}>No entries here.</Text>
-                <Text style={styles.emptyStateAction}>Tap to add food</Text>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    gap: 2,
+                    alignItems: "center",
+                  }}
+                >
+                  <PlusCircleIcon size={14} color={appColors.foodPrimary} />
+                  <Text style={styles.emptyStateAction}>Tap to add food</Text>
+                </View>
               </Pressable>
             )}
           </View>
@@ -315,7 +353,6 @@ const FoodDiaryMainStrip = ({
   const fallbackMaxCalories = Math.max(1, ...days.map((day) => day.calories));
   const todayKey = formatFoodDateKey(new Date());
 
-
   const toggleHour = React.useCallback(
     (hour: number) => {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -345,7 +382,7 @@ const FoodDiaryMainStrip = ({
             pressed && styles.cardPressed,
           ]}
         >
-          <CaretDoubleLeftIcon  size={18} color={appColors.lavenderShadow} />
+          <CaretDoubleLeftIcon size={18} color={appColors.lavenderShadow} />
         </Pressable>
         <View style={styles.headerCopy}>
           <Text style={styles.title}>Week view</Text>
@@ -358,7 +395,7 @@ const FoodDiaryMainStrip = ({
             pressed && styles.cardPressed,
           ]}
         >
-          <CaretDoubleRightIcon  size={18} color={appColors.lavenderShadow} />
+          <CaretDoubleRightIcon size={18} color={appColors.lavenderShadow} />
         </Pressable>
       </View>
 
@@ -438,7 +475,6 @@ const FoodDiaryMainStrip = ({
       ) : null}
 
       <View style={styles.timelineSection}>
-        <Text style={styles.sectionTitle}>Timeline</Text>
         <View style={styles.timeline}>
           {hourBuckets.map((bucket, index) => {
             const selected = bucket.hour === selectedHour;
@@ -490,7 +526,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent:'center',
+    justifyContent: "center",
     marginBottom: 12,
   },
   headerCopy: {
@@ -609,7 +645,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.foodPrimaryOverlay,
   },
   timelineSection: {
-    marginTop: 2,
+    marginTop: 24,
   },
   sectionTitle: {
     color: appColors.foodText,
@@ -711,6 +747,11 @@ const styles = StyleSheet.create({
     borderColor: appColors.foodTimelineBorder,
     paddingHorizontal: 12,
     paddingVertical: 12,
+  },
+    nonEmptyState: {
+    backgroundColor: appColors.white,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   emptyStateText: {
     color: appColors.foodText,

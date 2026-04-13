@@ -723,14 +723,6 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     marginBottom: 10,
   },
-  fieldLabel: {
-    color: appColors.foodLabel,
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-    marginBottom: 6,
-  },
   fieldLabelSpacing: {
     marginTop: 10,
   },
@@ -750,6 +742,14 @@ const styles = StyleSheet.create({
     color: appColors.foodText,
     fontSize: 14,
     fontWeight: "700",
+  },
+  fieldLabel: {
+    color: appColors.foodLabel,
+    fontSize: 11,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    marginBottom: 6,
   },
   unitPill: {
     borderRadius: 9999,

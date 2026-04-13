@@ -10,6 +10,7 @@ import FuelPlanScreen from "../screens/Onboarding/FuelPlanScreen";
 import AccountScreen from "../screens/Onboarding/AccountScreen";
 import SuccessScreen from "../screens/Onboarding/SuccessScreen";
 import type { OnboardingParamList } from "./onboardingTypes";
+import LoginScreen from "../screens/Auth/LoginScreen";
 
 type OnboardingNavigatorProps = {
   onFinish: () => void;
@@ -19,9 +20,15 @@ const Stack = createNativeStackNavigator<OnboardingParamList>();
 
 const OnboardingNavigator = ({ onFinish }: OnboardingNavigatorProps) => {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Welcome">
+    <Stack.Navigator
+      screenOptions={{ headerShown: false }}
+      initialRouteName="Welcome"
+    >
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
       <Stack.Screen name="Goal" component={GoalScreen} />
+      <Stack.Screen name="Login">
+        {() => <LoginScreen onAuthenticated={onFinish} />}
+      </Stack.Screen>
       <Stack.Screen name="GoalRate" component={GoalRateScreen} />
       <Stack.Screen name="BodyData" component={BodyDataScreen} />
       <Stack.Screen name="Activity" component={ActivityLevelScreen} />

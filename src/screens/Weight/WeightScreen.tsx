@@ -1442,7 +1442,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   heroStatCaption: {
-    color: appColors.foodShadow,
+    color: appColors.slate600,
     fontSize: 12,
     lineHeight: 17,
   },

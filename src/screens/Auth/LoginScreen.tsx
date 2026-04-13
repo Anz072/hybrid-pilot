@@ -1,33 +1,100 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { ShieldCheckIcon } from "phosphor-react-native";
+import { useAppDispatch } from "../../store/hooks";
+import { setCurrentUser } from "../../store/userSlice";
 import { appColors } from "../../theme/colors";
 import { appTypography } from "../../theme/typography";
+import {
+  getSupabaseConfigError,
+  isSupabaseConfigured,
+} from "../../API/supabase/client";
+import {
+  signInWithGoogleViaSupabase,
+  upsertGoogleUserToLocalDb,
+} from "../../API/supabase/googleAuth";
 
-const LoginScreen = () => {
+type LoginScreenProps = {
+  onAuthenticated?: () => void | Promise<void>;
+};
+
+const LoginScreen = ({ onAuthenticated }: LoginScreenProps) => {
+  const dispatch = useAppDispatch();
+  const [signingIn, setSigningIn] = React.useState(false);
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+
+  const handleGoogleSignIn = React.useCallback(async () => {
+    if (signingIn) {
+      return;
+    }
+
+    setSigningIn(true);
+    setErrorMessage(null);
+
+    try {
+      if (!isSupabaseConfigured()) {
+        throw new Error(getSupabaseConfigError());
+      }
+
+      const session = await signInWithGoogleViaSupabase();
+
+      if (!session?.user) {
+        return;
+      }
+
+      const user = await upsertGoogleUserToLocalDb(session.user, {
+        allowCreate: false,
+      });
+      dispatch(setCurrentUser(user));
+      await onAuthenticated?.();
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Could not sign in with Google.";
+
+      setErrorMessage(message);
+      Alert.alert("Google sign-in failed", message);
+    } finally {
+      setSigningIn(false);
+    }
+  }, [dispatch, onAuthenticated, signingIn]);
+
   return (
     <View style={styles.screen}>
       <View style={styles.orbTop} />
       <View style={styles.orbBottom} />
 
       <View style={styles.card}>
-        <View style={styles.badge}>
-          <ShieldCheckIcon
-            size={18}
-            color={appColors.revolutDark}
-            weight="fill"
-          />
-        </View>
-        <Text style={styles.eyebrow}>Hybrid Pilot</Text>
-        <Text style={styles.title}>Nutrition, rebuilt with a darker shell.</Text>
-        <Text style={styles.body}>
-          Bigger type, pill actions, flatter surfaces, and a calmer neutral
-          system are now the default.
-        </Text>
+        <Text style={styles.title}>Sign in with Google</Text>
 
-        <Pressable style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
-          <Text style={styles.buttonText}>Sign in</Text>
+        <Pressable
+          onPress={() => {
+            void handleGoogleSignIn();
+          }}
+          disabled={signingIn}
+          style={({ pressed }) => [
+            styles.button,
+            signingIn && styles.buttonDisabled,
+            pressed && !signingIn && styles.pressed,
+          ]}
+        >
+          {signingIn ? (
+            <ActivityIndicator color={appColors.revolutDark} />
+          ) : null}
+          <Text style={styles.buttonText}>
+            {signingIn ? "Signing in..." : "Continue with Google"}
+          </Text>
         </Pressable>
+
+        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
       </View>
     </View>
   );
@@ -82,7 +149,9 @@ const styles = StyleSheet.create({
   title: {
     ...appTypography.displaySection,
     color: appColors.textPrimary,
-    marginBottom: 10,
+    fontSize: 18,
+    textAlign: 'center',
+    marginBottom: 48,
   },
   body: {
     ...appTypography.body,
@@ -90,16 +159,26 @@ const styles = StyleSheet.create({
     marginBottom: 22,
   },
   button: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 10,
     borderRadius: 9999,
     backgroundColor: appColors.revolutLight,
     paddingHorizontal: 24,
     paddingVertical: 16,
   },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
   buttonText: {
     ...appTypography.button,
     color: appColors.revolutDark,
+  },
+  errorText: {
+    ...appTypography.bodySmall,
+    color: appColors.dangerText,
+    marginTop: 14,
   },
   pressed: {
     opacity: 0.85,

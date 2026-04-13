@@ -3,7 +3,7 @@ export type GoalType = "lose_fat" | "maintain" | "build_muscle";
 export type GoalRatePace = number | null;
 
 export type BodyData = {
-  age: number;
+  birthdate: string;
   sex: "female" | "male" | "other";
   heightCm: number;
   weightKg: number;
@@ -44,8 +44,13 @@ export type OnboardingProfile = {
 export type OnboardingParamList = {
   Welcome: undefined;
   Goal: undefined;
+  Login: undefined;
   GoalRate: { goal: GoalType };
-  BodyData: { goal: GoalType; goalRateKgPerWeek: GoalRatePace };
+  BodyData: {
+    goal: GoalType;
+    goalRateKgPerWeek: GoalRatePace;
+    bodyData?: BodyData;
+  };
   Activity: {
     goal: GoalType;
     goalRateKgPerWeek: GoalRatePace;

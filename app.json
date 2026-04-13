@@ -5,6 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
+    "scheme": "hybridpilot",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
@@ -37,6 +38,12 @@
           "resizeMode": "contain",
           "backgroundColor": "#191c1f",
           "imageWidth": 200
+        }
+      ],
+      [
+        "expo-web-browser",
+        {
+          "experimentalLauncherActivity": false
         }
       ],
       "expo-camera",

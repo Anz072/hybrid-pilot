@@ -115,6 +115,7 @@ const ActivityLevelScreen = ({ navigation, route }: Props) => {
               navigation.push("BodyData", {
                 goal: route.params.goal,
                 goalRateKgPerWeek: route.params.goalRateKgPerWeek,
+                bodyData: route.params.bodyData,
               }),
           },
         ]}
@@ -147,7 +148,7 @@ const ActivityLevelScreen = ({ navigation, route }: Props) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: appColors.slate50,
+    backgroundColor: appColors.surfaceCanvas,
   },
   content: {
     paddingHorizontal: 22,
@@ -169,7 +170,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 999,
-    backgroundColor: appColors.slate200,
+    backgroundColor: appColors.foodEyebrowBg,
   },
   headerWrap: {
     marginTop: 18,
@@ -197,7 +198,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     lineHeight: 38,
     fontWeight: "800",
-    color: appColors.slate900,
+    color: appColors.textPrimary,
     marginBottom: 8,
   },
   subtitle: {
@@ -208,21 +209,6 @@ const styles = StyleSheet.create({
   listWrap: {
     gap: 10,
   },
-  // levelButton: {
-  //   flexDirection: "row",
-  //   alignItems: "center",
-  //   backgroundColor: "#FFFFFF",
-  //   borderWidth: 1,
-  //   borderColor: "#E2E8F0",
-  //   borderRadius: 14,
-  //   paddingVertical: 14,
-  //   paddingHorizontal: 14,
-  //   shadowColor: "#0F172A",
-  //   shadowOpacity: 0.06,
-  //   shadowRadius: 8,
-  //   shadowOffset: { width: 0, height: 4 },
-  //   elevation: 2,
-  // },
   levelButton: {
     flexDirection: "row",
     alignItems: "center",

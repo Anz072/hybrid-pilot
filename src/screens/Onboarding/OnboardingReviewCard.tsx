@@ -46,7 +46,7 @@ const OnboardingReviewCard = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceCanvasAlt,
     borderWidth: 1,
     borderColor: appColors.slate300,
     borderRadius: 12,
@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
-    color: appColors.slate900,
+    color: appColors.textPrimary,
     fontSize: 15,
     fontWeight: "800",
     marginBottom: 10,
@@ -74,14 +74,14 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   label: {
-    color: appColors.slate500,
+    color: appColors.slate600,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0.8,
     textTransform: "uppercase",
   },
   value: {
-    color: appColors.slate900,
+    color: appColors.slate200,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "700",

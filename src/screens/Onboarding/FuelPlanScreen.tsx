@@ -8,6 +8,7 @@ import type {
   OnboardingProfile,
 } from "../../navigation/onboardingTypes";
 import { Pie, PolarChart } from "victory-native";
+import { getAgeFromBirthdateValue } from "../../helpers";
 import { buildFuelPlan, getGoalRateLabel } from "./initialCalculations";
 import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
 import OnboardingReviewCard from "./OnboardingReviewCard";
@@ -32,8 +33,12 @@ type MacroChartDatum = {
 const FuelPlanScreen = ({ navigation, route }: Props) => {
   const insets = useSafeAreaInsets();
   const { goal, goalRateKgPerWeek, bodyData, activity, training } = route.params;
+  const age = getAgeFromBirthdateValue(bodyData.birthdate) ?? 25;
   const fuelPlan = buildFuelPlan({
-    ...bodyData,
+    heightCm: bodyData.heightCm,
+    weightKg: bodyData.weightKg,
+    sex: bodyData.sex,
+    age,
     activity,
     goal,
     goalRateKgPerWeek,
@@ -112,6 +117,7 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
               navigation.push("BodyData", {
                 goal,
                 goalRateKgPerWeek,
+                bodyData,
               }),
           },
           {
@@ -203,7 +209,7 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: appColors.slate50,
+    backgroundColor: appColors.surfaceCanvas,
   },
   content: {
     paddingHorizontal: 22,
@@ -232,7 +238,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 30,
     fontWeight: "800",
-    color: appColors.slate900,
+    color: appColors.textPrimary,
   },
   subtitle: {
     fontSize: 15,
@@ -255,7 +261,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   card: {
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceCanvasAlt,
     borderRadius: 6,
     padding: 14,
     marginBottom: 14,
@@ -273,11 +279,11 @@ const styles = StyleSheet.create({
   },
   metricValue: {
     fontSize: 15,
-    color: appColors.slate900,
+    color: appColors.slate100,
     fontWeight: "800",
   },
   chartCard: {
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceCanvasAlt,
     borderRadius: 6,
     padding: 14,
     marginBottom: 18,
@@ -305,7 +311,7 @@ const styles = StyleSheet.create({
   chartCenterValue: {
     fontSize: 24,
     fontWeight: "900",
-    color: appColors.slate900,
+    color: appColors.slate100,
     lineHeight: 28,
   },
   chartCenterLabel: {

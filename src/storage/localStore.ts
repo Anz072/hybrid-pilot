@@ -12,7 +12,7 @@ const KEY_LOCAL_ACCOUNT = "localAccount";
 const KEY_ONBOARDING_PROFILE = "onboardingProfile";
 const KEY_FOOD_SEARCH_SECTION_STATE = "foodSearchSectionState";
 
-export type AuthProvider = "local";
+export type AuthProvider = "local" | "google";
 
 export type OnboardingProfile = {
   goal: GoalType;

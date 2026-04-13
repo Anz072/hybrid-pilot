@@ -549,9 +549,6 @@ const styles = StyleSheet.create({
   },
   navButton: {
     borderRadius: 9999,
-    backgroundColor: appColors.surfaceGhost,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
     paddingHorizontal: 18,
     paddingVertical: 10,
   },

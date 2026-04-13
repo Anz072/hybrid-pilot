@@ -57,7 +57,7 @@ import {
   MicronutrientSex,
   OpenFoodMapMicronutrientKey,
 } from "../../engine/micronutrients";
-import { getAgeToday } from "../../helpers";
+import { getAgeFromBirthdateValue } from "../../helpers";
 
 type ScannedFoodRoute = RouteProp<FoodStackParamList, "ScannedFood">;
 type ScannedFoodNav = CompositeNavigationProp<
@@ -104,7 +104,7 @@ const ScannedFoodLogScreen = () => {
   const microTargets = user
     ? getMicronutrientTargets({
         sex: String(user.gender) as MicronutrientSex,
-        age: getAgeToday(new Date(user?.birthdate || "1996-10-01")),
+        age: getAgeFromBirthdateValue(user.birthdate) ?? 29,
       })
     : MICRONUTRIENT_TARGETS.generic;
 

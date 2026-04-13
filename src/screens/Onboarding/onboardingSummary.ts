@@ -46,4 +46,4 @@ export const formatTrainingSummary = (training: TrainingSelection): string =>
     : "None selected";
 
 export const formatBodySummary = (bodyData: BodyData): string =>
-  `${bodyData.age}y / ${bodyData.heightCm} cm / ${bodyData.weightKg} kg`;
+  `${bodyData.birthdate.slice(0, 10)} / ${bodyData.heightCm} cm / ${bodyData.weightKg} kg`;

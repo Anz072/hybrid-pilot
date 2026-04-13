@@ -26,7 +26,7 @@ export const MacroBar = ({
   accent,
   consumed,
   label,
-  places = 1,
+  places = 0,
   target,
   unit,
 }: MacroBarProps) => {
@@ -37,7 +37,8 @@ export const MacroBar = ({
   const safeRatio = Number.isFinite(rawRatio) ? rawRatio : 0;
   const ratio = clampFoodRatio(safeRatio);
   const isOver = hasTarget && safeRatio > 1;
-  const remaining = hasTarget ? safeTarget - safeConsumed : null;
+  // const remaining = hasTarget ? safeTarget - safeConsumed : null;
+  const remaining = hasTarget ? (safeConsumed / safeTarget) * 100 : null;
 
   return (
     <View style={styles.macroCard}>
@@ -53,7 +54,8 @@ export const MacroBar = ({
         <Text
           style={[styles.progressPercent, isOver && styles.progressPercentOver]}
         >
-          {remaining != null ? `${remaining.toFixed(places)} ${unit}` : ""}
+          {/* {remaining != null ? `${remaining.toFixed(places)} ${unit}` : ""} */}
+          {remaining != null ? `${remaining.toFixed(places)} %` : ""}
         </Text>
       </View>
       <View style={styles.progressTrack}>
@@ -118,11 +120,7 @@ const FoodDiaryHeroCard = ({
 
 const styles = StyleSheet.create({
   hero: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    paddingHorizontal: 14,
+    paddingHorizontal: 2,
     paddingVertical: 12,
     marginTop: 16,
   },

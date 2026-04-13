@@ -41,6 +41,7 @@ const WelcomeScreen = ({ navigation }: Props) => {
           styles.secondaryButton,
           pressed && styles.secondaryButtonPressed,
         ]}
+        onPress={() => navigation.navigate("Login")}
       >
         <Text style={styles.secondaryButtonText}>
           I already have an account
@@ -57,7 +58,7 @@ const styles = StyleSheet.create({
     paddingTop: 56,
     paddingBottom: 30,
     justifyContent: "center",
-    backgroundColor: appColors.slate50,
+    backgroundColor: appColors.surfaceCanvas,
   },
   bgOrbTop: {
     position: "absolute",
@@ -75,7 +76,7 @@ const styles = StyleSheet.create({
     width: 240,
     height: 240,
     borderRadius: 999,
-    backgroundColor: appColors.slate200,
+    backgroundColor: appColors.foodEyebrowBg,
   },
   heroRow: {
     flexDirection: "row",
@@ -121,7 +122,7 @@ const styles = StyleSheet.create({
     fontSize: 40,
     lineHeight: 44,
     fontWeight: "800",
-    color: appColors.slate900,
+    color: appColors.textPrimary,
     marginBottom: 12,
     textAlign: "center",
   },
@@ -134,7 +135,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   primaryButton: {
-    marginBottom: 10,
+    marginBottom: 16,
   },
   secondaryButton: {
     paddingVertical: 11,

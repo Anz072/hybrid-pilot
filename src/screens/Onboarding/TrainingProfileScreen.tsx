@@ -113,6 +113,7 @@ const TrainingProfileScreen = ({ navigation, route }: Props) => {
               navigation.push("BodyData", {
                 goal: route.params.goal,
                 goalRateKgPerWeek: route.params.goalRateKgPerWeek,
+                bodyData: route.params.bodyData,
               }),
           },
           {
@@ -191,7 +192,7 @@ const TrainingProfileScreen = ({ navigation, route }: Props) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: appColors.slate50,
+    backgroundColor: appColors.surfaceCanvas,
   },
   content: {
     paddingHorizontal: 22,
@@ -213,7 +214,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: "800",
-    color: appColors.slate900,
+    color: appColors.textPrimary,
     marginBottom: 8,
   },
   subtitle: {
@@ -225,15 +226,15 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   option: {
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceCanvasAlt,
     borderWidth: 1,
     borderColor: appColors.slate300,
     borderRadius: 12,
     padding: 14,
   },
   optionSelected: {
-    borderColor: appColors.slate900,
-    backgroundColor: appColors.slate50,
+    borderColor: appColors.revolutBlue,
+    backgroundColor: appColors.slate900,
   },
   optionPressed: {
     opacity: 0.95,
@@ -248,7 +249,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   optionText: {
-    color: appColors.slate900,
+    color: appColors.textPrimary,
     fontWeight: "800",
     fontSize: 17,
     marginBottom: 4,
@@ -276,13 +277,13 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     borderColor: appColors.slate300,
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceCanvasAlt,
     alignItems: "center",
     justifyContent: "center",
   },
   checkBadgeSelected: {
     backgroundColor: appColors.slate900,
-    borderColor: appColors.slate900,
+    borderColor: appColors.revolutBlue,
   },
   helper: {
     marginTop: 12,

@@ -112,3 +112,53 @@ export const getFirstUser = async (): Promise<DBUser | null> => {
     fatG: row.fatG ?? null,
   };
 };
+
+export const getUserByExternalId = async (
+  externalId: string,
+): Promise<DBUser | null> => {
+  await initDb();
+  const db = await getDb();
+
+  const row = await db.getFirstAsync<RawDBUser>(
+    `
+    SELECT
+      id,
+      external_id AS externalId,
+      provider,
+      display_name AS displayName,
+      created_at AS createdAt,
+      email,
+      birthdate,
+      gender,
+      height_cm AS heightCm,
+      activity_level AS activityLevel,
+      goal,
+      training_types AS trainingTypes,
+      calorieAllowance,
+      proteinG,
+      carbsG,
+      fatG
+    FROM users
+    WHERE external_id = ?
+    LIMIT 1
+    `,
+    externalId,
+  );
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    ...row,
+    gender: (row.gender as DBUser["gender"]) ?? null,
+    trainingTypes:
+      typeof row.trainingTypes === "string"
+        ? (JSON.parse(row.trainingTypes) as string[])
+        : null,
+    calorieAllowance: row.calorieAllowance ?? null,
+    proteinG: row.proteinG ?? null,
+    carbsG: row.carbsG ?? null,
+    fatG: row.fatG ?? null,
+  };
+};

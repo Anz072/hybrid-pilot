@@ -377,7 +377,7 @@ const MainTabNavigator = () => {
               styles.sheet,
               {
                 height: SHEET_HEIGHT,
-                paddingBottom: Math.max(insets.bottom, 18),
+                paddingBottom: Math.max(insets.bottom + 8, 24),
                 transform: [{ translateY: sheetTranslateY }],
               },
             ]}

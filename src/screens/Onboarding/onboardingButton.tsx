@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     letterSpacing: 0.8,
     fontWeight: "800",
-    color: appColors.slate900,
+    color: appColors.slate100,
     marginBottom: 3,
     marginTop: 4,
   },
@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
   option2: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceCanvasAlt,
     borderColor: appColors.slate200,
     borderRadius: 6,
     paddingVertical: 18,

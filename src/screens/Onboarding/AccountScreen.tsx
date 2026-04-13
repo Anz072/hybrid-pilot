@@ -1,8 +1,6 @@
-import React, { useMemo, useState } from "react";
-import DateTimePicker, {
-  DateTimePickerEvent,
-} from "@react-native-community/datetimepicker";
+import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -21,7 +19,16 @@ import {
   saveLocalAccount,
   saveOnboardingProfile,
   setOnboardingComplete,
+  type LocalAccount,
 } from "../../storage/localStore";
+import {
+  getSupabaseConfigError,
+  isSupabaseConfigured,
+} from "../../API/supabase/client";
+import {
+  getGoogleDisplayName,
+  signInWithGoogleViaSupabase,
+} from "../../API/supabase/googleAuth";
 import { DB } from "../../store/DB";
 import { useAppDispatch } from "../../store/hooks";
 import { setCurrentUser } from "../../store/userSlice";
@@ -40,76 +47,81 @@ import {
   formatTrainingSummary,
 } from "./onboardingSummary";
 import { appColors } from "../../theme/colors";
+import { appTypography } from "../../theme/typography";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "Account">;
-
-const formatDateToYmd = (date: Date): string => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
 
 const AccountScreen = ({ navigation, route }: Props) => {
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
-  const [birthdate, setBirthdate] = useState("");
-  const [selectedBirthdate, setSelectedBirthdate] = useState(
-    new Date(1998, 0, 1),
-  );
-  const [isSaving, setIsSaving] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [submissionMode, setSubmissionMode] = useState<
+    "local" | "google" | null
+  >(null);
 
   const normalizedEmail = email.trim();
-  const normalizedBirthdate = birthdate.trim();
-  const canSubmit =
-    displayName.trim().length > 0 &&
-    normalizedEmail.length > 0 &&
-    normalizedBirthdate.length > 0;
+  const isSaving = submissionMode !== null;
+  const canCreateLocalAccount =
+    displayName.trim().length > 0 && normalizedEmail.length > 0;
 
-  const minBirthdate = useMemo(() => new Date(1900, 0, 1), []);
-  const maxBirthdate = useMemo(() => new Date(), []);
+  const completeOnboardingAccount = async (account: LocalAccount) => {
+    const onboarding = route.params.onboarding;
+    const persistedAccount: LocalAccount = {
+      ...account,
+      birthdate: onboarding.bodyData.birthdate,
+    };
+    const nextUser = {
+      id: 0,
+      externalId: persistedAccount.id,
+      provider: persistedAccount.provider,
+      displayName: persistedAccount.displayName,
+      createdAt: persistedAccount.createdAt,
+      email: persistedAccount.email,
+      birthdate: persistedAccount.birthdate,
+      gender: onboarding.bodyData.sex,
+      heightCm: onboarding.bodyData.heightCm,
+      activityLevel: onboarding.activity,
+      goal: onboarding.goal,
+      trainingTypes: onboarding.training,
+      calorieAllowance: onboarding.fuelPlan.calories,
+      proteinG: onboarding.fuelPlan.protein,
+      carbsG: onboarding.fuelPlan.carbs,
+      fatG: onboarding.fuelPlan.fats,
+    };
 
-  const parseBirthdateToIso = (value: string): string | null => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-      return null;
-    }
+    await saveLocalAccount(persistedAccount);
+    await saveOnboardingProfile(onboarding);
+    await setOnboardingComplete(true);
+    await DB.addUser(nextUser);
 
-    const date = new Date(value + "T00:00:00.000Z");
-    if (Number.isNaN(date.getTime())) {
-      return null;
-    }
+    const initialWeightDate = new Date();
+    const initialWeightEntryId = `${persistedAccount.id}-initial-weight`;
+    const initialWeightKg = onboarding.bodyData.weightKg;
 
-    return date.toISOString();
-  };
+    await DB.saveWeightEntry({
+      id: initialWeightEntryId,
+      userExternalId: persistedAccount.id,
+      measuredAt: initialWeightDate.toISOString(),
+      measuredAtLocalIso: toLocalIsoWithOffset(initialWeightDate),
+      zoneOffsetMinutes: getZoneOffsetMinutes(initialWeightDate),
+      valueKg: initialWeightKg,
+      valueOriginal: initialWeightKg,
+      unitOriginal: "kg",
+      source: "manual",
+      notes: null,
+      clientGeneratedId: initialWeightEntryId,
+      deviceId: generateUuid(),
+    });
 
-  const openDatePicker = () => {
-    setShowDatePicker(true);
-  };
+    const savedUser = await DB.getUserByExternalId(persistedAccount.id);
+    dispatch(setCurrentUser(savedUser ?? nextUser));
 
-  const handleDateChange = (event: DateTimePickerEvent, date?: Date) => {
-    if (Platform.OS === "android") {
-      setShowDatePicker(false);
-    }
-
-    if (event.type !== "set" || !date) {
-      return;
-    }
-
-    setSelectedBirthdate(date);
-    setBirthdate(formatDateToYmd(date));
+    navigation.push("Success", { onboarding });
   };
 
   const handleCreateLocalAccount = async () => {
-    if (!canSubmit || isSaving) {
-      return;
-    }
-
-    const parsedBirthdate = parseBirthdateToIso(normalizedBirthdate);
-    if (!parsedBirthdate) {
-      Alert.alert("Invalid birthdate", "Use format YYYY-MM-DD.");
+    if (!canCreateLocalAccount || isSaving) {
       return;
     }
 
@@ -118,65 +130,76 @@ const AccountScreen = ({ navigation, route }: Props) => {
       return;
     }
 
-    setIsSaving(true);
+    setSubmissionMode("local");
 
     try {
       const account = buildLocalAccount({
         displayName: displayName.trim(),
         email: normalizedEmail,
-        birthdate: parsedBirthdate,
+        birthdate: route.params.onboarding.bodyData.birthdate,
       });
 
-      await saveLocalAccount(account);
-      await saveOnboardingProfile(route.params.onboarding);
-      await setOnboardingComplete(true);
-
-      await DB.addUser({
-        id: 0,
-        externalId: account.id,
-        provider: account.provider,
-        displayName: account.displayName,
-        createdAt: account.createdAt,
-        email: account.email,
-        birthdate: account.birthdate,
-        gender: route.params.onboarding.bodyData.sex,
-        heightCm: route.params.onboarding.bodyData.heightCm,
-        activityLevel: route.params.onboarding.activity,
-        goal: route.params.onboarding.goal,
-        trainingTypes: route.params.onboarding.training,
-        calorieAllowance: route.params.onboarding.fuelPlan.calories,
-        proteinG: route.params.onboarding.fuelPlan.protein,
-        carbsG: route.params.onboarding.fuelPlan.carbs,
-        fatG: route.params.onboarding.fuelPlan.fats,
-      });
-
-      const initialWeightDate = new Date();
-      const initialWeightEntryId = `${account.id}-initial-weight`;
-      const initialWeightKg = route.params.onboarding.bodyData.weightKg;
-
-      await DB.saveWeightEntry({
-        id: initialWeightEntryId,
-        userExternalId: account.id,
-        measuredAt: initialWeightDate.toISOString(),
-        measuredAtLocalIso: toLocalIsoWithOffset(initialWeightDate),
-        zoneOffsetMinutes: getZoneOffsetMinutes(initialWeightDate),
-        valueKg: initialWeightKg,
-        valueOriginal: initialWeightKg,
-        unitOriginal: "kg",
-        source: "manual",
-        notes: null,
-        clientGeneratedId: initialWeightEntryId,
-        deviceId: generateUuid(),
-      });
-
-      const user = await DB.getUser();
-      dispatch(setCurrentUser(user));
-
-      navigation.push("Success", { onboarding: route.params.onboarding });
+      await completeOnboardingAccount(account);
     } catch {
       Alert.alert("Could not save account", "Please try again.");
     } finally {
-      setIsSaving(false);
+      setSubmissionMode(null);
+    }
+  };
+
+  const handleCreateGoogleAccount = async () => {
+    if (isSaving) {
+      return;
+    }
+
+    setSubmissionMode("google");
+
+    try {
+      if (!isSupabaseConfigured()) {
+        throw new Error(getSupabaseConfigError());
+      }
+
+      const session = await signInWithGoogleViaSupabase();
+      if (!session?.user) {
+        return;
+      }
+
+      const googleEmail =
+        session.user.email ??
+        (normalizedEmail.length > 0 ? normalizedEmail : null);
+      if (!googleEmail || !googleEmail.includes("@")) {
+        throw new Error("Google did not return a valid email address.");
+      }
+
+      const account: LocalAccount = {
+        id: session.user.id,
+        provider: "google",
+        displayName: getGoogleDisplayName(
+          session.user,
+          displayName.trim() || undefined,
+        ),
+        email: googleEmail,
+        birthdate: route.params.onboarding.bodyData.birthdate,
+        createdAt:
+          typeof session.user.created_at === "string" &&
+          session.user.created_at.length > 0
+            ? session.user.created_at
+            : new Date().toISOString(),
+      };
+
+      setDisplayName(account.displayName);
+      setEmail(account.email ?? "");
+
+      await completeOnboardingAccount(account);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Could not create your Google account.";
+
+      Alert.alert("Google account failed", message);
+    } finally {
+      setSubmissionMode(null);
     }
   };
 
@@ -197,9 +220,11 @@ const AccountScreen = ({ navigation, route }: Props) => {
           stepLabel="Account"
         />
         <Text style={styles.eyebrow}>Final Step</Text>
-        <Text style={styles.title}>Create local account</Text>
+        <Text style={styles.title}>Create your account</Text>
         <Text style={styles.subtitle}>
-          Saved only on this device for now so your onboarding progress stays local.
+          Finish with a local account or use Google. Either way, this onboarding
+          plan, including your birthdate from body data, is saved on this
+          device.
         </Text>
 
         <OnboardingReviewCard
@@ -220,6 +245,7 @@ const AccountScreen = ({ navigation, route }: Props) => {
                 navigation.push("BodyData", {
                   goal: route.params.onboarding.goal,
                   goalRateKgPerWeek: route.params.onboarding.goalRateKgPerWeek,
+                  bodyData: route.params.onboarding.bodyData,
                 }),
             },
             {
@@ -267,44 +293,41 @@ const AccountScreen = ({ navigation, route }: Props) => {
             style={styles.input}
           />
 
-          <Text style={styles.label}>Birthdate</Text>
-          <Pressable onPress={openDatePicker} style={styles.input}>
-            <Text
-              style={
-                birthdate ? styles.birthdateText : styles.birthdatePlaceholder
-              }
-            >
-              {birthdate || "Select your birthdate"}
-            </Text>
-          </Pressable>
-
-          {showDatePicker ? (
-            <View style={styles.pickerWrap}>
-              <DateTimePicker
-                value={selectedBirthdate}
-                mode="date"
-                display={Platform.OS === "ios" ? "spinner" : "default"}
-                maximumDate={maxBirthdate}
-                minimumDate={minBirthdate}
-                onChange={handleDateChange}
-              />
-              {Platform.OS === "ios" ? (
-                <Pressable
-                  onPress={() => setShowDatePicker(false)}
-                  style={styles.pickerDoneButton}
-                >
-                  <Text style={styles.pickerDoneText}>Done</Text>
-                </Pressable>
-              ) : null}
-            </View>
-          ) : null}
-
           <OnboardingPrimaryButton
-            label={isSaving ? "Saving..." : "Create local account"}
-            disabled={!canSubmit || isSaving}
+            label={
+              submissionMode === "local" ? "Saving..." : "Create local account"
+            }
+            disabled={!canCreateLocalAccount || isSaving}
             style={styles.primaryButton}
             onPress={() => void handleCreateLocalAccount()}
           />
+
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <Pressable
+            disabled={isSaving}
+            onPress={() => {
+              void handleCreateGoogleAccount();
+            }}
+            style={({ pressed }) => [
+              styles.googleButton,
+              isSaving && styles.googleButtonDisabled,
+              pressed && !isSaving && styles.googleButtonPressed,
+            ]}
+          >
+            {submissionMode === "google" ? (
+              <ActivityIndicator color={appColors.foodPrimaryDark} />
+            ) : null}
+            <Text style={styles.googleButtonText}>
+              {submissionMode === "google"
+                ? "Connecting Google..."
+                : "Create with Google"}
+            </Text>
+          </Pressable>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -314,7 +337,7 @@ const AccountScreen = ({ navigation, route }: Props) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: appColors.slate50,
+    backgroundColor: appColors.surfaceCanvas,
   },
   scrollContent: {
     paddingHorizontal: 22,
@@ -338,7 +361,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: "800",
-    color: appColors.slate900,
+    color: appColors.textPrimary,
     marginBottom: 6,
   },
   subtitle: {
@@ -347,8 +370,6 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   card: {
-    backgroundColor: appColors.white,
-    borderRadius: 6,
     padding: 16,
   },
   label: {
@@ -372,36 +393,49 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
     fontWeight: "600",
   },
-  birthdateText: {
-    color: appColors.slate900,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  birthdatePlaceholder: {
-    color: appColors.slate400,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  pickerWrap: {
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: appColors.slate200,
-    borderRadius: 12,
-    paddingVertical: 8,
-  },
-  pickerDoneButton: {
-    alignSelf: "flex-end",
-    marginRight: 12,
-    marginTop: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  pickerDoneText: {
-    color: appColors.slate900,
-    fontWeight: "700",
-  },
   primaryButton: {
-    marginTop: 48,
+    marginTop: 32,
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 18,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: appColors.slate200,
+  },
+  dividerText: {
+    ...appTypography.label,
+    color: appColors.slate500,
+  },
+  googleHint: {
+    ...appTypography.bodySmall,
+    color: appColors.slate600,
+    marginTop: 14,
+    marginBottom: 12,
+  },
+  googleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    borderRadius: 9999,
+    backgroundColor: appColors.revolutBlue,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+  },
+  googleButtonDisabled: {
+    opacity: 0.6,
+  },
+  googleButtonPressed: {
+    opacity: 0.9,
+  },
+  googleButtonText: {
+    ...appTypography.button,
+    color: appColors.textPrimary,
   },
 });
 

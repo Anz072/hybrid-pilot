@@ -23,7 +23,7 @@ import {
   MicronutrientSex,
   OpenFoodMapMicronutrientKey,
 } from "../../engine/micronutrients";
-import { getAgeToday } from "../../helpers";
+import { getAgeFromBirthdateValue } from "../../helpers";
 import { DB } from "../../store/DB";
 import type { DBFoodItem } from "../../store/DB_TYPES";
 import { useAppSelector } from "../../store/hooks";
@@ -86,7 +86,7 @@ const FoodReadOnlyScreen = () => {
       user
         ? getMicronutrientTargets({
             sex: String(user.gender) as MicronutrientSex,
-            age: getAgeToday(new Date(user.birthdate || "1996-10-01")),
+            age: getAgeFromBirthdateValue(user.birthdate) ?? 29,
           })
         : MICRONUTRIENT_TARGETS.generic,
     [user],

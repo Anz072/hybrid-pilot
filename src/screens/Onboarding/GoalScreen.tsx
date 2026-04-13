@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingTop: 34,
     paddingBottom: 24,
-    backgroundColor: appColors.slate50,
+    backgroundColor: appColors.surfaceCanvas,
   },
   bgOrbTop: {
     position: "absolute",
@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 999,
-    backgroundColor: appColors.slate200,
+    backgroundColor: appColors.foodEyebrowBg,
   },
   headerWrap: {
     marginTop: 20,
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     lineHeight: 38,
     fontWeight: "800",
-    color: appColors.slate900,
+    color: appColors.textPrimary,
     marginBottom: 10,
   },
   subtitle: {

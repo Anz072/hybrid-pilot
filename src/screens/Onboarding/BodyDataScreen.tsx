@@ -1,3 +1,6 @@
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import React from "react";
 import {
   Alert,
@@ -16,6 +19,12 @@ import type {
   BodyData,
   OnboardingParamList,
 } from "../../navigation/onboardingTypes";
+import {
+  buildBirthdateIsoString,
+  formatDateToYmd,
+  getAgeToday,
+  parseBirthdateValue,
+} from "../../helpers";
 import { formatGoalRateKg } from "./initialCalculations";
 import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
 import OnboardingTopBar from "./OnboardingTopBar";
@@ -23,20 +32,66 @@ import { appColors } from "../../theme/colors";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "BodyData">;
 
+const resolveInitialBirthdate = (value?: string): Date => {
+  const parsed = parseBirthdateValue(value);
+  if (parsed) {
+    return parsed;
+  }
+
+  return new Date(1998, 0, 1);
+};
+
 const BodyDataScreen = ({ navigation, route }: Props) => {
   const insets = useSafeAreaInsets();
-  const [age, setAge] = React.useState("25");
-  const [heightCm, setHeightCm] = React.useState("168");
-  const [weightKg, setWeightKg] = React.useState("77");
-  const [sex, setSex] = React.useState<BodyData["sex"]>("female");
+  const [selectedBirthdate, setSelectedBirthdate] = React.useState<Date>(() =>
+    resolveInitialBirthdate(route.params.bodyData?.birthdate),
+  );
+  const [heightCm, setHeightCm] = React.useState(
+    route.params.bodyData ? String(route.params.bodyData.heightCm) : "168",
+  );
+  const [weightKg, setWeightKg] = React.useState(
+    route.params.bodyData ? String(route.params.bodyData.weightKg) : "77",
+  );
+  const [sex, setSex] = React.useState<BodyData["sex"]>(
+    route.params.bodyData?.sex ?? "female",
+  );
+  const [showDatePicker, setShowDatePicker] = React.useState(false);
+  const minBirthdate = React.useMemo(() => new Date(1900, 0, 1), []);
+  const maxBirthdate = React.useMemo(() => new Date(), []);
+  const formattedBirthdate = React.useMemo(
+    () => formatDateToYmd(selectedBirthdate),
+    [selectedBirthdate],
+  );
+  const derivedAge = React.useMemo(
+    () => getAgeToday(selectedBirthdate),
+    [selectedBirthdate],
+  );
+
+  const openDatePicker = () => {
+    setShowDatePicker(true);
+  };
+
+  const handleDateChange = (event: DateTimePickerEvent, date?: Date) => {
+    if (Platform.OS === "android") {
+      setShowDatePicker(false);
+    }
+
+    if (event.type !== "set" || !date) {
+      return;
+    }
+
+    setSelectedBirthdate(date);
+  };
 
   const handleNext = () => {
-    const parsedAge = Number(age);
     const parsedHeight = Number(heightCm);
     const parsedWeight = Number(weightKg);
 
-    if (!Number.isFinite(parsedAge) || parsedAge < 13 || parsedAge > 100) {
-      Alert.alert("Check your age", "Enter an age between 13 and 100.");
+    if (!Number.isFinite(derivedAge) || derivedAge < 13 || derivedAge > 100) {
+      Alert.alert(
+        "Check your birthdate",
+        "Select a birthdate that makes you between 13 and 100 years old.",
+      );
       return;
     }
 
@@ -51,7 +106,7 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
     }
 
     const bodyData: BodyData = {
-      age: parsedAge,
+      birthdate: buildBirthdateIsoString(selectedBirthdate),
       heightCm: parsedHeight,
       weightKg: parsedWeight,
       sex,
@@ -84,7 +139,8 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
           </View>
           <Text style={styles.title}>Body basics</Text>
           <Text style={styles.subtitle}>
-            Quick setup for a better TDEE estimate.
+            Quick setup for a better TDEE estimate. We use your birthdate to
+            calculate age automatically.
           </Text>
           {route.params.goalRateKgPerWeek != null ? (
             <Text style={styles.contextNote}>
@@ -95,15 +151,36 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
 
         <View style={styles.formCard}>
           <View>
-            <Text style={styles.sectionLabelx}>Age</Text>
-            <TextInput
+            <Text style={styles.sectionLabelx}>Birthdate</Text>
+            <Pressable
               style={styles.input}
-              value={age}
-              onChangeText={setAge}
-              keyboardType="numeric"
-              placeholder="Age"
-              placeholderTextColor={appColors.slate400}
-            />
+              onPress={openDatePicker}
+            >
+              <Text style={styles.birthdateText}>{formattedBirthdate}</Text>
+            </Pressable>
+            <Text style={styles.ageHint}>
+              Age used for calculations: {derivedAge} years
+            </Text>
+            {showDatePicker ? (
+              <View style={styles.pickerWrap}>
+                <DateTimePicker
+                  value={selectedBirthdate}
+                  mode="date"
+                  display={Platform.OS === "ios" ? "spinner" : "default"}
+                  maximumDate={maxBirthdate}
+                  minimumDate={minBirthdate}
+                  onChange={handleDateChange}
+                />
+                {Platform.OS === "ios" ? (
+                  <Pressable
+                    onPress={() => setShowDatePicker(false)}
+                    style={styles.pickerDoneButton}
+                  >
+                    <Text style={styles.pickerDoneText}>Done</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : null}
           </View>
           <View>
             <Text style={styles.sectionLabelx}>Height (cm)</Text>
@@ -165,7 +242,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 22,
     paddingTop: 34,
-    backgroundColor: appColors.slate50,
+    backgroundColor: appColors.surfaceCanvas,
   },
   content: {
     flex: 1,
@@ -189,7 +266,7 @@ const styles = StyleSheet.create({
     width: 210,
     height: 210,
     borderRadius: 999,
-    backgroundColor: appColors.slate200,
+    backgroundColor: appColors.foodEyebrowBg,
   },
   headerWrap: {
     marginTop: 18,
@@ -217,7 +294,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     lineHeight: 38,
     fontWeight: "800",
-    color: appColors.slate900,
+    color: appColors.textPrimary,
     marginBottom: 8,
   },
   subtitle: {
@@ -233,20 +310,19 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   formCard: {
-    backgroundColor: appColors.white,
-    borderColor: appColors.charcoal,
+    backgroundColor: appColors.surfaceCanvasAlt,
     borderRadius: 6,
     padding: 14,
     gap: 16,
   },
   input: {
     borderWidth: 1,
-    borderColor: appColors.charcoal,
+    borderColor: appColors.lavenderBorder,
     borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 14,
-    backgroundColor: appColors.white,
-    color: appColors.slate900,
+    backgroundColor: appColors.surfaceCanvasAlt,
+    color: appColors.textPrimary,
     fontSize: 18,
     letterSpacing: 0.5,
     fontWeight: "600",
@@ -269,13 +345,44 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     color: appColors.slate500,
   },
+  birthdateText: {
+    color: appColors.textPrimary,
+    fontSize: 18,
+    letterSpacing: 0.5,
+    fontWeight: "600",
+  },
+  ageHint: {
+    marginTop: 8,
+    marginLeft: 4,
+    color: appColors.slate600,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  pickerWrap: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: appColors.lavenderBorder,
+    borderRadius: 12,
+    paddingVertical: 8,
+  },
+  pickerDoneButton: {
+    alignSelf: "flex-end",
+    marginRight: 12,
+    marginTop: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  pickerDoneText: {
+    color: appColors.slate900,
+    fontWeight: "700",
+  },
   sexRow: {
     flexDirection: "row",
     gap: 8,
   },
   sexChip: {
     borderWidth: 1,
-    borderColor: appColors.slate300,
+    borderColor: appColors.lavenderBorder,
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -283,7 +390,7 @@ const styles = StyleSheet.create({
   },
   sexChipActive: {
     backgroundColor: appColors.slate900,
-    borderColor: appColors.slate900,
+    borderColor: appColors.textPrimary,
   },
   sexChipPressed: {
     opacity: 0.88,

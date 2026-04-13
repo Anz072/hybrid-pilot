@@ -117,7 +117,7 @@ const SuccessScreen = ({ onFinish, route }: Props) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: appColors.slate50,
+    backgroundColor: appColors.surfaceCanvas,
   },
   content: {
     paddingHorizontal: 22,
@@ -139,15 +139,15 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 999,
-    backgroundColor: appColors.slate200,
+    backgroundColor: appColors.greenSoftBg,
   },
   badge: {
     width: 68,
     height: 68,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: appColors.raw_hex_BBF7D0,
-    backgroundColor: appColors.raw_hex_F0FDF4,
+    borderColor: appColors.revolutBlue,
+    backgroundColor: appColors.revolutBlue,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 14,
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     fontSize: 34,
     lineHeight: 40,
     fontWeight: "800",
-    color: appColors.slate900,
+    color: appColors.textPrimary,
     marginBottom: 8,
   },
   subtitle: {
@@ -179,11 +179,10 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   highlightCard: {
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.surfaceCanvasAlt,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: appColors.raw_hex_D1FAE5,
     marginBottom: 16,
   },
   highlightHeader: {
@@ -195,7 +194,7 @@ const styles = StyleSheet.create({
   highlightTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: appColors.slate900,
+    color: appColors.textPrimary,
   },
   pacePill: {
     alignSelf: "flex-start",
@@ -219,7 +218,7 @@ const styles = StyleSheet.create({
   },
   metricTile: {
     width: "47%",
-    backgroundColor: appColors.slate50,
+    backgroundColor: appColors.slate900,
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 12,
@@ -235,7 +234,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   metricTileValue: {
-    color: appColors.slate900,
+    color: appColors.slate100,
     fontSize: 24,
     fontWeight: "900",
     lineHeight: 28,
@@ -247,7 +246,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   card: {
-    backgroundColor: appColors.white,
+    backgroundColor: appColors.slate900,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
@@ -265,7 +264,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   detailValue: {
-    color: appColors.slate900,
+    color: appColors.slate100,
     fontSize: 16,
     fontWeight: "800",
     lineHeight: 22,

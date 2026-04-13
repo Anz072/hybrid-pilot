@@ -3,7 +3,7 @@ import type {
   FuelPlan,
   GoalType,
 } from "../navigation/onboardingTypes";
-import { getAgeToday } from "../helpers";
+import { getAgeFromBirthdateValue } from "../helpers";
 import { buildFuelPlan } from "../screens/Onboarding/initialCalculations";
 import type { DBUser, DBUserSettings } from "../store/DB_TYPES";
 
@@ -174,13 +174,8 @@ export const buildAutomaticFuelPlanForUser = ({
     return null;
   }
 
-  const birthdate = new Date(user.birthdate);
-  if (!Number.isFinite(birthdate.getTime())) {
-    return null;
-  }
-
-  const age = getAgeToday(birthdate);
-  if (!Number.isFinite(age) || age <= 0) {
+  const age = getAgeFromBirthdateValue(user.birthdate);
+  if (age == null || age <= 0) {
     return null;
   }
 

@@ -409,6 +409,13 @@ const FoodDiaryMainStrip = ({
               ? dayTargetCalories
               : fallbackMaxCalories;
           const ratio = Math.max(0, Math.min(1, day.calories / ratioBase));
+          const progressColor = selected
+            ? appColors.foodPrimaryDark
+            : appColors.foodPrimary;
+          const fillColor = withOpacity(
+            progressColor,
+            selected ? 0.28 : 0.18,
+          );
 
           return (
             <Pressable
@@ -420,6 +427,14 @@ const FoodDiaryMainStrip = ({
                 pressed && styles.cardPressed,
               ]}
             >
+              <View
+                style={[
+                  styles.dayPillFill,
+                  {
+                    backgroundColor: fillColor,
+                  },
+                ]}
+              />
               <Svg
                 width={PILL_WIDTH}
                 height={PILL_HEIGHT}
@@ -427,16 +442,16 @@ const FoodDiaryMainStrip = ({
               >
                 <Path
                   d={outlinePath}
-                  stroke={appColors.lavenderShadow}
+                  stroke={
+                    selected ? appColors.foodPrimaryOverlay : appColors.borderSoft
+                  }
                   strokeWidth={OUTLINE_WIDTH}
                   fill="none"
                   strokeLinecap="round"
                 />
                 <Path
                   d={outlinePath}
-                  stroke={
-                    selected ? appColors.indigo600 : appColors.violetAccent
-                  }
+                  stroke={progressColor}
                   strokeWidth={OUTLINE_WIDTH}
                   fill="none"
                   strokeLinecap="round"
@@ -611,6 +626,12 @@ const styles = StyleSheet.create({
   },
   dayPillSelected: {
     backgroundColor: appColors.lavenderPanel,
+  },
+  dayPillFill: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    left: 0,
   },
   weekday: {
     color: appColors.foodPlaceholder,

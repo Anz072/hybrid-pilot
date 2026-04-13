@@ -8,7 +8,6 @@ import {
   Modal,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -17,6 +16,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ClockIcon, PencilSimpleIcon, XIcon } from "phosphor-react-native";
 import type { DBWeightEntry } from "../../store/DB_TYPES";
+import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import OnboardingPrimaryButton from "../Onboarding/OnboardingPrimaryButton";
 import {
   formatWeightKg,
@@ -198,12 +198,11 @@ const WeightEntryModal = ({
           </Pressable>
         </View>
 
-        <ScrollView
+        <KeyboardAwareScrollView
           contentContainerStyle={[
             styles.content,
             { paddingBottom: insets.bottom + 24 },
           ]}
-          keyboardShouldPersistTaps="handled"
         >
           <View style={styles.card}>
             <View>
@@ -339,7 +338,7 @@ const WeightEntryModal = ({
               <Text style={styles.deleteText}>Delete entry</Text>
             </Pressable>
           ) : null}
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </View>
     </Modal>
   );

@@ -6,12 +6,18 @@ import {
   TextInput,
   type TextStyle,
 } from "react-native";
+import { notifyTextInputFocused } from "./textInputFocusEvents";
 
 type FontWeightValue = TextStyle["fontWeight"];
 
 type PatchedTextComponent = {
   render?: (...args: unknown[]) => React.ReactElement | null;
   __interPatched?: boolean;
+};
+
+type InterPatchedElementProps = {
+  onFocus?: ((event: unknown) => void) | undefined;
+  style?: StyleProp<TextStyle>;
 };
 
 const normalizeFontWeight = (fontWeight?: FontWeightValue): number => {
@@ -85,7 +91,12 @@ const withInterFont = (style: StyleProp<TextStyle>) => {
   ];
 };
 
-const patchTextRender = (component: PatchedTextComponent) => {
+const patchTextRender = (
+  component: PatchedTextComponent,
+  options: {
+    notifyOnFocus?: boolean;
+  } = {},
+) => {
   if (component.__interPatched || !component.render) {
     return;
   }
@@ -97,19 +108,29 @@ const patchTextRender = (component: PatchedTextComponent) => {
       return element;
     }
 
-    const typedElement = element as React.ReactElement<{
-      style?: StyleProp<TextStyle>;
-    }>;
+    const typedElement = element as React.ReactElement<InterPatchedElementProps>;
     const props = typedElement.props;
-
-    return React.cloneElement(typedElement, {
+    const nextProps: InterPatchedElementProps = {
       style: withInterFont(props.style),
-    });
+    };
+
+    if (options.notifyOnFocus) {
+      nextProps.onFocus = (event) => {
+        props.onFocus?.(event);
+        requestAnimationFrame(() => {
+          notifyTextInputFocused();
+        });
+      };
+    }
+
+    return React.cloneElement(typedElement, nextProps);
   };
   component.__interPatched = true;
 };
 
 export const applyInterFontDefaults = () => {
   patchTextRender(Text as unknown as PatchedTextComponent);
-  patchTextRender(TextInput as unknown as PatchedTextComponent);
+  patchTextRender(TextInput as unknown as PatchedTextComponent, {
+    notifyOnFocus: true,
+  });
 };

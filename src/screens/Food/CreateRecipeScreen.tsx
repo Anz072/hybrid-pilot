@@ -4,7 +4,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -35,6 +34,7 @@ import {
 } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { API } from "../../API/apiCaller";
+import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
 import { DB } from "../../store/DB";
@@ -1000,13 +1000,13 @@ const CreateRecipeScreen = () => {
         style={styles.screen}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView
+        <KeyboardAwareScrollView
           style={styles.screen}
           contentContainerStyle={[
             styles.content,
             { paddingBottom: Math.max(176, insets.bottom + 152) },
           ]}
-          keyboardShouldPersistTaps="handled"
+          focusedInputBottomOffset={148}
         >
           <FoodScreenHeader
             title={isEditing ? "Edit recipe" : "Create recipe"}
@@ -1490,7 +1490,7 @@ const CreateRecipeScreen = () => {
           </View>
             </>
           )}
-        </ScrollView>
+        </KeyboardAwareScrollView>
 
         {!loadingRecipe && !recipeLoadError ? (
           <View

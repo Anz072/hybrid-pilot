@@ -3,7 +3,6 @@ import {
   Alert,
   LayoutAnimation,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -39,6 +38,7 @@ import {
   saveFoodSearchSectionState,
   type FoodSearchSectionState,
 } from "../../storage/localStore";
+import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import FoodBarcodeScannerModal from "./FoodBarcodeScannerModal";
 import type { ScannedFoodLookupResult } from "./FoodBarcodeScannerShared";
 import {
@@ -66,6 +66,22 @@ type SearchFoodResult = SaveFoodItemInput & {
 
 type FoodSearchSectionKey = "favorites" | "recent";
 type FoodSearchMode = "all" | "recipes";
+type SearchResultCategory =
+  | "custom_recipes"
+  | "common_foods"
+  | "branded_foods";
+type SearchResultSection = {
+  key: SearchResultCategory;
+  title: string;
+  subtitle: string;
+  items: SearchFoodResult[];
+};
+type RenderSectionOptions = {
+  collapsible?: boolean;
+  expanded?: boolean;
+  onToggle?: () => void;
+  showCreateCustomFoodCta?: boolean;
+};
 
 const DEFAULT_SECTION_STATE: FoodSearchSectionState = {
   favoritesExpanded: true,
@@ -76,6 +92,33 @@ const SEARCH_DEBOUNCE_MS = 350;
 const REMOTE_SEARCH_MIN_QUERY_LENGTH = 3;
 const REMOTE_BARCODE_QUERY_PATTERN = /^\d{8,}$/;
 const MAX_SEARCH_RESULTS = 30;
+const SEARCH_RESULT_CATEGORY_ORDER: SearchResultCategory[] = [
+  "custom_recipes",
+  "common_foods",
+  "branded_foods",
+];
+const SEARCH_RESULT_CATEGORY_PRIORITY: Record<SearchResultCategory, number> = {
+  custom_recipes: 0,
+  common_foods: 1,
+  branded_foods: 2,
+};
+const SEARCH_RESULT_CATEGORY_META: Record<
+  SearchResultCategory,
+  Omit<SearchResultSection, "items" | "key">
+> = {
+  custom_recipes: {
+    title: "Custom Recipes",
+    subtitle: "Your saved recipes and custom foods first.",
+  },
+  common_foods: {
+    title: "Common Foods",
+    subtitle: "Generic foods without a brand.",
+  },
+  branded_foods: {
+    title: "Branded Foods",
+    subtitle: "Packaged and brand-specific matches.",
+  },
+};
 
 const getSearchCacheKey = (mode: FoodSearchMode, query: string) =>
   `${mode}:${query}`;
@@ -173,6 +216,24 @@ const getSearchResultDedupeKeys = (food: SearchFoodResult) => {
   }
 
   return [...dedupeKeys];
+};
+
+const getSearchResultCategory = (
+  food: SearchFoodResult,
+): SearchResultCategory => {
+  if (
+    food.source === "recipe" ||
+    food.source === "custom" ||
+    food.source === "manual"
+  ) {
+    return "custom_recipes";
+  }
+
+  if ((food.brand ?? "").trim().length > 0) {
+    return "branded_foods";
+  }
+
+  return "common_foods";
 };
 
 const scoreSearchFoodResult = (food: SearchFoodResult, query: string) => {
@@ -285,6 +346,14 @@ const scoreSearchFoodResult = (food: SearchFoodResult, query: string) => {
 
 const rankSearchResults = (query: string, results: SearchFoodResult[]) => {
   const scoredResults = [...results].sort((left, right) => {
+    const categoryDifference =
+      SEARCH_RESULT_CATEGORY_PRIORITY[getSearchResultCategory(left)] -
+      SEARCH_RESULT_CATEGORY_PRIORITY[getSearchResultCategory(right)];
+
+    if (categoryDifference !== 0) {
+      return categoryDifference;
+    }
+
     const scoreDifference =
       scoreSearchFoodResult(right, query) - scoreSearchFoodResult(left, query);
 
@@ -319,6 +388,15 @@ const rankSearchResults = (query: string, results: SearchFoodResult[]) => {
 
   return uniqueResults;
 };
+
+const buildCategorizedSearchSections = (
+  items: SearchFoodResult[],
+): SearchResultSection[] =>
+  SEARCH_RESULT_CATEGORY_ORDER.map((category) => ({
+    key: category,
+    ...SEARCH_RESULT_CATEGORY_META[category],
+    items: items.filter((item) => getSearchResultCategory(item) === category),
+  })).filter((section) => section.items.length > 0);
 
 const AddFoodScreen = () => {
   const route = useRoute<AddFoodRoute>();
@@ -669,6 +747,13 @@ const AddFoodScreen = () => {
 
     return [];
   }, [query, recipeResults, results, searchMode]);
+  const categorizedQueryResults = useMemo(
+    () =>
+      query.trim() && searchMode === "all"
+        ? buildCategorizedSearchSections(activeResults)
+        : [],
+    [activeResults, query, searchMode],
+  );
   const searchPlaceholder =
     searchMode === "recipes" ? "Search recipes" : "Search foods";
   const shouldShowScanner = searchMode === "all";
@@ -772,11 +857,7 @@ const AddFoodScreen = () => {
     subtitle: string,
     items: SearchFoodResult[],
     emptyText: string,
-    options?: {
-      collapsible?: boolean;
-      expanded?: boolean;
-      onToggle?: () => void;
-    },
+    options?: RenderSectionOptions,
   ) => {
     const collapsible = options?.collapsible ?? false;
     const expanded = options?.expanded ?? true;
@@ -785,7 +866,7 @@ const AddFoodScreen = () => {
       ? appColors.foodAccentText
       : appColors.foodPrimary;
     const shouldShowNoResultsExtra =
-      subtitle === "Pick a match and confirm the amount." && items.length === 0;
+      (options?.showCreateCustomFoodCta ?? false) && items.length === 0;
 
     const headerContent = (
       <View style={styles.sectionHeaderRow}>
@@ -885,10 +966,9 @@ const AddFoodScreen = () => {
       <View style={styles.bgOrbTop} />
       <View style={styles.bgOrbBottom} />
 
-      <ScrollView
+      <KeyboardAwareScrollView
         style={styles.screen}
         contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
       >
         <View style={styles.heroCard}>
           <View style={styles.searchModeRow}>
@@ -981,21 +1061,44 @@ const AddFoodScreen = () => {
               : query.trim()
                 ? isSearching
                   ? "Searching your foods and USDA branded + generic foods..."
-                  : `${activeResults.length} matches across local foods and USDA results.`
+                  : activeResults.length > 0
+                    ? `${activeResults.length} matches grouped into custom recipes, common foods, and branded foods.`
+                    : "No foods matched yet. Try a broader name or create one."
                 : ""}
           </Text>
         </View>
 
         {query.trim() ? (
-          renderSection(
-            searchMode === "recipes" ? "Recipes" : "Results",
-            searchMode === "recipes"
-              ? "Saved recipes matching your search."
-              : "Pick a match and confirm the amount.",
-            activeResults,
-            searchMode === "recipes"
-              ? "No recipes matched that search yet."
-              : "No foods matched that search yet.",
+          searchMode === "recipes" ? (
+            renderSection(
+              "Recipes",
+              "Saved recipes matching your search.",
+              activeResults,
+              "No recipes matched that search yet.",
+            )
+          ) : activeResults.length === 0 ? (
+            renderSection(
+              "Results",
+              "Try another search or create your own food.",
+              activeResults,
+              "No foods matched that search yet.",
+              {
+                showCreateCustomFoodCta: true,
+              },
+            )
+          ) : (
+            <>
+              {categorizedQueryResults.map((section) => (
+                <React.Fragment key={section.key}>
+                  {renderSection(
+                    section.title,
+                    section.subtitle,
+                    section.items,
+                    "No foods matched that search yet.",
+                  )}
+                </React.Fragment>
+              ))}
+            </>
           )
         ) : searchMode === "recipes" ? (
           renderSection(
@@ -1030,7 +1133,7 @@ const AddFoodScreen = () => {
             )}
           </>
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <FoodBarcodeScannerModal
         visible={scannerVisible}

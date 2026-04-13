@@ -29,27 +29,12 @@ const HomeScreen = () => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.heroCard}>
-          <Text style={styles.eyebrow}>Hybrid Pilot</Text>
+          <Text style={styles.eyebrow}>Hybrid Dashboard</Text>
           <Text style={styles.title}>
             {user?.displayName
-              ? `${user.displayName}, keep the plan tight.`
+              ? `${user.displayName}, lets goooo!`
               : "Keep the plan tight."}
           </Text>
-          <Text style={styles.subtitle}>
-            Dark, focused surfaces with fast access to food, trend, and weekly
-            targets.
-          </Text>
-
-          <View style={styles.heroMetricRow}>
-            <View style={styles.metricPill}>
-              <SparkleIcon size={16} color={appColors.foodPrimary} weight="fill" />
-              <Text style={styles.metricPillText}>Product mode</Text>
-            </View>
-            <View style={styles.metricPill}>
-              <TrendUpIcon size={16} color={appColors.revolutTeal} weight="bold" />
-              <Text style={styles.metricPillText}>Weekly pacing</Text>
-            </View>
-          </View>
         </View>
 
         <View style={styles.sectionRow}>
@@ -83,23 +68,19 @@ const HomeScreen = () => {
           </View>
         </View>
 
-        <View style={styles.featureCard}>
-          <View style={styles.featureHeader}>
-            <View style={styles.featureIcon}>
-              <BarbellIcon
+          <View style={styles.sectionCard}>
+            <View style={styles.cardIcon}>
+              <ForkKnifeIcon
                 size={18}
-                color={appColors.revolutDark}
+                color={appColors.textPrimary}
                 weight="fill"
               />
             </View>
-            <Text style={styles.featureEyebrow}>This pass</Text>
+            <Text style={styles.cardTitle}>Food diary</Text>
+            <Text style={styles.cardText}>
+              Search, scan, or build recipes without leaving the darker workflow.
+            </Text>
           </View>
-          <Text style={styles.featureTitle}>Revolut-inspired dark shell</Text>
-          <Text style={styles.featureText}>
-            Bigger headlines, pill actions, zero shadows, and a cleaner neutral
-            palette now drive the app chrome.
-          </Text>
-        </View>
       </ScrollView>
     </View>
   );

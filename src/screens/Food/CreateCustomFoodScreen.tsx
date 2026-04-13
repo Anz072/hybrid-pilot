@@ -20,7 +20,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -28,6 +27,7 @@ import {
 } from "react-native";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
+import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import { DB } from "../../store/DB";
 import type { DBFoodNutrientDetails } from "../../store/DB_TYPES";
 import { useAppSelector } from "../../store/hooks";
@@ -380,9 +380,8 @@ const CreateCustomFoodScreen = () => {
         style={styles.screen}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView
+        <KeyboardAwareScrollView
           contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
         >
           <FoodScreenHeader
             eyebrow="Custom Food"
@@ -594,7 +593,7 @@ const CreateCustomFoodScreen = () => {
               {creating ? "Creating..." : "Create and add"}
             </Text>
           </Pressable>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </KeyboardAvoidingView>
     </View>
   );

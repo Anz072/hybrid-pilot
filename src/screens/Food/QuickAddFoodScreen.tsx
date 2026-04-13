@@ -7,7 +7,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -23,6 +22,7 @@ import type {
   RouteProp,
 } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import {
   CalendarIcon,
   ClockIcon,
@@ -364,13 +364,13 @@ const QuickAddFoodScreen = () => {
         style={styles.screen}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView
+        <KeyboardAwareScrollView
           style={styles.screen}
           contentContainerStyle={[
             styles.content,
             { paddingBottom: Math.max(176, insets.bottom + 152) },
           ]}
-          keyboardShouldPersistTaps="handled"
+          focusedInputBottomOffset={132}
         >
           <View style={styles.card}>
             <View style={styles.heroHeaderRow}>
@@ -492,7 +492,7 @@ const QuickAddFoodScreen = () => {
               onChange={handleTimeChange}
             />
           ) : null}
-        </ScrollView>
+        </KeyboardAwareScrollView>
 
         <View
           style={[

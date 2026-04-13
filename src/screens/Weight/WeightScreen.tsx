@@ -7,7 +7,6 @@ import {
   Platform,
   Pressable,
   RefreshControl,
-  ScrollView,
   SectionList,
   StyleSheet,
   Text,
@@ -37,6 +36,7 @@ import type {
   SaveWeightEntryInput,
   WeightEntryGoal,
 } from "../../store/DB_TYPES";
+import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import { DB } from "../../store/DB";
 import OnboardingPrimaryButton from "../Onboarding/OnboardingPrimaryButton";
 import WeightEntryModal, { type WeightEntryDraft } from "./WeightEntryModal";
@@ -1155,12 +1155,11 @@ const WeightScreen = ({
             </Pressable>
           </View>
 
-          <ScrollView
+          <KeyboardAwareScrollView
             contentContainerStyle={[
               styles.goalModalContent,
               { paddingBottom: insets.bottom + 24 },
             ]}
-            keyboardShouldPersistTaps="handled"
           >
             <View style={styles.card}>
               <View style={styles.rowBetween}>
@@ -1277,7 +1276,7 @@ const WeightScreen = ({
                 </Pressable>
               ) : null}
             </View>
-          </ScrollView>
+          </KeyboardAwareScrollView>
         </View>
       </Modal>
 

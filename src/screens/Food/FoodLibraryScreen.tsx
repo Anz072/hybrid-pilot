@@ -2,7 +2,6 @@ import React, { useCallback, useMemo, useState } from "react";
 import {
   Alert,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -10,6 +9,7 @@ import {
 } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
 import { DB } from "../../store/DB";
 import type { DBFoodItem } from "../../store/DB_TYPES";
@@ -152,10 +152,9 @@ const FoodLibraryScreen = () => {
 
   return (
     <View style={styles.screen}>
-      <ScrollView
+      <KeyboardAwareScrollView
         style={styles.screen}
         contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
       >
         <FoodScreenHeader
           eyebrow="Debug"
@@ -242,7 +241,7 @@ const FoodLibraryScreen = () => {
             <Text style={styles.emptyText}>Tap an item above to inspect all DB fields.</Text>
           )}
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 };

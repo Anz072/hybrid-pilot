@@ -2,7 +2,6 @@ import React from "react";
 import {
   Alert,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -17,6 +16,7 @@ import {
   clampCalorieTarget,
   getWeeklyCalorieBudget,
 } from "../../engine/calorieTargets";
+import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import type { MoreParamList } from "../../navigation/MoreNavigator";
 import { DB } from "../../store/DB";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
@@ -178,7 +178,7 @@ const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
       <View style={styles.orbTop} />
       <View style={styles.orbBottom} />
 
-      <ScrollView
+      <KeyboardAwareScrollView
         style={styles.screen}
         contentContainerStyle={[
           styles.content,
@@ -187,7 +187,6 @@ const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
             paddingBottom: insets.bottom + 28,
           },
         ]}
-        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         <SettingsStackHeader
@@ -308,7 +307,7 @@ const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
             />
           </>
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 };

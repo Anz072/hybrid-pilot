@@ -9,7 +9,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -23,6 +22,7 @@ import {
 } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
+import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import { DB } from "../../store/DB";
 import type { DBFoodItem, DBUserFoodLogEntry } from "../../store/DB_TYPES";
 import { useAppSelector } from "../../store/hooks";
@@ -275,13 +275,13 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
         style={styles.screen}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView
+        <KeyboardAwareScrollView
           style={styles.screen}
           contentContainerStyle={[
             styles.content,
             { paddingBottom: Math.max(176, insets.bottom + 152) },
           ]}
-          keyboardShouldPersistTaps="handled"
+          focusedInputBottomOffset={132}
         >
           <FoodEntryForm
             headerEyebrow="Food Entry"
@@ -409,7 +409,7 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
               onChange={handleTimeChange}
             />
           ) : null}
-        </ScrollView>
+        </KeyboardAwareScrollView>
 
         <View
           style={[

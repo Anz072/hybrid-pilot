@@ -1,198 +1,162 @@
 # HybridPilot Feature Audit
 
-Date: 2026-04-07
+Date: 2026-04-12
+
+Supersedes: 2026-04-07 audit
 
 ## Scope
 
-This audit covers the current Expo/React Native app in `hybrid-pilot`, with emphasis on user-facing workflows, persistence, validation, and feature gaps. It is based on source inspection plus the available automated check.
+This refresh uses the 2026-04-07 audit as context and re-audits the current `hybrid-pilot` codebase as of 2026-04-12. It focuses on user-visible behavior, persistence, validation, and release readiness across the whole app.
 
-## Validation Run
+## Validation Snapshot
 
-- Ran `npx tsc --noEmit`.
-- Result: failed because `src/API/supabase/endpoints.ts` references an implicit `any` parameter, an undefined `supabase`, and an undefined `setFoods`.
-- No dedicated test scripts exist in `package.json`.
+- Ran `npx tsc --noEmit` on 2026-04-12.
+- Result: failed in `src/API/supabase/endpoints.ts` because `Food` is implicitly `any`, `supabase` is undefined, and `setFoods` is undefined.
+- `package.json` still has no `typecheck`, `lint`, or `test` scripts.
 - No `*.test*`, `*.spec*`, or `__tests__` files were found under `src`.
-- Native build was not run after the TypeScript failure; the first quality gate should be fixed before treating a native build as meaningful.
 
-## Current Feature Map
+## Executive Summary
 
-### App Shell And Persistence
+- The strongest part of the app is now the local-first food plus weight workflow: onboarding, calorie target setup, food search/logging, barcode lookup, custom food creation, quick add, recipe creation, and a much more mature weight diary.
+- The app has materially progressed since 2026-04-07. Recipes are now real, USDA search is wired into food discovery, and More has become a functional settings area with calorie, goal, training, schedule, and diary-hour controls.
+- The app is still not release-ready. TypeScript does not pass, Home and Login are still placeholders, auth/restore is incomplete, and a few food/recipe flows are misleading or hidden.
 
-- Expo React Native app with local SQLite storage, Redux user state, Inter font loading, and an animated splash.
-- Boot flow hydrates onboarding status and the first local user from SQLite.
-- Navigation gates users through `Onboarding`, `Main`, or `Login`.
-- Main tabs are `Home`, `Food`, center shortcut sheet, `Weight`, and `More`.
-- Local SQLite migrations cover users, app key-value storage, food items/logs/favorites/custom meals, weight entries/goals, user settings, activities, and extended nutrient fields.
+## What Changed Since 2026-04-07
 
-### Onboarding
+- Added real recipe creation backed by `user_recipes`, `user_recipe_ingredients`, and a linked `food_items` row with computed per-serving nutrition.
+- Added USDA text search into food search and recipe ingredient search when `EXPO_PUBLIC_USDA_API_KEY` is configured.
+- Expanded More from mostly debug into a real settings hub with calorie allowance editing, automatic goal/activity recalculation, training type editing, daily calorie schedule overrides, and diary timeline hour controls.
+- Food search now has a recipes mode and clearer separation of favorites, recent, and recipe results.
+- Weight remains the most polished vertical slice and is still ahead of the rest of the app in UX completeness.
 
-- Flow: Welcome -> Goal -> Goal Rate -> Body Data -> Activity -> Training -> Fuel Plan -> Account -> Success.
-- Goal options: lose fat, maintain, build muscle.
-- Fat loss and muscle gain include pace selection.
-- Body data captures age, height, weight, and sex.
-- Activity captures baseline activity level.
-- Training captures multiple training modes.
-- Fuel plan estimates calories and macros from body data, activity, and goal pace.
-- Account creation is local-only and writes the user, onboarding profile, onboarding-complete flag, and initial weight entry.
+## Status Legend
+
+- Implemented: usable end-to-end in the current app.
+- Partial: real workflow exists but has meaningful UX, product, or architecture gaps.
+- Placeholder: visible shell with no meaningful underlying workflow.
+- Schema only: table/type exists but there is no surfaced product flow.
+
+## Whole-App Feature Map
+
+### App Shell And Local Data Foundation
+
+- Implemented: Expo/React Native app with local SQLite, Redux user hydration, font loading, splash animation, and migration-driven schema evolution.
+- Implemented: boot flow gates between onboarding, main app, and login based on onboarding completion plus a locally hydrated user.
+- Partial: the user model is effectively single-user and local-only. The app always loads the first DB user and there is no real restore, sign-out, or account switching.
+- Partial: `supabase` is present in dependencies and the API folder, but the actual integration is an unused broken stub that blocks TypeScript.
+
+### Onboarding And Local Account Creation
+
+- Implemented: welcome -> goal -> goal pace -> body data -> activity -> training -> fuel plan -> account -> success.
+- Implemented: calorie and macro targets are computed from onboarding inputs and stored on the local user profile.
+- Implemented: finishing onboarding writes the local account, onboarding profile, onboarding-complete flag, and an initial weight entry.
+- Partial: the onboarding account step requires display name, email, and birthdate for a local-only account, but there is no post-onboarding profile editor for display name, birthdate, height, sex, or email.
+- Placeholder: Welcome still shows `I already have an account` with no handler.
+- Placeholder: Login is still a visual stub with a Sign In button and no restore/auth implementation.
 
 ### Food Diary And Logging
 
-- Food diary has a week/date strip, daily calorie ring indicators, macro target progress, hourly timeline, favorite quick adds, copy-yesterday, custom food creation, and configurable visible diary hours.
-- Add Food supports local search, recent foods, favorites, save/unsave favorite, barcode scanning, and custom food creation.
-- Custom food supports core macros plus many optional micronutrient and nutrient detail fields.
-- Edit Food Entry supports quantity, time, label, nutrition preview, save, and delete.
-- Scanned Food Log lets users review quantity, label, favorite status, and nutrition preview before logging.
-- Food Library is a debug/local DB viewer with delete support.
-- Barcode scanner validates EAN/UPC/GTIN-style codes, looks up local DB first, then Open Food Facts, and saves resolved products locally.
+- Implemented: weekly diary strip, selected-day macro and energy progress, visible timeline hours, hourly buckets, add-food entry points, edit/delete flows, and copy-yesterday.
+- Implemented: standard food logging supports quantity, time, meal label, nutrition preview, save, edit, and delete.
+- Implemented: quick add supports calories plus macros/alcohol, optional custom name, time editing, manual versus auto-calculated energy, and edit flow for existing quick-add entries.
+- Implemented: custom food creation supports a grams-based serving, core macros, and a large advanced nutrition section, then immediately logs the new food into the diary.
+- Partial: deleting food diary entries has no undo, while weight deletes do.
+- Partial: copy-yesterday duplicates entries without warning when the destination day already has food logs.
+- Partial: favorite quick-add cards exist in code, are loaded in the screen, and have a dedicated component, but the component is commented out in `FoodDiaryScreen`, so favorites are not actually surfaced there right now.
+- Partial: `FoodDiaryMoreSection` receives `onQuickAddFood` but does not render a quick-add action card, so part of the intended diary action set is currently hidden.
+
+### Food Search, Barcode, And Library
+
+- Implemented: Add Food supports local search, recent foods, favorites, recipe search mode, USDA remote results, barcode scanning, and custom food fallback.
+- Implemented: scanned barcode flow validates EAN, UPC, and GTIN patterns, checks local DB first, then Open Food Facts, and persists newly found foods locally before logging.
+- Implemented: foods can be favorited per user and recent foods are derived from actual log history.
+- Partial: USDA search silently returns no remote results when `EXPO_PUBLIC_USDA_API_KEY` is missing, so the experience degrades to local-only without explicit user feedback.
+- Partial: barcode scanning still relies entirely on camera flow. There is no manual barcode entry fallback.
+- Partial: barcode and API flows still emit several debug `console.log` and `console.error` calls that should be dev-guarded or removed before release.
+- Partial: Food Library is still presented as a debug/local DB viewer with destructive delete behavior rather than a safe user-facing food manager.
+
+### Recipes
+
+- Implemented: recipe builder supports manual creation, ingredient search from local foods plus USDA, barcode scanning for ingredients, per-ingredient amounts, servings, optional prepared weight, prep/cook time, link field, freeform description, and step list.
+- Implemented: saving a recipe creates both recipe records and a linked food item with computed per-serving calories, macros, and rolled-up nutrient data.
+- Implemented: saved recipes show up in Add Food under Recipes and can be logged like normal food items.
+- Partial: there is no recipe edit, duplicate, archive, or dedicated recipe details screen after save.
+- Partial: Add Food has recipe search mode, but there is no visible create-recipe CTA there even though the empty-state copy implies one exists.
+- Partial: the diary copy says recipe creation will log one serving, but the current save flow only persists the recipe and closes the screen. It does not add a diary entry.
+- Partial: `CreateRecipeScreen` still has leftover UI inconsistencies, including a hero title that says `Quick Add`.
+- Placeholder: link import and AI import are sketched in code/comments but not actually enabled.
 
 ### Weight
 
-- Weight diary supports manual add/edit/delete, notes, date/time, future timestamp confirmation, unusual weight confirmation, same-day entry replacement, optimistic updates, undo after delete, and local pending sync status.
-- Weight chart supports ranges `1W`, `1M`, `3M`, `1Y`, and `ALL`, daily scale line, EMA-style trend line, and weight goal band.
-- Goal workflow supports target weight, optional target date, pace helper, clear goal, and chart integration.
-- Insights include trend, consistency, goal progress, and volatility with explanatory details.
-- History is grouped by local date, supports pull-to-refresh, and has swipe-to-delete.
-- Debug settings can seed weight histories for trend-down, trend-up, and maintain-ish scenarios.
+- Implemented: manual add/edit/delete, notes, local time handling, future timestamp confirmation, unusual-weight confirmation, same-day replacement logic, optimistic saves, delete undo, goal setting, target date, pace helper, chart ranges, trend line, goal band, insights, and collapsible history.
+- Implemented: weight entries keep source metadata and local sync status fields, so the data model is already shaped for future sync/import work.
+- Partial: sync status is purely local state management today. There is no server sync, device sync, or retry pipeline behind the pending/error states.
+- Partial: weight input is kg-only. There is no lb/lbs option.
+- Partial: same-day replacement is a deliberate product choice, but the UX still reads like a generic history logger, so some users may expect multiple weigh-ins per day to coexist.
 
-### More, Settings, And Debug
+### Settings And Profile Management
 
-- More screen is mostly a debug/settings shell.
-- Settings screen exposes SQLite table counts, DB reset, sample seed data, and weight history presets.
-- Food Library is reachable from More as a local DB debug tool.
+- Implemented: More now acts as a real settings hub with calorie allowance, automatic goal/activity recalculation, training types, daily calorie schedule overrides, weekly budget preview, and diary timeline hours.
+- Implemented: automatic calorie recalculation uses the latest logged body weight plus stored body/profile data.
+- Partial: there is still no surfaced editor for body data, birthdate, height, sex, email, units, privacy, or export.
+- Partial: the debug tools and Food Library remain directly accessible from the main More experience rather than behind a strict dev gate.
 
-## Workflow Issues And Improvement Plan
+### Home And Auth Surfaces
 
-### P0: Build And Quality Gates
+- Placeholder: Home is still a centered text placeholder and does not function as a dashboard.
+- Placeholder: Login is still a placeholder screen with no authentication or restore behavior.
+- Partial: because onboarding completion and active-user hydration are separate checks, the app conceptually supports a post-onboarding restore path, but that path has not been built.
 
-- `src/API/supabase/endpoints.ts` blocks strict TypeScript. Either remove the unused placeholder, implement a typed Supabase client, or isolate it behind a disabled stub that compiles.
-- Add scripts: `typecheck`, `lint`, and `test` in `package.json`.
-- Add at least repository/util tests around food logging, water tracking once added, weight goal math, barcode validation, and date/time helpers.
-- Do not run release build validation until TypeScript is clean.
+### Schema-Only Or Mostly Unsurfaced Areas
 
-### P0: Placeholder Or Incomplete UI
+- Schema only: `activities` table exists, but there is no exercise/activity logging UI.
+- Schema only: `custom_meals` repository exists, but there is no surfaced custom-meal management flow.
+- Mostly unsurfaced: detailed micronutrient data is stored and rolled up, but there is no micronutrient dashboard or nutrient insight UI yet.
 
-- `HomeScreen` still says "This is the Home Screen"; replace it with a real dashboard for calories, water, weight trend, and today's quick actions.
-- `WelcomeScreen` has an "I already have an account" button without a handler; either wire it to login/restore or remove it until real auth exists.
-- `LoginScreen` is a visual placeholder and does not sign in.
-- `MoreScreen` exposes debug tools as the main settings experience; split developer debug tools from user settings before release.
-- `USDA` endpoint uses a placeholder base URL; either implement USDA search/import or remove the visible integration.
+## Biggest Release Blockers
 
-### P1: Food Logging UX
+- `src/API/supabase/endpoints.ts` breaks `npx tsc --noEmit`, so the baseline quality gate is red.
+- Home is still a placeholder, which leaves one of the main tabs effectively empty.
+- Login/restore is not implemented, while onboarding still advertises an existing-account path.
+- Recipe creation copy currently promises diary logging that does not happen.
+- There is no automated test coverage and no standard scripts for typecheck, lint, or test.
 
-- Add quantity adjustment before immediate local search/favorite add, not only after scanned food.
-- Add undo/snackbar for food log deletion and copy-yesterday.
-- Add duplicate protection or a confirmation when copying yesterday into a day that already has entries.
-- Add loading/error states around local search, Open Food Facts lookup, and DB operations.
-- Add manual barcode entry fallback for scanner/camera failures.
-- Replace noisy scanner/API logging of raw barcode and raw food response with dev-only guarded logs.
-- Clarify custom food nutrition basis and units. Today custom foods are grams-only and lack brand/barcode/image fields.
-- Promote Food Library from debug viewer into a safer user food manager, or keep it behind a dev gate.
+## MVP View
 
-### P1: Weight UX
+### If MVP Means "Useful Single-User Local Nutrition Plus Weight Tracker"
 
-- Same-day replacement is useful, but it should be explicit in the UI because users may expect multiple weigh-ins per day.
-- Insights and history are hidden by default; consider showing compact summaries by default and letting users collapse them.
-- Sync status is local-only. Either label it clearly as "local pending" or implement real sync.
-- Add body composition fields later: body fat percentage, waist, resting heart rate, photos, or smart scale imports.
-- Add unit support beyond kg before wider release if targeting US users.
+The app already contains most of the product surface needed for that MVP:
 
-### P1: Onboarding And Profile
+- onboarding and local account creation,
+- calorie and macro target setup,
+- food diary with search, favorites, recent, barcode scan, quick add, custom foods, and recipe logging,
+- weight diary with chart, goal, and history,
+- settings for calories, goal/activity, training, daily schedule, and diary hours.
 
-- Add a profile/settings editor for calorie target, macros, body data, activity, training, and diary hours after onboarding.
-- Make email optional if the account is truly local-only, or explain why it is required.
-- Add clearer privacy copy around local-only storage.
-- Add validation for birthdate age consistency against body-data age.
-- Save onboarding selections as editable structured profile data, not only static initial targets.
+### What Must Be Fixed Before Calling That MVP Shippable
 
-### P2: Navigation And Architecture
+- Fix TypeScript so the codebase compiles cleanly.
+- Replace the Home placeholder with a real dashboard or remove the tab until it exists.
+- Either implement restore/login or remove the fake login and existing-account affordances.
+- Fix the recipe flow mismatch so diary copy matches actual behavior.
+- Decide whether debug tools and Food Library are developer-only or user-facing, then gate or redesign them accordingly.
+- Add at least a minimal `typecheck` script and a handful of tests around food log math, copy-yesterday, quick add calculations, and weight goal math.
 
-- Food screens are registered in both root stack and food stack. That enables global shortcuts, but it increases close/pop complexity. Keep only the root modal path for global modals or wrap close behavior in a shared helper.
-- Add a proper production/dev mode split for debug screens.
-- Add typed route helpers for food logging context to avoid passing the same `date`, `loggedAt`, `mealType`, and `contextLabel` shape through many screens.
+### What Is Outside MVP And Can Wait
 
-## Water Tracking Recommendation
+- cloud auth and cross-device sync,
+- activity logging,
+- water tracking,
+- fasting,
+- wearable or health platform integration,
+- micronutrient dashboards,
+- export/import,
+- AI recipe import or AI food logging.
 
-Water tracking should be added as a first-class diary feature, not as a food item. The app already has `waterG` as a nutrient field on foods, but that is different from a user's deliberate drinking-water log.
+## Recommended Next Pass
 
-### Phase 1: Data Model
-
-- Add `water_logs` table:
-  - `id`, `user_external_id`, `date`, `logged_at`, `amount_ml`, `source`, `created_at`, `updated_at`, `deleted_at`.
-- Add user settings:
-  - `daily_water_goal_ml`, `default_water_amount_ml`, `water_unit`, `show_water_widget`.
-- Add `waterRepository.ts` with:
-  - `addWaterLog`, `listWaterLogsByDate`, `updateWaterLog`, `deleteWaterLog`, `sumWaterByDate`, `copyWaterFromDate`.
-- Add DB types and expose repository methods through `DB`.
-- Keep drinking water separate from food `waterG` at first; later add an optional "total hydration" view that includes water from foods.
-
-### Phase 2: UI
-
-- Add a water widget to `FoodDiaryScreen`, near macro progress:
-  - progress toward goal,
-  - quick buttons like `250 ml`, `500 ml`, `750 ml`,
-  - custom amount,
-  - undo for last add,
-  - date-aware totals.
-- Add a `Water` shortcut to the center shortcut sheet.
-- Add water settings under a real user settings screen:
-  - daily goal,
-  - default container,
-  - unit: mL, cups, fl oz,
-  - widget visibility.
-- Add a compact Home dashboard tile after `HomeScreen` is upgraded.
-
-### Phase 3: Insights
-
-- Add streaks: days meeting hydration goal.
-- Add gentle reminders configurable by time window.
-- Add trend summaries: 7-day average, today vs average, and hydration consistency.
-- Later correlate water with weight trend, training days, or high-sodium days.
-
-### Phase 4: Testing
-
-- Repository tests for add/update/delete/sum/copy by date.
-- Utility tests for unit conversion and date key handling.
-- Screen-level manual test checklist:
-  - add water today,
-  - add water to a past date,
-  - custom amount,
-  - delete/undo,
-  - change goal/unit,
-  - copy yesterday,
-  - no-user state,
-  - app restart persistence.
-
-## Additional Popular Functionality To Consider
-
-These are high-value additions based on current common capabilities in nutrition apps:
-
-- Photo/AI meal scan and voice logging. MyFitnessPal now lists meal scan and voice logging as premium features, so this is becoming table-stakes for lower-friction logging.
-- Intermittent fasting tracker. MyFitnessPal tracks fasting periods directly alongside meals, water, and exercise; Cronometer also exposes fasting dashboard visibility.
-- Recipes, meals, and meal planning. Add reusable recipes, combined meals, scheduled meal templates, and grocery planning later.
-- Wearable and health-platform sync. Cronometer highlights device/app sync and biometrics; this app already models sync status but does not sync yet.
-- Micronutrient dashboard. The data model already stores many micronutrients, so a Cronometer-style "nutrients to improve" view is a natural differentiator.
-- Streaks and reminders. Use lightweight habit loops for logging food, water, and weight.
-- Data export. Useful for trust, coaching, and debugging.
-- Barcode correction and contribution workflow. Allow users to correct a mismatched barcode locally.
-- Restaurant/common-food remote search. Today remote lookup is mostly barcode-only.
-- Body composition and measurements. Add waist, body fat, progress photos, and smart scale source metadata.
-- Per-day and per-meal targets. Support different calorie/macro goals by weekday and meal timing.
-
-## Suggested Roadmap
-
-1. Fix TypeScript and debug placeholders.
-2. Build real Home and user Settings shells.
-3. Add water tracking as a small vertical slice: data, diary widget, shortcut, settings, tests.
-4. Harden food logging UX: quantity-before-add, undo, duplicate copy guard, scanner fallback, dev-only logs.
-5. Add test coverage and CI-like scripts.
-6. Add profile target editing and proper auth/restore decisions.
-7. Add advanced features: recipes/meals, fasting, micronutrient insights, health sync, AI/photo/voice logging.
-
-## External Reference Notes
-
-- MyFitnessPal App Store listing currently emphasizes water tracking, AI food tracking, workouts, dashboards, recipes, meal planning, device integrations, barcode scan, meal scan, voice logging, custom goals, and fasting: https://apps.apple.com/us/app/myfitnesspal-calorie-counter/id341232718
-- MyFitnessPal Premium feature list includes goals by day, macro/calorie goals by meal, food timestamps, recipe discovery, meal scan, barcode scanner, intermittent fasting, multi-day logging, and voice logging: https://support.myfitnesspal.com/hc/en-us/articles/360032625951-What-are-the-features-of-MyFitnessPal-Premium
-- MyFitnessPal Meal Scan FAQ describes camera/photo meal recognition and logging flow: https://support.myfitnesspal.com/hc/en-us/articles/360045761612-Meal-Scan-FAQ
-- Cronometer positions itself around macros-to-micros nutrition, verified food data, weight goals, device sync, biometrics, barcode scanning, and detailed dashboards: https://cronometer.com/index.html
-- Cronometer settings include a configurable water widget, diary visibility, water units, daily drinking-water goal, default container size, fasting visibility, sleep, streaks, highlighted nutrients, and nutrient balances: https://support.cronometer.com/hc/en-us/articles/360060181932-Display-Settings
-- YAZIO has a diary water tracker that can be enabled under profile/settings: https://help.yazio.com/hc/en-us/articles/360000671858-Why-is-my-Water-Tracker-gone
+1. Remove or disable the broken supabase stub and add `typecheck`, `lint`, and `test` scripts.
+2. Finish the shell surfaces: Home, login/restore decision, and Welcome existing-account path.
+3. Tighten food UX: restore diary favorites quick-adds, add delete undo for food logs, add copy-yesterday duplicate guard, and add manual barcode entry.
+4. Finish recipes as a true product slice: correct the UI copy/title, then decide whether saving a recipe should optionally log it immediately.
+5. Keep advanced features like activity, sync, water, and micronutrient insights as post-MVP tracks.

@@ -7,7 +7,6 @@ import {
   Alert,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -22,6 +21,7 @@ import type {
   RouteProp,
 } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import {
   BarcodeIcon,
   CalendarIcon,
@@ -370,13 +370,13 @@ const ScannedFoodLogScreen = () => {
       <View style={styles.bgOrbTop} />
       <View style={styles.bgOrbBottom} />
 
-      <ScrollView
+      <KeyboardAwareScrollView
         style={styles.screen}
         contentContainerStyle={[
           styles.content,
           { paddingBottom: 148 + Math.max(insets.bottom, 12) },
         ]}
-        keyboardShouldPersistTaps="handled"
+        focusedInputBottomOffset={132}
       >
         <FoodEntryForm
           headerEyebrow={screenEyebrow}
@@ -490,7 +490,7 @@ const ScannedFoodLogScreen = () => {
             onChange={handleTimeChange}
           />
           ) : null}
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <View
         style={[

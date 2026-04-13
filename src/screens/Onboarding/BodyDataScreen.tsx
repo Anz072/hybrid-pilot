@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RulerIcon } from "phosphor-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import type {
   BodyData,
   OnboardingParamList,
@@ -127,7 +128,13 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
       <View style={styles.bgOrbTop} />
       <View style={styles.bgOrbBottom} />
 
-      <View style={styles.content}>
+      <KeyboardAwareScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(172, insets.bottom + 140) },
+        ]}
+        focusedInputBottomOffset={128}
+      >
         <OnboardingTopBar
           onBack={() => navigation.goBack()}
           stepLabel="Body Data"
@@ -228,7 +235,7 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
             ))}
           </View>
         </View>
-      </View>
+      </KeyboardAwareScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 6 }]}>
         <OnboardingPrimaryButton label="Next" onPress={handleNext} />
@@ -240,12 +247,12 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 22,
-    paddingTop: 34,
     backgroundColor: appColors.surfaceCanvas,
   },
-  content: {
-    flex: 1,
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 22,
+    paddingTop: 34,
   },
   footer: {
     paddingTop: 12,

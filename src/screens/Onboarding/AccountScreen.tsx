@@ -5,7 +5,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -46,6 +45,7 @@ import {
   formatGoalSummary,
   formatTrainingSummary,
 } from "./onboardingSummary";
+import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import { appColors } from "../../theme/colors";
 import { appTypography } from "../../theme/typography";
 
@@ -210,10 +210,8 @@ const AccountScreen = ({ navigation, route }: Props) => {
       enabled
       style={styles.container}
     >
-      <ScrollView
+      <KeyboardAwareScrollView
         contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
       >
         <OnboardingTopBar
           onBack={() => navigation.goBack()}
@@ -329,7 +327,7 @@ const AccountScreen = ({ navigation, route }: Props) => {
             </Text>
           </Pressable>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </KeyboardAvoidingView>
   );
 };

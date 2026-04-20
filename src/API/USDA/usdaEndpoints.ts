@@ -113,7 +113,7 @@ class USDA_API {
     const proteinG = this.readNutrient(food.foodNutrients, "g", "203");
     const carbsG = this.readNutrient(food.foodNutrients, "g", "205");
     const fatG = this.readNutrient(food.foodNutrients, "g", "204");
-    const saturatedFatG = this.readNutrient(food.foodNutrients, "g", "606");
+    const fatSaturatedG = this.readNutrient(food.foodNutrients, "g", "606");
     const alphaLinolenicAcidG = this.readNutrient(
       food.foodNutrients,
       "g",
@@ -164,8 +164,7 @@ class USDA_API {
       alcoholG: this.readNutrient(food.foodNutrients, "g", "221"),
       saltG:
         sodiumMg != null ? Number(((sodiumMg * 2.5) / 1000).toFixed(3)) : null,
-      saturatedFatG,
-      fatSaturatedG: saturatedFatG,
+      fatSaturatedG,
       fatMonounsaturatedG: this.readNutrient(food.foodNutrients, "g", "645"),
       fatPolyunsaturatedG: this.readNutrient(food.foodNutrients, "g", "646"),
       fatTransG: this.readNutrient(food.foodNutrients, "g", "605"),

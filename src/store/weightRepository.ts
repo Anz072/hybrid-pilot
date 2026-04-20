@@ -1,8 +1,6 @@
 import { getDb, initDb } from "../storage/sqlite";
 import type {
-  AddWeightLogInput,
   DBWeightEntry,
-  DBWeightLog,
   SaveWeightEntryInput,
   SaveWeightGoalInput,
   SoftDeleteWeightEntryInput,
@@ -319,41 +317,4 @@ export const clearAllWeightData = async (
     `DELETE FROM weight_goals WHERE user_external_id = ?`,
     userExternalId,
   );
-};
-
-const createLegacyWeightEntryId = (): string =>
-  `legacy-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
-
-export const addWeightLog = async (input: AddWeightLogInput): Promise<void> => {
-  const now = input.loggedAt ?? new Date().toISOString();
-
-  await saveWeightEntry({
-    id: createLegacyWeightEntryId(),
-    userExternalId: input.userExternalId,
-    measuredAt: now,
-    measuredAtLocalIso: now,
-    zoneOffsetMinutes: 0,
-    valueKg: input.weightKg,
-    valueOriginal: input.weightKg,
-    unitOriginal: "kg",
-    source: "manual",
-    notes: input.note ?? null,
-    clientGeneratedId: createLegacyWeightEntryId(),
-  });
-};
-
-export const getRecentWeightLogs = async (
-  userExternalId: string,
-  limit = 30,
-): Promise<DBWeightLog[]> => {
-  const entries = await listWeightEntries(userExternalId, { limit });
-
-  return entries.map((entry, index) => ({
-    id: limit - index,
-    userExternalId: entry.userExternalId,
-    weightKg: entry.valueKg,
-    note: entry.notes,
-    loggedAt: entry.measuredAt,
-    createdAt: entry.createdAt,
-  }));
 };

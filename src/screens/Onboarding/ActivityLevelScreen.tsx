@@ -116,6 +116,8 @@ const ActivityLevelScreen = ({ navigation, route }: Props) => {
                 goal: route.params.goal,
                 goalRateKgPerWeek: route.params.goalRateKgPerWeek,
                 bodyData: route.params.bodyData,
+                training: route.params.training,
+                proteinFocus: route.params.proteinFocus,
               }),
           },
         ]}
@@ -132,6 +134,8 @@ const ActivityLevelScreen = ({ navigation, route }: Props) => {
                 goalRateKgPerWeek: route.params.goalRateKgPerWeek,
                 bodyData: route.params.bodyData,
                 activity: item.value,
+                training: route.params.training,
+                proteinFocus: route.params.proteinFocus,
               }}
               value={item.value}
               borderColor={appColors.charcoal}

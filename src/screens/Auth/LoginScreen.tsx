@@ -18,7 +18,7 @@ import {
 } from "../../API/supabase/client";
 import {
   signInWithGoogleViaSupabase,
-  upsertGoogleUserToLocalDb,
+  upsertGoogleUserAccount,
 } from "../../API/supabase/googleAuth";
 
 type LoginScreenProps = {
@@ -49,7 +49,7 @@ const LoginScreen = ({ onAuthenticated }: LoginScreenProps) => {
         return;
       }
 
-      const user = await upsertGoogleUserToLocalDb(session.user, {
+      const user = await upsertGoogleUserAccount(session.user, {
         allowCreate: false,
       });
       dispatch(setCurrentUser(user));
@@ -74,6 +74,10 @@ const LoginScreen = ({ onAuthenticated }: LoginScreenProps) => {
 
       <View style={styles.card}>
         <Text style={styles.title}>Sign in with Google</Text>
+        <Text style={styles.body}>
+          Use your existing Google-backed HybridPilot account to restore your
+          synced data.
+        </Text>
 
         <Pressable
           onPress={() => {
@@ -94,7 +98,9 @@ const LoginScreen = ({ onAuthenticated }: LoginScreenProps) => {
           </Text>
         </Pressable>
 
-        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+        {errorMessage ? (
+          <Text style={styles.errorText}>{errorMessage}</Text>
+        ) : null}
       </View>
     </View>
   );

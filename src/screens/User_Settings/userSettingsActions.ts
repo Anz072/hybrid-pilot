@@ -1,7 +1,9 @@
 import {
   buildAutomaticFuelPlanForUser,
+  buildMacroTargetsForCalories,
   scaleMacroTargetsToCalories,
 } from "../../engine/calorieTargets";
+import type { ProteinFocus } from "../../navigation/onboardingTypes";
 import { DB } from "../../store/DB";
 import type { AppDispatch } from "../../store/appStore";
 import type { DBUser } from "../../store/DB_TYPES";
@@ -74,7 +76,15 @@ export const saveManualCalorieTarget = async ({
   dispatch: AppDispatch;
   user: DBUser;
 }): Promise<DBUser> => {
-  const nextMacros = scaleMacroTargetsToCalories(user, calories);
+  const latestWeightKg = await getLatestUserWeightKg(user.externalId);
+  const nextMacros =
+    latestWeightKg != null
+      ? buildMacroTargetsForCalories({
+          calories,
+          proteinFocus: user.proteinFocus,
+          weightKg: latestWeightKg,
+        }) ?? scaleMacroTargetsToCalories(user, calories)
+      : scaleMacroTargetsToCalories(user, calories);
 
   return saveUserProfileChanges({
     dispatch,
@@ -82,6 +92,49 @@ export const saveManualCalorieTarget = async ({
     patch: {
       calorieAllowance: calories,
       ...nextMacros,
+    },
+  });
+};
+
+export const saveProteinFocusForUser = async ({
+  dispatch,
+  proteinFocus,
+  user,
+}: {
+  dispatch: AppDispatch;
+  proteinFocus: ProteinFocus;
+  user: DBUser;
+}): Promise<DBUser> => {
+  const latestWeightKg = await getLatestUserWeightKg(user.externalId);
+
+  if (
+    latestWeightKg != null &&
+    user.calorieAllowance != null &&
+    user.calorieAllowance > 0
+  ) {
+    const nextMacros = buildMacroTargetsForCalories({
+      calories: user.calorieAllowance,
+      proteinFocus,
+      weightKg: latestWeightKg,
+    });
+
+    return saveUserProfileChanges({
+      dispatch,
+      user,
+      patch: {
+        proteinFocus,
+        proteinG: nextMacros?.proteinG ?? user.proteinG,
+        carbsG: nextMacros?.carbsG ?? user.carbsG,
+        fatG: nextMacros?.fatG ?? user.fatG,
+      },
+    });
+  }
+
+  return saveUserProfileChanges({
+    dispatch,
+    user,
+    patch: {
+      proteinFocus,
     },
   });
 };

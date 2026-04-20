@@ -140,6 +140,13 @@ const FoodLibraryScreen = () => {
                 await DB.deleteFoodItem(selectedItem.id);
                 setSelectedItemId(null);
                 await loadItems();
+              } catch (error) {
+                Alert.alert(
+                  "Delete failed",
+                  error instanceof Error
+                    ? error.message
+                    : "That item could not be deleted.",
+                );
               } finally {
                 setIsDeleting(false);
               }
@@ -159,7 +166,7 @@ const FoodLibraryScreen = () => {
         <FoodScreenHeader
           eyebrow="Debug"
           title="Food library"
-          subtitle="Simple local DB viewer for generic food items."
+          subtitle="Debug viewer for the active food catalog."
           onBack={() => navigation.goBack()}
         />
 

@@ -1,16 +1,11 @@
 import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-  BarbellIcon,
-  BicycleIcon,
-  CheckIcon,
-  SneakerMoveIcon,
-} from "phosphor-react-native";
+import { BarbellIcon, CheckIcon } from "phosphor-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type {
   OnboardingParamList,
-  TrainingType,
+  ProteinFocus,
 } from "../../navigation/onboardingTypes";
 import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
 import OnboardingReviewCard from "./OnboardingReviewCard";
@@ -19,63 +14,18 @@ import {
   formatActivitySummary,
   formatBodySummary,
   formatGoalSummary,
+  formatProteinFocusSummary,
+  formatTrainingSummary,
 } from "./onboardingSummary";
 import { appColors } from "../../theme/colors";
-import { DEFAULT_PROTEIN_FOCUS } from "../../engine/proteinFocus";
+import { PROTEIN_FOCUS_OPTIONS } from "../../engine/proteinFocus";
 
-type Props = NativeStackScreenProps<OnboardingParamList, "Training">;
+type Props = NativeStackScreenProps<OnboardingParamList, "ProteinFocus">;
 
-const TrainingProfileScreen = ({ navigation, route }: Props) => {
+const ProteinFocusScreen = ({ navigation, route }: Props) => {
   const insets = useSafeAreaInsets();
-  const [selectedTraining, setSelectedTraining] = React.useState<TrainingType[]>(
-    route.params.training ?? [],
-  );
-
-  const options: {
-    label: string;
-    value: TrainingType;
-    icon: React.ReactNode;
-    note: string;
-  }[] = [
-    {
-      label: "Running",
-      value: "running",
-      icon: <SneakerMoveIcon size={30} color={appColors.slate900} weight="fill" />,
-      note: "Useful for endurance-focused fueling and recovery.",
-    },
-    {
-      label: "Cycling",
-      value: "cycling",
-      icon: <BicycleIcon size={30} color={appColors.slate900} weight="fill" />,
-      note: "Great if riding volume changes your energy demands.",
-    },
-    {
-      label: "Gym / Bodybuilding",
-      value: "bodybuilding",
-      icon: <BarbellIcon size={30} color={appColors.slate900} weight="fill" />,
-      note: "Helps bias the plan toward performance and muscle retention.",
-    },
-    {
-      label: "CrossFit",
-      value: "crossfit",
-      icon: <BarbellIcon size={30} color={appColors.slate900} weight="fill" />,
-      note: "Useful when training mixes strength and conditioning demands.",
-    },
-    {
-      label: "Other",
-      value: "other",
-      icon: <BarbellIcon size={30} color={appColors.slate900} weight="fill" />,
-      note: "Pick this if your main training mode is something else.",
-    },
-  ];
-
-  const toggleTraining = (value: TrainingType) => {
-    setSelectedTraining((current) =>
-      current.includes(value)
-        ? current.filter((item) => item !== value)
-        : [...current, value],
-    );
-  };
+  const [selectedProteinFocus, setSelectedProteinFocus] =
+    React.useState<ProteinFocus>(route.params.proteinFocus ?? "focused");
 
   return (
     <ScrollView
@@ -89,12 +39,13 @@ const TrainingProfileScreen = ({ navigation, route }: Props) => {
     >
       <OnboardingTopBar
         onBack={() => navigation.goBack()}
-        stepLabel="Training"
+        stepLabel="Protein Focus"
       />
-      <Text style={styles.eyebrow}>Training Profile</Text>
-      <Text style={styles.title}>What do you train?</Text>
+      <Text style={styles.eyebrow}>Macro Bias</Text>
+      <Text style={styles.title}>How protein-focused should this be?</Text>
       <Text style={styles.subtitle}>
-        Select all that apply so the plan reflects your real training mix.
+        This changes macro targets and protein grams per kilogram, while leaving
+        the calorie recommendation itself alone.
       </Text>
 
       <OnboardingReviewCard
@@ -115,8 +66,6 @@ const TrainingProfileScreen = ({ navigation, route }: Props) => {
                 goal: route.params.goal,
                 goalRateKgPerWeek: route.params.goalRateKgPerWeek,
                 bodyData: route.params.bodyData,
-                training: selectedTraining,
-                proteinFocus: route.params.proteinFocus,
               }),
           },
           {
@@ -127,21 +76,32 @@ const TrainingProfileScreen = ({ navigation, route }: Props) => {
                 goal: route.params.goal,
                 goalRateKgPerWeek: route.params.goalRateKgPerWeek,
                 bodyData: route.params.bodyData,
-                training: selectedTraining,
-                proteinFocus: route.params.proteinFocus,
+              }),
+          },
+          {
+            label: "Training",
+            value: formatTrainingSummary(route.params.training),
+            onEdit: () =>
+              navigation.push("Training", {
+                goal: route.params.goal,
+                goalRateKgPerWeek: route.params.goalRateKgPerWeek,
+                bodyData: route.params.bodyData,
+                activity: route.params.activity,
+                training: route.params.training,
+                proteinFocus: selectedProteinFocus,
               }),
           },
         ]}
       />
 
       <View style={styles.listWrap}>
-        {options.map((option) => {
-          const isSelected = selectedTraining.includes(option.value);
+        {PROTEIN_FOCUS_OPTIONS.map((option) => {
+          const isSelected = selectedProteinFocus === option.value;
 
           return (
             <Pressable
               key={option.value}
-              onPress={() => toggleTraining(option.value)}
+              onPress={() => setSelectedProteinFocus(option.value)}
               style={({ pressed }) => [
                 styles.option,
                 isSelected && styles.optionSelected,
@@ -149,12 +109,20 @@ const TrainingProfileScreen = ({ navigation, route }: Props) => {
               ]}
             >
               <View style={styles.optionRow}>
-                <View style={styles.optionTextWrap}>
-                  <Text style={styles.optionText}>{option.label}</Text>
-                  <Text style={styles.optionNote}>{option.note}</Text>
+                <View style={styles.optionCopy}>
+                  <Text style={styles.optionTitle}>
+                    {option.label} ({option.gramsPerKg} g/kg)
+                  </Text>
+                  <Text style={styles.optionText}>{option.description}</Text>
                 </View>
                 <View style={styles.optionMeta}>
-                  <View style={styles.iconBadge}>{option.icon}</View>
+                  <View style={styles.iconBadge}>
+                    <BarbellIcon
+                      size={22}
+                      color={appColors.slate900}
+                      weight="fill"
+                    />
+                  </View>
                   <View
                     style={[
                       styles.checkBadge,
@@ -173,22 +141,20 @@ const TrainingProfileScreen = ({ navigation, route }: Props) => {
       </View>
 
       <Text style={styles.helper}>
-        Pick at least one. You can come back later and adjust this mix.
+        Current selection: {formatProteinFocusSummary(selectedProteinFocus)}
       </Text>
 
       <OnboardingPrimaryButton
         label="Continue"
-        disabled={selectedTraining.length === 0}
         style={styles.primaryButton}
         onPress={() =>
-          navigation.push("ProteinFocus", {
+          navigation.push("FuelPlan", {
             goal: route.params.goal,
             goalRateKgPerWeek: route.params.goalRateKgPerWeek,
             bodyData: route.params.bodyData,
             activity: route.params.activity,
-            training: selectedTraining,
-            proteinFocus:
-              route.params.proteinFocus ?? DEFAULT_PROTEIN_FOCUS,
+            training: route.params.training,
+            proteinFocus: selectedProteinFocus,
           })
         }
       />
@@ -252,16 +218,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-  optionTextWrap: {
+  optionCopy: {
     flex: 1,
   },
-  optionText: {
+  optionTitle: {
     color: appColors.textPrimary,
     fontWeight: "800",
     fontSize: 17,
     marginBottom: 4,
   },
-  optionNote: {
+  optionText: {
     color: appColors.slate500,
     fontSize: 13,
     lineHeight: 18,
@@ -303,4 +269,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default TrainingProfileScreen;
+export default ProteinFocusScreen;

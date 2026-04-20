@@ -115,15 +115,7 @@ const AppNavigator = () => {
   return (
     <NavigationContainer theme={appNavigationTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {!hasCompletedOnboarding ? (
-          <Stack.Screen name="Onboarding">
-            {() => (
-              <OnboardingNavigator
-                onFinish={() => void hydrateLocalSession()}
-              />
-            )}
-          </Stack.Screen>
-        ) : isLoggedIn ? (
+        {isLoggedIn ? (
           <>
             <Stack.Screen name="Main" component={MainTabNavigator} />
             <Stack.Screen
@@ -175,6 +167,14 @@ const AppNavigator = () => {
               }}
             />
           </>
+        ) : !hasCompletedOnboarding ? (
+          <Stack.Screen name="Onboarding">
+            {() => (
+              <OnboardingNavigator
+                onFinish={() => void hydrateLocalSession()}
+              />
+            )}
+          </Stack.Screen>
         ) : (
           <Stack.Screen name="Login" component={LoginScreen} />
         )}

@@ -6,6 +6,7 @@ import GoalRateScreen from "../screens/Onboarding/GoalRateScreen";
 import BodyDataScreen from "../screens/Onboarding/BodyDataScreen";
 import ActivityLevelScreen from "../screens/Onboarding/ActivityLevelScreen";
 import TrainingProfileScreen from "../screens/Onboarding/TrainingProfileScreen";
+import ProteinFocusScreen from "../screens/Onboarding/ProteinFocusScreen";
 import FuelPlanScreen from "../screens/Onboarding/FuelPlanScreen";
 import AccountScreen from "../screens/Onboarding/AccountScreen";
 import SuccessScreen from "../screens/Onboarding/SuccessScreen";
@@ -33,6 +34,7 @@ const OnboardingNavigator = ({ onFinish }: OnboardingNavigatorProps) => {
       <Stack.Screen name="BodyData" component={BodyDataScreen} />
       <Stack.Screen name="Activity" component={ActivityLevelScreen} />
       <Stack.Screen name="Training" component={TrainingProfileScreen} />
+      <Stack.Screen name="ProteinFocus" component={ProteinFocusScreen} />
       <Stack.Screen name="FuelPlan" component={FuelPlanScreen} />
       <Stack.Screen name="Account" component={AccountScreen} />
       <Stack.Screen name="Success">

@@ -1,9 +1,7 @@
 import { getDb, initDb } from "../storage/sqlite";
 import type {
-  AddCustomMealInput,
   AddQuickAddFoodLogInput,
   AddUserFoodLogInput,
-  DBCustomMeal,
   DBUserFoodLogEntry,
   UpdateQuickAddFoodLogInput,
   UpdateUserFoodLogInput,
@@ -56,8 +54,8 @@ const NORMAL_FOOD_LOG_SELECT = `
     l.created_at AS createdAt,
     'food_item' AS entrySource,
     f.name AS foodName,
-    COALESCE(f.serving_size_value, f.serving_size) AS servingSize,
-    COALESCE(f.serving_size_unit, f.serving_unit) AS servingUnit,
+    f.serving_size_value AS servingSize,
+    f.serving_size_unit AS servingUnit,
     COALESCE(f.calories, 0) AS calories,
     COALESCE(f.protein_g, 0) AS proteinG,
     COALESCE(f.carbs_g, 0) AS carbsG,
@@ -415,57 +413,4 @@ export const copyFoodLogsFromDate = async (
       now,
     );
   }
-};
-
-export const getCustomMeals = async (
-  userExternalId: string,
-): Promise<DBCustomMeal[]> => {
-  await initDb();
-  const db = await getDb();
-
-  return db.getAllAsync<DBCustomMeal>(
-    `
-    SELECT
-      id,
-      user_external_id AS userExternalId,
-      name,
-      created_at AS createdAt
-    FROM custom_meals
-    WHERE user_external_id = ?
-    ORDER BY lower(name) ASC
-    `,
-    userExternalId,
-  );
-};
-
-export const addCustomMeal = async (input: AddCustomMealInput): Promise<void> => {
-  await initDb();
-  const db = await getDb();
-
-  await db.runAsync(
-    `
-    INSERT OR IGNORE INTO custom_meals (user_external_id, name, created_at)
-    VALUES (?, ?, ?)
-    `,
-    input.userExternalId,
-    input.name.trim(),
-    new Date().toISOString(),
-  );
-};
-
-export const deleteCustomMeal = async (
-  userExternalId: string,
-  name: string,
-): Promise<void> => {
-  await initDb();
-  const db = await getDb();
-
-  await db.runAsync(
-    `
-    DELETE FROM custom_meals
-    WHERE user_external_id = ? AND name = ?
-    `,
-    userExternalId,
-    name,
-  );
 };

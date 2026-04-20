@@ -27,7 +27,6 @@ export const FOOD_NUTRIENT_COLUMNS = [
   ["waterG", "water_g"],
   ["alcoholG", "alcohol_g"],
   ["saltG", "salt_g"],
-  ["saturatedFatG", "saturated_fat_g"],
   ["fatSaturatedG", "fat_saturated_g"],
   ["fatMonounsaturatedG", "fat_monounsaturated_g"],
   ["fatPolyunsaturatedG", "fat_polyunsaturated_g"],
@@ -120,30 +119,6 @@ const normalizeNutritionBasis = (value: unknown): NutritionBasis => {
     : "serving";
 };
 
-const getResolvedServing = (
-  input: Pick<
-    SaveFoodItemInput,
-    "nutritionBasis" | "servingSizeValue" | "servingSizeUnit"
-  >,
-) => {
-  if (input.servingSizeValue != null && input.servingSizeValue > 0) {
-    return {
-      value: input.servingSizeValue,
-      unit: normalizeOptionalText(input.servingSizeUnit) ?? "g",
-    };
-  }
-
-  if (input.nutritionBasis === "100ml") {
-    return { value: 100, unit: "ml" };
-  }
-
-  if (input.nutritionBasis === "100g") {
-    return { value: 100, unit: "g" };
-  }
-
-  return { value: 1, unit: "serving" };
-};
-
 const getFoodItemSelect = (alias?: string) => {
   const prefix = alias ? `${alias}.` : "";
   const nutrientSelect = FOOD_NUTRIENT_COLUMNS.map(
@@ -172,6 +147,7 @@ const getFoodItemSelect = (alias?: string) => {
     ${prefix}raw_payload AS rawPayload,
     ${prefix}verified AS verified,
     ${prefix}is_complete AS isComplete,
+    ${prefix}is_public AS isPublic,
     ${prefix}created_at AS createdAt,
     COALESCE(${prefix}updated_at, ${prefix}created_at) AS updatedAt
   `;
@@ -226,6 +202,8 @@ const toFoodItem = (row: Record<string, unknown>): DBFoodItem => ({
   verified: row.verified === true || row.verified === 1 || row.verified === "1",
   isComplete:
     row.isComplete === true || row.isComplete === 1 || row.isComplete === "1",
+  isPublic:
+    row.isPublic === true || row.isPublic === 1 || row.isPublic === "1",
   createdAt: String(row.createdAt ?? ""),
   updatedAt: String(row.updatedAt ?? row.createdAt ?? ""),
 });
@@ -353,7 +331,6 @@ export const saveFoodItem = async (
   const db = await getDb();
   const now = new Date().toISOString();
   const existingId = await findExistingFoodItemId(db, input);
-  const resolvedServing = getResolvedServing(input);
   const saveColumns = [
     "source",
     "source_id",
@@ -375,8 +352,7 @@ export const saveFoodItem = async (
     "raw_payload",
     "verified",
     "is_complete",
-    "serving_size",
-    "serving_unit",
+    "is_public",
   ];
 
   const values = [
@@ -400,8 +376,7 @@ export const saveFoodItem = async (
     normalizeOptionalText(input.rawPayload),
     input.verified ? 1 : 0,
     input.isComplete ? 1 : 0,
-    resolvedServing.value,
-    resolvedServing.unit,
+    input.isPublic ? 1 : 0,
   ] as const;
 
   if (existingId != null) {

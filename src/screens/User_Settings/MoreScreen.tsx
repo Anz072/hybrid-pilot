@@ -25,6 +25,7 @@ import CalorieBudgetChart from "./CalorieBudgetChart";
 import {
   formatActivityLevelLabel,
   formatGoalLabel,
+  formatProteinFocusLabel,
   formatTrainingSummary,
 } from "./userProfileOptions";
 
@@ -216,6 +217,19 @@ const MoreScreen = () => {
             value={`${formatGoalLabel(user?.goal)} / ${formatActivityLevelLabel(
               user?.activityLevel,
             )}`}
+          />
+          <MoreActionRow
+            description="Set how strongly your macro targets should bias toward protein grams per kilogram."
+            icon={
+              <BarbellIcon
+                size={18}
+                color={appColors.foodPrimaryDark}
+                weight="fill"
+              />
+            }
+            onPress={() => navigation.navigate("ProteinFocusSettingsScreen")}
+            title="Protein focus"
+            value={formatProteinFocusLabel(user?.proteinFocus)}
           />
           <MoreActionRow
             description="Keep your training profile aligned with what you actually do week to week."

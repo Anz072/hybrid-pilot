@@ -48,6 +48,7 @@ import { useAppSelector } from "../../store/hooks";
 import { appColors } from "../../theme/colors";
 import FoodBarcodeScannerModal from "./FoodBarcodeScannerModal";
 import FoodScreenHeader from "./FoodScreenHeader";
+import PublicVisibilityCheckbox from "./PublicVisibilityCheckbox";
 import type { ScannedFoodLookupResult } from "./FoodBarcodeScannerShared";
 import {
   buildFoodLoggedAt,
@@ -396,6 +397,7 @@ const CreateRecipeScreen = () => {
   const [name, setName] = React.useState("");
   const [servingsValue, setServingsValue] = React.useState("1");
   const [preparedWeightValue, setPreparedWeightValue] = React.useState("");
+  const [isPublic, setIsPublic] = React.useState(true);
   const [prepTimeValue, setPrepTimeValue] = React.useState("");
   const [cookTimeValue, setCookTimeValue] = React.useState("");
   const [linkValue, setLinkValue] = React.useState("");
@@ -506,6 +508,7 @@ const CreateRecipeScreen = () => {
       setRecipeDetails(null);
       setLoadingRecipe(false);
       setRecipeLoadError(null);
+      setIsPublic(true);
       return () => {
         cancelled = true;
       };
@@ -533,6 +536,7 @@ const CreateRecipeScreen = () => {
         setPreparedWeightValue(
           formatNumberInput(loadedRecipe.preparedFoodWeightG),
         );
+        setIsPublic(loadedRecipe.isPublic);
         setPrepTimeValue(formatNumberInput(loadedRecipe.prepTimeMin));
         setCookTimeValue(formatNumberInput(loadedRecipe.cookTimeMin));
         setLinkValue(loadedRecipe.linkUrl ?? "");
@@ -905,6 +909,7 @@ const CreateRecipeScreen = () => {
           createdByUserExternalId:
             recipeDetails?.createdByUserExternalId ?? user.externalId,
           buildMethod: method,
+          isPublic,
           name: recipeName,
           description: descriptionValue.trim() || null,
           linkUrl: linkValue.trim() || null,
@@ -941,6 +946,7 @@ const CreateRecipeScreen = () => {
       descriptionValue,
       editingRecipeId,
       ingredients,
+      isPublic,
       isEditing,
       linkValue,
       method,
@@ -1128,6 +1134,13 @@ const CreateRecipeScreen = () => {
                   </View>
                 </View>
               </View>
+            </View>
+
+            <View style={styles.fieldSpacing}>
+              <PublicVisibilityCheckbox
+                checked={isPublic}
+                onChange={setIsPublic}
+              />
             </View>
 
             <View style={styles.metricCard}>

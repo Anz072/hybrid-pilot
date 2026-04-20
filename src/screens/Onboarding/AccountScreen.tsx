@@ -43,6 +43,7 @@ import {
   formatActivitySummary,
   formatBodySummary,
   formatGoalSummary,
+  formatProteinFocusSummary,
   formatTrainingSummary,
 } from "./onboardingSummary";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
@@ -84,15 +85,13 @@ const AccountScreen = ({ navigation, route }: Props) => {
       activityLevel: onboarding.activity,
       goal: onboarding.goal,
       trainingTypes: onboarding.training,
+      proteinFocus: onboarding.proteinFocus,
       calorieAllowance: onboarding.fuelPlan.calories,
       proteinG: onboarding.fuelPlan.protein,
       carbsG: onboarding.fuelPlan.carbs,
       fatG: onboarding.fuelPlan.fats,
     };
 
-    await saveLocalAccount(persistedAccount);
-    await saveOnboardingProfile(onboarding);
-    await setOnboardingComplete(true);
     await DB.addUser(nextUser);
 
     const initialWeightDate = new Date();
@@ -113,6 +112,10 @@ const AccountScreen = ({ navigation, route }: Props) => {
       clientGeneratedId: initialWeightEntryId,
       deviceId: generateUuid(),
     });
+
+    await saveLocalAccount(persistedAccount);
+    await saveOnboardingProfile(onboarding);
+    await setOnboardingComplete(true);
 
     const savedUser = await DB.getUserByExternalId(persistedAccount.id);
     dispatch(setCurrentUser(savedUser ?? nextUser));
@@ -220,9 +223,8 @@ const AccountScreen = ({ navigation, route }: Props) => {
         <Text style={styles.eyebrow}>Final Step</Text>
         <Text style={styles.title}>Create your account</Text>
         <Text style={styles.subtitle}>
-          Finish with a local account or use Google. Either way, this onboarding
-          plan, including your birthdate from body data, is saved on this
-          device.
+          Create a synced Google account to keep your profile and food data
+          available across devices, or keep everything local on this device.
         </Text>
 
         <OnboardingReviewCard
@@ -244,6 +246,8 @@ const AccountScreen = ({ navigation, route }: Props) => {
                   goal: route.params.onboarding.goal,
                   goalRateKgPerWeek: route.params.onboarding.goalRateKgPerWeek,
                   bodyData: route.params.onboarding.bodyData,
+                  training: route.params.onboarding.training,
+                  proteinFocus: route.params.onboarding.proteinFocus,
                 }),
             },
             {
@@ -254,6 +258,8 @@ const AccountScreen = ({ navigation, route }: Props) => {
                   goal: route.params.onboarding.goal,
                   goalRateKgPerWeek: route.params.onboarding.goalRateKgPerWeek,
                   bodyData: route.params.onboarding.bodyData,
+                  training: route.params.onboarding.training,
+                  proteinFocus: route.params.onboarding.proteinFocus,
                 }),
             },
             {
@@ -266,6 +272,22 @@ const AccountScreen = ({ navigation, route }: Props) => {
                   bodyData: route.params.onboarding.bodyData,
                   activity: route.params.onboarding.activity,
                   training: route.params.onboarding.training,
+                  proteinFocus: route.params.onboarding.proteinFocus,
+                }),
+            },
+            {
+              label: "Protein focus",
+              value: formatProteinFocusSummary(
+                route.params.onboarding.proteinFocus,
+              ),
+              onEdit: () =>
+                navigation.push("ProteinFocus", {
+                  goal: route.params.onboarding.goal,
+                  goalRateKgPerWeek: route.params.onboarding.goalRateKgPerWeek,
+                  bodyData: route.params.onboarding.bodyData,
+                  activity: route.params.onboarding.activity,
+                  training: route.params.onboarding.training,
+                  proteinFocus: route.params.onboarding.proteinFocus,
                 }),
             },
           ]}
@@ -291,21 +313,6 @@ const AccountScreen = ({ navigation, route }: Props) => {
             style={styles.input}
           />
 
-          <OnboardingPrimaryButton
-            label={
-              submissionMode === "local" ? "Saving..." : "Create local account"
-            }
-            disabled={!canCreateLocalAccount || isSaving}
-            style={styles.primaryButton}
-            onPress={() => void handleCreateLocalAccount()}
-          />
-
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
           <Pressable
             disabled={isSaving}
             onPress={() => {
@@ -323,9 +330,29 @@ const AccountScreen = ({ navigation, route }: Props) => {
             <Text style={styles.googleButtonText}>
               {submissionMode === "google"
                 ? "Connecting Google..."
-                : "Create with Google"}
+                : "Create synced Google account"}
             </Text>
           </Pressable>
+
+          <Text style={styles.googleHint}>
+            Google sign-up creates your online account and stores your plan in
+            Supabase so you can sign in again later.
+          </Text>
+
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <OnboardingPrimaryButton
+            label={
+              submissionMode === "local" ? "Saving..." : "Create local account"
+            }
+            disabled={!canCreateLocalAccount || isSaving}
+            style={styles.primaryButton}
+            onPress={() => void handleCreateLocalAccount()}
+          />
         </View>
       </KeyboardAwareScrollView>
     </KeyboardAvoidingView>

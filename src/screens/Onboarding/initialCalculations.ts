@@ -2,7 +2,12 @@ import {
   ActivityLevel,
   FuelPlan,
   GoalType,
+  ProteinFocus,
 } from "../../navigation/onboardingTypes";
+import {
+  PROTEIN_FOCUS_MULTIPLIER,
+  resolveProteinFocus,
+} from "../../engine/proteinFocus";
 
 const ACTIVITY_FACTOR: Record<ActivityLevel, number> = {
   sedentary: 1.2,
@@ -59,6 +64,33 @@ const resolveGoalOffset = (
   return DEFAULT_GOAL_OFFSET[goal];
 };
 
+export const buildMacroTargets = ({
+  calories,
+  proteinFocus,
+  weightKg,
+}: {
+  calories: number;
+  proteinFocus?: ProteinFocus | null;
+  weightKg: number;
+}): Pick<FuelPlan, "protein" | "carbs" | "fats"> => {
+  const protein = Math.min(
+    Math.round(
+      weightKg * PROTEIN_FOCUS_MULTIPLIER[resolveProteinFocus(proteinFocus)],
+    ),
+    Math.floor(calories / 4),
+  );
+  const remainingCaloriesAfterProtein = Math.max(0, calories - protein * 4);
+  const fats = Math.round(
+    Math.min(calories * 0.28, remainingCaloriesAfterProtein) / 9,
+  );
+  const carbs = Math.max(
+    0,
+    Math.round((calories - protein * 4 - fats * 9) / 4),
+  );
+
+  return { protein, carbs, fats };
+};
+
 export const buildFuelPlan = ({
   weightKg,
   heightCm,
@@ -67,6 +99,7 @@ export const buildFuelPlan = ({
   activity,
   goal,
   goalRateKgPerWeek,
+  proteinFocus,
 }: {
   weightKg: number;
   heightCm: number;
@@ -75,6 +108,7 @@ export const buildFuelPlan = ({
   activity: ActivityLevel;
   goal: GoalType;
   goalRateKgPerWeek?: number | null;
+  proteinFocus?: ProteinFocus | null;
 }): FuelPlan => {
   const sexBase = sex === "female" ? -161 : sex === "male" ? 5 : -78;
   const bmr = 10 * weightKg + 6.25 * heightCm - 5 * age + sexBase;
@@ -83,10 +117,11 @@ export const buildFuelPlan = ({
     1200,
     Math.round(tdee + resolveGoalOffset(goal, goalRateKgPerWeek)),
   );
-
-  const protein = Math.round(weightKg * 2);
-  const fats = Math.round((calories * 0.28) / 9);
-  const carbs = Math.round((calories - protein * 4 - fats * 9) / 4);
+  const { protein, carbs, fats } = buildMacroTargets({
+    calories,
+    proteinFocus,
+    weightKg,
+  });
 
   return { calories, protein, carbs, fats };
 };

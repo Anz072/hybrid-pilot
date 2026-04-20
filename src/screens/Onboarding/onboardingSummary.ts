@@ -2,10 +2,12 @@ import type {
   ActivityLevel,
   BodyData,
   GoalType,
+  ProteinFocus,
   TrainingSelection,
   TrainingType,
 } from "../../navigation/onboardingTypes";
 import { getGoalRateLabel } from "./initialCalculations";
+import { formatProteinFocusSummary as formatProteinFocusSummaryFromEngine } from "../../engine/proteinFocus";
 
 const GOAL_LABELS: Record<GoalType, string> = {
   lose_fat: "Lose fat",
@@ -44,6 +46,9 @@ export const formatTrainingSummary = (training: TrainingSelection): string =>
   training.length > 0
     ? training.map((item) => TRAINING_LABELS[item]).join(", ")
     : "None selected";
+
+export const formatProteinFocusSummary = (proteinFocus: ProteinFocus): string =>
+  formatProteinFocusSummaryFromEngine(proteinFocus);
 
 export const formatBodySummary = (bodyData: BodyData): string =>
   `${bodyData.birthdate.slice(0, 10)} / ${bodyData.heightCm} cm / ${bodyData.weightKg} kg`;

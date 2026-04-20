@@ -1,5 +1,7 @@
 export type DBIsoDateString = string;
 
+import type { ProteinFocus } from "../navigation/onboardingTypes";
+
 export type DBUserProvider = "local" | "google" | "apple" | "email";
 export type DBUserGender = "male" | "female" | "other" | null;
 
@@ -16,6 +18,7 @@ export type DBUser = {
   activityLevel: string | null;
   goal: string | null;
   trainingTypes: string[] | null;
+  proteinFocus: ProteinFocus | null;
   calorieAllowance: number | null;
   proteinG: number | null;
   carbsG: number | null;
@@ -38,22 +41,6 @@ export type SaveUserSettingsInput = {
   foodDiaryStartHour?: number;
   foodDiaryEndHour?: number;
   dailyCalorieOverrides?: Array<number | null> | null;
-};
-
-export type DBWeightLog = {
-  id: number;
-  userExternalId: string;
-  weightKg: number;
-  note: string | null;
-  loggedAt: DBIsoDateString;
-  createdAt: DBIsoDateString;
-};
-
-export type AddWeightLogInput = {
-  userExternalId: string;
-  weightKg: number;
-  note?: string;
-  loggedAt?: DBIsoDateString;
 };
 
 export type WeightEntrySource =
@@ -141,7 +128,6 @@ export type DBFoodNutrientDetails = {
   waterG: number | null;
   alcoholG: number | null;
   saltG: number | null;
-  saturatedFatG: number | null;
   fatSaturatedG: number | null;
   fatMonounsaturatedG: number | null;
   fatPolyunsaturatedG: number | null;
@@ -233,6 +219,7 @@ export type DBFoodItem = DBFoodNutrientDetails & {
   rawPayload: string | null;
   verified: boolean; //  true for imported official-ish source, false for manual
   isComplete: boolean;
+  isPublic: boolean;
   createdAt: DBIsoDateString;
   updatedAt: DBIsoDateString;
 };
@@ -243,10 +230,12 @@ export type SaveFoodItemInput = Omit<
   | "createdAt"
   | "updatedAt"
   | "rawPayload"
+  | "isPublic"
   | keyof DBFoodNutrientDetails
 > & {
   id?: number;
   rawPayload?: string | null;
+  isPublic?: boolean;
 } & Partial<DBFoodNutrientDetails>;
 
 export type AddFoodItemInput = SaveFoodItemInput;
@@ -270,6 +259,7 @@ export type DBRecipe = {
   userExternalId: string;
   createdByUserExternalId: string;
   linkedFoodId: number;
+  isPublic: boolean;
   buildMethod: RecipeBuildMethod;
   name: string;
   description: string | null;
@@ -301,6 +291,7 @@ export type CreateUserRecipeIngredientInput = {
 export type CreateUserRecipeInput = {
   userExternalId: string;
   createdByUserExternalId: string;
+  isPublic?: boolean;
   buildMethod?: RecipeBuildMethod;
   name: string;
   description?: string | null;
@@ -329,7 +320,11 @@ export type DBRecipeDetails = DBRecipe & {
   gramsPerServing: number | null;
 };
 
-export type UserFoodLogSource = "food_item" | "quick_add";
+export type UserFoodLogSource =
+  | "food_item"
+  | "custom_recipe"
+  | "custom_meal"
+  | "quick_add";
 
 export type DBUserFoodLog = {
   id: number;
@@ -417,18 +412,6 @@ export type DBUserFoodLogEntry = DBUserFoodLog & {
   systemCalculatedCalories: number | null;
   isEnergyManuallySet: boolean;
   quickAddName: string | null;
-};
-
-export type DBCustomMeal = {
-  id: number;
-  userExternalId: string;
-  name: string;
-  createdAt: DBIsoDateString;
-};
-
-export type AddCustomMealInput = {
-  userExternalId: string;
-  name: string;
 };
 
 export type DBActivity = {

@@ -117,6 +117,8 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
       goal: route.params.goal,
       goalRateKgPerWeek: route.params.goalRateKgPerWeek,
       bodyData,
+      training: route.params.training,
+      proteinFocus: route.params.proteinFocus,
     });
   };
 

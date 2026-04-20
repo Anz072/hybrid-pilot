@@ -1,8 +1,10 @@
 import type {
   ActivityLevel,
   GoalType,
+  ProteinFocus,
   TrainingType,
 } from "../../navigation/onboardingTypes";
+import { formatProteinFocusLabel as formatProteinFocusLabelFromEngine } from "../../engine/proteinFocus";
 
 export const GOAL_OPTIONS: Array<{
   description: string;
@@ -124,3 +126,7 @@ export const formatTrainingSummary = (
 
   return values.map(formatTrainingTypeLabel).join(", ");
 };
+
+export const formatProteinFocusLabel = (
+  value: ProteinFocus | string | null | undefined,
+): string => formatProteinFocusLabelFromEngine(value);

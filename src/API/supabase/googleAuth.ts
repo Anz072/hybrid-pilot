@@ -156,15 +156,15 @@ export const getGoogleDisplayName = (user: User, fallback?: string | null) => {
   return "Google User";
 };
 
-type UpsertGoogleUserToLocalDbOptions = {
+type UpsertGoogleUserAccountOptions = {
   allowCreate?: boolean;
   markOnboardingComplete?: boolean;
   persistLocalAccount?: boolean;
 };
 
-export const upsertGoogleUserToLocalDb = async (
+export const upsertGoogleUserAccount = async (
   user: User,
-  options: UpsertGoogleUserToLocalDbOptions = {},
+  options: UpsertGoogleUserAccountOptions = {},
 ): Promise<DBUser> => {
   const existingUser = await DB.getUserByExternalId(user.id);
   const displayName = getGoogleDisplayName(user, existingUser?.displayName);
@@ -172,7 +172,7 @@ export const upsertGoogleUserToLocalDb = async (
   if (!existingUser && options.allowCreate === false) {
     await getSupabaseClient().auth.signOut();
     throw new Error(
-      "No local account exists for this Google sign-in yet. Finish onboarding first to create one.",
+      "No app account exists for this Google sign-in yet. Finish onboarding first to create one.",
     );
   }
 
@@ -201,6 +201,7 @@ export const upsertGoogleUserToLocalDb = async (
         activityLevel: null,
         goal: null,
         trainingTypes: null,
+        proteinFocus: null,
         calorieAllowance: null,
         proteinG: null,
         carbsG: null,

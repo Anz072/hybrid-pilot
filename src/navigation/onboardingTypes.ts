@@ -25,6 +25,8 @@ export type TrainingType =
 
 export type TrainingSelection = TrainingType[];
 
+export type ProteinFocus = "mild" | "moderate" | "focused" | "heavy";
+
 export type FuelPlan = {
   calories: number;
   protein: number;
@@ -38,6 +40,7 @@ export type OnboardingProfile = {
   bodyData: BodyData;
   activity: ActivityLevel;
   training: TrainingSelection;
+  proteinFocus: ProteinFocus;
   fuelPlan: FuelPlan;
 };
 
@@ -50,11 +53,15 @@ export type OnboardingParamList = {
     goal: GoalType;
     goalRateKgPerWeek: GoalRatePace;
     bodyData?: BodyData;
+    training?: TrainingSelection;
+    proteinFocus?: ProteinFocus;
   };
   Activity: {
     goal: GoalType;
     goalRateKgPerWeek: GoalRatePace;
     bodyData: BodyData;
+    training?: TrainingSelection;
+    proteinFocus?: ProteinFocus;
   };
   Training: {
     goal: GoalType;
@@ -62,6 +69,15 @@ export type OnboardingParamList = {
     bodyData: BodyData;
     activity: ActivityLevel;
     training?: TrainingSelection;
+    proteinFocus?: ProteinFocus;
+  };
+  ProteinFocus: {
+    goal: GoalType;
+    goalRateKgPerWeek: GoalRatePace;
+    bodyData: BodyData;
+    activity: ActivityLevel;
+    training: TrainingSelection;
+    proteinFocus?: ProteinFocus;
   };
   FuelPlan: {
     goal: GoalType;
@@ -69,6 +85,7 @@ export type OnboardingParamList = {
     bodyData: BodyData;
     activity: ActivityLevel;
     training: TrainingSelection;
+    proteinFocus: ProteinFocus;
   };
   Account: { onboarding: OnboardingProfile };
   Success: { onboarding: OnboardingProfile };

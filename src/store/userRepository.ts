@@ -1,8 +1,10 @@
 import { getDb, initDb } from "../storage/sqlite";
+import type { ProteinFocus } from "../navigation/onboardingTypes";
 import type { DBUser } from "./DB_TYPES";
 
-type RawDBUser = Omit<DBUser, "trainingTypes"> & {
+type RawDBUser = Omit<DBUser, "trainingTypes" | "proteinFocus"> & {
   trainingTypes: string | null;
+  proteinFocus: string | null;
 };
 
 export const upsertUser = async (input: DBUser): Promise<void> => {
@@ -27,12 +29,13 @@ export const upsertUser = async (input: DBUser): Promise<void> => {
       activity_level,
       goal,
       training_types,
+      protein_focus,
       calorieAllowance,
       proteinG,
       carbsG,
       fatG
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(external_id) DO UPDATE SET
       provider = excluded.provider,
       display_name = excluded.display_name,
@@ -43,6 +46,7 @@ export const upsertUser = async (input: DBUser): Promise<void> => {
       activity_level = excluded.activity_level,
       goal = excluded.goal,
       training_types = excluded.training_types,
+      protein_focus = excluded.protein_focus,
       calorieAllowance = excluded.calorieAllowance,
       proteinG = excluded.proteinG,
       carbsG = excluded.carbsG,
@@ -59,6 +63,7 @@ export const upsertUser = async (input: DBUser): Promise<void> => {
     input.activityLevel,
     input.goal,
     trainingTypesJson,
+    input.proteinFocus,
     input.calorieAllowance,
     input.proteinG,
     input.carbsG,
@@ -85,6 +90,7 @@ export const getFirstUser = async (): Promise<DBUser | null> => {
       activity_level AS activityLevel,
       goal,
       training_types AS trainingTypes,
+      protein_focus AS proteinFocus,
       calorieAllowance,
       proteinG,
       carbsG,
@@ -106,6 +112,7 @@ export const getFirstUser = async (): Promise<DBUser | null> => {
       typeof row.trainingTypes === "string"
         ? (JSON.parse(row.trainingTypes) as string[])
         : null,
+    proteinFocus: (row.proteinFocus as ProteinFocus | null) ?? null,
     calorieAllowance: row.calorieAllowance ?? null,
     proteinG: row.proteinG ?? null,
     carbsG: row.carbsG ?? null,
@@ -134,6 +141,7 @@ export const getUserByExternalId = async (
       activity_level AS activityLevel,
       goal,
       training_types AS trainingTypes,
+      protein_focus AS proteinFocus,
       calorieAllowance,
       proteinG,
       carbsG,
@@ -156,6 +164,7 @@ export const getUserByExternalId = async (
       typeof row.trainingTypes === "string"
         ? (JSON.parse(row.trainingTypes) as string[])
         : null,
+    proteinFocus: (row.proteinFocus as ProteinFocus | null) ?? null,
     calorieAllowance: row.calorieAllowance ?? null,
     proteinG: row.proteinG ?? null,
     carbsG: row.carbsG ?? null,

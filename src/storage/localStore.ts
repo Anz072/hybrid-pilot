@@ -3,6 +3,7 @@ import type {
   BodyData,
   FuelPlan,
   GoalType,
+  ProteinFocus,
   TrainingSelection,
 } from "../navigation/onboardingTypes";
 import { getDb, initDb } from "./sqlite";
@@ -20,6 +21,7 @@ export type OnboardingProfile = {
   bodyData: BodyData;
   activity: ActivityLevel;
   training: TrainingSelection;
+  proteinFocus: ProteinFocus;
   fuelPlan: FuelPlan;
 };
 

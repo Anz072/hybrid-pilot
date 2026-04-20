@@ -2,9 +2,13 @@ import type {
   ActivityLevel,
   FuelPlan,
   GoalType,
+  ProteinFocus,
 } from "../navigation/onboardingTypes";
 import { getAgeFromBirthdateValue } from "../helpers";
-import { buildFuelPlan } from "../screens/Onboarding/initialCalculations";
+import {
+  buildFuelPlan,
+  buildMacroTargets,
+} from "../screens/Onboarding/initialCalculations";
 import type { DBUser, DBUserSettings } from "../store/DB_TYPES";
 
 type CalorieOverrideSettings = Pick<DBUserSettings, "dailyCalorieOverrides">;
@@ -153,6 +157,32 @@ export const scaleMacroTargetsToCalories = (
   };
 };
 
+export const buildMacroTargetsForCalories = ({
+  calories,
+  proteinFocus,
+  weightKg,
+}: {
+  calories: number;
+  proteinFocus?: ProteinFocus | null;
+  weightKg: number;
+}): Pick<DBUser, "proteinG" | "carbsG" | "fatG"> | null => {
+  if (!Number.isFinite(calories) || calories <= 0 || !Number.isFinite(weightKg) || weightKg <= 0) {
+    return null;
+  }
+
+  const nextMacros = buildMacroTargets({
+    calories,
+    proteinFocus,
+    weightKg,
+  });
+
+  return {
+    proteinG: nextMacros.protein,
+    carbsG: nextMacros.carbs,
+    fatG: nextMacros.fats,
+  };
+};
+
 export const buildAutomaticFuelPlanForUser = ({
   user,
   weightKg,
@@ -186,5 +216,6 @@ export const buildAutomaticFuelPlanForUser = ({
     sex: user.gender,
     activity: user.activityLevel,
     goal: user.goal,
+    proteinFocus: user.proteinFocus,
   });
 };

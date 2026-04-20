@@ -170,6 +170,7 @@ const ScannedFoodLogScreen = () => {
     () => (food ? buildPreview(food, quantity) : null),
     [food, quantity],
   );
+  const canFavoriteFood = food != null && food.source !== "recipe";
   const micronutrientFactor = React.useMemo(() => {
     if (!serving || !Number.isFinite(quantity) || quantity <= 0) {
       return 0;
@@ -275,9 +276,17 @@ const ScannedFoodLogScreen = () => {
       return;
     }
 
+    if (!canFavoriteFood) {
+      Alert.alert(
+        "Unavailable",
+        "Recipes are shared separately and cannot be favorited here.",
+      );
+      return;
+    }
+
     await DB.setFoodItemFavorite(user.externalId, food.id, !isFavorite);
     setIsFavorite((current) => !current);
-  }, [food, isFavorite, user]);
+  }, [canFavoriteFood, food, isFavorite, user]);
 
   const saveLog = React.useCallback(async () => {
     if (!user || !food) {
@@ -389,20 +398,24 @@ const ScannedFoodLogScreen = () => {
             food.source,
           )} | Serving ${formatFoodNumber(serving.value, ` ${serving.unit}`)}`}
           heroPills={heroPills}
-          heroAction={{
-            active: isFavorite,
-            icon: (
-              <StarIcon
-                size={14}
-                color={isFavorite ? appColors.white : appColors.foodPrimary}
-                weight={isFavorite ? "fill" : "bold"}
-              />
-            ),
-            label: isFavorite ? "Saved" : "Save",
-            onPress: () => {
-              void toggleFavorite();
-            },
-          }}
+          heroAction={
+            canFavoriteFood
+              ? {
+                  active: isFavorite,
+                  icon: (
+                    <StarIcon
+                      size={14}
+                      color={isFavorite ? appColors.white : appColors.foodPrimary}
+                      weight={isFavorite ? "fill" : "bold"}
+                    />
+                  ),
+                  label: isFavorite ? "Saved" : "Save",
+                  onPress: () => {
+                    void toggleFavorite();
+                  },
+                }
+              : undefined
+          }
           previewCaloriesText={
             preview ? `${preview.calories.toFixed(0)} kcal` : "--"
           }

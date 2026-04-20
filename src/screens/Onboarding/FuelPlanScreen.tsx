@@ -17,6 +17,7 @@ import {
   formatActivitySummary,
   formatBodySummary,
   formatGoalSummary,
+  formatProteinFocusSummary,
   formatTrainingSummary,
 } from "./onboardingSummary";
 import { appColors } from "../../theme/colors";
@@ -32,7 +33,14 @@ type MacroChartDatum = {
 
 const FuelPlanScreen = ({ navigation, route }: Props) => {
   const insets = useSafeAreaInsets();
-  const { goal, goalRateKgPerWeek, bodyData, activity, training } = route.params;
+  const {
+    goal,
+    goalRateKgPerWeek,
+    bodyData,
+    activity,
+    training,
+    proteinFocus,
+  } = route.params;
   const age = getAgeFromBirthdateValue(bodyData.birthdate) ?? 25;
   const fuelPlan = buildFuelPlan({
     heightCm: bodyData.heightCm,
@@ -42,6 +50,7 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
     activity,
     goal,
     goalRateKgPerWeek,
+    proteinFocus,
   });
   const goalRateLabel = getGoalRateLabel(goal, goalRateKgPerWeek);
 
@@ -51,6 +60,7 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
     bodyData,
     activity,
     training,
+    proteinFocus,
     fuelPlan,
   };
 
@@ -95,7 +105,7 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
         <Text style={styles.title}>Initial Plan</Text>
       </View>
       <Text style={styles.subtitle}>
-        Auto-generated from your body data, activity, and goals.
+        Auto-generated from your body data, activity, goals, and protein bias.
       </Text>
       {goalRateLabel ? (
         <View style={styles.pacePill}>
@@ -118,6 +128,8 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
                 goal,
                 goalRateKgPerWeek,
                 bodyData,
+                training,
+                proteinFocus,
               }),
           },
           {
@@ -128,6 +140,8 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
                 goal,
                 goalRateKgPerWeek,
                 bodyData,
+                training,
+                proteinFocus,
               }),
           },
           {
@@ -140,6 +154,20 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
                 bodyData,
                 activity,
                 training,
+                proteinFocus,
+              }),
+          },
+          {
+            label: "Protein focus",
+            value: formatProteinFocusSummary(proteinFocus),
+            onEdit: () =>
+              navigation.push("ProteinFocus", {
+                goal,
+                goalRateKgPerWeek,
+                bodyData,
+                activity,
+                training,
+                proteinFocus,
               }),
           },
         ]}
@@ -184,6 +212,12 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
         <View style={styles.metricRow}>
           <Text style={styles.metricLabel}>Protein</Text>
           <Text style={styles.metricValue}>{fuelPlan.protein} g</Text>
+        </View>
+        <View style={styles.metricRow}>
+          <Text style={styles.metricLabel}>Protein focus</Text>
+          <Text style={styles.metricValue}>
+            {formatProteinFocusSummary(proteinFocus)}
+          </Text>
         </View>
         <View style={styles.metricRow}>
           <Text style={styles.metricLabel}>Carbs</Text>

@@ -8,6 +8,7 @@ import { getGoalRateLabel } from "./initialCalculations";
 import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
 import {
   formatActivitySummary,
+  formatProteinFocusSummary,
   formatTrainingSummary,
 } from "./onboardingSummary";
 import { appColors } from "../../theme/colors";
@@ -43,8 +44,9 @@ const SuccessScreen = ({ onFinish, route }: Props) => {
       <Text style={styles.eyebrow}>Ready</Text>
       <Text style={styles.title}>Your plan is live</Text>
       <Text style={styles.subtitle}>
-        We built your starting targets from your goal, activity, and training
-        profile. You can refine them later as your progress comes in.
+        We built your starting targets from your goal, activity, training
+        profile, and protein focus. You can refine them later as your progress
+        comes in.
       </Text>
 
       <View style={styles.highlightCard}>
@@ -101,6 +103,13 @@ const SuccessScreen = ({ onFinish, route }: Props) => {
           <Text style={styles.detailLabel}>Training</Text>
           <Text style={styles.detailValue}>
             {formatTrainingSummary(route.params.onboarding.training)}
+          </Text>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>Protein focus</Text>
+          <Text style={styles.detailValue}>
+            {formatProteinFocusSummary(route.params.onboarding.proteinFocus)}
           </Text>
         </View>
       </View>

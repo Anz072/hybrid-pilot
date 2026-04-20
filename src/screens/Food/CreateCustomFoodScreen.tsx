@@ -32,6 +32,7 @@ import { DB } from "../../store/DB";
 import type { DBFoodNutrientDetails } from "../../store/DB_TYPES";
 import { useAppSelector } from "../../store/hooks";
 import FoodScreenHeader from "./FoodScreenHeader";
+import PublicVisibilityCheckbox from "./PublicVisibilityCheckbox";
 import {
   buildFoodLoggedAt,
   formatFoodLoggedTime,
@@ -176,6 +177,7 @@ const CreateCustomFoodScreen = () => {
   const [protein, setProtein] = React.useState("0");
   const [carbs, setCarbs] = React.useState("0");
   const [fat, setFat] = React.useState("0");
+  const [isPublic, setIsPublic] = React.useState(true);
   const [showAdvanced, setShowAdvanced] = React.useState(false);
   const [creating, setCreating] = React.useState(false);
   const [optionalNutrients, setOptionalNutrients] =
@@ -326,13 +328,10 @@ const CreateCustomFoodScreen = () => {
         fatG: parsedFat,
         saltG: null,
         ...parsedOptionalNutrients.values,
-        saturatedFatG:
-          parsedOptionalNutrients.values.saturatedFatG ??
-          parsedOptionalNutrients.values.fatSaturatedG ??
-          null,
         ingredientsText: null,
         verified: false,
         isComplete: true,
+        isPublic,
       });
 
       await DB.addUserFoodLog({
@@ -369,6 +368,7 @@ const CreateCustomFoodScreen = () => {
     resolvedLoggedAt,
     trimmedName,
     user,
+    isPublic,
   ]);
 
   return (
@@ -466,6 +466,13 @@ const CreateCustomFoodScreen = () => {
               <View style={styles.unitPill}>
                 <Text style={styles.unitText}>g</Text>
               </View>
+            </View>
+
+            <View style={styles.fieldLabelSpacing}>
+              <PublicVisibilityCheckbox
+                checked={isPublic}
+                onChange={setIsPublic}
+              />
             </View>
           </View>
 

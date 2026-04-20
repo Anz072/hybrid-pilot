@@ -36,6 +36,9 @@ const normalizeOptionalText = (value?: string | null) => {
   return normalized ? normalized : null;
 };
 
+const parseBoolean = (value: unknown): boolean =>
+  value === true || value === 1 || value === "1";
+
 const getResolvedServing = (
   food: Pick<DBFoodItem, "nutritionBasis" | "servingSizeValue" | "servingSizeUnit">,
 ) => {
@@ -89,6 +92,7 @@ const toRecipe = (row: Record<string, unknown>): DBRecipe => ({
   userExternalId: String(row.userExternalId ?? ""),
   createdByUserExternalId: String(row.createdByUserExternalId ?? ""),
   linkedFoodId: Number(row.linkedFoodId),
+  isPublic: parseBoolean(row.isPublic),
   buildMethod: parseRecipeBuildMethod(row.buildMethod),
   name: String(row.name ?? ""),
   description:
@@ -202,6 +206,7 @@ const updateLinkedRecipeFoodWithDb = async (
     buildMethod: input.buildMethod ?? "scratch",
     createdByUserExternalId: input.createdByUserExternalId,
     ingredientCount: input.ingredients.length,
+    isPublic: input.isPublic ?? false,
     servings: input.servings,
     ingredientTotalWeightG: weightMetrics.ingredientTotalWeightG,
     preparedFoodWeightG: weightMetrics.preparedFoodWeightG,
@@ -239,8 +244,7 @@ const updateLinkedRecipeFoodWithDb = async (
       raw_payload = ?,
       verified = ?,
       is_complete = ?,
-      serving_size = ?,
-      serving_unit = ?,
+      is_public = ?,
       updated_at = ?
     WHERE id = ?
     `,
@@ -266,8 +270,7 @@ const updateLinkedRecipeFoodWithDb = async (
     JSON.stringify(baseRawPayload),
     0,
     1,
-    1,
-    "serving",
+    input.isPublic ? 1 : 0,
     updatedAt,
     linkedFoodId,
   );
@@ -286,6 +289,7 @@ export const getUserRecipeById = async (
       user_external_id AS userExternalId,
       created_by_user_external_id AS createdByUserExternalId,
       linked_food_id AS linkedFoodId,
+      is_public AS isPublic,
       build_method AS buildMethod,
       name,
       description,
@@ -445,6 +449,7 @@ export const createUserRecipe = async (
   const trimmedName = input.name.trim();
   const servings = roundTo(input.servings, 2);
   const steps = (input.steps ?? []).map((step) => step.trim()).filter(Boolean);
+  const isPublic = input.isPublic ?? false;
 
   if (!trimmedName) {
     throw new Error("Recipe name is required.");
@@ -484,6 +489,7 @@ export const createUserRecipe = async (
     buildMethod,
     createdByUserExternalId: input.createdByUserExternalId,
     ingredientCount: input.ingredients.length,
+    isPublic,
     servings,
     ingredientTotalWeightG: weightMetrics.ingredientTotalWeightG,
     preparedFoodWeightG: weightMetrics.preparedFoodWeightG,
@@ -513,6 +519,7 @@ export const createUserRecipe = async (
     rawPayload: JSON.stringify(baseRawPayload),
     verified: false,
     isComplete: true,
+    isPublic,
   });
 
   let recipeId: number | null = null;
@@ -525,6 +532,7 @@ export const createUserRecipe = async (
           user_external_id,
           created_by_user_external_id,
           linked_food_id,
+          is_public,
           build_method,
           name,
           description,
@@ -536,11 +544,12 @@ export const createUserRecipe = async (
           created_at,
           updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         input.userExternalId,
         input.createdByUserExternalId,
         linkedFoodId,
+        isPublic ? 1 : 0,
         buildMethod,
         trimmedName,
         normalizeOptionalText(input.description),
@@ -627,6 +636,7 @@ export const updateUserRecipe = async (
   const trimmedName = input.name.trim();
   const servings = roundTo(input.servings, 2);
   const steps = (input.steps ?? []).map((step) => step.trim()).filter(Boolean);
+  const isPublic = input.isPublic ?? existingRecipe.isPublic;
 
   if (!trimmedName) {
     throw new Error("Recipe name is required.");
@@ -656,6 +666,7 @@ export const updateUserRecipe = async (
     ...input,
     name: trimmedName,
     servings,
+    isPublic,
     createdByUserExternalId:
       existingRecipe.createdByUserExternalId || input.createdByUserExternalId,
   };
@@ -670,6 +681,7 @@ export const updateUserRecipe = async (
       SET
         user_external_id = ?,
         linked_food_id = ?,
+        is_public = ?,
         build_method = ?,
         name = ?,
         description = ?,
@@ -683,6 +695,7 @@ export const updateUserRecipe = async (
       `,
       normalizedInput.userExternalId,
       existingRecipe.linkedFoodId,
+      normalizedInput.isPublic ? 1 : 0,
       buildMethod,
       trimmedName,
       normalizeOptionalText(normalizedInput.description),

@@ -1,48 +1,42 @@
 import {
-  addWeightLog,
   clearAllWeightData,
   clearWeightGoal,
-  getRecentWeightLogs,
   getWeightGoal,
   listWeightEntries,
   saveWeightEntry,
   saveWeightGoal,
   softDeleteWeightEntry,
-} from "./weightRepository";
-import { getFirstUser, getUserByExternalId, upsertUser } from "./userRepository";
-import { getUserSettings, saveUserSettings } from "./userSettingsRepository";
+  getFirstUser,
+  getUserByExternalId,
+  getUserSettings,
+  saveUserSettings,
+  upsertUser,
+} from "./supabaseUserStore";
 import {
   addFoodItem,
+  addQuickAddFoodLog,
+  addUserFoodLog,
+  copyFoodLogsFromDate,
+  createUserRecipe,
   deleteFoodItem,
+  deleteUserRecipe,
+  deleteUserFoodLog,
   getFavoriteFoodIds,
   getFavoriteFoodItems,
   getFoodItemByBarcode,
   getFoodItemById,
   getRecentFoodItems,
+  getUserFoodLogEntriesByDate,
+  getUserFoodLogEntryById,
+  getUserRecipeDetailsById,
   listFoodItems,
   saveFoodItem,
   searchFoodItems,
   setFoodItemFavorite,
-} from "./foodRepository";
-import {
-  createUserRecipe,
-  deleteUserRecipe,
-  getUserRecipeDetailsById,
-  updateUserRecipe,
-} from "./recipeRepository";
-import {
-  addCustomMeal,
-  addQuickAddFoodLog,
-  addUserFoodLog,
-  copyFoodLogsFromDate,
-  deleteCustomMeal,
-  deleteUserFoodLog,
-  getCustomMeals,
-  getUserFoodLogEntriesByDate,
-  getUserFoodLogEntryById,
   updateQuickAddFoodLog,
   updateUserFoodLog,
-} from "./foodLogRepository";
+  updateUserRecipe,
+} from "./supabaseFoodStore";
 
 export const DB = {
   addUser: upsertUser,
@@ -50,8 +44,6 @@ export const DB = {
   getUserByExternalId,
   getUserSettings,
   saveUserSettings,
-  addWeightLog,
-  getRecentWeightLogs,
   listWeightEntries,
   saveWeightEntry,
   softDeleteWeightEntry,
@@ -82,7 +74,4 @@ export const DB = {
   getUserFoodLogEntryById,
   getUserFoodLogEntriesByDate,
   copyFoodLogsFromDate,
-  getCustomMeals,
-  addCustomMeal,
-  deleteCustomMeal,
 };

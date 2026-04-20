@@ -232,7 +232,6 @@ class OpenFoodsAPI {
       waterG: this.readNutrient(nutriments, suffix, "g", "water"),
       alcoholG: this.readNutrient(nutriments, suffix, "g", "alcohol"),
       saltG: this.readNutrient(nutriments, suffix, "g", "salt"),
-      saturatedFatG: fatSaturatedG,
       fatSaturatedG,
       fatMonounsaturatedG: this.readNutrient(
         nutriments,

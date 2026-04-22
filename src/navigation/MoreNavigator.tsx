@@ -4,6 +4,7 @@ import FoodLibraryScreen from "../screens/Food/FoodLibraryScreen";
 import MoreScreen from "../screens/User_Settings/MoreScreen";
 import AdjustGoalSettingsScreen from "../screens/User_Settings/ActivityLevelSettingsScreen";
 import CalorieAllowanceSettingsScreen from "../screens/User_Settings/CalorieAllowanceSettingsScreen";
+import AdaptiveCaloriesSettingsScreen from "../screens/User_Settings/AdaptiveCaloriesSettingsScreen";
 import CalorieScheduleScreen from "../screens/User_Settings/CalorieScheduleScreen";
 import DiaryHoursDebugScreen from "../screens/User_Settings/DiaryHoursDebugScreen";
 import TrainingTypesSettingsScreen from "../screens/User_Settings/TrainingTypesSettingsScreen";
@@ -16,6 +17,7 @@ export type MoreParamList = {
   SettingsScreen: undefined;
   DiaryHoursDebugScreen: undefined;
   CalorieAllowanceSettingsScreen: undefined;
+  AdaptiveCaloriesSettingsScreen: undefined;
   AdjustGoalSettingsScreen: undefined;
   TrainingTypesSettingsScreen: undefined;
   ProteinFocusSettingsScreen: undefined;
@@ -40,6 +42,10 @@ const MoreNavigator = () => {
       <Stack.Screen
         name="CalorieAllowanceSettingsScreen"
         component={CalorieAllowanceSettingsScreen}
+      />
+      <Stack.Screen
+        name="AdaptiveCaloriesSettingsScreen"
+        component={AdaptiveCaloriesSettingsScreen}
       />
       <Stack.Screen
         name="AdjustGoalSettingsScreen"

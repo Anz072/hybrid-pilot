@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   emptyState: {
-    borderRadius: 14,
+    borderRadius: 8,
     backgroundColor: appColors.white,
     borderWidth: 1,
     borderColor: appColors.foodTimelineBorder,
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
   entryTime: {
     color: appColors.black65,
     fontSize: 10,
-    borderRadius: 6,
+    borderRadius: 8,
     paddingHorizontal: 3,
     paddingVertical: 2,
     backgroundColor: appColors.raw_hex_6e52ea1f,

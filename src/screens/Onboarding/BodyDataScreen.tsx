@@ -320,14 +320,14 @@ const styles = StyleSheet.create({
   },
   formCard: {
     backgroundColor: appColors.surfaceCanvasAlt,
-    borderRadius: 6,
+    borderRadius: 8,
     padding: 14,
     gap: 16,
   },
   input: {
     borderWidth: 1,
     borderColor: appColors.lavenderBorder,
-    borderRadius: 6,
+    borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 14,
     backgroundColor: appColors.surfaceCanvasAlt,
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     borderWidth: 1,
     borderColor: appColors.lavenderBorder,
-    borderRadius: 12,
+    borderRadius: 8,
     paddingVertical: 8,
   },
   pickerDoneButton: {

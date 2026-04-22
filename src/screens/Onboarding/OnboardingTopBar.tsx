@@ -46,9 +46,8 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRadius: 999,
+    borderRadius: 8,
     backgroundColor: appColors.white,
-    borderWidth: 1,
     borderColor: appColors.slate300,
   },
   backButtonPressed: {

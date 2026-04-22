@@ -7,6 +7,7 @@ import {
   ClockIcon,
   DatabaseIcon,
   ForkKnifeIcon,
+  LightningIcon,
   TargetIcon,
 } from "phosphor-react-native";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -86,19 +87,27 @@ const MoreScreen = () => {
   const [settings, setSettings] = React.useState<Awaited<
     ReturnType<typeof DB.getUserSettings>
   > | null>(null);
+  const [adaptiveRecommendationReady, setAdaptiveRecommendationReady] =
+    React.useState(false);
   const weekDates = React.useMemo(() => buildCurrentWeekDates(new Date()), []);
 
   const loadSettings = React.useCallback(async () => {
     if (!user) {
       setSettings(null);
+      setAdaptiveRecommendationReady(false);
       return;
     }
 
     try {
-      const nextSettings = await DB.getUserSettings(user.externalId);
+      const [nextSettings, nextRecommendation] = await Promise.all([
+        DB.getUserSettings(user.externalId),
+        DB.getLatestAdaptiveCalorieRecommendation(user.externalId, "proposed"),
+      ]);
       setSettings(nextSettings);
+      setAdaptiveRecommendationReady(nextRecommendation != null);
     } catch {
       setSettings(null);
+      setAdaptiveRecommendationReady(false);
     }
   }, [user]);
 
@@ -245,6 +254,25 @@ const MoreScreen = () => {
             value={formatTrainingSummary(user?.trainingTypes)}
           />
           <MoreActionRow
+            description="Let completed diary days and your recent weight trend generate quiet calorie-target recommendations that you can review manually."
+            icon={
+              <LightningIcon
+                size={18}
+                color={appColors.foodPrimaryDark}
+                weight="fill"
+              />
+            }
+            onPress={() => navigation.navigate("AdaptiveCaloriesSettingsScreen")}
+            title="Adaptive calories"
+            value={
+              settings?.adaptiveCaloriesEnabled
+                ? adaptiveRecommendationReady
+                  ? "On / Review ready"
+                  : "On"
+                : "Off"
+            }
+          />
+          <MoreActionRow
             description="Set different calorie targets for different weekdays while keeping the weekly budget visible."
             icon={
               <ForkKnifeIcon
@@ -338,7 +366,7 @@ const styles = StyleSheet.create({
   },
   heroCard: {
     backgroundColor: appColors.surfaceCard,
-    borderRadius: 28,
+    borderRadius: 8,
     padding: 20,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
@@ -395,7 +423,7 @@ const styles = StyleSheet.create({
   },
   sectionCard: {
     backgroundColor: appColors.surfaceCard,
-    borderRadius: 24,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
     overflow: "hidden",

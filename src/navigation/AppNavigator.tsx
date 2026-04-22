@@ -17,9 +17,15 @@ import CreateRecipeScreen from "../screens/Food/CreateRecipeScreen";
 import QuickAddFoodScreen from "../screens/Food/QuickAddFoodScreen";
 import ScannedFoodLogScreen from "../screens/Food/ScannedFoodLogScreen";
 import FoodReadOnlyScreen from "../screens/Food/FoodReadOnlyScreen";
+import MicrosOverviewScreen from "../screens/Home/MicrosOverviewScreen";
+import {
+  getSupabaseClient,
+  getValidatedSupabaseSessionUser,
+  isSupabaseConfigured,
+} from "../API/supabase/client";
 import { getOnboardingComplete } from "../storage/localStore";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
-import { hydrateUserFromDb } from "../store/userSlice";
+import { clearCurrentUser, hydrateUserFromDb } from "../store/userSlice";
 import type { FoodStackParamList } from "./foodTypes";
 import { appColors } from "../theme/colors";
 import { appNavigationTheme } from "../theme/navigationTheme";
@@ -29,6 +35,7 @@ export type RootStackParamList = {
   Onboarding: undefined;
   Main: undefined;
   Login: undefined;
+  MicrosOverview: undefined;
   AddFood: FoodStackParamList["AddFood"];
   ScannedFood: FoodStackParamList["ScannedFood"];
   FoodReadOnly: FoodStackParamList["FoodReadOnly"];
@@ -47,18 +54,24 @@ const AppNavigator = () => {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const [bootstrapError, setBootstrapError] = useState<string | null>(null);
 
-  const hydrateLocalSession = useCallback(async () => {
+  const hydrateAuthenticatedSession = useCallback(async () => {
     setBootstrapError(null);
 
     try {
       const onboardingDone = await getOnboardingComplete();
       setHasCompletedOnboarding(onboardingDone);
 
+      const sessionUser = await getValidatedSupabaseSessionUser();
+      if (!sessionUser) {
+        dispatch(clearCurrentUser());
+        return;
+      }
+
       const result = await dispatch(hydrateUserFromDb());
 
       if (hydrateUserFromDb.rejected.match(result)) {
         setBootstrapError(
-          result.error.message ?? "Could not load your local profile.",
+          result.error.message ?? "Could not load your profile.",
         );
       }
     } catch (error) {
@@ -74,8 +87,28 @@ const AppNavigator = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    void hydrateLocalSession();
-  }, [hydrateLocalSession]);
+    void hydrateAuthenticatedSession();
+  }, [hydrateAuthenticatedSession]);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured()) {
+      return undefined;
+    }
+
+    const supabase = getSupabaseClient();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        void dispatch(hydrateUserFromDb());
+        return;
+      }
+
+      dispatch(clearCurrentUser());
+    });
+
+    return () => subscription.unsubscribe();
+  }, [dispatch]);
 
   const isHydrating = isBootstrapping || (!userHydrated && !bootstrapError);
   const isLoggedIn = Boolean(user);
@@ -99,7 +132,7 @@ const AppNavigator = () => {
         <Pressable
           onPress={() => {
             setIsBootstrapping(true);
-            void hydrateLocalSession();
+            void hydrateAuthenticatedSession();
           }}
           style={({ pressed }) => [
             styles.retryButton,
@@ -118,6 +151,14 @@ const AppNavigator = () => {
         {isLoggedIn ? (
           <>
             <Stack.Screen name="Main" component={MainTabNavigator} />
+            <Stack.Screen
+              name="MicrosOverview"
+              component={MicrosOverviewScreen}
+              options={{
+                animation: "slide_from_right",
+                presentation: "fullScreenModal",
+              }}
+            />
             <Stack.Screen
               name="AddFood"
               component={AddFoodScreen}
@@ -171,7 +212,7 @@ const AppNavigator = () => {
           <Stack.Screen name="Onboarding">
             {() => (
               <OnboardingNavigator
-                onFinish={() => void hydrateLocalSession()}
+                onFinish={() => void hydrateAuthenticatedSession()}
               />
             )}
           </Stack.Screen>

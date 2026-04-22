@@ -23,6 +23,7 @@ import { useAppSelector } from "../../store/hooks";
 import { appColors } from "../../theme/colors";
 import CalorieBudgetChart from "./CalorieBudgetChart";
 import SettingsStackHeader from "./SettingsStackHeader";
+import { supersedeOpenAdaptiveRecommendationForUser } from "./adaptiveCaloriesActions";
 
 type Props = NativeStackScreenProps<MoreParamList, "CalorieScheduleScreen">;
 
@@ -119,7 +120,9 @@ const CalorieScheduleScreen = ({ navigation }: Props) => {
       await DB.saveUserSettings({
         userExternalId: user.externalId,
         dailyCalorieOverrides: overrides,
+        adaptiveLastCalculatedAt: new Date().toISOString(),
       });
+      await supersedeOpenAdaptiveRecommendationForUser(user.externalId);
     } catch {
       Alert.alert("Could not save schedule", "Please try again.");
     } finally {

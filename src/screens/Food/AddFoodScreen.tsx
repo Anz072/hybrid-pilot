@@ -793,11 +793,6 @@ const AddFoodScreen = () => {
                   {formatFoodSourceLabel(food.source)}
                 </Text>
               </View>
-              {food.verified ? (
-                <View style={styles.foodBadge}>
-                  <Text style={styles.foodBadgeText}>Verified</Text>
-                </View>
-              ) : null}
             </View>
             <Text style={styles.foodCalories}>
               {formatFoodNumber(food.calories, " kcal")}
@@ -1173,7 +1168,7 @@ const styles = StyleSheet.create({
   },
   heroCard: {
     backgroundColor: appColors.surfaceCard,
-    borderRadius: 24,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
     padding: 16,
@@ -1341,7 +1336,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    borderRadius: 20,
+    borderRadius: 8,
     backgroundColor: appColors.surfaceCardAlt,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
@@ -1380,7 +1375,7 @@ const styles = StyleSheet.create({
   },
   sectionCard: {
     backgroundColor: appColors.surfaceCard,
-    borderRadius: 24,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
     padding: 16,
@@ -1463,7 +1458,7 @@ const styles = StyleSheet.create({
   foodCard: {
     flexDirection: "row",
     gap: 10,
-    borderRadius: 20,
+    borderRadius: 8,
     backgroundColor: appColors.foodSurfaceAlt,
     borderWidth: 1,
     borderColor: appColors.foodSoftBorder,

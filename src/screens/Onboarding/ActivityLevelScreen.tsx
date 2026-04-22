@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: appColors.white,
     borderColor: appColors.slate200,
-    borderRadius: 6,
+    borderRadius: 8,
     borderWidth: 1,
     paddingVertical: 18,
     paddingHorizontal: 24,

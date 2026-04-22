@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: appColors.surfaceCanvasAlt,
-    borderRadius: 6,
+    borderRadius: 8,
     padding: 14,
     marginBottom: 14,
     gap: 8,
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
   },
   chartCard: {
     backgroundColor: appColors.surfaceCanvasAlt,
-    borderRadius: 6,
+    borderRadius: 8,
     padding: 14,
     marginBottom: 18,
   },

@@ -1,10 +1,19 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { formatFoodHourLabel } from "./foodUtils";
 import { appColors } from "../../theme/colors";
 
 type FoodDiaryMoreSectionProps = {
+  isDayComplete: boolean;
+  isDayCompleteLoading: boolean;
   selectedHour: number;
+  onToggleDayComplete: () => void;
   onCopyYesterday: () => void;
   onQuickAddFood: () => void;
   onCreateRecipe: () => void;
@@ -12,7 +21,10 @@ type FoodDiaryMoreSectionProps = {
 };
 
 const FoodDiaryMoreSection = ({
+  isDayComplete,
+  isDayCompleteLoading,
   selectedHour,
+  onToggleDayComplete,
   onCopyYesterday,
   onQuickAddFood,
   onCreateRecipe,
@@ -22,6 +34,53 @@ const FoodDiaryMoreSection = ({
     <View style={styles.card}>
       <Text style={styles.sectionTitle}>More Actions</Text>
       <View style={styles.stack}>
+        <Pressable
+          disabled={isDayCompleteLoading}
+          onPress={onToggleDayComplete}
+          style={({ pressed }) => [
+            styles.moreRow,
+            isDayComplete && styles.moreRowAccent,
+            isDayCompleteLoading && styles.moreRowDisabled,
+            pressed && styles.cardPressed,
+          ]}
+        >
+          <View style={styles.moreCopy}>
+            <Text style={styles.moreTitle}>
+              {isDayCompleteLoading
+                ? isDayComplete
+                  ? "Updating completion"
+                  : "Marking day complete"
+                : isDayComplete
+                  ? "Day complete"
+                  : "Mark day complete"}
+            </Text>
+            <Text style={styles.moreText}>
+              {isDayCompleteLoading
+                ? "Please wait while the diary day status is being saved."
+                : isDayComplete
+                ? "This day is counted toward adaptive calorie analysis until the diary changes again."
+                : "Confirm this day is fully logged so adaptive calories can use it."}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.morePill,
+              isDayComplete && styles.morePillAccent,
+              isDayCompleteLoading && styles.morePillLoading,
+            ]}
+          >
+            {isDayCompleteLoading ? (
+              <ActivityIndicator
+                color={isDayComplete ? appColors.white : appColors.revolutDark}
+                size="small"
+              />
+            ) : (
+              <Text style={styles.morePillText}>
+                {isDayComplete ? "Done" : "Mark"}
+              </Text>
+            )}
+          </View>
+        </Pressable>
         <Pressable
           onPress={onCreateRecipe}
           style={({ pressed }) => [
@@ -81,7 +140,7 @@ const FoodDiaryMoreSection = ({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: appColors.surfaceCard,
-    borderRadius: 24,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
     padding: 16,
@@ -103,7 +162,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   infoCard: {
-    borderRadius: 18,
+    borderRadius: 8,
     backgroundColor: appColors.foodFieldBg,
     padding: 14,
   },
@@ -144,7 +203,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    borderRadius: 20,
+    borderRadius: 8,
     backgroundColor: appColors.surfaceCardAlt,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
@@ -154,6 +213,9 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.foodPillBg,
     borderWidth: 1,
     borderColor: appColors.foodBorder,
+  },
+  moreRowDisabled: {
+    opacity: 0.75,
   },
   selectedSlotRow: {
     backgroundColor: appColors.raw_hex_F4F0FF,
@@ -181,6 +243,11 @@ const styles = StyleSheet.create({
   },
   morePillAccent: {
     backgroundColor: appColors.foodPrimary,
+  },
+  morePillLoading: {
+    minWidth: 48,
+    alignItems: "center",
+    justifyContent: "center",
   },
   morePillText: {
     color: appColors.revolutDark,

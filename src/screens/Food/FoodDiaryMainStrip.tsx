@@ -534,7 +534,7 @@ const FoodDiaryMainStrip = ({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: appColors.surfaceCard,
-    borderRadius: 24,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
     padding: 16,
@@ -577,7 +577,7 @@ const styles = StyleSheet.create({
   weekBudgetCard: {
     marginTop: 16,
     marginBottom: 8,
-    borderRadius: 20,
+    borderRadius: 8,
     backgroundColor: appColors.foodFieldBg,
     paddingHorizontal: 14,
     paddingVertical: 13,
@@ -724,7 +724,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   hourCard: {
-    borderRadius: 20,
+    borderRadius: 8,
     backgroundColor: appColors.foodSurfaceAlt,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
@@ -771,7 +771,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   emptyState: {
-    borderRadius: 18,
+    borderRadius: 8,
     backgroundColor: appColors.surfaceCardAlt,
     borderWidth: 1,
     borderColor: appColors.borderSoft,

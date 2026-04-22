@@ -22,6 +22,7 @@ import MoreNavigator, { type MoreParamList } from "./MoreNavigator";
 import type { RootStackParamList } from "./AppNavigator";
 import {
   BarcodeIcon,
+  BowlFoodIcon,
   CookingPotIcon,
   DotsThreeCircleIcon,
   FireIcon,
@@ -45,6 +46,7 @@ import {
   formatFoodDateKey,
   formatFoodLoggedTime,
 } from "../screens/Food/foodUtils";
+import { refreshAdaptiveRecommendationForUser } from "../screens/User_Settings/adaptiveCaloriesActions";
 import { appColors } from "../theme/colors";
 import { appTypography } from "../theme/typography";
 
@@ -115,13 +117,18 @@ const MainTabNavigator = () => {
     closeShortcuts();
   }, [closeShortcuts]);
 
+  type Shortcut =
+    | "search"
+    | "barcode"
+    | "weight"
+    | "quick_add"
+    | "recipe"
+    | "custom_meal";
+
   const handleShortcutPress = React.useCallback(
-    (shortcut: "search" | "barcode" | "weight" | "quick_add" | "recipe") => {
-      if (shortcut === "weight") {
-        closeShortcuts(() => setWeightModalVisible(true));
-      } else if (shortcut === "barcode") {
-        closeShortcuts(() => setBarcodeModalScannerVisible(true));
-      } else if (shortcut === "quick_add") {
+    (shortcut: Shortcut) => {
+      
+      const openFoodScreen = (screen: any) => {
         const now = new Date();
         const date = formatFoodDateKey(now);
         const loggedAt = buildFoodLoggedAt(
@@ -131,47 +138,39 @@ const MainTabNavigator = () => {
         );
 
         closeShortcuts(() =>
-          rootNavigation.navigate("QuickAddFood", {
+          rootNavigation.navigate(screen, {
             contextLabel: formatFoodLoggedTime(loggedAt),
             date,
             loggedAt,
             mealType: null,
           }),
         );
-      } else if (shortcut === "recipe") {
-        const now = new Date();
-        const date = formatFoodDateKey(now);
-        const loggedAt = buildFoodLoggedAt(
-          date,
-          now.getHours(),
-          now.getMinutes(),
-        );
+      };
 
-        closeShortcuts(() =>
-          rootNavigation.navigate("CreateRecipe", {
-            contextLabel: formatFoodLoggedTime(loggedAt),
-            date,
-            loggedAt,
-            mealType: null,
-          }),
-        );
-      } else if (shortcut === "search") {
-        const now = new Date();
-        const date = formatFoodDateKey(now);
-        const loggedAt = buildFoodLoggedAt(
-          date,
-          now.getHours(),
-          now.getMinutes(),
-        );
+      switch (shortcut) {
+        case "weight":
+          closeShortcuts(() => setWeightModalVisible(true));
+          return;
 
-        closeShortcuts(() =>
-          rootNavigation.navigate("AddFood", {
-            contextLabel: formatFoodLoggedTime(loggedAt),
-            date,
-            loggedAt,
-            mealType: null,
-          }),
-        );
+        case "barcode":
+          closeShortcuts(() => setBarcodeModalScannerVisible(true));
+          return;
+
+        case "quick_add":
+          openFoodScreen("QuickAddFood");
+          return;
+
+        case "recipe":
+          openFoodScreen("CreateRecipe");
+          return;
+
+        case "search":
+          openFoodScreen("AddFood");
+          return;
+
+        case "custom_meal":
+          openFoodScreen("CreateCustomFood");
+          return;
       }
     },
     [closeShortcuts, rootNavigation],
@@ -181,7 +180,14 @@ const MainTabNavigator = () => {
     async (draft: WeightEntryDraft) => {
       try {
         const currentUser = await DB.getUser();
-        const resolvedUserId = currentUser?.externalId ?? "guest-local";
+        const resolvedUserId = currentUser?.externalId;
+
+        if (!resolvedUserId) {
+          setWeightModalVisible(false);
+          Alert.alert("Session expired", "Please sign in with Google again.");
+          return;
+        }
+
         const entryId = generateUuid();
 
         await DB.saveWeightEntry({
@@ -197,6 +203,14 @@ const MainTabNavigator = () => {
           notes: draft.notes ?? null,
           clientGeneratedId: entryId,
         });
+        try {
+          await refreshAdaptiveRecommendationForUser({
+            userExternalId: resolvedUserId,
+            force: true,
+          });
+        } catch {
+          // Saving the weight entry should not fail because adaptive refresh did.
+        }
 
         setWeightRefreshToken((current) => current + 1);
         setWeightModalVisible(false);
@@ -248,6 +262,7 @@ const MainTabNavigator = () => {
   return (
     <View style={styles.container}>
       <Tab.Navigator
+        initialRouteName="Food"
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: FOCUSED_COLOR,
@@ -362,7 +377,12 @@ const MainTabNavigator = () => {
         animationType="none"
         onRequestClose={handleCloseShortcuts}
       >
-        <View style={styles.modalRoot}>
+        <View
+          style={[
+            styles.modalRoot,
+            { paddingBottom: Math.max(insets.bottom, 24) },
+          ]}
+        >
           <Animated.View
             style={[styles.backdrop, { opacity: backdropOpacity }]}
           >
@@ -377,7 +397,7 @@ const MainTabNavigator = () => {
               styles.sheet,
               {
                 height: SHEET_HEIGHT,
-                paddingBottom: Math.max(insets.bottom + 8, 24),
+
                 transform: [{ translateY: sheetTranslateY }],
               },
             ]}
@@ -473,7 +493,18 @@ const MainTabNavigator = () => {
                 <Text style={styles.shortcutLabel}>Recipe</Text>
               </Pressable>
 
-              <View style={styles.shortcutCard}></View>
+              <Pressable
+                onPress={() => handleShortcutPress("custom_meal")}
+                style={({ pressed }) => [
+                  styles.shortcutCard,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <View style={styles.shortcutIconWrap}>
+                  <BowlFoodIcon size={26} color={appColors.textPrimary} />
+                </View>
+                <Text style={styles.shortcutLabel}>Custom Meal</Text>
+              </Pressable>
             </View>
           </Animated.View>
         </View>

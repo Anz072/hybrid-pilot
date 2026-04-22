@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DB } from "../../store/DB";
 import type {
   DBFoodItem,
+  DBAdaptiveCalorieRecommendation,
   DBUser,
   DBUserSettings,
   DBUserFoodLogEntry,
@@ -20,6 +21,7 @@ import FoodDiaryMainStrip, {
   buildFoodDiaryWeekDays,
   type FoodDiaryMainStripDay,
 } from "./FoodDiaryMainStrip";
+import AdaptiveCaloriesBanner from "./AdaptiveCaloriesBanner";
 import FoodDiaryMoreSection from "./FoodDiaryMoreSection";
 // import FoodDiaryQuickAdds from "./FoodDiaryQuickAdds";
 import type {
@@ -33,10 +35,15 @@ import {
   formatFoodLoggedTime,
   getFoodLoggedHour,
   getFoodResolvedServing,
+  parseFoodDateKey,
   shiftFoodDate,
   sumLoggedNutrition,
 } from "./foodUtils";
 import { appColors } from "../../theme/colors";
+import {
+  refreshAdaptiveRecommendationForUser,
+  setDiaryDayCompletionAndRefresh,
+} from "../User_Settings/adaptiveCaloriesActions";
 
 type FoodDiaryNav = NativeStackNavigationProp<FoodStackParamList, "Diary">;
 
@@ -62,7 +69,7 @@ const FoodDiaryScreen = () => {
 
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [user, setUser] = useState<DBUser | null>(null);
-  const [entries, setEntries] = useState<DBUserFoodLogEntry[]>([]);
+  const [weekEntries, setWeekEntries] = useState<DBUserFoodLogEntry[]>([]);
   const [mainStripDays, setMainStripDays] = useState<FoodDiaryMainStripDay[]>(
     () =>
       buildFoodDiaryWeekDays(new Date()).map((date) => ({
@@ -75,6 +82,12 @@ const FoodDiaryScreen = () => {
     [],
   );
   const [settings, setSettings] = useState<DBUserSettings | null>(null);
+  const [dayCompletionByDate, setDayCompletionByDate] = useState<
+    Record<string, boolean>
+  >({});
+  const [isDayCompleteLoading, setIsDayCompleteLoading] = useState(false);
+  const [adaptiveRecommendation, setAdaptiveRecommendation] =
+    useState<DBAdaptiveCalorieRecommendation | null>(null);
   const [visibleStartHour, setVisibleStartHour] = useState(INITIAL_START);
   const [visibleEndHour, setVisibleEndHour] = useState(INITIAL_END);
   const [selectedHour, setSelectedHour] = useState(() =>
@@ -85,42 +98,58 @@ const FoodDiaryScreen = () => {
     () => formatFoodDateKey(selectedDate),
     [selectedDate],
   );
+  const selectedWeekStart = useMemo(
+    () => buildFoodDiaryWeekDays(selectedDate)[0] ?? selectedDate,
+    [selectedDate],
+  );
+  const weekStart = useMemo(
+    () => formatFoodDateKey(selectedWeekStart),
+    [selectedWeekStart],
+  );
+  const weekDays = useMemo(
+    () => buildFoodDiaryWeekDays(parseFoodDateKey(weekStart)),
+    [weekStart],
+  );
+  const weekDateKeys = useMemo(
+    () => weekDays.map(formatFoodDateKey),
+    [weekDays],
+  );
+  const weekEnd = weekDateKeys[weekDateKeys.length - 1] ?? dateKey;
 
   const loadData = useCallback(async () => {
     const currentUser = await DB.getUser();
     setUser(currentUser);
 
     if (!currentUser) {
-      setEntries([]);
+      setWeekEntries([]);
       setSettings(null);
-      setMainStripDays(
-        buildFoodDiaryWeekDays(selectedDate).map((date) => ({
-          date,
-          dateKey: formatFoodDateKey(date),
-          calories: 0,
-        })),
-      );
+      setDayCompletionByDate({});
+      setAdaptiveRecommendation(null);
+      setMainStripDays(weekDays.map((date, index) => ({
+        date,
+        dateKey: weekDateKeys[index],
+        calories: 0,
+      })));
       setFavoriteFoods([]);
       setVisibleStartHour(INITIAL_START);
       setVisibleEndHour(INITIAL_END);
       return;
     }
 
-    const weekDays = buildFoodDiaryWeekDays(selectedDate);
-    const weekDateKeys = weekDays.map(formatFoodDateKey);
-    const [favorites, settings, weekEntriesByDate] = await Promise.all([
-      DB.getFavoriteFoodItems(currentUser.externalId, 10),
-      DB.getUserSettings(currentUser.externalId),
-      Promise.all(
-        weekDateKeys.map((weekDateKey) =>
-          DB.getUserFoodLogEntriesByDate(currentUser.externalId, weekDateKey),
-        ),
-      ),
-    ]);
+    const [favorites, nextSettings, weekEntries, weekDayStatuses] =
+      await Promise.all([
+        DB.getFavoriteFoodItems(currentUser.externalId, 10),
+        DB.getUserSettings(currentUser.externalId),
+        DB.getUserFoodLogEntriesBetween(currentUser.externalId, weekStart, weekEnd),
+        DB.listDiaryDayStatusesBetween(currentUser.externalId, weekStart, weekEnd),
+      ]);
 
-    const selectedDateIndex = weekDateKeys.indexOf(dateKey);
-    setEntries(weekEntriesByDate[selectedDateIndex] ?? []);
-    setSettings(settings);
+    const weekEntriesByDate = weekDateKeys.map((weekDateKey) =>
+      weekEntries.filter((entry) => entry.date === weekDateKey),
+    );
+
+    setWeekEntries(weekEntries);
+    setSettings(nextSettings);
     setMainStripDays(
       weekDays.map((date, index) => ({
         date,
@@ -128,11 +157,16 @@ const FoodDiaryScreen = () => {
         calories: sumLoggedNutrition(weekEntriesByDate[index] ?? []).calories,
       })),
     );
+    setDayCompletionByDate(
+      Object.fromEntries(
+        weekDayStatuses.map((status) => [status.date, status.isComplete]),
+      ) as Record<string, boolean>,
+    );
 
-    if (settings) {
+    if (nextSettings) {
       const normalized = normalizeVisibleHours(
-        settings.foodDiaryStartHour,
-        settings.foodDiaryEndHour,
+        nextSettings.foodDiaryStartHour,
+        nextSettings.foodDiaryEndHour,
       );
 
       setVisibleStartHour(normalized.startHour);
@@ -156,7 +190,28 @@ const FoodDiaryScreen = () => {
         };
       }),
     );
-  }, [dateKey, selectedDate]);
+
+    if (nextSettings?.adaptiveCaloriesEnabled) {
+      try {
+        const refreshResult = await refreshAdaptiveRecommendationForUser({
+          userExternalId: currentUser.externalId,
+        });
+        setAdaptiveRecommendation(refreshResult.latestRecommendation);
+        if (refreshResult.settings) {
+          setSettings(refreshResult.settings);
+        }
+      } catch {
+        const latestOpenRecommendation =
+          await DB.getLatestAdaptiveCalorieRecommendation(
+            currentUser.externalId,
+            "proposed",
+          );
+        setAdaptiveRecommendation(latestOpenRecommendation);
+      }
+    } else {
+      setAdaptiveRecommendation(null);
+    }
+  }, [weekDateKeys, weekDays, weekEnd, weekStart]);
 
   useFocusEffect(
     useCallback(() => {
@@ -170,6 +225,10 @@ const FoodDiaryScreen = () => {
     );
   }, [visibleEndHour, visibleStartHour]);
 
+  const entries = useMemo(
+    () => weekEntries.filter((entry) => entry.date === dateKey),
+    [dateKey, weekEntries],
+  );
   const totals = useMemo(() => sumLoggedNutrition(entries), [entries]);
   const weeklyConsumedCalories = useMemo(
     () => mainStripDays.reduce((sum, day) => sum + day.calories, 0),
@@ -210,6 +269,7 @@ const FoodDiaryScreen = () => {
     [mainStripDays, settings, user?.calorieAllowance],
   );
   const isToday = dateKey === formatFoodDateKey(new Date());
+  const isSelectedDayComplete = Boolean(dayCompletionByDate[dateKey]);
 
   const hourBuckets = useMemo(() => {
     const rows: FoodDiaryHourBucket[] = [];
@@ -317,6 +377,43 @@ const FoodDiaryScreen = () => {
     await loadData();
   }, [dateKey, loadData, selectedDate, user]);
 
+  const openAdaptiveSettings = useCallback(() => {
+    const parentNavigation = navigation.getParent();
+    if (!parentNavigation) {
+      return;
+    }
+
+    (parentNavigation as {
+      navigate: (routeName: string, params?: object) => void;
+    }).navigate("More", {
+      screen: "AdaptiveCaloriesSettingsScreen",
+    });
+  }, [navigation]);
+
+  const toggleDayComplete = useCallback(async () => {
+    if (!user || isDayCompleteLoading) {
+      return;
+    }
+
+    setIsDayCompleteLoading(true);
+
+    try {
+      await setDiaryDayCompletionAndRefresh({
+        userExternalId: user.externalId,
+        date: dateKey,
+        isComplete: !isSelectedDayComplete,
+      });
+      await loadData();
+    } catch {
+      Alert.alert(
+        "Could not update completion",
+        "Please try marking the day complete again.",
+      );
+    } finally {
+      setIsDayCompleteLoading(false);
+    }
+  }, [dateKey, isDayCompleteLoading, isSelectedDayComplete, loadData, user]);
+
   return (
     <View style={styles.screen}>
       <View style={styles.orbTop} />
@@ -330,6 +427,13 @@ const FoodDiaryScreen = () => {
         ]}
         keyboardShouldPersistTaps="handled"
       >
+        {adaptiveRecommendation ? (
+          <AdaptiveCaloriesBanner
+            recommendation={adaptiveRecommendation}
+            onReview={openAdaptiveSettings}
+          />
+        ) : null}
+
         <FoodDiaryMainStrip
           days={mainStripDays}
           selectedDate={selectedDate}
@@ -363,7 +467,12 @@ const FoodDiaryScreen = () => {
         /> */}
 
         <FoodDiaryMoreSection
+          isDayComplete={isSelectedDayComplete}
+          isDayCompleteLoading={isDayCompleteLoading}
           selectedHour={selectedHour}
+          onToggleDayComplete={() => {
+            void toggleDayComplete();
+          }}
           onCopyYesterday={() => {
             void copyYesterday();
           }}

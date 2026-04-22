@@ -40,7 +40,7 @@ const OnboardingPrimaryButton = ({
 const styles = StyleSheet.create({
   button: {
     backgroundColor: appColors.foodPrimary,
-    borderRadius: 14,
+    borderRadius: 8,
     paddingVertical: 15,
     alignItems: "center",
   },

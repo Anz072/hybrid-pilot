@@ -84,7 +84,7 @@ const CalorieBudgetChart = ({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: appColors.surfaceCard,
-    borderRadius: 24,
+    borderRadius: 8,
     padding: 18,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
   },
   chartWrap: {
     overflow: "hidden",
-    borderRadius: 18,
+    borderRadius: 8,
     backgroundColor: appColors.foodFieldBg,
     paddingHorizontal: 12,
     paddingVertical: 14,
@@ -132,13 +132,13 @@ const styles = StyleSheet.create({
     width: "100%",
     height: CHART_BAR_MAX_HEIGHT,
     justifyContent: "flex-end",
-    borderRadius: 14,
+    borderRadius: 8,
     backgroundColor: appColors.surfaceGhost,
     padding: 4,
   },
   barFill: {
     width: "100%",
-    borderRadius: 10,
+    borderRadius: 8,
     backgroundColor: appColors.foodPrimaryOverlay,
   },
   barFillHighlighted: {

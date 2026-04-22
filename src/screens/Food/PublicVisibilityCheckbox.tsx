@@ -32,10 +32,6 @@ const PublicVisibilityCheckbox = ({
 
       <View style={styles.copy}>
         <Text style={styles.title}>Make this public</Text>
-        <Text style={styles.description}>
-          Allow this custom food or recipe to be shared with other users across
-          devices when publishing is available.
-        </Text>
       </View>
     </Pressable>
   );
@@ -46,7 +42,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 12,
-    borderRadius: 18,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: appColors.foodSoftBorder,
     backgroundColor: appColors.foodFieldBg,
@@ -62,7 +58,7 @@ const styles = StyleSheet.create({
   checkbox: {
     width: 22,
     height: 22,
-    borderRadius: 7,
+    borderRadius: 8,
     borderWidth: 1.5,
     borderColor: appColors.foodBorder,
     backgroundColor: appColors.surfaceCardAlt,

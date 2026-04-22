@@ -1,5 +1,9 @@
 import { getDb, initDb } from "../storage/sqlite";
-import type { DBUserSettings, SaveUserSettingsInput } from "./DB_TYPES";
+import type {
+  AdaptiveCalorieMode,
+  DBUserSettings,
+  SaveUserSettingsInput,
+} from "./DB_TYPES";
 
 export const DEFAULT_FOOD_DIARY_START_HOUR = 7;
 export const DEFAULT_FOOD_DIARY_END_HOUR = 22;
@@ -58,6 +62,9 @@ const normalizeFoodDiaryHours = (
   };
 };
 
+const parseAdaptiveMode = (value: unknown): AdaptiveCalorieMode =>
+  value === "auto_apply" ? "auto_apply" : "recommend";
+
 const toUserSettings = (
   row: Record<string, unknown>,
 ): DBUserSettings => {
@@ -86,6 +93,13 @@ const toUserSettings = (
     userExternalId: String(row.userExternalId ?? ""),
     ...normalized,
     dailyCalorieOverrides,
+    adaptiveCaloriesEnabled: Boolean(row.adaptiveCaloriesEnabled),
+    adaptiveMode: parseAdaptiveMode(row.adaptiveMode),
+    adaptiveLastCalculatedAt:
+      typeof row.adaptiveLastCalculatedAt === "string" &&
+      row.adaptiveLastCalculatedAt.length > 0
+        ? row.adaptiveLastCalculatedAt
+        : null,
     createdAt: String(row.createdAt ?? ""),
     updatedAt: String(row.updatedAt ?? row.createdAt ?? ""),
   };

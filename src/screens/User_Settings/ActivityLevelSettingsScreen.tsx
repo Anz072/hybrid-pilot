@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: appColors.surfaceCard,
-    borderRadius: 24,
+    borderRadius: 8,
     padding: 18,
     borderWidth: 1,
     borderColor: appColors.slate200,
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
   },
   previewStat: {
     flex: 1,
-    borderRadius: 20,
+    borderRadius: 8,
     backgroundColor: appColors.foodFieldBg,
     padding: 14,
   },
@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   optionCard: {
-    borderRadius: 20,
+    borderRadius: 8,
     backgroundColor: appColors.surfaceRaised,
     padding: 14,
     flexDirection: "row",

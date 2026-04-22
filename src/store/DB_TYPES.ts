@@ -27,11 +27,26 @@ export type DBUser = {
 
 export type UpsertUserInput = DBUser;
 
+export type AdaptiveCalorieMode = "recommend" | "auto_apply";
+export type AdaptiveCalorieRecommendationStatus =
+  | "proposed"
+  | "accepted"
+  | "rejected"
+  | "applied"
+  | "superseded";
+export type AdaptiveCalorieRecommendationConfidence =
+  | "low"
+  | "medium"
+  | "high";
+
 export type DBUserSettings = {
   userExternalId: string;
   foodDiaryStartHour: number;
   foodDiaryEndHour: number;
   dailyCalorieOverrides: Array<number | null> | null;
+  adaptiveCaloriesEnabled: boolean;
+  adaptiveMode: AdaptiveCalorieMode;
+  adaptiveLastCalculatedAt: DBIsoDateString | null;
   createdAt: DBIsoDateString;
   updatedAt: DBIsoDateString;
 };
@@ -41,6 +56,136 @@ export type SaveUserSettingsInput = {
   foodDiaryStartHour?: number;
   foodDiaryEndHour?: number;
   dailyCalorieOverrides?: Array<number | null> | null;
+  adaptiveCaloriesEnabled?: boolean;
+  adaptiveMode?: AdaptiveCalorieMode;
+  adaptiveLastCalculatedAt?: DBIsoDateString | null;
+};
+
+export type DBDiaryDayStatus = {
+  userExternalId: string;
+  date: string;
+  isComplete: boolean;
+  completedAt: DBIsoDateString | null;
+  createdAt: DBIsoDateString;
+  updatedAt: DBIsoDateString;
+};
+
+export type SaveDiaryDayStatusInput = {
+  userExternalId: string;
+  date: string;
+  isComplete: boolean;
+};
+
+export type DBAdaptiveCalorieRecommendation = {
+  id: number;
+  userExternalId: string;
+  status: AdaptiveCalorieRecommendationStatus;
+  algorithmVersion: string;
+  windowStart: string;
+  windowEnd: string;
+  confidence: AdaptiveCalorieRecommendationConfidence;
+  currentBaseCalories: number | null;
+  recommendedBaseCalories: number;
+  estimatedTdee: number;
+  recommendedDelta: number;
+  avgLoggedCalories: number;
+  completeDaysUsed: number;
+  weighInsUsed: number;
+  trendStartKg: number;
+  trendEndKg: number;
+  observedWeeklyChangeKg: number | null;
+  reason: string;
+  inputSummary: Record<string, unknown> | null;
+  respondedAt: DBIsoDateString | null;
+  appliedAt: DBIsoDateString | null;
+  createdAt: DBIsoDateString;
+  updatedAt: DBIsoDateString;
+};
+
+export type CreateAdaptiveCalorieRecommendationInput = {
+  userExternalId: string;
+  status?: AdaptiveCalorieRecommendationStatus;
+  algorithmVersion?: string | null;
+  windowStart: string;
+  windowEnd: string;
+  confidence: AdaptiveCalorieRecommendationConfidence;
+  currentBaseCalories?: number | null;
+  recommendedBaseCalories: number;
+  estimatedTdee: number;
+  recommendedDelta: number;
+  avgLoggedCalories: number;
+  completeDaysUsed: number;
+  weighInsUsed: number;
+  trendStartKg: number;
+  trendEndKg: number;
+  observedWeeklyChangeKg?: number | null;
+  reason: string;
+  inputSummary?: Record<string, unknown> | null;
+  respondedAt?: DBIsoDateString | null;
+  appliedAt?: DBIsoDateString | null;
+};
+
+export type UpdateAdaptiveCalorieRecommendationInput = {
+  id: number;
+  userExternalId: string;
+  status?: AdaptiveCalorieRecommendationStatus;
+  respondedAt?: DBIsoDateString | null;
+  appliedAt?: DBIsoDateString | null;
+};
+
+export type ListAdaptiveCalorieRecommendationsInput = {
+  userExternalId: string;
+  limit?: number;
+  status?: AdaptiveCalorieRecommendationStatus | null;
+};
+
+export type AdaptiveRecommendationInputSummary = {
+  windowDays: number;
+  windowStart: string | null;
+  windowEnd: string | null;
+  latestCompleteDate: string | null;
+  daySpan: number;
+  completeDaysUsed: number;
+  completeDateKeys: string[];
+  totalEntriesUsed: number;
+  weighInsUsed: number;
+  trendStartKg: number | null;
+  trendEndKg: number | null;
+  observedWeeklyChangeKg: number | null;
+  avgLoggedCalories: number | null;
+};
+
+export type AdaptiveRecommendationDraft = Omit<
+  CreateAdaptiveCalorieRecommendationInput,
+  "userExternalId"
+> & {
+  algorithmVersion: string;
+  inputSummary: Record<string, unknown> | null;
+};
+
+export type AdaptiveRecommendationOutcome =
+  | {
+      status: "ready";
+      reason: string;
+      confidence: AdaptiveCalorieRecommendationConfidence;
+      estimatedTdee: number;
+      recommendedBaseCalories: number;
+      summary: AdaptiveRecommendationInputSummary;
+      recommendation: AdaptiveRecommendationDraft;
+    }
+  | {
+      status: "unchanged" | "insufficient" | "disabled";
+      reason: string;
+      confidence: AdaptiveCalorieRecommendationConfidence | null;
+      estimatedTdee: number | null;
+      recommendedBaseCalories: number | null;
+      summary: AdaptiveRecommendationInputSummary | null;
+    };
+
+export type AdaptiveCalorieTargetApplyResult = {
+  calorieAllowance: number;
+  dailyCalorieOverrides: Array<number | null> | null;
+  appliedDelta: number;
 };
 
 export type WeightEntrySource =

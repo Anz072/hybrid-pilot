@@ -1590,7 +1590,7 @@ const styles = StyleSheet.create({
   },
   heroCard: {
     backgroundColor: appColors.surfaceCard,
-    borderRadius: 24,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
     padding: 16,
@@ -1649,7 +1649,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   previewStrip: {
-    borderRadius: 20,
+    borderRadius: 8,
     backgroundColor: appColors.foodPrimaryDark,
     paddingHorizontal: 14,
     paddingVertical: 13,
@@ -1673,7 +1673,7 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: appColors.surfaceCard,
-    borderRadius: 24,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
     padding: 16,
@@ -1697,7 +1697,7 @@ const styles = StyleSheet.create({
   methodCard: {
     flexDirection: "row",
     gap: 12,
-    borderRadius: 20,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: appColors.foodBorder,
     backgroundColor: appColors.foodFieldBg,
@@ -1779,7 +1779,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     borderColor: appColors.foodBorder,
-    borderRadius: 16,
+    borderRadius: 8,
     backgroundColor: appColors.foodFieldBg,
     paddingHorizontal: 14,
     paddingVertical: 13,
@@ -1791,6 +1791,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+    marginBottom: 12
   },
   searchInputWrap: {
     flex: 1,
@@ -1825,7 +1826,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    borderRadius: 18,
+    borderRadius: 8,
     backgroundColor: appColors.foodSurfaceAlt,
     borderWidth: 1,
     borderColor: appColors.foodSoftBorder,
@@ -1871,7 +1872,7 @@ const styles = StyleSheet.create({
   scanButton: {
     width: 44,
     height: 44,
-    borderRadius: 12,
+    borderRadius: 8,
     backgroundColor: appColors.foodPrimaryDark,
     alignItems: "center",
     justifyContent: "center",
@@ -1880,7 +1881,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   ingredientCard: {
-    borderRadius: 20,
+    borderRadius: 8,
     backgroundColor: appColors.surfaceCardAlt,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
@@ -1954,11 +1955,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   unitPill: {
-    borderRadius: 9999,
-    backgroundColor: appColors.foodPillBg,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    paddingHorizontal: 14,
+    paddingRight:8,
+    paddingLeft: 2,
     paddingVertical: 12,
   },
   unitText: {
@@ -1975,7 +1973,7 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     marginTop: 12,
-    borderRadius: 18,
+    borderRadius: 8,
     backgroundColor: appColors.surfaceCardAlt,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
@@ -2028,7 +2026,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   stepCard: {
-    borderRadius: 20,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: appColors.foodBorder,
     backgroundColor: appColors.foodFieldBg,

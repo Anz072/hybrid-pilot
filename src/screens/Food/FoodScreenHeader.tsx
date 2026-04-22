@@ -60,9 +60,8 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 9999,
+    borderRadius: 8,
     backgroundColor: appColors.surfaceGhost,
-    borderWidth: 2,
     borderColor: appColors.whiteOverlay18,
   },
   backButtonPressed: {

@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
   },
   highlightCard: {
     backgroundColor: appColors.surfaceCanvasAlt,
-    borderRadius: 16,
+    borderRadius: 8,
     padding: 16,
     borderWidth: 1,
     marginBottom: 16,
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   metricTile: {
     width: "47%",
     backgroundColor: appColors.slate900,
-    borderRadius: 12,
+    borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 12,
     borderWidth: 1,
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: appColors.slate900,
-    borderRadius: 14,
+    borderRadius: 8,
     padding: 16,
     borderWidth: 1,
     borderColor: appColors.slate200,

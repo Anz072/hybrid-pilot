@@ -514,7 +514,7 @@ export const styles = StyleSheet.create({
   permissionCard: {
     width: "100%",
     maxWidth: 320,
-    borderRadius: 24,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: appColors.raw_rgba167_139_250_0_34,
     backgroundColor: appColors.raw_rgba15_23_42_0_82,
@@ -534,7 +534,7 @@ export const styles = StyleSheet.create({
   permissionButton: {
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 16,
+    borderRadius: 8,
     backgroundColor: appColors.foodPrimary,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -591,7 +591,7 @@ export const styles = StyleSheet.create({
   closeButton: {
     width: 42,
     height: 42,
-    borderRadius: 21,
+    borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: appColors.slateOverlay72,
@@ -627,7 +627,7 @@ export const styles = StyleSheet.create({
     elevation: 4,
   },
   footerCard: {
-    borderRadius: 24,
+    borderRadius: 8,
     backgroundColor: appColors.raw_rgba15_23_42_0_78,
     borderWidth: 1,
     borderColor: appColors.raw_rgba255_255_255_0_12,
@@ -658,7 +658,7 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    borderRadius: 18,
+    borderRadius: 8,
     backgroundColor: appColors.raw_rgba31_24_49_0_92,
     borderWidth: 1,
     borderColor: appColors.raw_rgba255_255_255_0_16,
@@ -689,7 +689,7 @@ export const styles = StyleSheet.create({
   modalContent: {
     width: "100%",
     maxWidth: 320,
-    borderRadius: 18,
+    borderRadius: 8,
     backgroundColor: appColors.white,
     padding: 22,
     alignItems: "center",
@@ -712,7 +712,7 @@ export const styles = StyleSheet.create({
     minWidth: 120,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 14,
+    borderRadius: 8,
     backgroundColor: appColors.gray900,
     paddingHorizontal: 16,
     paddingVertical: 12,

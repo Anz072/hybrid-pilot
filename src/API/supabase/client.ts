@@ -1,8 +1,15 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import {
+  createClient,
+  type Session,
+  type SupabaseClient,
+  type User,
+} from "@supabase/supabase-js";
 import { getDb, initDb } from "../../storage/sqlite";
 
 const SUPABASE_APP_KV_PREFIX = "supabase:";
 const SUPABASE_STORAGE_KEY = "hybridpilot-auth";
+export const SUPABASE_SESSION_REQUIRED_MESSAGE =
+  "Your session is no longer valid. Please sign in with Google again.";
 
 const readConfig = () => ({
   anonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? "",
@@ -10,6 +17,8 @@ const readConfig = () => ({
 });
 
 const buildStorageKey = (key: string) => `${SUPABASE_APP_KV_PREFIX}${key}`;
+const isTransientAuthNetworkError = (message: string) =>
+  /fetch failed|network request failed|network/i.test(message);
 
 const supabaseStorage = {
   getItem: async (key: string) => {
@@ -75,4 +84,73 @@ export const getSupabaseClient = () => {
   }
 
   return cachedClient;
+};
+
+export const getSupabaseSession = async (): Promise<Session | null> => {
+  if (!isSupabaseConfigured()) {
+    return null;
+  }
+
+  try {
+    const supabase = getSupabaseClient();
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
+
+    if (error) {
+      return null;
+    }
+
+    return session ?? null;
+  } catch {
+    return null;
+  }
+};
+
+export const getSupabaseSessionUser = async (): Promise<User | null> => {
+  const session = await getSupabaseSession();
+  return session?.user ?? null;
+};
+
+export const getValidatedSupabaseSessionUser = async (): Promise<User | null> => {
+  if (!isSupabaseConfigured()) {
+    return null;
+  }
+
+  try {
+    const supabase = getSupabaseClient();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+
+    if (error) {
+      if (isTransientAuthNetworkError(error.message)) {
+        return getSupabaseSessionUser();
+      }
+
+      return null;
+    }
+
+    return user ?? null;
+  } catch (error) {
+    if (error instanceof Error && isTransientAuthNetworkError(error.message)) {
+      return getSupabaseSessionUser();
+    }
+
+    return null;
+  }
+};
+
+export const requireSupabaseSessionUser = async (
+  expectedUserId?: string | null,
+): Promise<User> => {
+  const sessionUser = await getSupabaseSessionUser();
+
+  if (!sessionUser || (expectedUserId && sessionUser.id !== expectedUserId)) {
+    throw new Error(SUPABASE_SESSION_REQUIRED_MESSAGE);
+  }
+
+  return sessionUser;
 };

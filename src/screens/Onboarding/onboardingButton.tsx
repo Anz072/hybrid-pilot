@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: appColors.surfaceCanvasAlt,
     borderColor: appColors.slate200,
-    borderRadius: 6,
+    borderRadius: 8,
     paddingVertical: 18,
     paddingHorizontal: 24,
     borderWidth: 1,

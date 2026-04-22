@@ -567,7 +567,7 @@ const styles = StyleSheet.create({
   centerCard: {
     alignItems: "center",
     gap: 10,
-    borderRadius: 24,
+    borderRadius: 8,
     backgroundColor: appColors.surfaceCard,
     borderWidth: 1,
     borderColor: appColors.borderSoft,

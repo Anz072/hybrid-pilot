@@ -1,9 +1,13 @@
-import { getSupabaseClient, isSupabaseConfigured } from "../API/supabase/client";
+import {
+  getSupabaseClient,
+  requireSupabaseSessionUser,
+} from "../API/supabase/client";
 import type {
   AddFoodItemInput,
   AddQuickAddFoodLogInput,
   AddUserFoodLogInput,
   CreateUserRecipeInput,
+  DBDiaryDayStatus,
   DBFoodItem,
   DBFoodNutrientDetails,
   DBQuickAddFoodLog,
@@ -15,6 +19,7 @@ import type {
   FoodSource,
   ListFoodItemsInput,
   NutritionBasis,
+  SaveDiaryDayStatusInput,
   SaveFoodItemInput,
   UpdateQuickAddFoodLogInput,
   UpdateUserFoodLogInput,
@@ -58,6 +63,10 @@ const SUPABASE_RECIPES_TABLE = "custom_recipes";
 const SUPABASE_RECIPE_INGREDIENTS_TABLE = "custom_recipe_ingredients";
 const SUPABASE_FOOD_ENTRIES_TABLE = "user_food_entries";
 const SUPABASE_MEALS_TABLE = "custom_meals";
+const SUPABASE_DIARY_DAYS_TABLE = "user_diary_days";
+const SUPABASE_USER_SETTINGS_TABLE = "user_settings";
+const SUPABASE_ADAPTIVE_RECOMMENDATIONS_TABLE =
+  "adaptive_calorie_recommendations";
 
 const SYNTHETIC_MEAL_FOOD_ID_OFFSET = 1_000_000_000;
 const DEFAULT_LOG_AMOUNT = 1;
@@ -161,6 +170,15 @@ type SupabaseUserFoodEntryRow = {
   is_energy_manually_set: boolean | null;
   metadata: unknown;
   created_at: string | null;
+};
+
+type SupabaseDiaryDayRow = {
+  user_id: string;
+  date: string;
+  is_complete: boolean | null;
+  completed_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
 };
 
 type EntrySnapshotMetadata = {
@@ -294,6 +312,23 @@ const combineDateKeyWithTime = (dateKey: string, timeSource: string) => {
     source.getSeconds(),
     source.getMilliseconds(),
   ).toISOString();
+};
+
+const listDateKeysBetween = (startDate: string, endDate: string): string[] => {
+  if (!startDate || !endDate || startDate > endDate) {
+    return [];
+  }
+
+  const dates: string[] = [];
+  const cursor = new Date(`${startDate}T12:00:00`);
+  const end = new Date(`${endDate}T12:00:00`);
+
+  while (cursor.getTime() <= end.getTime()) {
+    dates.push(cursor.toISOString().slice(0, 10));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return dates;
 };
 
 const sanitizeSupabaseSearch = (value: string) =>
@@ -599,42 +634,11 @@ const buildRecipeWeightMetrics = (
   };
 };
 
-const getSupabaseAuthUserId = async (): Promise<string | null> => {
-  if (!isSupabaseConfigured()) {
-    return null;
-  }
-
-  try {
-    const supabase = getSupabaseClient();
-    const {
-      data: { session },
-      error,
-    } = await supabase.auth.getSession();
-
-    if (error) {
-      return null;
-    }
-
-    return session?.user?.id ?? null;
-  } catch {
-    return null;
-  }
-};
-
 const resolveSupabaseUserId = async (
   userExternalId?: string | null,
-): Promise<string | null> => {
-  const authUserId = await getSupabaseAuthUserId();
-
-  if (!authUserId) {
-    return null;
-  }
-
-  if (userExternalId && userExternalId !== authUserId) {
-    return null;
-  }
-
-  return authUserId;
+) => {
+  const authUser = await requireSupabaseSessionUser(userExternalId);
+  return authUser.id;
 };
 
 const fetchFoodItemsByIds = async (ids: number[]): Promise<DBFoodItem[]> => {
@@ -1041,6 +1045,112 @@ const toDbFoodLogEntry = (row: SupabaseUserFoodEntryRow): DBUserFoodLogEntry => 
         ? normalizeOptionalText(metadata?.quickAddName) ?? normalizeOptionalText(row.display_name)
         : null,
   };
+};
+
+const toDbDiaryDayStatus = (row: SupabaseDiaryDayRow): DBDiaryDayStatus => ({
+  userExternalId: row.user_id,
+  date: row.date,
+  isComplete: parseBoolean(row.is_complete),
+  completedAt: normalizeOptionalText(row.completed_at),
+  createdAt: normalizeOptionalText(row.created_at) ?? new Date().toISOString(),
+  updatedAt:
+    normalizeOptionalText(row.updated_at) ??
+    normalizeOptionalText(row.created_at) ??
+    new Date().toISOString(),
+});
+
+const fetchDiaryDayRow = async (
+  userId: string,
+  date: string,
+): Promise<SupabaseDiaryDayRow | null> => {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from(SUPABASE_DIARY_DAYS_TABLE)
+    .select("*")
+    .eq("user_id", userId)
+    .eq("date", date)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return (data as SupabaseDiaryDayRow | null) ?? null;
+};
+
+const listDiaryDayRowsBetween = async (
+  userId: string,
+  startDate: string,
+  endDate: string,
+): Promise<SupabaseDiaryDayRow[]> => {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from(SUPABASE_DIARY_DAYS_TABLE)
+    .select("*")
+    .eq("user_id", userId)
+    .gte("date", startDate)
+    .lte("date", endDate)
+    .order("date", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data as SupabaseDiaryDayRow[]) ?? [];
+};
+
+const invalidateAdaptiveCalculationForUser = async (userId: string) => {
+  const supabase = getSupabaseClient();
+  const { error } = await supabase
+    .from(SUPABASE_USER_SETTINGS_TABLE)
+    .update({ adaptive_last_calculated_at: null })
+    .eq("user_id", userId);
+
+  if (error) {
+    throw error;
+  }
+};
+
+const supersedeOpenAdaptiveRecommendations = async (userId: string) => {
+  const supabase = getSupabaseClient();
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from(SUPABASE_ADAPTIVE_RECOMMENDATIONS_TABLE)
+    .update({
+      status: "superseded",
+      responded_at: now,
+    })
+    .eq("user_id", userId)
+    .eq("status", "proposed");
+
+  if (error) {
+    throw error;
+  }
+};
+
+const clearCompletedDiaryDayIfNeeded = async (userId: string, date: string) => {
+  const existingStatus = await fetchDiaryDayRow(userId, date);
+
+  if (!existingStatus || !parseBoolean(existingStatus.is_complete)) {
+    return;
+  }
+
+  const supabase = getSupabaseClient();
+  const { error } = await supabase
+    .from(SUPABASE_DIARY_DAYS_TABLE)
+    .update({
+      is_complete: false,
+      completed_at: null,
+    })
+    .eq("user_id", userId)
+    .eq("date", date);
+
+  if (error) {
+    throw error;
+  }
+
+  await invalidateAdaptiveCalculationForUser(userId);
+  await supersedeOpenAdaptiveRecommendations(userId);
 };
 
 const fetchFoodLogEntryRowByIdSupabase = async (
@@ -1678,6 +1788,8 @@ export const addUserFoodLog = async (
   if (error) {
     throw error;
   }
+
+  await clearCompletedDiaryDayIfNeeded(authUserId, input.date);
 };
 
 export const addQuickAddFoodLog = async (
@@ -1723,6 +1835,8 @@ export const addQuickAddFoodLog = async (
     throw error;
   }
 
+  await clearCompletedDiaryDayIfNeeded(authUserId, input.date);
+
   return parseRequiredNumber(data.id);
 };
 
@@ -1760,6 +1874,8 @@ export const updateUserFoodLog = async (
   if (error) {
     throw error;
   }
+
+  await clearCompletedDiaryDayIfNeeded(authUserId, entry.date);
 };
 
 export const updateQuickAddFoodLog = async (
@@ -1769,6 +1885,11 @@ export const updateQuickAddFoodLog = async (
 
   if (!authUserId) {
     return updateQuickAddFoodLogLocal(input);
+  }
+
+  const existingRow = await fetchFoodLogEntryRowByIdSupabase(input.id);
+  if (!existingRow) {
+    return;
   }
 
   const supabase = getSupabaseClient();
@@ -1799,6 +1920,8 @@ export const updateQuickAddFoodLog = async (
   if (error) {
     throw error;
   }
+
+  await clearCompletedDiaryDayIfNeeded(authUserId, existingRow.date);
 };
 
 export const deleteUserFoodLog = async (id: number): Promise<void> => {
@@ -1806,6 +1929,11 @@ export const deleteUserFoodLog = async (id: number): Promise<void> => {
 
   if (!authUserId) {
     return deleteUserFoodLogLocal(id);
+  }
+
+  const existingRow = await fetchFoodLogEntryRowByIdSupabase(id);
+  if (!existingRow) {
+    return;
   }
 
   const supabase = getSupabaseClient();
@@ -1817,6 +1945,8 @@ export const deleteUserFoodLog = async (id: number): Promise<void> => {
   if (error) {
     throw error;
   }
+
+  await clearCompletedDiaryDayIfNeeded(authUserId, existingRow.date);
 };
 
 export const getUserFoodLogEntryById = async (
@@ -1830,6 +1960,126 @@ export const getUserFoodLogEntryById = async (
 
   const row = await fetchFoodLogEntryRowByIdSupabase(id);
   return row ? toDbFoodLogEntry(row) : null;
+};
+
+export const getUserFoodLogEntriesBetween = async (
+  userExternalId: string,
+  startDate: string,
+  endDate: string,
+): Promise<DBUserFoodLogEntry[]> => {
+  const authUserId = await resolveSupabaseUserId(userExternalId);
+
+  if (!authUserId) {
+    const localEntries = await Promise.all(
+      listDateKeysBetween(startDate, endDate).map((date) =>
+        getUserFoodLogEntriesByDateLocal(userExternalId, date),
+      ),
+    );
+
+    return localEntries.flat().sort((left, right) => {
+      const leftTime = new Date(left.loggedAt ?? left.createdAt).getTime();
+      const rightTime = new Date(right.loggedAt ?? right.createdAt).getTime();
+      return leftTime - rightTime;
+    });
+  }
+
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from(SUPABASE_FOOD_ENTRIES_TABLE)
+    .select("*")
+    .eq("user_id", authUserId)
+    .gte("date", startDate)
+    .lte("date", endDate)
+    .order("date", { ascending: true })
+    .order("logged_at", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return ((data as SupabaseUserFoodEntryRow[]) ?? []).map(toDbFoodLogEntry);
+};
+
+export const getDiaryDayStatus = async (
+  userExternalId: string,
+  date: string,
+): Promise<DBDiaryDayStatus | null> => {
+  let authUserId: string;
+
+  try {
+    authUserId = await resolveSupabaseUserId(userExternalId);
+  } catch {
+    return null;
+  }
+
+  const row = await fetchDiaryDayRow(authUserId, date);
+  return row ? toDbDiaryDayStatus(row) : null;
+};
+
+export const listDiaryDayStatusesBetween = async (
+  userExternalId: string,
+  startDate: string,
+  endDate: string,
+): Promise<DBDiaryDayStatus[]> => {
+  let authUserId: string;
+
+  try {
+    authUserId = await resolveSupabaseUserId(userExternalId);
+  } catch {
+    return [];
+  }
+
+  const rows = await listDiaryDayRowsBetween(authUserId, startDate, endDate);
+  return rows.map(toDbDiaryDayStatus);
+};
+
+export const saveDiaryDayStatus = async (
+  input: SaveDiaryDayStatusInput,
+): Promise<DBDiaryDayStatus> => {
+  let authUserId: string;
+
+  try {
+    authUserId = await resolveSupabaseUserId(input.userExternalId);
+  } catch {
+    const now = new Date().toISOString();
+    return {
+      userExternalId: input.userExternalId,
+      date: input.date,
+      isComplete: input.isComplete,
+      completedAt: input.isComplete ? now : null,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
+  const existing = await fetchDiaryDayRow(authUserId, input.date);
+  const now = new Date().toISOString();
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from(SUPABASE_DIARY_DAYS_TABLE)
+    .upsert(
+      {
+        user_id: authUserId,
+        date: input.date,
+        is_complete: input.isComplete,
+        completed_at: input.isComplete ? now : null,
+        created_at:
+          normalizeOptionalText(existing?.created_at) ??
+          normalizeOptionalText(existing?.updated_at) ??
+          now,
+        updated_at: now,
+      },
+      { onConflict: "user_id,date" },
+    )
+    .select("*")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return toDbDiaryDayStatus(data as SupabaseDiaryDayRow);
 };
 
 export const getUserFoodLogEntriesByDate = async (
@@ -1921,4 +2171,6 @@ export const copyFoodLogsFromDate = async (
   if (insertResult.error) {
     throw insertResult.error;
   }
+
+  await clearCompletedDiaryDayIfNeeded(authUserId, toDate);
 };

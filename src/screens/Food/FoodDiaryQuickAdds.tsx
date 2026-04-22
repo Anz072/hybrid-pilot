@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
   },
   favoriteCard: {
     width: 214,
-    borderRadius: 22,
+    borderRadius: 8,
     backgroundColor: appColors.foodFieldBg,
     borderWidth: 1,
     borderColor: appColors.foodSoftBorder,
@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   favoriteButton: {
-    borderRadius: 16,
+    borderRadius: 8,
     backgroundColor: appColors.foodPrimaryDark,
     paddingVertical: 12,
     alignItems: "center",

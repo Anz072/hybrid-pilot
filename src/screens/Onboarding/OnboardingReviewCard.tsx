@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvasAlt,
     borderWidth: 1,
     borderColor: appColors.slate300,
-    borderRadius: 12,
+    borderRadius: 8,
     padding: 14,
     marginBottom: 16,
   },

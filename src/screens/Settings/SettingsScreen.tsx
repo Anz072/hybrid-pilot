@@ -27,6 +27,7 @@ import {
   roundWeightKg,
   toLocalIsoWithOffset,
 } from "../Weight/weightUtils";
+import { refreshAdaptiveRecommendationForUser } from "../User_Settings/adaptiveCaloriesActions";
 import { appColors } from "../../theme/colors";
 
 type WeightSeedPreset = "down" | "up" | "maintain";
@@ -174,6 +175,15 @@ const SettingsScreen = () => {
           notes: `Debug preset: ${getPresetLabel(preset)}`,
           clientGeneratedId: entryId,
         });
+      }
+
+      try {
+        await refreshAdaptiveRecommendationForUser({
+          userExternalId: user.externalId,
+          force: true,
+        });
+      } catch {
+        // Keep debug preset generation usable even if adaptive refresh fails.
       }
 
       await handleRefresh();
@@ -402,7 +412,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     backgroundColor: appColors.slate900,
-    borderRadius: 10,
+    borderRadius: 8,
     paddingVertical: 12,
   },
   seedButton: {
@@ -427,7 +437,7 @@ const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
     borderColor: appColors.slate200,
-    borderRadius: 12,
+    borderRadius: 8,
     padding: 12,
     backgroundColor: appColors.raw_hex_f8fafc,
   },

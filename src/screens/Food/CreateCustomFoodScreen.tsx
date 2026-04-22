@@ -635,7 +635,7 @@ const styles = StyleSheet.create({
   },
   heroCard: {
     backgroundColor: appColors.surfaceCard,
-    borderRadius: 24,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
     padding: 16,
@@ -687,7 +687,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   previewStrip: {
-    borderRadius: 20,
+    borderRadius: 8,
     backgroundColor: appColors.foodPrimaryDark,
     paddingHorizontal: 14,
     paddingVertical: 13,
@@ -711,7 +711,7 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: appColors.surfaceCard,
-    borderRadius: 24,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
     padding: 16,
@@ -741,7 +741,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     borderColor: appColors.foodBorder,
-    borderRadius: 16,
+    borderRadius: 8,
     backgroundColor: appColors.foodFieldBg,
     paddingHorizontal: 14,
     paddingVertical: 13,

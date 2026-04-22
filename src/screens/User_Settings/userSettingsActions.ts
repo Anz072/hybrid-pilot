@@ -8,6 +8,7 @@ import { DB } from "../../store/DB";
 import type { AppDispatch } from "../../store/appStore";
 import type { DBUser } from "../../store/DB_TYPES";
 import { setCurrentUser } from "../../store/userSlice";
+import { supersedeOpenAdaptiveRecommendationForUser } from "./adaptiveCaloriesActions";
 
 export const saveUserProfileChanges = async ({
   dispatch,
@@ -86,7 +87,7 @@ export const saveManualCalorieTarget = async ({
         }) ?? scaleMacroTargetsToCalories(user, calories)
       : scaleMacroTargetsToCalories(user, calories);
 
-  return saveUserProfileChanges({
+  const savedUser = await saveUserProfileChanges({
     dispatch,
     user,
     patch: {
@@ -94,6 +95,14 @@ export const saveManualCalorieTarget = async ({
       ...nextMacros,
     },
   });
+
+  await supersedeOpenAdaptiveRecommendationForUser(user.externalId);
+  await DB.saveUserSettings({
+    userExternalId: user.externalId,
+    adaptiveLastCalculatedAt: new Date().toISOString(),
+  });
+
+  return savedUser;
 };
 
 export const saveProteinFocusForUser = async ({
@@ -170,7 +179,7 @@ export const saveAutomaticFuelPlanForUser = async ({
     return null;
   }
 
-  return saveUserProfileChanges({
+  const savedUser = await saveUserProfileChanges({
     dispatch,
     user,
     patch: {
@@ -182,4 +191,12 @@ export const saveAutomaticFuelPlanForUser = async ({
       fatG: plan.fats,
     },
   });
+
+  await supersedeOpenAdaptiveRecommendationForUser(user.externalId);
+  await DB.saveUserSettings({
+    userExternalId: user.externalId,
+    adaptiveLastCalculatedAt: new Date().toISOString(),
+  });
+
+  return savedUser;
 };

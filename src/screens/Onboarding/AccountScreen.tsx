@@ -14,7 +14,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { OnboardingParamList } from "../../navigation/onboardingTypes";
 import {
-  buildLocalAccount,
   saveLocalAccount,
   saveOnboardingProfile,
   setOnboardingComplete,
@@ -36,7 +35,6 @@ import {
   getZoneOffsetMinutes,
   toLocalIsoWithOffset,
 } from "../Weight/weightUtils";
-import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
 import OnboardingReviewCard from "./OnboardingReviewCard";
 import OnboardingTopBar from "./OnboardingTopBar";
 import {
@@ -56,15 +54,8 @@ const AccountScreen = ({ navigation, route }: Props) => {
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const [displayName, setDisplayName] = useState("");
-  const [email, setEmail] = useState("");
-  const [submissionMode, setSubmissionMode] = useState<
-    "local" | "google" | null
-  >(null);
-
-  const normalizedEmail = email.trim();
+  const [submissionMode, setSubmissionMode] = useState<"google" | null>(null);
   const isSaving = submissionMode !== null;
-  const canCreateLocalAccount =
-    displayName.trim().length > 0 && normalizedEmail.length > 0;
 
   const completeOnboardingAccount = async (account: LocalAccount) => {
     const onboarding = route.params.onboarding;
@@ -123,33 +114,6 @@ const AccountScreen = ({ navigation, route }: Props) => {
     navigation.push("Success", { onboarding });
   };
 
-  const handleCreateLocalAccount = async () => {
-    if (!canCreateLocalAccount || isSaving) {
-      return;
-    }
-
-    if (!normalizedEmail.includes("@")) {
-      Alert.alert("Invalid email", "Please enter a valid email address.");
-      return;
-    }
-
-    setSubmissionMode("local");
-
-    try {
-      const account = buildLocalAccount({
-        displayName: displayName.trim(),
-        email: normalizedEmail,
-        birthdate: route.params.onboarding.bodyData.birthdate,
-      });
-
-      await completeOnboardingAccount(account);
-    } catch {
-      Alert.alert("Could not save account", "Please try again.");
-    } finally {
-      setSubmissionMode(null);
-    }
-  };
-
   const handleCreateGoogleAccount = async () => {
     if (isSaving) {
       return;
@@ -167,9 +131,7 @@ const AccountScreen = ({ navigation, route }: Props) => {
         return;
       }
 
-      const googleEmail =
-        session.user.email ??
-        (normalizedEmail.length > 0 ? normalizedEmail : null);
+      const googleEmail = session.user.email ?? null;
       if (!googleEmail || !googleEmail.includes("@")) {
         throw new Error("Google did not return a valid email address.");
       }
@@ -191,7 +153,6 @@ const AccountScreen = ({ navigation, route }: Props) => {
       };
 
       setDisplayName(account.displayName);
-      setEmail(account.email ?? "");
 
       await completeOnboardingAccount(account);
     } catch (error) {
@@ -223,8 +184,8 @@ const AccountScreen = ({ navigation, route }: Props) => {
         <Text style={styles.eyebrow}>Final Step</Text>
         <Text style={styles.title}>Create your account</Text>
         <Text style={styles.subtitle}>
-          Create a synced Google account to keep your profile and food data
-          available across devices, or keep everything local on this device.
+          Finish by connecting your Google account. HybridPilot now requires a
+          Supabase-backed Google sign-in for registration and future logins.
         </Text>
 
         <OnboardingReviewCard
@@ -294,22 +255,12 @@ const AccountScreen = ({ navigation, route }: Props) => {
         />
 
         <View style={styles.card}>
-          <Text style={styles.label}>Username</Text>
+          <Text style={styles.label}>Display name</Text>
           <TextInput
             value={displayName}
             onChangeText={setDisplayName}
             placeholder="Your display name"
             autoCapitalize="words"
-            style={styles.input}
-          />
-
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            placeholder="name@email.com"
-            autoCapitalize="none"
-            keyboardType="email-address"
             style={styles.input}
           />
 
@@ -335,24 +286,9 @@ const AccountScreen = ({ navigation, route }: Props) => {
           </Pressable>
 
           <Text style={styles.googleHint}>
-            Google sign-up creates your online account and stores your plan in
-            Supabase so you can sign in again later.
+            Google sign-up creates your online account in Supabase and is the
+            only supported way to sign in again later.
           </Text>
-
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <OnboardingPrimaryButton
-            label={
-              submissionMode === "local" ? "Saving..." : "Create local account"
-            }
-            disabled={!canCreateLocalAccount || isSaving}
-            style={styles.primaryButton}
-            onPress={() => void handleCreateLocalAccount()}
-          />
         </View>
       </KeyboardAwareScrollView>
     </KeyboardAvoidingView>
@@ -409,7 +345,7 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderColor: appColors.charcoal,
-    borderRadius: 6,
+    borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 14,
     backgroundColor: appColors.white,
@@ -417,24 +353,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     letterSpacing: 0.2,
     fontWeight: "600",
-  },
-  primaryButton: {
-    marginTop: 32,
-  },
-  dividerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 18,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: appColors.slate200,
-  },
-  dividerText: {
-    ...appTypography.label,
-    color: appColors.slate500,
   },
   googleHint: {
     ...appTypography.bodySmall,

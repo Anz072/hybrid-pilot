@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: appColors.surfaceCard,
-    borderRadius: 24,
+    borderRadius: 8,
     padding: 18,
     borderWidth: 1,
     borderColor: appColors.slate200,
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
   },
   inputCard: {
     flex: 1,
-    borderRadius: 22,
+    borderRadius: 8,
     backgroundColor: appColors.foodFieldBg,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    borderRadius: 20,
+    borderRadius: 8,
     backgroundColor: appColors.foodFieldBg,
     padding: 14,
   },

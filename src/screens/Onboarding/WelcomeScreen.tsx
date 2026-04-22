@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
   secondaryButton: {
     paddingVertical: 11,
     alignItems: "center",
-    borderRadius: 12,
+    borderRadius: 8,
   },
   secondaryButtonPressed: {
     backgroundColor: appColors.slate100,

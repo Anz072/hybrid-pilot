@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.white,
     borderWidth: 1,
     borderColor: appColors.slate300,
-    borderRadius: 12,
+    borderRadius: 8,
     padding: 12,
     marginBottom: 12,
   },

@@ -40,6 +40,7 @@ import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import { DB } from "../../store/DB";
 import OnboardingPrimaryButton from "../Onboarding/OnboardingPrimaryButton";
 import WeightEntryModal, { type WeightEntryDraft } from "./WeightEntryModal";
+import { refreshAdaptiveRecommendationForUser } from "../User_Settings/adaptiveCaloriesActions";
 import WeightTrendChart from "./WeightTrendChart";
 import {
   DEFAULT_GOAL_BAND_KG,
@@ -50,7 +51,7 @@ import {
   computeWeeklyPaceToGoal,
   filterEntriesByRange,
   formatDateOnly,
-  formatLocalDateTimeLabel,
+  formatLocalDateLabel,
   formatWeightKg,
   generateUuid,
   getLocalDateKey,
@@ -60,7 +61,6 @@ import {
 } from "./weightUtils";
 import { appColors } from "../../theme/colors";
 
-const FALLBACK_USER_ID = "guest-local";
 const SOFT_MIN_WEIGHT_KG = 20;
 const SOFT_MAX_WEIGHT_KG = 300;
 const FUTURE_GRACE_MINUTES = 5;
@@ -133,6 +133,12 @@ const formatHeaderDateLabel = (value: string) =>
     year: "numeric",
   });
 
+const formatHistoryTimeLabel = (value: string) =>
+  new Date(value).toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
 type WeightScreenProps = {
   externalRefreshToken?: number;
 };
@@ -143,7 +149,7 @@ const WeightScreen = ({
   const insets = useSafeAreaInsets();
   const hasHydratedOnceRef = React.useRef(false);
   const lastExternalRefreshTokenRef = React.useRef(externalRefreshToken);
-  const [userId, setUserId] = React.useState(FALLBACK_USER_ID);
+  const [userId, setUserId] = React.useState<string | null>(null);
   const [allEntries, setAllEntries] = React.useState<DBWeightEntry[]>([]);
   const [goal, setGoal] = React.useState<WeightEntryGoal | null>(null);
   const [range, setRange] = React.useState<WeightRangeKey>("1M");
@@ -185,6 +191,13 @@ const WeightScreen = ({
     );
   }, []);
 
+  const clearWeightState = React.useCallback(() => {
+    setAllEntries([]);
+    setGoal(null);
+    setTargetWeightValue("");
+    setTargetDate(null);
+  }, []);
+
   const hydrate = React.useCallback(
     async (opts?: { silent?: boolean }) => {
       if (opts?.silent) {
@@ -195,7 +208,14 @@ const WeightScreen = ({
 
       try {
         const dbUser = await DB.getUser();
-        const resolvedUserId = dbUser?.externalId ?? FALLBACK_USER_ID;
+        const resolvedUserId = dbUser?.externalId ?? null;
+
+        if (!resolvedUserId) {
+          setUserId(null);
+          clearWeightState();
+          return;
+        }
+
         setUserId(resolvedUserId);
         await loadWeightState(resolvedUserId);
       } catch {
@@ -208,7 +228,7 @@ const WeightScreen = ({
         setRefreshing(false);
       }
     },
-    [loadWeightState],
+    [clearWeightState, loadWeightState],
   );
 
   useFocusEffect(
@@ -286,7 +306,7 @@ const WeightScreen = ({
   const previewGoal: WeightEntryGoal | null =
     parsedTargetWeight != null
       ? {
-          userExternalId: userId,
+          userExternalId: userId ?? "",
           targetWeightKg: parsedTargetWeight,
           targetDate: targetDate ? formatDateOnly(targetDate) : null,
           goalBandKg: goal?.goalBandKg ?? DEFAULT_GOAL_BAND_KG,
@@ -456,6 +476,11 @@ const WeightScreen = ({
   };
 
   const finalizeSave = async (draft: WeightEntryDraft) => {
+    if (!userId) {
+      Alert.alert("Session expired", "Please sign in with Google again.");
+      return;
+    }
+
     const measuredAtMs = new Date(draft.measuredAt).getTime();
     if (measuredAtMs > Date.now() + FUTURE_GRACE_MINUTES * 60 * 1000) {
       const confirmed = await confirmAsync(
@@ -553,6 +578,14 @@ const WeightScreen = ({
       });
       replaceLocalEntries([saved, ...optimisticDeletedEntries]);
       setSelectedEntryId(saved.id);
+      try {
+        await refreshAdaptiveRecommendationForUser({
+          userExternalId: userId,
+          force: true,
+        });
+      } catch {
+        // Keep the weight save successful even if adaptive refresh fails.
+      }
     } catch {
       setSnackbar(null);
       await hydrate({ silent: true });
@@ -581,6 +614,14 @@ const WeightScreen = ({
         );
         replaceLocalEntry(restored);
         setSelectedEntryId(restored.id);
+        try {
+          await refreshAdaptiveRecommendationForUser({
+            userExternalId: entry.userExternalId,
+            force: true,
+          });
+        } catch {
+          // Undo should still succeed even if adaptive refresh fails.
+        }
       } catch {
         Alert.alert("Undo failed", "Please try editing the entry again.");
       }
@@ -589,11 +630,20 @@ const WeightScreen = ({
     try {
       const deleted = await DB.softDeleteWeightEntry({
         id: entry.id,
-        userExternalId: userId,
+        userExternalId: entry.userExternalId,
       });
 
       if (deleted) {
         replaceLocalEntry(deleted);
+      }
+
+      try {
+        await refreshAdaptiveRecommendationForUser({
+          userExternalId: entry.userExternalId,
+          force: true,
+        });
+      } catch {
+        // Keep the delete successful even if adaptive refresh fails.
       }
     } catch {
       setSnackbar(null);
@@ -603,6 +653,11 @@ const WeightScreen = ({
   };
 
   const handleSaveGoal = async () => {
+    if (!userId) {
+      Alert.alert("Session expired", "Please sign in with Google again.");
+      return;
+    }
+
     const parsedTarget = parseLocalizedWeight(targetWeightValue);
     if (parsedTarget == null || parsedTarget <= 0) {
       Alert.alert("Invalid target", "Enter a valid goal weight in kilograms.");
@@ -650,7 +705,7 @@ const WeightScreen = ({
   };
 
   const handleClearGoal = () => {
-    if (!goal) {
+    if (!goal || !userId) {
       return;
     }
 
@@ -1026,22 +1081,32 @@ const WeightScreen = ({
             </View>
           )
         }
-        renderItem={({ item }) => {
+        renderSectionHeader={() => (
+          <View style={styles.historyTableHeader}>
+            <View style={[styles.historyHeaderCell, styles.historyDateColumn]}>
+              <Text style={styles.historyHeaderLabel}>Date</Text>
+            </View>
+            <View style={[styles.historyHeaderCell, styles.historyWeightColumn]}>
+              <Text style={styles.historyHeaderLabel}>Weight</Text>
+            </View>
+            <View style={[styles.historyHeaderCell, styles.historySourceColumn]}>
+              <Text style={styles.historyHeaderLabel}>Source</Text>
+            </View>
+            <View style={styles.historyActionColumn} />
+          </View>
+        )}
+        renderItem={({ item, index, section }) => {
           const selected = item.id === selectedEntryId;
+          const isFirst = index === 0;
+          const isLast = index === section.data.length - 1;
           const statusLabel =
             item.syncStatus === "error"
               ? "Sync issue"
               : item.syncStatus === "pending"
                 ? "Pending"
                 : null;
-          const compactMeta = [
-            formatLocalDateTimeLabel(item.measuredAtLocalIso),
-            toTitleCase(item.source),
-          ];
-
-          if (item.notes) {
-            compactMeta.push(item.notes);
-          }
+          const sourceLabel = toTitleCase(item.source);
+          const hasSecondaryRow = Boolean(item.notes || item.syncError);
 
           return (
             <Swipeable
@@ -1064,61 +1129,86 @@ const WeightScreen = ({
                 onPress={() => openEditModal(item)}
                 style={({ pressed }) => [
                   styles.historyRow,
+                  isFirst && styles.historyRowFirst,
+                  isLast && styles.historyRowLast,
                   selected && styles.historyRowActive,
                   pressed && styles.cardPressed,
                 ]}
               >
-                <View style={styles.rowBetween}>
-                  <View style={styles.flexOne}>
-                    <View style={styles.historyPrimaryRow}>
-                      <Text style={styles.historyValue}>
-                        {formatWeightKg(item.valueKg)} kg
-                      </Text>
-                      {statusLabel ? (
-                        <View
-                          style={[
-                            styles.statusChip,
-                            item.syncStatus === "error" &&
-                              styles.statusChipWarning,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.statusChipText,
-                              item.syncStatus === "error" &&
-                                styles.statusChipTextWarning,
-                            ]}
-                          >
-                            {statusLabel}
-                          </Text>
-                        </View>
-                      ) : null}
-                    </View>
-                    <Text style={styles.historyMeta} numberOfLines={1}>
-                      {compactMeta.join("  |  ")}
+                <View style={styles.historyRowMain}>
+                  <View style={[styles.historyCell, styles.historyDateColumn]}>
+                    <Text style={styles.historyDateText} numberOfLines={1}>
+                      {formatLocalDateLabel(item.measuredAtLocalIso)}
+                    </Text>
+                    <Text style={styles.historyTimeText} numberOfLines={1}>
+                      {formatHistoryTimeLabel(item.measuredAtLocalIso)}
                     </Text>
                   </View>
-                  <View style={styles.rowAction}>
+
+                  <View style={[styles.historyCell, styles.historyWeightColumn]}>
+                    <Text style={styles.historyWeightText} numberOfLines={1}>
+                      {formatWeightKg(item.valueKg)}
+                    </Text>
+                    <Text style={styles.historyWeightUnit}>kg</Text>
+                  </View>
+
+                  <View style={[styles.historyCell, styles.historySourceColumn]}>
+                    <Text style={styles.historySourceText} numberOfLines={1}>
+                      {sourceLabel}
+                    </Text>
+                    {statusLabel ? (
+                      <View
+                        style={[
+                          styles.statusChip,
+                          item.syncStatus === "error" &&
+                            styles.statusChipWarning,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.statusChipText,
+                            item.syncStatus === "error" &&
+                              styles.statusChipTextWarning,
+                          ]}
+                        >
+                          {statusLabel}
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.historyTimeText} numberOfLines={1}>
+                        Synced
+                      </Text>
+                    )}
+                  </View>
+
+                  <View style={styles.historyActionColumn}>
                     <PencilSimpleIcon
-                      size={18}
+                      size={17}
                       color={appColors.textSecondary}
                       weight="bold"
                     />
                   </View>
                 </View>
 
-                {item.syncError ? (
+                {hasSecondaryRow ? (
                   <View style={styles.historySupplementalRow}>
-                    <View style={styles.historyInlineWarning}>
-                      <WarningCircleIcon
-                        size={12}
-                        color={appColors.amber600}
-                        weight="fill"
-                      />
-                      <Text style={styles.historyInlineWarningText}>
-                        Edit and retry sync
+                    {item.notes ? (
+                      <Text style={styles.historyNoteText} numberOfLines={2}>
+                        {item.notes}
                       </Text>
-                    </View>
+                    ) : null}
+                    {item.syncError ? (
+                      <View style={styles.historyInlineWarning}>
+                        <WarningCircleIcon
+                          size={12}
+                          color={appColors.amber600}
+                          weight="fill"
+                        />
+                        <Text style={styles.historyInlineWarningText}>
+                          Edit and retry sync
+                        </Text>
+                      </View>
+                    ) : null}
                   </View>
                 ) : null}
               </Pressable>
@@ -1363,7 +1453,7 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: appColors.surfaceCard,
-    borderRadius: 24,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
     padding: 12,
@@ -1385,7 +1475,7 @@ const styles = StyleSheet.create({
   },
   heroCard: {
     backgroundColor: appColors.surfaceCard,
-    borderRadius: 28,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
     paddingVertical: 20,
@@ -1403,7 +1493,7 @@ const styles = StyleSheet.create({
     right: 0,
     width: 42,
     height: 42,
-    borderRadius: 21,
+    borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: appColors.surfaceGhost,
@@ -1667,7 +1757,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     borderColor: appColors.borderStrong,
-    borderRadius: 14,
+    borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 14,
     fontSize: 20,
@@ -1678,7 +1768,7 @@ const styles = StyleSheet.create({
   unitPill: {
     paddingHorizontal: 16,
     paddingVertical: 14,
-    borderRadius: 14,
+    borderRadius: 8,
     backgroundColor: appColors.surfaceGhost,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
@@ -1701,7 +1791,7 @@ const styles = StyleSheet.create({
     gap: 8,
     borderWidth: 1,
     borderColor: appColors.borderStrong,
-    borderRadius: 12,
+    borderRadius: 8,
     backgroundColor: appColors.surfaceField,
     paddingHorizontal: 12,
     paddingVertical: 12,
@@ -1737,7 +1827,7 @@ const styles = StyleSheet.create({
   softPanel: {
     flex: 1,
     backgroundColor: appColors.surfaceCardAlt,
-    borderRadius: 14,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
     padding: 12,
@@ -1784,8 +1874,8 @@ const styles = StyleSheet.create({
   deleteSwipe: {
     width: 108,
     marginRight: 20,
-    marginBottom: 8,
-    borderRadius: 16,
+    marginBottom: 0,
+    borderRadius: 8,
     backgroundColor: appColors.danger700,
     alignItems: "center",
     justifyContent: "center",
@@ -1796,34 +1886,103 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
   },
+  historyTableHeader: {
+    marginHorizontal: 20,
+    marginTop: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: appColors.surfaceGhost,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    borderColor: appColors.borderSoft,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  historyHeaderCell: {
+    justifyContent: "center",
+  },
+  historyHeaderLabel: {
+    color: appColors.textSecondary,
+    fontSize: 11,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
   historyRow: {
     marginHorizontal: 20,
-    marginBottom: 8,
     backgroundColor: appColors.surfaceCardAlt,
-    borderRadius: 18,
-    borderWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: appColors.borderSoft,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
+  historyRowFirst: {
+    borderTopWidth: 1,
+  },
+  historyRowLast: {
+    borderBottomWidth: 1,
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
+  },
   historyRowActive: {
     backgroundColor: appColors.raw_hex_F8F4FE,
   },
-  historyPrimaryRow: {
+  historyRowMain: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 3,
+    gap: 10,
   },
-  historyValue: {
+  historyCell: {
+    justifyContent: "center",
+  },
+  historyDateColumn: {
+    flex: 1.2,
+  },
+  historyWeightColumn: {
+    flex: 0.78,
+    alignItems: "center",
+  },
+  historySourceColumn: {
+    flex: 0.92,
+    alignItems: "flex-end",
+  },
+  historyActionColumn: {
+    width: 26,
+    alignItems: "flex-end",
+    justifyContent: "center",
+  },
+  historyDateText: {
     color: appColors.textPrimary,
-    fontSize: 18,
+    fontSize: 13,
     fontWeight: "800",
   },
-  historyMeta: {
+  historyTimeText: {
     color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 16,
+  },
+  historyWeightText: {
+    color: appColors.textPrimary,
+    fontSize: 18,
+    fontWeight: "900",
+    letterSpacing: -0.3,
+  },
+  historyWeightUnit: {
+    color: appColors.textSecondary,
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+  historySourceText: {
+    color: appColors.textPrimary,
+    fontSize: 12,
+    fontWeight: "800",
+    textAlign: "right",
   },
   historySupplementalRow: {
     flexDirection: "row",
@@ -1831,12 +1990,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: appColors.borderSoft,
   },
-  rowAction: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingTop: 2,
+  historyNoteText: {
+    flex: 1,
+    color: appColors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
   },
   statusChip: {
     borderRadius: 999,
@@ -1900,7 +2062,7 @@ const styles = StyleSheet.create({
   goalModalCloseButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: appColors.surfaceGhost,
@@ -1915,7 +2077,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 20,
     right: 20,
-    borderRadius: 16,
+    borderRadius: 8,
     backgroundColor: appColors.surfaceRaised,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -1932,7 +2094,7 @@ const styles = StyleSheet.create({
   },
   insightCard: {
     backgroundColor: appColors.surfaceCardAlt,
-    borderRadius: 20,
+    borderRadius: 8,
     padding: 14,
     borderWidth: 1,
     borderColor: appColors.borderSoft,

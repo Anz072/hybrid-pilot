@@ -3,11 +3,16 @@ import {
   Keyboard,
   Platform,
   ScrollView,
+  StyleSheet,
   TextInput,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  type LayoutChangeEvent,
   type ScrollViewProps,
+  type ViewStyle,
+  useWindowDimensions,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { subscribeToTextInputFocus } from "../theme/textInputFocusEvents";
 
 type KeyboardAwareScrollViewProps = ScrollViewProps & {
@@ -21,6 +26,27 @@ type Measurable = {
 };
 
 const FOCUS_SCROLL_DELAY_MS = 48;
+const MIN_FOCUSED_INPUT_BOTTOM_OFFSET = 64;
+const DEFAULT_EXTRA_BOTTOM_CLEARANCE = 44;
+
+const getNumericStyleValue = (value: unknown): number =>
+  typeof value === "number" ? value : 0;
+
+const getBasePaddingBottom = (
+  style: ScrollViewProps["contentContainerStyle"],
+): number => {
+  const flattenedStyle = StyleSheet.flatten(style) as ViewStyle | undefined;
+
+  if (!flattenedStyle) {
+    return 0;
+  }
+
+  return (
+    getNumericStyleValue(flattenedStyle.paddingBottom) ||
+    getNumericStyleValue(flattenedStyle.paddingVertical) ||
+    getNumericStyleValue(flattenedStyle.padding)
+  );
+};
 
 const KeyboardAwareScrollView = React.forwardRef<
   ScrollView,
@@ -30,19 +56,58 @@ const KeyboardAwareScrollView = React.forwardRef<
     {
       automaticallyAdjustKeyboardInsets = true,
       focusedInputBottomOffset = 24,
+      contentContainerStyle,
       keyboardDismissMode = Platform.OS === "ios" ? "interactive" : "on-drag",
       keyboardShouldPersistTaps = "handled",
+      onContentSizeChange,
+      onLayout,
       onScroll,
+      scrollIndicatorInsets,
       scrollEventThrottle = 16,
       ...props
     },
     forwardedRef,
   ) => {
+    const insets = useSafeAreaInsets();
+    const windowHeight = useWindowDimensions().height;
     const scrollRef = React.useRef<ScrollView>(null);
     const scrollYRef = React.useRef(0);
     const keyboardTopRef = React.useRef<number | null>(null);
+    const keyboardHeightRef = React.useRef(0);
     const focusTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(
       null,
+    );
+    const [keyboardSpacer, setKeyboardSpacer] = React.useState(0);
+
+    const effectiveFocusedInputBottomOffset = React.useMemo(
+      () =>
+        Math.max(
+          focusedInputBottomOffset,
+          insets.bottom + DEFAULT_EXTRA_BOTTOM_CLEARANCE,
+          MIN_FOCUSED_INPUT_BOTTOM_OFFSET,
+        ),
+      [focusedInputBottomOffset, insets.bottom],
+    );
+
+    const resolvedContentContainerStyle = React.useMemo(
+      () => [
+        contentContainerStyle,
+        keyboardSpacer > 0
+          ? {
+              paddingBottom:
+                getBasePaddingBottom(contentContainerStyle) + keyboardSpacer,
+            }
+          : null,
+      ],
+      [contentContainerStyle, keyboardSpacer],
+    );
+
+    const resolvedScrollIndicatorInsets = React.useMemo(
+      () => ({
+        ...scrollIndicatorInsets,
+        bottom: (scrollIndicatorInsets?.bottom ?? 0) + keyboardSpacer,
+      }),
+      [keyboardSpacer, scrollIndicatorInsets],
     );
 
     React.useImperativeHandle(
@@ -59,7 +124,11 @@ const KeyboardAwareScrollView = React.forwardRef<
     }, []);
 
     const ensureFocusedInputVisible = React.useCallback(() => {
-      const keyboardTop = keyboardTopRef.current;
+      const keyboardTop =
+        keyboardTopRef.current ??
+        (keyboardHeightRef.current > 0
+          ? windowHeight - keyboardHeightRef.current
+          : null);
       const scrollView = scrollRef.current as (ScrollView & Measurable) | null;
       const focusedInput = (TextInput.State as unknown as {
         currentlyFocusedInput?: () => Measurable | null;
@@ -76,8 +145,8 @@ const KeyboardAwareScrollView = React.forwardRef<
       scrollView.measureInWindow((_x, scrollViewY) => {
         focusedInput.measureInWindow?.((_ix, inputY, _inputWidth, inputHeight) => {
           const inputBottom = inputY + inputHeight;
-          const safeTop = scrollViewY + focusedInputBottomOffset;
-          const safeBottom = keyboardTop - focusedInputBottomOffset;
+          const safeTop = scrollViewY + effectiveFocusedInputBottomOffset;
+          const safeBottom = keyboardTop - effectiveFocusedInputBottomOffset;
 
           if (inputBottom > safeBottom) {
             scrollView.scrollTo?.({
@@ -95,7 +164,7 @@ const KeyboardAwareScrollView = React.forwardRef<
           }
         });
       });
-    }, [focusedInputBottomOffset]);
+    }, [effectiveFocusedInputBottomOffset, windowHeight]);
 
     const scheduleFocusedInputScroll = React.useCallback(() => {
       clearScheduledFocusScroll();
@@ -105,18 +174,44 @@ const KeyboardAwareScrollView = React.forwardRef<
     }, [clearScheduledFocusScroll, ensureFocusedInputVisible]);
 
     React.useEffect(() => {
+      const updateKeyboardMetrics = (screenY: number | null, height: number) => {
+        keyboardTopRef.current = screenY;
+        keyboardHeightRef.current = height;
+        setKeyboardSpacer(
+          height > 0
+            ? Platform.OS === "ios"
+              ? effectiveFocusedInputBottomOffset
+              : height + effectiveFocusedInputBottomOffset
+            : 0,
+        );
+      };
+
       const handleKeyboardShow = Keyboard.addListener(
         Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
         (event) => {
-          keyboardTopRef.current = event.endCoordinates.screenY;
+          updateKeyboardMetrics(
+            event.endCoordinates.screenY ?? null,
+            event.endCoordinates.height ?? 0,
+          );
           scheduleFocusedInputScroll();
         },
       );
 
+      const handleKeyboardChangeFrame =
+        Platform.OS === "ios"
+          ? Keyboard.addListener("keyboardWillChangeFrame", (event) => {
+              updateKeyboardMetrics(
+                event.endCoordinates.screenY ?? null,
+                event.endCoordinates.height ?? 0,
+              );
+              scheduleFocusedInputScroll();
+            })
+          : null;
+
       const handleKeyboardHide = Keyboard.addListener(
         Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
         () => {
-          keyboardTopRef.current = null;
+          updateKeyboardMetrics(null, 0);
           clearScheduledFocusScroll();
         },
       );
@@ -131,11 +226,16 @@ const KeyboardAwareScrollView = React.forwardRef<
 
       return () => {
         handleKeyboardShow.remove();
+        handleKeyboardChangeFrame?.remove();
         handleKeyboardHide.remove();
         unsubscribeFocus();
         clearScheduledFocusScroll();
       };
-    }, [clearScheduledFocusScroll, scheduleFocusedInputScroll]);
+    }, [
+      clearScheduledFocusScroll,
+      effectiveFocusedInputBottomOffset,
+      scheduleFocusedInputScroll,
+    ]);
 
     const handleScroll = React.useCallback(
       (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -145,13 +245,39 @@ const KeyboardAwareScrollView = React.forwardRef<
       [onScroll],
     );
 
+    const handleLayout = React.useCallback(
+      (event: LayoutChangeEvent) => {
+        onLayout?.(event);
+
+        if (keyboardHeightRef.current > 0) {
+          scheduleFocusedInputScroll();
+        }
+      },
+      [onLayout, scheduleFocusedInputScroll],
+    );
+
+    const handleContentSizeChange = React.useCallback(
+      (width: number, height: number) => {
+        onContentSizeChange?.(width, height);
+
+        if (keyboardHeightRef.current > 0) {
+          scheduleFocusedInputScroll();
+        }
+      },
+      [onContentSizeChange, scheduleFocusedInputScroll],
+    );
+
     return (
       <ScrollView
         ref={scrollRef}
         automaticallyAdjustKeyboardInsets={automaticallyAdjustKeyboardInsets}
+        contentContainerStyle={resolvedContentContainerStyle}
         keyboardDismissMode={keyboardDismissMode}
         keyboardShouldPersistTaps={keyboardShouldPersistTaps}
+        onContentSizeChange={handleContentSizeChange}
+        onLayout={handleLayout}
         onScroll={handleScroll}
+        scrollIndicatorInsets={resolvedScrollIndicatorInsets}
         scrollEventThrottle={scrollEventThrottle}
         {...props}
       />

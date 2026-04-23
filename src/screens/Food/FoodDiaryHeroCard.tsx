@@ -84,7 +84,7 @@ const FoodDiaryHeroCard = ({
     <View style={styles.hero}>
       <View style={styles.progressPanel}>
         <MacroBar
-          accent={appColors.plum820}
+          accent={appColors.plum}
           consumed={Number(totals.calories.toFixed(0))}
           label="Energy"
           places={0}
@@ -92,7 +92,7 @@ const FoodDiaryHeroCard = ({
           unit="kcal"
         />
         <MacroBar
-          accent={appColors.raw_hex_22C55E}
+          accent={appColors.emerald500}
           consumed={Number(totals.proteinG.toFixed(0))}
           label="Protein"
           target={user?.proteinG ?? null}
@@ -106,7 +106,7 @@ const FoodDiaryHeroCard = ({
           unit="g"
         />
         <MacroBar
-          accent={appColors.raw_hex_F97316}
+          accent={appColors.amber600}
           consumed={Number(totals.fatG.toFixed(0))}
           label="Fat"
           target={user?.fatG ?? null}
@@ -146,11 +146,11 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   progressHeadlineMuted: {
-    color: appColors.plum720,
+    color: appColors.plum2,
     fontWeight: "400",
   },
   progressPercent: {
-    color: appColors.plum820,
+    color: appColors.plum,
     fontSize: 14,
     fontWeight: "400",
   },

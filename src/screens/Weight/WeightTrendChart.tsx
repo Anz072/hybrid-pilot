@@ -44,14 +44,14 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 const TREND_LINE_COLOR = appColors.violet500;
 const TREND_HALO_COLOR = appColors.violetSoftBg;
-const DAILY_LINE_COLOR = appColors.raw_hex_B8B0C9;
-const DAILY_POINT_STROKE = appColors.raw_hex_A99FC0;
+const DAILY_LINE_COLOR = appColors.slate300;
+const DAILY_POINT_STROKE = appColors.slate400;
 const DAILY_POINT_FILL = appColors.white;
 const CURRENT_POINT_FILL = appColors.violet500;
-const GRID_COLOR = appColors.raw_hex_E5DFEE;
+const GRID_COLOR = appColors.borderSoft;
 const AXIS_TEXT_COLOR = appColors.plumPlaceholderAlt;
-const GOAL_BAND_FILL = appColors.raw_hex_E9E2FF;
-const GOAL_LINE_COLOR = appColors.raw_hex_B794F4;
+const GOAL_BAND_FILL = appColors.borderSoft;
+const GOAL_LINE_COLOR = appColors.brand400;
 
 const buildLinePath = (points: Array<{ x: number; y: number }>): string =>
   points
@@ -592,13 +592,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   periodLabel: {
-    color: appColors.plum750,
+    color: appColors.plum2,
     fontSize: 14,
     fontWeight: "700",
     marginBottom: 4,
   },
   helperText: {
-    color: appColors.raw_hex_857C95,
+    color: appColors.textMuted,
     fontSize: 12,
     lineHeight: 17,
   },
@@ -609,7 +609,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   logsPillText: {
-    color: appColors.raw_hex_5C5569,
+    color: appColors.textMuted,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -626,7 +626,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 8,
     borderRadius: 999,
-    backgroundColor: appColors.raw_hex_ECE7F3,
+    backgroundColor: appColors.borderSoft,
     padding: 6,
   },
   segment: {
@@ -648,12 +648,12 @@ const styles = StyleSheet.create({
     opacity: 0.92,
   },
   segmentText: {
-    color: appColors.raw_hex_675F77,
+    color: appColors.textMuted,
     fontSize: 12,
     fontWeight: "700",
   },
   segmentTextActive: {
-    color: appColors.plum900,
+    color: appColors.plum,
   },
   legendCard: {
     marginTop: 14,
@@ -662,7 +662,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 18,
     borderRadius: 8,
-    backgroundColor: appColors.raw_hex_F4F0F8,
+    backgroundColor: appColors.surfaceCardAlt,
     paddingHorizontal: 16,
     paddingVertical: 15,
     borderWidth: 1,

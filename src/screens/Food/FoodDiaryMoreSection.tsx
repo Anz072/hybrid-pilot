@@ -123,9 +123,9 @@ const FoodDiaryMoreSection = ({
           ]}
         >
           <View style={styles.moreCopy}>
-            <Text style={styles.moreTitle}>Create custom food</Text>
+            <Text style={styles.moreTitle}>Create custom meal</Text>
             <Text style={styles.moreText}>
-              Add a new item directly into {formatFoodHourLabel(selectedHour)}.
+              Build a reusable meal and add it directly into {formatFoodHourLabel(selectedHour)}.
             </Text>
           </View>
           <View style={styles.morePill}>
@@ -173,13 +173,13 @@ const styles = StyleSheet.create({
   hourChip: {
     width: 64,
     borderRadius: 8,
-    backgroundColor: appColors.raw_hex_F7F3FC,
+    backgroundColor: appColors.surfaceFieldAlt,
     paddingHorizontal: 4,
     paddingVertical: 4,
   },
   hourChipActive: {
-    backgroundColor: appColors.foodPrimaryDark,
-    borderColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.brand700,
+    borderColor: appColors.brand700,
   },
   hourChipLabel: {
     color: appColors.foodInk,
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     color: appColors.white,
   },
   hourChipText: {
-    color: appColors.raw_hex_827994,
+    color: appColors.textMuted,
     fontSize: 12,
     lineHeight: 16,
     fontWeight: "700",
@@ -218,8 +218,8 @@ const styles = StyleSheet.create({
     opacity: 0.75,
   },
   selectedSlotRow: {
-    backgroundColor: appColors.raw_hex_F4F0FF,
-    borderColor: appColors.raw_hex_DCD2F8,
+    backgroundColor: appColors.surfaceCardAlt,
+    borderColor: appColors.borderStrong,
   },
   moreCopy: {
     flex: 1,
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   morePillAccent: {
-    backgroundColor: appColors.foodPrimary,
+    backgroundColor: appColors.brand500,
   },
   morePillLoading: {
     minWidth: 48,

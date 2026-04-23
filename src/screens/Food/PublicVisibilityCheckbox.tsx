@@ -49,8 +49,8 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   cardChecked: {
-    borderColor: appColors.foodPrimary,
-    backgroundColor: appColors.foodPrimaryOverlay,
+    borderColor: appColors.brand500,
+    backgroundColor: appColors.brand500Overlay,
   },
   cardPressed: {
     opacity: 0.9,
@@ -67,8 +67,8 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   checkboxChecked: {
-    borderColor: appColors.foodPrimary,
-    backgroundColor: appColors.foodPrimary,
+    borderColor: appColors.brand500,
+    backgroundColor: appColors.brand500,
   },
   copy: {
     flex: 1,

@@ -5,6 +5,7 @@ import {
   BarbellIcon,
   BugIcon,
   ClockIcon,
+  CookingPotIcon,
   DatabaseIcon,
   ForkKnifeIcon,
   LightningIcon,
@@ -200,7 +201,7 @@ const MoreScreen = () => {
             icon={
               <ForkKnifeIcon
                 size={18}
-                color={appColors.foodPrimaryDark}
+                color={appColors.brand700}
                 weight="fill"
               />
             }
@@ -217,7 +218,7 @@ const MoreScreen = () => {
             icon={
               <TargetIcon
                 size={18}
-                color={appColors.foodPrimaryDark}
+                color={appColors.brand700}
                 weight="fill"
               />
             }
@@ -232,7 +233,7 @@ const MoreScreen = () => {
             icon={
               <BarbellIcon
                 size={18}
-                color={appColors.foodPrimaryDark}
+                color={appColors.brand700}
                 weight="fill"
               />
             }
@@ -245,7 +246,7 @@ const MoreScreen = () => {
             icon={
               <BarbellIcon
                 size={18}
-                color={appColors.foodPrimaryDark}
+                color={appColors.brand700}
                 weight="fill"
               />
             }
@@ -254,11 +255,37 @@ const MoreScreen = () => {
             value={formatTrainingSummary(user?.trainingTypes)}
           />
           <MoreActionRow
+            description="Review every recipe you created in one compact list and open any of them straight in the editor."
+            icon={
+              <CookingPotIcon
+                size={18}
+                color={appColors.brand700}
+                weight="fill"
+              />
+            }
+            onPress={() => navigation.navigate("UserCreatedRecipesScreen")}
+            title="Your recipes"
+            value="Manage"
+          />
+          <MoreActionRow
+            description="Review every custom meal you created and jump straight into editing macros, serving size, or visibility."
+            icon={
+              <ForkKnifeIcon
+                size={18}
+                color={appColors.brand700}
+                weight="fill"
+              />
+            }
+            onPress={() => navigation.navigate("UserCreatedCustomMealsScreen")}
+            title="Your custom meals"
+            value="Manage"
+          />
+          <MoreActionRow
             description="Let completed diary days and your recent weight trend generate quiet calorie-target recommendations that you can review manually."
             icon={
               <LightningIcon
                 size={18}
-                color={appColors.foodPrimaryDark}
+                color={appColors.brand700}
                 weight="fill"
               />
             }
@@ -277,7 +304,7 @@ const MoreScreen = () => {
             icon={
               <ForkKnifeIcon
                 size={18}
-                color={appColors.foodPrimaryDark}
+                color={appColors.brand700}
                 weight="fill"
               />
             }
@@ -298,7 +325,7 @@ const MoreScreen = () => {
             icon={
               <ClockIcon
                 size={18}
-                color={appColors.foodPrimaryDark}
+                color={appColors.brand700}
                 weight="fill"
               />
             }
@@ -311,7 +338,7 @@ const MoreScreen = () => {
             icon={
               <BugIcon
                 size={18}
-                color={appColors.foodPrimaryDark}
+                color={appColors.brand700}
                 weight="fill"
               />
             }
@@ -324,7 +351,7 @@ const MoreScreen = () => {
             icon={
               <DatabaseIcon
                 size={18}
-                color={appColors.foodPrimaryDark}
+                color={appColors.brand700}
                 weight="fill"
               />
             }
@@ -468,7 +495,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   actionValue: {
-    color: appColors.foodPrimaryDark,
+    color: appColors.brand700,
     fontSize: 12,
     fontWeight: "800",
     textAlign: "right",

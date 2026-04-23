@@ -6,11 +6,11 @@ export const appNavigationTheme: Theme = {
   dark: true,
   colors: {
     ...DarkTheme.colors,
-    primary: appColors.foodPrimaryDark,
+    primary: appColors.brand700,
     background: appColors.surfaceCanvas,
     card: appColors.surfaceCard,
     text: appColors.textPrimary,
     border: appColors.borderSoft,
-    notification: appColors.foodPrimary,
+    notification: appColors.brand500,
   },
 };

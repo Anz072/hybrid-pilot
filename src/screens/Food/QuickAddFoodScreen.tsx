@@ -363,6 +363,7 @@ const QuickAddFoodScreen = () => {
       <KeyboardAvoidingView
         style={styles.screen}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
       >
         <KeyboardAwareScrollView
           style={styles.screen}
@@ -387,7 +388,7 @@ const QuickAddFoodScreen = () => {
               >
                 <ClockIcon
                   size={14}
-                  color={appColors.foodPrimary}
+                  color={appColors.brand500}
                   weight="bold"
                 />
                 <Text style={styles.contextPillText}>
@@ -572,7 +573,7 @@ const styles = StyleSheet.create({
   },
   heroEyebrow: {
     alignSelf: "flex-start",
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -599,7 +600,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   heroPillText: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 11,
     fontWeight: "800",
   },
@@ -621,18 +622,18 @@ const styles = StyleSheet.create({
     borderColor: appColors.foodBorder,
   },
   contextPillText: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 12,
     fontWeight: "800",
   },
   contextPillAction: {
-    color: appColors.foodAccentText,
+    color: appColors.brand300,
     fontSize: 11,
     fontWeight: "800",
   },
   previewStrip: {
     borderRadius: 8,
-    backgroundColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.brand700,
     paddingHorizontal: 14,
     paddingVertical: 13,
   },
@@ -673,7 +674,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   fieldLabel: {
-    color: appColors.foodLabel,
+    color: appColors.slate300,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -691,7 +692,7 @@ const styles = StyleSheet.create({
   energyInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: appColors.foodPrimaryDark,
+    borderColor: appColors.brand700,
     borderRadius: 8,
     backgroundColor: appColors.foodFieldBg,
     paddingHorizontal: 14,
@@ -709,7 +710,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   unitText: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 13,
     fontWeight: "800",
   },
@@ -756,7 +757,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   nutrientUnit: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 13,
     fontWeight: "800",
   },

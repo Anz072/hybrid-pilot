@@ -233,7 +233,7 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
             onBack={() => navigation.goBack()}
           />
           <View style={styles.centerCard}>
-            <ActivityIndicator size="small" color={appColors.foodPrimaryDark} />
+            <ActivityIndicator size="small" color={appColors.brand700} />
             <Text style={styles.centerText}>Preparing the editor.</Text>
           </View>
         </View>
@@ -274,6 +274,7 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
       <KeyboardAvoidingView
         style={styles.screen}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
       >
         <KeyboardAwareScrollView
           style={styles.screen}
@@ -301,7 +302,7 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
                 icon: (
                   <PencilSimpleIcon
                     size={14}
-                    color={appColors.foodPrimary}
+                    color={appColors.brand500}
                     weight="bold"
                   />
                 ),
@@ -309,14 +310,14 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
               {
                 key: "date",
                 label: loggedDate,
-                icon: <CalendarIcon size={14} color={appColors.foodPrimary} weight="bold" />,
+                icon: <CalendarIcon size={14} color={appColors.brand500} weight="bold" />,
               },
               ...(mealTypeValue.trim()
                 ? [
                     {
                       key: "label",
                       label: mealTypeValue.trim(),
-                      icon: <ForkKnifeIcon size={14} color={appColors.foodPrimary} weight="fill" />,
+                      icon: <ForkKnifeIcon size={14} color={appColors.brand500} weight="fill" />,
                     },
                   ]
                 : []),
@@ -338,7 +339,7 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
             onChangeAmount={setQuantityValue}
             onAmountBlur={handleQuantityBlur}
             slot={{
-              icon: <ClockIcon size={18} color={appColors.foodPrimary} weight="bold" />,
+              icon: <ClockIcon size={18} color={appColors.brand500} weight="bold" />,
               label: "Logged time",
               value: loggedTime,
               actionLabel: "Change",
@@ -387,7 +388,7 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
               ).map(([key, target]) => (
                 <MacroBar
                   key={key}
-                  accent={appColors.foodPrimary}
+                  accent={appColors.brand500}
                   consumed={(food[key] ?? 0) * micronutrientFactor}
                   target={target}
                   label={key
@@ -513,7 +514,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     borderRadius: 999,
-    backgroundColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.brand700,
     paddingVertical: 13,
   },
   primaryButtonText: {

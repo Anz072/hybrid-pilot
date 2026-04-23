@@ -222,7 +222,7 @@ const CalorieScheduleScreen = ({ navigation }: Props) => {
                         >
                           <MinusIcon
                             size={16}
-                            color={appColors.foodPrimaryDark}
+                            color={appColors.brand700}
                             weight="bold"
                           />
                         </Pressable>
@@ -245,7 +245,7 @@ const CalorieScheduleScreen = ({ navigation }: Props) => {
                         >
                           <PlusIcon
                             size={16}
-                            color={appColors.foodPrimaryDark}
+                            color={appColors.brand700}
                             weight="bold"
                           />
                         </Pressable>
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   baseValue: {
-    color: appColors.foodPrimaryDark,
+    color: appColors.brand700,
     fontSize: 30,
     lineHeight: 34,
     fontWeight: "800",
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   clearButtonText: {
-    color: appColors.foodPrimaryDark,
+    color: appColors.brand700,
     fontSize: 12,
     fontWeight: "800",
   },
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     marginTop: 16,
     borderRadius: 999,
-    backgroundColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.brand700,
     paddingHorizontal: 16,
     paddingVertical: 14,
     alignItems: "center",

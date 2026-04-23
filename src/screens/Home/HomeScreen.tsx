@@ -121,7 +121,7 @@ const CalorieGauge = ({
         />
         <Path
           d={gaugePath}
-          stroke={appColors.foodPrimary}
+          stroke={appColors.brand500}
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeDasharray={`${arcLength} ${arcLength}`}
@@ -288,7 +288,7 @@ const HomeScreen = () => {
 
           {isLoading ? (
             <View style={styles.loadingState}>
-              <ActivityIndicator color={appColors.foodPrimary} />
+              <ActivityIndicator color={appColors.brand500} />
             </View>
           ) : error ? (
             <Text style={styles.errorText}>{error}</Text>
@@ -319,7 +319,7 @@ const HomeScreen = () => {
 
               <View style={styles.macroStack}>
                 <MacroBar
-                  accent={appColors.raw_hex_22C55E}
+                  accent={appColors.emerald500}
                   consumed={todayTotals.proteinG}
                   label="Protein"
                   target={user?.proteinG ?? null}
@@ -333,7 +333,7 @@ const HomeScreen = () => {
                   unit="g"
                 />
                 <MacroBar
-                  accent={appColors.raw_hex_F97316}
+                  accent={appColors.amber600}
                   consumed={todayTotals.fatG}
                   label="Fat"
                   target={user?.fatG ?? null}
@@ -624,7 +624,7 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.brand700,
   },
   cardIconAlt: {
     backgroundColor: appColors.revolutTeal,
@@ -726,7 +726,7 @@ const styles = StyleSheet.create({
   },
   microsPreviewValue: {
     ...appTypography.bodyStrong,
-    color: appColors.foodAccentText,
+    color: appColors.brand300,
   },
   microsMascotCard: {
     width: 100,

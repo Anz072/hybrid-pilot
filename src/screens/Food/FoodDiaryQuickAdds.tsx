@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   favoriteEyebrow: {
-    color: appColors.raw_hex_8A7DB0,
+    color: appColors.brand500,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -110,14 +110,14 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   favoriteMeta: {
-    color: appColors.foodMeta,
+    color: appColors.slate300,
     fontSize: 13,
     lineHeight: 18,
     marginBottom: 4,
   },
   favoriteButton: {
     borderRadius: 8,
-    backgroundColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.brand700,
     paddingVertical: 12,
     alignItems: "center",
     marginTop: 10,

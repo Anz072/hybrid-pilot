@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   eyebrow: {
-    color: appColors.foodPrimaryDark,
+    color: appColors.brand700,
     fontSize: 12,
     fontWeight: "800",
     letterSpacing: 0.4,
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
   reviewButton: {
     alignSelf: "flex-start",
     borderRadius: 9999,
-    backgroundColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.brand700,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },

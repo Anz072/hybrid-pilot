@@ -126,6 +126,7 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
     >
       <View style={styles.bgOrbTop} />
       <View style={styles.bgOrbBottom} />
@@ -143,7 +144,7 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
         />
         <View style={styles.headerWrap}>
           <View style={styles.headerRow}>
-            <RulerIcon size={22} color={appColors.sky700} weight="fill" />
+            <RulerIcon size={22} color={appColors.brand700} weight="fill" />
             <Text style={styles.eyebrow}>Body Data</Text>
           </View>
           <Text style={styles.title}>Body basics</Text>
@@ -315,7 +316,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 13,
     lineHeight: 19,
-    color: appColors.teal700,
+    color: appColors.green700,
     fontWeight: "700",
   },
   formCard: {

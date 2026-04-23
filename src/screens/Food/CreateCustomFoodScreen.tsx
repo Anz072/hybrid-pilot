@@ -1,5 +1,15 @@
 import React from "react";
 import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import {
   StackActions,
   useNavigation,
   useRoute,
@@ -11,25 +21,14 @@ import type {
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   CalendarIcon,
-  CaretDownIcon,
-  CaretUpIcon,
   ForkKnifeIcon,
+  TrashIcon,
 } from "phosphor-react-native";
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import { DB } from "../../store/DB";
-import type { DBFoodNutrientDetails } from "../../store/DB_TYPES";
 import { useAppSelector } from "../../store/hooks";
 import FoodScreenHeader from "./FoodScreenHeader";
 import PublicVisibilityCheckbox from "./PublicVisibilityCheckbox";
@@ -48,119 +47,6 @@ type CreateCustomFoodNav = CompositeNavigationProp<
   NativeStackNavigationProp<RootStackParamList>
 >;
 
-type OptionalNutrientInputValues = Partial<
-  Record<keyof DBFoodNutrientDetails, string>
->;
-
-type NutrientField = {
-  key: keyof DBFoodNutrientDetails;
-  label: string;
-  unit: string;
-};
-
-const OPTIONAL_NUTRIENT_SECTIONS: Array<{
-  title: string;
-  fields: NutrientField[];
-}> = [
-  {
-    title: "Macros + extras",
-    fields: [
-      { key: "fiberG", label: "Fiber", unit: "g" },
-      { key: "sugarG", label: "Sugar", unit: "g" },
-      { key: "addedSugarsG", label: "Added sugars", unit: "g" },
-      { key: "waterG", label: "Water", unit: "g" },
-      { key: "alcoholG", label: "Alcohol", unit: "g" },
-    ],
-  },
-  {
-    title: "Fats",
-    fields: [
-      { key: "fatSaturatedG", label: "Saturated fat", unit: "g" },
-      { key: "fatMonounsaturatedG", label: "Monounsaturated fat", unit: "g" },
-      { key: "fatPolyunsaturatedG", label: "Polyunsaturated fat", unit: "g" },
-      { key: "fatTransG", label: "Trans fat", unit: "g" },
-      { key: "omega3G", label: "Omega-3", unit: "g" },
-      { key: "omega6G", label: "Omega-6", unit: "g" },
-      { key: "epaG", label: "EPA", unit: "g" },
-      { key: "dhaG", label: "DHA", unit: "g" },
-      { key: "alaG", label: "ALA", unit: "g" },
-      { key: "linoleicAcidG", label: "Linoleic acid", unit: "g" },
-      { key: "alphaLinolenicAcidG", label: "Alpha-linolenic acid", unit: "g" },
-      { key: "cholesterolMg", label: "Cholesterol", unit: "mg" },
-    ],
-  },
-  {
-    title: "Vitamins",
-    fields: [
-      { key: "vitaminAUg", label: "Vitamin A", unit: "ug" },
-      { key: "vitaminCMg", label: "Vitamin C", unit: "mg" },
-      { key: "vitaminDUg", label: "Vitamin D", unit: "ug" },
-      { key: "vitaminEMg", label: "Vitamin E", unit: "mg" },
-      { key: "vitaminKUg", label: "Vitamin K", unit: "ug" },
-      { key: "vitaminK1Ug", label: "Vitamin K1", unit: "ug" },
-      { key: "vitaminK2Ug", label: "Vitamin K2", unit: "ug" },
-      { key: "thiaminB1Mg", label: "Thiamin B1", unit: "mg" },
-      { key: "riboflavinB2Mg", label: "Riboflavin B2", unit: "mg" },
-      { key: "niacinB3Mg", label: "Niacin B3", unit: "mg" },
-      { key: "pantothenicAcidB5Mg", label: "Pantothenic acid B5", unit: "mg" },
-      { key: "vitaminB6Mg", label: "Vitamin B6", unit: "mg" },
-      { key: "biotinB7Ug", label: "Biotin B7", unit: "ug" },
-      { key: "folateB9Ug", label: "Folate B9", unit: "ug" },
-      { key: "vitaminB12Ug", label: "Vitamin B12", unit: "ug" },
-      { key: "cholineMg", label: "Choline", unit: "mg" },
-    ],
-  },
-  {
-    title: "Minerals",
-    fields: [
-      { key: "calciumMg", label: "Calcium", unit: "mg" },
-      { key: "ironMg", label: "Iron", unit: "mg" },
-      { key: "magnesiumMg", label: "Magnesium", unit: "mg" },
-      { key: "phosphorusMg", label: "Phosphorus", unit: "mg" },
-      { key: "potassiumMg", label: "Potassium", unit: "mg" },
-      { key: "sodiumMg", label: "Sodium", unit: "mg" },
-      { key: "zincMg", label: "Zinc", unit: "mg" },
-      { key: "copperMg", label: "Copper", unit: "mg" },
-      { key: "manganeseMg", label: "Manganese", unit: "mg" },
-      { key: "seleniumUg", label: "Selenium", unit: "ug" },
-      { key: "iodineUg", label: "Iodine", unit: "ug" },
-      { key: "chromiumUg", label: "Chromium", unit: "ug" },
-      { key: "molybdenumUg", label: "Molybdenum", unit: "ug" },
-    ],
-  },
-  {
-    title: "Amino acids",
-    fields: [
-      { key: "histidineG", label: "Histidine", unit: "g" },
-      { key: "isoleucineG", label: "Isoleucine", unit: "g" },
-      { key: "leucineG", label: "Leucine", unit: "g" },
-      { key: "lysineG", label: "Lysine", unit: "g" },
-      { key: "methionineG", label: "Methionine", unit: "g" },
-      { key: "phenylalanineG", label: "Phenylalanine", unit: "g" },
-      { key: "threonineG", label: "Threonine", unit: "g" },
-      { key: "tryptophanG", label: "Tryptophan", unit: "g" },
-      { key: "valineG", label: "Valine", unit: "g" },
-      { key: "alanineG", label: "Alanine", unit: "g" },
-      { key: "arginineG", label: "Arginine", unit: "g" },
-      { key: "asparticAcidG", label: "Aspartic acid", unit: "g" },
-      { key: "cysteineG", label: "Cysteine", unit: "g" },
-      { key: "glutamicAcidG", label: "Glutamic acid", unit: "g" },
-      { key: "glycineG", label: "Glycine", unit: "g" },
-      { key: "prolineG", label: "Proline", unit: "g" },
-      { key: "serineG", label: "Serine", unit: "g" },
-      { key: "tyrosineG", label: "Tyrosine", unit: "g" },
-    ],
-  },
-  {
-    title: "Other",
-    fields: [
-      { key: "caffeineMg", label: "Caffeine", unit: "mg" },
-      { key: "betaineMg", label: "Betaine", unit: "mg" },
-      { key: "luteinZeaxanthinUg", label: "Lutein + zeaxanthin", unit: "ug" },
-    ],
-  },
-];
-
 const parseLocalizedNumber = (value: string): number =>
   Number(value.trim().replace(",", "."));
 
@@ -170,23 +56,44 @@ const formatPreviewNumber = (
   empty = "--",
 ): string => (Number.isFinite(value) ? `${value.toFixed(0)}${suffix}` : empty);
 
+const parseMealPayload = (rawPayload: string | null) => {
+  if (!rawPayload) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(rawPayload) as Record<string, unknown>;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed
+      : null;
+  } catch {
+    return null;
+  }
+};
+
 const CreateCustomFoodScreen = () => {
   const [name, setName] = React.useState("");
+  const [description, setDescription] = React.useState("");
   const [servingSize, setServingSize] = React.useState("100");
   const [calories, setCalories] = React.useState("0");
   const [protein, setProtein] = React.useState("0");
   const [carbs, setCarbs] = React.useState("0");
   const [fat, setFat] = React.useState("0");
   const [isPublic, setIsPublic] = React.useState(true);
-  const [showAdvanced, setShowAdvanced] = React.useState(false);
-  const [creating, setCreating] = React.useState(false);
-  const [optionalNutrients, setOptionalNutrients] =
-    React.useState<OptionalNutrientInputValues>({});
+  const [loadedMealOwnerUserId, setLoadedMealOwnerUserId] = React.useState<
+    string | null
+  >(null);
+  const [loadingMeal, setLoadingMeal] = React.useState(false);
+  const [mealLoadError, setMealLoadError] = React.useState<string | null>(null);
+  const [saving, setSaving] = React.useState(false);
+  const [deleting, setDeleting] = React.useState(false);
 
   const user = useAppSelector((state) => state.user.currentUser);
   const route = useRoute<CreateCustomFoodRoute>();
   const navigation = useNavigation<CreateCustomFoodNav>();
-  const { contextLabel, date, loggedAt, mealType } = route.params;
+  const insets = useSafeAreaInsets();
+  const { contextLabel, date, loggedAt, mealType, mealId } = route.params;
+  const isEditing = mealId != null;
 
   const resolvedLoggedAt = React.useMemo(() => {
     if (loggedAt) {
@@ -207,7 +114,9 @@ const CreateCustomFoodScreen = () => {
   }, [contextLabel, resolvedLoggedAt]);
 
   const trimmedName = name.trim();
+  const trimmedDescription = description.trim();
   const trimmedMealType = mealType?.trim() || null;
+
   const parsedServing = React.useMemo(
     () => parseLocalizedNumber(servingSize),
     [servingSize],
@@ -222,64 +131,127 @@ const CreateCustomFoodScreen = () => {
   );
   const parsedCarbs = React.useMemo(() => parseLocalizedNumber(carbs), [carbs]);
   const parsedFat = React.useMemo(() => parseLocalizedNumber(fat), [fat]);
+
+  const canEditMeal =
+    !isEditing ||
+    (user?.externalId != null &&
+      loadedMealOwnerUserId != null &&
+      loadedMealOwnerUserId === user.externalId);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    if (!isEditing || mealId == null) {
+      setLoadingMeal(false);
+      setMealLoadError(null);
+      setLoadedMealOwnerUserId(user?.externalId ?? null);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const loadMeal = async () => {
+      try {
+        setLoadingMeal(true);
+        setMealLoadError(null);
+
+        const meal = await DB.getUserCustomMealFoodById(mealId);
+
+        if (!meal) {
+          throw new Error("That custom meal could not be found.");
+        }
+
+        const payload = parseMealPayload(meal.rawPayload);
+        const ownerUserId =
+          typeof payload?.createdByUserExternalId === "string" &&
+          payload.createdByUserExternalId.trim()
+            ? payload.createdByUserExternalId
+            : null;
+
+        if (
+          user?.externalId &&
+          ownerUserId &&
+          ownerUserId !== user.externalId
+        ) {
+          throw new Error("Only your own custom meals can be edited here.");
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        setLoadedMealOwnerUserId(ownerUserId);
+        setName(meal.name);
+        setDescription(
+          typeof payload?.description === "string" ? payload.description : "",
+        );
+        setServingSize(
+          Number.isFinite(meal.servingSizeValue ?? NaN)
+            ? String(meal.servingSizeValue)
+            : "100",
+        );
+        setCalories(
+          Number.isFinite(meal.calories ?? NaN) ? String(meal.calories) : "0",
+        );
+        setProtein(
+          Number.isFinite(meal.proteinG ?? NaN) ? String(meal.proteinG) : "0",
+        );
+        setCarbs(
+          Number.isFinite(meal.carbsG ?? NaN) ? String(meal.carbsG) : "0",
+        );
+        setFat(Number.isFinite(meal.fatG ?? NaN) ? String(meal.fatG) : "0");
+        setIsPublic(meal.isPublic);
+      } catch (error) {
+        if (!cancelled) {
+          setMealLoadError(
+            error instanceof Error ? error.message : "Please try again.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingMeal(false);
+        }
+      }
+    };
+
+    void loadMeal();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isEditing, mealId, user?.externalId]);
+
   const handleServingBlur = React.useCallback(() => {
     setServingSize((current) => normalizePositiveFoodInput(current, 100));
   }, []);
+
   const handleCaloriesBlur = React.useCallback(() => {
     setCalories((current) => normalizePositiveFoodInput(current, 1, 0));
   }, []);
 
-  const updateOptionalNutrient = React.useCallback(
-    (key: keyof DBFoodNutrientDetails, value: string) => {
-      setOptionalNutrients((current) => ({
-        ...current,
-        [key]: value,
-      }));
-    },
-    [],
-  );
+  const closeAfterCreate = React.useCallback(() => {
+    const routes = navigation.getState().routes;
+    const previousRoute = routes[routes.length - 2];
 
-  const parseOptionalNutrients = React.useCallback(() => {
-    const parsed: Partial<DBFoodNutrientDetails> = {};
-
-    for (const section of OPTIONAL_NUTRIENT_SECTIONS) {
-      for (const field of section.fields) {
-        const rawValue = optionalNutrients[field.key]?.trim();
-
-        if (!rawValue) {
-          continue;
-        }
-
-        const numericValue = parseLocalizedNumber(rawValue);
-
-        if (!Number.isFinite(numericValue) || numericValue < 0) {
-          return {
-            error: `${field.label} must be a non-negative number.`,
-            values: null,
-          };
-        }
-
-        parsed[field.key] = numericValue;
-      }
+    if (previousRoute?.name === "AddFood" && routes.length >= 2) {
+      navigation.dispatch(StackActions.pop(2));
+      return;
     }
 
-    return {
-      error: null,
-      values: parsed,
-    };
-  }, [optionalNutrients]);
+    navigation.goBack();
+  }, [navigation]);
 
-  const createAndAdd = React.useCallback(async () => {
+  const handleSave = React.useCallback(async () => {
     if (!user) {
       Alert.alert(
         "No account found",
-        "Create or restore a user before adding food.",
+        "Create or restore a user before saving custom meals.",
       );
       return;
     }
 
     if (!trimmedName) {
-      Alert.alert("Missing name", "Enter a food name first.");
+      Alert.alert("Missing name", "Enter a custom meal name first.");
       return;
     }
 
@@ -298,78 +270,312 @@ const CreateCustomFoodScreen = () => {
       return;
     }
 
-    const parsedOptionalNutrients = parseOptionalNutrients();
-    if (parsedOptionalNutrients.error || !parsedOptionalNutrients.values) {
+    if (isEditing && !canEditMeal) {
       Alert.alert(
-        "Invalid optional nutrient",
-        parsedOptionalNutrients.error ?? "Check the advanced nutrition values.",
+        "Custom meal unavailable",
+        "Only your own custom meals can be edited here.",
       );
       return;
     }
 
     try {
-      setCreating(true);
+      setSaving(true);
 
-      const foodId = await DB.saveFoodItem({
-        source: "custom",
-        sourceId: null,
-        barcode: null,
+      const payload = {
+        userExternalId: user.externalId,
+        createdByUserExternalId: loadedMealOwnerUserId ?? user.externalId,
+        isPublic,
         name: trimmedName,
-        brand: null,
-        imageUrl: null,
-        quantityValue: null,
-        quantityUnit: null,
-        servingSizeValue: parsedServing,
-        servingSizeUnit: "g",
-        nutritionBasis: "serving",
+        description: trimmedDescription || null,
+        servingSizeG: parsedServing,
         calories: parsedCalories,
         proteinG: parsedProtein,
         carbsG: parsedCarbs,
         fatG: parsedFat,
-        saltG: null,
-        ...parsedOptionalNutrients.values,
-        ingredientsText: null,
-        verified: false,
-        isComplete: true,
-        isPublic,
-      });
+      };
+
+      if (isEditing && mealId != null) {
+        await DB.updateUserCustomMeal({
+          mealId,
+          ...payload,
+        });
+        navigation.goBack();
+        return;
+      }
+
+      const mealFood = await DB.createUserCustomMeal(payload);
 
       await DB.addUserFoodLog({
         userExternalId: user.externalId,
-        foodId,
+        foodId: mealFood.id,
         date,
         loggedAt: resolvedLoggedAt,
         quantityG: parsedServing,
         mealType: mealType ?? null,
       });
 
-      const routes = navigation.getState().routes;
-      const previousRoute = routes[routes.length - 2];
-
-      if (previousRoute?.name === "AddFood" && routes.length >= 2) {
-        navigation.dispatch(StackActions.pop(2));
-        return;
-      }
-
-      navigation.goBack();
+      closeAfterCreate();
+    } catch (error) {
+      Alert.alert(
+        isEditing ? "Could not update custom meal" : "Could not save custom meal",
+        error instanceof Error ? error.message : "Please try again.",
+      );
     } finally {
-      setCreating(false);
+      setSaving(false);
     }
   }, [
+    canEditMeal,
+    closeAfterCreate,
     date,
+    isEditing,
+    isPublic,
+    loadedMealOwnerUserId,
+    mealId,
     mealType,
     navigation,
-    parseOptionalNutrients,
     parsedCalories,
     parsedCarbs,
     parsedFat,
     parsedProtein,
     parsedServing,
     resolvedLoggedAt,
+    trimmedDescription,
     trimmedName,
     user,
-    isPublic,
   ]);
+
+  const handleDeleteMeal = React.useCallback(() => {
+    if (!isEditing || mealId == null || deleting || !canEditMeal) {
+      return;
+    }
+
+    Alert.alert(
+      "Delete custom meal?",
+      "This removes the saved custom meal and its linked diary shortcut item.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              try {
+                setDeleting(true);
+                await DB.deleteUserCustomMeal(mealId);
+                navigation.goBack();
+              } catch (error) {
+                Alert.alert(
+                  "Could not delete custom meal",
+                  error instanceof Error ? error.message : "Please try again.",
+                );
+              } finally {
+                setDeleting(false);
+              }
+            })();
+          },
+        },
+      ],
+    );
+  }, [canEditMeal, deleting, isEditing, mealId, navigation]);
+
+  const renderEditor = () => (
+    <>
+      <View style={styles.heroCard}>
+        <View style={styles.heroHeaderCopy}>
+          <Text style={styles.heroEyebrow}>
+            {isEditing ? "Saved custom meal" : "Quick custom meal"}
+          </Text>
+          <Text style={styles.heroTitle}>
+            {trimmedName || (isEditing ? "Edit custom meal" : "New custom meal")}
+          </Text>
+          <Text style={styles.heroMeta}>
+            {isEditing
+              ? "Update the meal once and the saved version stays in sync everywhere it appears."
+              : "Save a reusable custom meal and log this serving into your diary right away."}
+          </Text>
+        </View>
+
+        <View style={styles.pillRow}>
+          <View style={styles.pill}>
+            <ForkKnifeIcon size={14} color={appColors.brand500} weight="fill" />
+            <Text style={styles.pillText}>{resolvedContextLabel}</Text>
+          </View>
+          <View style={styles.pill}>
+            <CalendarIcon size={14} color={appColors.brand500} weight="bold" />
+            <Text style={styles.pillText}>{formatFoodShortDate(date)}</Text>
+          </View>
+          {trimmedMealType ? (
+            <View style={styles.pill}>
+              <Text style={styles.pillText}>{trimmedMealType}</Text>
+            </View>
+          ) : null}
+        </View>
+
+        <View style={styles.previewStrip}>
+          <Text style={styles.previewValue}>
+            {formatPreviewNumber(parsedCalories, " kcal")}
+          </Text>
+          <Text style={styles.previewText}>
+            {`${formatFoodMacro(parsedProtein, "P")} | ${formatFoodMacro(
+              parsedCarbs,
+              "C",
+            )} | ${formatFoodMacro(parsedFat, "F")}`}
+          </Text>
+          <Text style={styles.previewSubtext}>
+            Serving size {formatPreviewNumber(parsedServing, " g")}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Meal Details</Text>
+        <Text style={styles.sectionSubtitle}>
+          Save the name, optional notes, and default serving for this custom meal.
+        </Text>
+
+        <Text style={styles.fieldLabel}>Meal name</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Chicken rice bowl"
+          placeholderTextColor={appColors.foodPlaceholder}
+          value={name}
+          onChangeText={setName}
+        />
+
+        <Text style={[styles.fieldLabel, styles.fieldLabelSpacing]}>
+          Description
+        </Text>
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          placeholder="Optional notes, ingredients, or prep details"
+          placeholderTextColor={appColors.foodPlaceholder}
+          value={description}
+          onChangeText={setDescription}
+          multiline
+          textAlignVertical="top"
+        />
+
+        <Text style={[styles.fieldLabel, styles.fieldLabelSpacing]}>
+          Default serving
+        </Text>
+        <View style={styles.inputRow}>
+          <TextInput
+            style={styles.input}
+            placeholder="100"
+            placeholderTextColor={appColors.foodPlaceholder}
+            value={servingSize}
+            onChangeText={setServingSize}
+            onBlur={handleServingBlur}
+            keyboardType="decimal-pad"
+          />
+          <View style={styles.unitPill}>
+            <Text style={styles.unitText}>g</Text>
+          </View>
+        </View>
+
+        <View style={styles.fieldLabelSpacing}>
+          <PublicVisibilityCheckbox checked={isPublic} onChange={setIsPublic} />
+        </View>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Nutrition Per Serving</Text>
+        <Text style={styles.sectionSubtitle}>
+          Enter the macros for the saved serving size above.
+        </Text>
+
+        <View style={styles.grid}>
+          <View style={styles.gridCell}>
+            <Text style={styles.fieldLabel}>Calories</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="0"
+              placeholderTextColor={appColors.foodPlaceholder}
+              value={calories}
+              onChangeText={setCalories}
+              onBlur={handleCaloriesBlur}
+              keyboardType="decimal-pad"
+            />
+          </View>
+          <View style={styles.gridCell}>
+            <Text style={styles.fieldLabel}>Protein (g)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="0"
+              placeholderTextColor={appColors.foodPlaceholder}
+              value={protein}
+              onChangeText={setProtein}
+              keyboardType="decimal-pad"
+            />
+          </View>
+          <View style={styles.gridCell}>
+            <Text style={styles.fieldLabel}>Carbs (g)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="0"
+              placeholderTextColor={appColors.foodPlaceholder}
+              value={carbs}
+              onChangeText={setCarbs}
+              keyboardType="decimal-pad"
+            />
+          </View>
+          <View style={styles.gridCell}>
+            <Text style={styles.fieldLabel}>Fat (g)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="0"
+              placeholderTextColor={appColors.foodPlaceholder}
+              value={fat}
+              onChangeText={setFat}
+              keyboardType="decimal-pad"
+            />
+          </View>
+        </View>
+      </View>
+
+      <Pressable
+        onPress={() => {
+          void handleSave();
+        }}
+        disabled={saving}
+        style={({ pressed }) => [
+          styles.primaryButton,
+          saving && styles.disabled,
+          pressed && !saving && styles.cardPressed,
+        ]}
+      >
+        <Text style={styles.primaryButtonText}>
+          {saving
+            ? isEditing
+              ? "Saving..."
+              : "Creating..."
+            : isEditing
+              ? "Save changes"
+              : "Create and add"}
+        </Text>
+      </Pressable>
+
+      {isEditing && canEditMeal ? (
+        <Pressable
+          onPress={handleDeleteMeal}
+          disabled={deleting}
+          style={({ pressed }) => [
+            styles.deleteButton,
+            deleting && styles.disabled,
+            pressed && !deleting && styles.cardPressed,
+          ]}
+        >
+          <TrashIcon size={16} color={appColors.revolutDark} weight="bold" />
+          <Text style={styles.deleteButtonText}>
+            {deleting ? "Deleting..." : "Delete custom meal"}
+          </Text>
+        </Pressable>
+      ) : null}
+    </>
+  );
 
   return (
     <View style={styles.screen}>
@@ -379,227 +585,37 @@ const CreateCustomFoodScreen = () => {
       <KeyboardAvoidingView
         style={styles.screen}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
       >
         <KeyboardAwareScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: Math.max(176, insets.bottom + 152) },
+          ]}
+          focusedInputBottomOffset={132}
         >
           <FoodScreenHeader
-            eyebrow="Custom Food"
-            title="Create custom food"
+            eyebrow="Custom Meal"
+            title={isEditing ? "Edit custom meal" : "Create custom meal"}
             subtitle={`${formatFoodShortDate(date)} | ${resolvedContextLabel}`}
             onBack={() => navigation.goBack()}
           />
 
-          <View style={styles.heroCard}>
-            <View style={styles.heroHeaderCopy}>
-              <Text style={styles.heroEyebrow}>Quick Create</Text>
-              <Text style={styles.heroTitle}>
-                {trimmedName || "New custom food"}
-              </Text>
-              <Text style={styles.heroMeta}>
-                Save it once, then drop it straight into your diary using the
-                serving below.
-              </Text>
-            </View>
-
-            <View style={styles.pillRow}>
-              <View style={styles.pill}>
-                <ForkKnifeIcon size={14} color={appColors.foodPrimary} weight="fill" />
-                <Text style={styles.pillText}>{resolvedContextLabel}</Text>
-              </View>
-              <View style={styles.pill}>
-                <CalendarIcon size={14} color={appColors.foodPrimary} weight="bold" />
-                <Text style={styles.pillText}>{formatFoodShortDate(date)}</Text>
-              </View>
-              {trimmedMealType ? (
-                <View style={styles.pill}>
-                  <Text style={styles.pillText}>{trimmedMealType}</Text>
-                </View>
-              ) : null}
-            </View>
-
-            <View style={styles.previewStrip}>
-              <Text style={styles.previewValue}>
-                {formatPreviewNumber(parsedCalories, " kcal")}
-              </Text>
-              <Text style={styles.previewText}>
-                {`${formatFoodMacro(parsedProtein, "P")} | ${formatFoodMacro(
-                  parsedCarbs,
-                  "C",
-                )} | ${formatFoodMacro(parsedFat, "F")}`}
-              </Text>
-              <Text style={styles.previewSubtext}>
-                Default log size {formatPreviewNumber(parsedServing, " g")}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Food Details</Text>
-            <Text style={styles.sectionSubtitle}>
-              Start with the saved name and the amount you want logged by
-              default.
-            </Text>
-
-            <Text style={styles.fieldLabel}>Food name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Chicken rice bowl"
-              placeholderTextColor={appColors.foodPlaceholder}
-              value={name}
-              onChangeText={setName}
-            />
-
-            <Text style={[styles.fieldLabel, styles.fieldLabelSpacing]}>
-              Default serving
-            </Text>
-            <View style={styles.inputRow}>
-              <TextInput
-                style={styles.input}
-                placeholder="100"
-                placeholderTextColor={appColors.foodPlaceholder}
-                value={servingSize}
-                onChangeText={setServingSize}
-                onBlur={handleServingBlur}
-                keyboardType="decimal-pad"
-              />
-              <View style={styles.unitPill}>
-                <Text style={styles.unitText}>g</Text>
-              </View>
-            </View>
-
-            <View style={styles.fieldLabelSpacing}>
-              <PublicVisibilityCheckbox
-                checked={isPublic}
-                onChange={setIsPublic}
-              />
-            </View>
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Core Nutrition</Text>
-            <Text style={styles.sectionSubtitle}>
-              Enter the nutrition for that serving.
-            </Text>
-
-            <View style={styles.grid}>
-              <View style={styles.gridCell}>
-                <Text style={styles.fieldLabel}>Calories</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="0"
-                  placeholderTextColor={appColors.foodPlaceholder}
-                  value={calories}
-                  onChangeText={setCalories}
-                  onBlur={handleCaloriesBlur}
-                  keyboardType="decimal-pad"
-                />
-              </View>
-              <View style={styles.gridCell}>
-                <Text style={styles.fieldLabel}>Protein (g)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="0"
-                  placeholderTextColor={appColors.foodPlaceholder}
-                  value={protein}
-                  onChangeText={setProtein}
-                  keyboardType="decimal-pad"
-                />
-              </View>
-              <View style={styles.gridCell}>
-                <Text style={styles.fieldLabel}>Carbs (g)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="0"
-                  placeholderTextColor={appColors.foodPlaceholder}
-                  value={carbs}
-                  onChangeText={setCarbs}
-                  keyboardType="decimal-pad"
-                />
-              </View>
-              <View style={styles.gridCell}>
-                <Text style={styles.fieldLabel}>Fat (g)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="0"
-                  placeholderTextColor={appColors.foodPlaceholder}
-                  value={fat}
-                  onChangeText={setFat}
-                  keyboardType="decimal-pad"
-                />
-              </View>
-            </View>
-          </View>
-
-          <Pressable
-            onPress={() => setShowAdvanced((current) => !current)}
-            style={({ pressed }) => [
-              styles.card,
-              styles.advancedToggle,
-              pressed && styles.cardPressed,
-            ]}
-          >
-            <View style={styles.advancedToggleCopy}>
-              <Text style={styles.sectionTitle}>Advanced Nutrition</Text>
-              <Text style={styles.advancedToggleText}>
-                Optional micronutrients and detailed fats for the same serving.
-              </Text>
-            </View>
-            {showAdvanced ? (
-              <CaretUpIcon size={18} color={appColors.foodInk} weight="bold" />
-            ) : (
-              <CaretDownIcon size={18} color={appColors.foodInk} weight="bold" />
-            )}
-          </Pressable>
-
-          {showAdvanced ? (
+          {loadingMeal ? (
             <View style={styles.card}>
-              <Text style={styles.advancedIntro}>
-                Leave anything blank if you do not know it. Calories and macros
-                above are the only required nutrition fields.
+              <Text style={styles.sectionTitle}>Loading custom meal</Text>
+              <Text style={styles.sectionSubtitle}>
+                Pulling the saved meal details into the editor.
               </Text>
-              {OPTIONAL_NUTRIENT_SECTIONS.map((section) => (
-                <View key={section.title} style={styles.advancedGroup}>
-                  <Text style={styles.advancedGroupTitle}>{section.title}</Text>
-                  <View style={styles.grid}>
-                    {section.fields.map((field) => (
-                      <View key={field.key} style={styles.gridCell}>
-                        <Text style={styles.fieldLabel}>
-                          {field.label} ({field.unit})
-                        </Text>
-                        <TextInput
-                          style={styles.input}
-                          placeholder="Optional"
-                          placeholderTextColor={appColors.foodPlaceholder}
-                          value={optionalNutrients[field.key] ?? ""}
-                          onChangeText={(value) =>
-                            updateOptionalNutrient(field.key, value)
-                          }
-                          keyboardType="decimal-pad"
-                        />
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              ))}
             </View>
-          ) : null}
-
-          <Pressable
-            onPress={() => {
-              void createAndAdd();
-            }}
-            disabled={creating}
-            style={({ pressed }) => [
-              styles.primaryButton,
-              creating && styles.disabled,
-              pressed && !creating && styles.cardPressed,
-            ]}
-          >
-            <Text style={styles.primaryButtonText}>
-              {creating ? "Creating..." : "Create and add"}
-            </Text>
-          </Pressable>
+          ) : mealLoadError ? (
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>Custom meal unavailable</Text>
+              <Text style={styles.sectionSubtitle}>{mealLoadError}</Text>
+            </View>
+          ) : (
+            renderEditor()
+          )}
         </KeyboardAwareScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -646,7 +662,7 @@ const styles = StyleSheet.create({
   },
   heroEyebrow: {
     alignSelf: "flex-start",
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -682,13 +698,13 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   pillText: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 11,
     fontWeight: "800",
   },
   previewStrip: {
     borderRadius: 8,
-    backgroundColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.brand700,
     paddingHorizontal: 14,
     paddingVertical: 13,
   },
@@ -729,6 +745,14 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     marginBottom: 10,
   },
+  fieldLabel: {
+    color: appColors.slate300,
+    fontSize: 11,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    marginBottom: 6,
+  },
   fieldLabelSpacing: {
     marginTop: 10,
   },
@@ -749,81 +773,63 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
   },
-  fieldLabel: {
-    color: appColors.foodLabel,
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-    marginBottom: 6,
+  textArea: {
+    minHeight: 96,
   },
   unitPill: {
-    borderRadius: 9999,
+    borderRadius: 999,
     backgroundColor: appColors.foodPillBg,
     borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderColor: appColors.foodBorder,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
   },
   unitText: {
-    color: appColors.foodPrimary,
-    fontSize: 13,
+    color: appColors.brand500,
+    fontSize: 12,
     fontWeight: "800",
   },
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: 10,
   },
   gridCell: {
     width: "47%",
-  },
-  advancedToggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  advancedToggleCopy: {
-    flex: 1,
-  },
-  advancedToggleText: {
-    color: appColors.foodMuted,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  advancedIntro: {
-    color: appColors.foodPrimary,
-    fontSize: 12,
-    lineHeight: 17,
-    fontWeight: "700",
-    marginBottom: 10,
-  },
-  advancedGroup: {
-    marginTop: 6,
-    marginBottom: 14,
-  },
-  advancedGroupTitle: {
-    color: appColors.foodText,
-    fontSize: 13,
-    fontWeight: "900",
-    marginBottom: 8,
   },
   primaryButton: {
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 9999,
     backgroundColor: appColors.revolutLight,
+    paddingHorizontal: 18,
     paddingVertical: 14,
     marginBottom: 12,
   },
   primaryButtonText: {
     color: appColors.revolutDark,
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "800",
+  },
+  deleteButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderRadius: 9999,
+    backgroundColor: appColors.surfaceGhost,
+    borderWidth: 1,
+    borderColor: appColors.foodBorder,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+  },
+  deleteButtonText: {
+    color: appColors.revolutDark,
+    fontSize: 13,
+    fontWeight: "700",
   },
   disabled: {
-    opacity: 0.58,
+    opacity: 0.7,
   },
   cardPressed: {
     opacity: 0.9,

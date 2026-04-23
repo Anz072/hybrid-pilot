@@ -163,7 +163,7 @@ const FoodReadOnlyScreen = () => {
             onBack={() => navigation.goBack()}
           />
           <View style={styles.centerCard}>
-            <ActivityIndicator size="small" color={appColors.foodPrimaryDark} />
+            <ActivityIndicator size="small" color={appColors.brand700} />
             <Text style={styles.centerText}>Preparing the ingredient view.</Text>
           </View>
         </View>
@@ -229,13 +229,13 @@ const FoodReadOnlyScreen = () => {
 
           <View style={styles.heroPillsRow}>
             <View style={styles.contextPill}>
-              <EyeIcon size={14} color={appColors.foodPrimary} weight="bold" />
+              <EyeIcon size={14} color={appColors.brand500} weight="bold" />
               <Text style={styles.contextPillText}>Recipe ingredient</Text>
             </View>
             <View style={styles.contextPill}>
               <CalendarIcon
                 size={14}
-                color={appColors.foodPrimary}
+                color={appColors.brand500}
                 weight="bold"
               />
               <Text style={styles.contextPillText}>
@@ -325,7 +325,7 @@ const FoodReadOnlyScreen = () => {
         ).map(([key, target]) => (
           <MacroBar
             key={key}
-            accent={appColors.foodPrimary}
+            accent={appColors.brand500}
             consumed={Number(food[key] ?? 0) * micronutrientFactor}
             target={target}
             label={key
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
   },
   heroEyebrow: {
     alignSelf: "flex-start",
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -433,13 +433,13 @@ const styles = StyleSheet.create({
     borderColor: appColors.foodBorder,
   },
   contextPillText: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 12,
     fontWeight: "800",
   },
   previewStrip: {
     borderRadius: 8,
-    backgroundColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.brand700,
     paddingHorizontal: 12,
     paddingVertical: 11,
   },
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   readOnlyLabel: {
-    color: appColors.foodLabel,
+    color: appColors.slate300,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   nutritionLabel: {
-    color: appColors.foodLabel,
+    color: appColors.slate300,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -536,7 +536,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 999,
-    backgroundColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.brand700,
     paddingVertical: 13,
     marginBottom: 12,
   },

@@ -165,7 +165,7 @@ const FoodDiaryDateStrip = ({
                 />
                 <Path
                   d={outlinePath}
-                  stroke={selected ? appColors.indigo600 : appColors.violetAccent}
+                  stroke={selected ? appColors.brand700 : appColors.brand500}
                   strokeWidth={OUTLINE_WIDTH}
                   fill="none"
                   strokeLinecap="round"
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
     borderRadius: PILL_RADIUS,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.raw_hex_FBFAFF,
+    backgroundColor: appColors.surfaceFieldAlt,
     overflow: "hidden",
   },
   dayPillSelected: {
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   dayNumberSelected: {
-    color: appColors.foodPrimaryDark,
+    color: appColors.brand700,
   },
   kcalText: {
     color: appColors.foodPlaceholder,
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   kcalTextSelected: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
   },
   todayDot: {
     position: "absolute",
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 999,
-    backgroundColor: appColors.foodPrimaryOverlay,
+    backgroundColor: appColors.brand500Overlay,
   },
   todayDot2: {
     position: "absolute",
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 999,
-    backgroundColor: appColors.foodPrimaryOverlay,
+    backgroundColor: appColors.brand500Overlay,
   },
   cardPressed: {
     opacity: 0.9,

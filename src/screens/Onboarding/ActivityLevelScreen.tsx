@@ -32,16 +32,16 @@ const ActivityLevelScreen = ({ navigation, route }: Props) => {
       label: "Desk mode",
       value: "sedentary",
       note: "Mostly seated, minimal movement.",
-      accent: appColors.raw_hex_BFDBFE,
-      bgColor: appColors.raw_hex_bfdbfe9a,
-      borderColor: appColors.raw_hex_60a5fa,
+      accent: appColors.brand300,
+      bgColor: appColors.brandOverlay18,
+      borderColor: appColors.cyan500,
     },
     {
       label: "Light movement",
       value: "lightly_active",
       note: "Daily steps with occasional activity.",
-      accent: appColors.raw_hex_A7F3D0,
-      bgColor: appColors.raw_hex_a7f3d09a,
+      accent: appColors.emerald500,
+      bgColor: appColors.tealOverlay18,
       borderColor: appColors.emerald500,
     },
     {
@@ -49,24 +49,24 @@ const ActivityLevelScreen = ({ navigation, route }: Props) => {
       value: "moderately_active",
       note: "Frequent workouts through the week.",
       accent: appColors.amberSoft,
-      bgColor: appColors.raw_hex_fde68a9a,
-      borderColor: appColors.raw_hex_f59e0b,
+      bgColor: appColors.amberOverlay18,
+      borderColor: appColors.amber600,
     },
     {
       label: "High output",
       value: "very_active",
       note: "Demanding routine and heavy training volume.",
-      accent: appColors.raw_hex_FECACA,
-      bgColor: appColors.raw_hex_fecaca9a,
-      borderColor: appColors.raw_hex_ef4444,
+      accent: appColors.dangerSoftBg,
+      bgColor: appColors.dangerOverlay18,
+      borderColor: appColors.danger600,
     },
     {
       label: "Beast mode",
       value: "athlete",
       note: "Performance-centric, high weekly load.",
       accent: appColors.violetSoftBg,
-      bgColor: appColors.raw_hex_ddd6fe9a,
-      borderColor: appColors.violet600,
+      bgColor: appColors.brandOverlay18,
+      borderColor: appColors.brand700,
     },
   ];
 
@@ -89,7 +89,7 @@ const ActivityLevelScreen = ({ navigation, route }: Props) => {
 
       <View style={styles.headerWrap}>
         <View style={styles.headerRow}>
-          <GaugeIcon size={24} color={appColors.sky700} weight="fill" />
+          <GaugeIcon size={24} color={appColors.brand700} weight="fill" />
           <Text style={styles.eyebrow}>Daily Baseline</Text>
         </View>
         <Text style={styles.title}>How active are you?</Text>

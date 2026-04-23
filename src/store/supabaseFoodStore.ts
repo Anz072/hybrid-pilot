@@ -6,8 +6,10 @@ import type {
   AddFoodItemInput,
   AddQuickAddFoodLogInput,
   AddUserFoodLogInput,
+  CreateUserCustomMealInput,
   CreateUserRecipeInput,
   DBDiaryDayStatus,
+  DBCustomMeal,
   DBFoodItem,
   DBFoodNutrientDetails,
   DBQuickAddFoodLog,
@@ -22,6 +24,7 @@ import type {
   SaveDiaryDayStatusInput,
   SaveFoodItemInput,
   UpdateQuickAddFoodLogInput,
+  UpdateUserCustomMealInput,
   UpdateUserFoodLogInput,
   UpdateUserRecipeInput,
   UserFoodLogSource,
@@ -429,6 +432,30 @@ const toDbRecipeFromSupabaseRow = (row: SupabaseCustomRecipeRow): DBRecipe => ({
     new Date().toISOString(),
 });
 
+const toDbCustomMealFromSupabaseRow = (
+  row: SupabaseCustomMealRow,
+): DBCustomMeal => ({
+  id: parseRequiredNumber(row.id),
+  userExternalId: String(row.created_by_user_id),
+  createdByUserExternalId: String(row.created_by_user_id),
+  linkedFoodId: toSyntheticMealFoodId(parseRequiredNumber(row.id)),
+  isPublic: parseBoolean(row.is_public),
+  name: String(row.name ?? ""),
+  description: normalizeOptionalText(row.description),
+  servings: parseRequiredNumber(row.servings, 1),
+  totalWeightG: parseNullableNumber(row.total_weight_g),
+  gramsPerServing: parseNullableNumber(row.grams_per_serving),
+  caloriesPerServing: parseNullableNumber(row.calories_per_serving),
+  proteinGPerServing: parseNullableNumber(row.protein_g_per_serving),
+  carbsGPerServing: parseNullableNumber(row.carbs_g_per_serving),
+  fatGPerServing: parseNullableNumber(row.fat_g_per_serving),
+  createdAt: normalizeOptionalText(row.created_at) ?? new Date().toISOString(),
+  updatedAt:
+    normalizeOptionalText(row.updated_at) ??
+    normalizeOptionalText(row.created_at) ??
+    new Date().toISOString(),
+});
+
 const toDbRecipeIngredient = (
   row: SupabaseRecipeIngredientRow,
 ): DBRecipeIngredient => ({
@@ -443,7 +470,9 @@ const toDbRecipeIngredient = (
 
 const buildRecipeRawPayload = (row: SupabaseCustomRecipeRow, recipeId?: number) =>
   JSON.stringify({
+    entityType: "custom_recipe",
     buildMethod: "scratch",
+    createdByUserExternalId: String(row.created_by_user_id),
     recipeId: recipeId ?? parseRequiredNumber(row.id),
     isPublic: parseBoolean(row.is_public),
     servings: parseRequiredNumber(row.servings, 1),
@@ -524,10 +553,18 @@ const buildSyntheticMealFood = (row: SupabaseCustomMealRow): DBFoodItem => {
     ) as DBFoodNutrientDetails,
     ingredientsText: normalizeOptionalText(row.description),
     rawPayload: serializeRawPayload({
+      entityType: "custom_meal",
+      createdByUserExternalId: String(row.created_by_user_id),
       mealId,
+      isPublic: parseBoolean(row.is_public),
       servings: parseRequiredNumber(row.servings, 1),
       gramsPerServing: parseNullableNumber(row.grams_per_serving),
       totalWeightG: parseNullableNumber(row.total_weight_g),
+      caloriesPerServing: parseNullableNumber(row.calories_per_serving),
+      proteinGPerServing: parseNullableNumber(row.protein_g_per_serving),
+      carbsGPerServing: parseNullableNumber(row.carbs_g_per_serving),
+      fatGPerServing: parseNullableNumber(row.fat_g_per_serving),
+      description: normalizeOptionalText(row.description),
     }),
     verified: false,
     isComplete: true,
@@ -749,12 +786,184 @@ const fetchCustomMealRowById = async (
   return (data as SupabaseCustomMealRow | null) ?? null;
 };
 
+const canAccessOwnedOrPublicRow = (
+  createdByUserId: string,
+  isPublic: boolean,
+  authUserId: string,
+) => createdByUserId === authUserId || isPublic;
+
+const applyNameDescriptionSearch = <
+  T extends {
+    or: (filters: string) => T;
+  },
+>(
+  builder: T,
+  query: string,
+) => {
+  const normalizedQuery = sanitizeSupabaseSearch(query);
+  if (!normalizedQuery) {
+    return builder;
+  }
+
+  return builder.or(
+    `name.ilike.%${normalizedQuery}%,description.ilike.%${normalizedQuery}%`,
+  );
+};
+
+const fetchVisibleRecipeRows = async ({
+  authUserId,
+  limit,
+  query,
+}: {
+  authUserId: string;
+  limit: number;
+  query: string;
+}): Promise<SupabaseCustomRecipeRow[]> => {
+  const supabase = getSupabaseClient();
+  const scopedLimit = Math.max(limit, 1);
+  const ownBuilder = applyNameDescriptionSearch(
+    supabase
+      .from(SUPABASE_RECIPES_TABLE)
+      .select("*")
+      .eq("created_by_user_id", authUserId)
+      .order("updated_at", { ascending: false })
+      .limit(scopedLimit),
+    query,
+  );
+  const publicBuilder = applyNameDescriptionSearch(
+    supabase
+      .from(SUPABASE_RECIPES_TABLE)
+      .select("*")
+      .eq("is_public", true)
+      .neq("created_by_user_id", authUserId)
+      .order("updated_at", { ascending: false })
+      .limit(scopedLimit),
+    query,
+  );
+  const [{ data: ownData, error: ownError }, { data: publicData, error: publicError }] =
+    await Promise.all([ownBuilder, publicBuilder]);
+
+  if (ownError) {
+    throw ownError;
+  }
+
+  if (publicError) {
+    throw publicError;
+  }
+
+  return [
+    ...((ownData as SupabaseCustomRecipeRow[]) ?? []),
+    ...((publicData as SupabaseCustomRecipeRow[]) ?? []),
+  ].slice(0, scopedLimit);
+};
+
+const fetchVisibleMealRows = async ({
+  authUserId,
+  limit,
+  query,
+}: {
+  authUserId: string;
+  limit: number;
+  query: string;
+}): Promise<SupabaseCustomMealRow[]> => {
+  const supabase = getSupabaseClient();
+  const scopedLimit = Math.max(limit, 1);
+  const ownBuilder = applyNameDescriptionSearch(
+    supabase
+      .from(SUPABASE_MEALS_TABLE)
+      .select("*")
+      .eq("created_by_user_id", authUserId)
+      .order("updated_at", { ascending: false })
+      .limit(scopedLimit),
+    query,
+  );
+  const publicBuilder = applyNameDescriptionSearch(
+    supabase
+      .from(SUPABASE_MEALS_TABLE)
+      .select("*")
+      .eq("is_public", true)
+      .neq("created_by_user_id", authUserId)
+      .order("updated_at", { ascending: false })
+      .limit(scopedLimit),
+    query,
+  );
+  const [{ data: ownData, error: ownError }, { data: publicData, error: publicError }] =
+    await Promise.all([ownBuilder, publicBuilder]);
+
+  if (ownError) {
+    throw ownError;
+  }
+
+  if (publicError) {
+    throw publicError;
+  }
+
+  return [
+    ...((ownData as SupabaseCustomMealRow[]) ?? []),
+    ...((publicData as SupabaseCustomMealRow[]) ?? []),
+  ].slice(0, scopedLimit);
+};
+
+const listOwnedLocalRecipeFoods = async (
+  userExternalId: string,
+  limit: number,
+): Promise<DBFoodItem[]> => {
+  const rows = await listFoodItemsLocal({
+    source: "recipe",
+    limit: Math.max(limit * 4, 200),
+  });
+
+  return rows
+    .filter((food) => {
+      const payload = parseJsonObject(food.rawPayload);
+      return (
+        payload?.createdByUserExternalId === userExternalId &&
+        payload?.entityType !== "custom_meal"
+      );
+    })
+    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+    .slice(0, Math.max(limit, 1));
+};
+
+const listOwnedLocalCustomMealFoods = async (
+  userExternalId: string,
+  limit: number,
+): Promise<DBFoodItem[]> => {
+  const rows = await listFoodItemsLocal({
+    source: "recipe",
+    limit: Math.max(limit * 4, 200),
+  });
+
+  return rows
+    .filter((food) => {
+      const payload = parseJsonObject(food.rawPayload);
+      return (
+        payload?.createdByUserExternalId === userExternalId &&
+        payload?.entityType === "custom_meal"
+      );
+    })
+    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+    .slice(0, Math.max(limit, 1));
+};
+
 const fetchSyntheticRecipeFoodById = async (
   recipeId: number,
+  authUserId?: string,
 ): Promise<DBFoodItem | null> => {
   const recipeRow = await fetchCustomRecipeRowById(recipeId);
 
   if (!recipeRow) {
+    return null;
+  }
+
+  if (
+    authUserId &&
+    !canAccessOwnedOrPublicRow(
+      String(recipeRow.created_by_user_id),
+      parseBoolean(recipeRow.is_public),
+      authUserId,
+    )
+  ) {
     return null;
   }
 
@@ -810,36 +1019,22 @@ const fetchSyntheticRecipeFoodById = async (
 
 const fetchSyntheticMealFoodById = async (
   mealId: number,
+  authUserId?: string,
 ): Promise<DBFoodItem | null> => {
   const mealRow = await fetchCustomMealRowById(mealId);
-  return mealRow ? buildSyntheticMealFood(mealRow) : null;
-};
-
-const fetchRecipeRowsForSearch = async (
-  query: string,
-  limit: number,
-): Promise<SupabaseCustomRecipeRow[]> => {
-  const supabase = getSupabaseClient();
-  const normalizedQuery = sanitizeSupabaseSearch(query);
-  let builder = supabase
-    .from(SUPABASE_RECIPES_TABLE)
-    .select("*")
-    .order("updated_at", { ascending: false })
-    .limit(limit);
-
-  if (normalizedQuery) {
-    builder = builder.or(
-      `name.ilike.%${normalizedQuery}%,description.ilike.%${normalizedQuery}%`,
-    );
+  if (
+    !mealRow ||
+    (authUserId &&
+      !canAccessOwnedOrPublicRow(
+        String(mealRow.created_by_user_id),
+        parseBoolean(mealRow.is_public),
+        authUserId,
+      ))
+  ) {
+    return null;
   }
 
-  const { data, error } = await builder;
-
-  if (error) {
-    throw error;
-  }
-
-  return (data as SupabaseCustomRecipeRow[]) ?? [];
+  return buildSyntheticMealFood(mealRow);
 };
 
 const fetchFoodRowsForList = async ({
@@ -1174,6 +1369,7 @@ const getRecentSupabaseItems = async (
   userExternalId: string,
   limit: number,
 ): Promise<DBFoodItem[]> => {
+  const authUserId = userExternalId;
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from(SUPABASE_FOOD_ENTRIES_TABLE)
@@ -1213,7 +1409,7 @@ const getRecentSupabaseItems = async (
         continue;
       }
 
-      const food = await fetchSyntheticRecipeFoodById(recipeId);
+      const food = await fetchSyntheticRecipeFoodById(recipeId, authUserId);
       if (food) {
         seen.add(dedupeKey);
         recentFoods.push(food);
@@ -1225,7 +1421,7 @@ const getRecentSupabaseItems = async (
         continue;
       }
 
-      const food = await fetchSyntheticMealFoodById(mealId);
+      const food = await fetchSyntheticMealFoodById(mealId, authUserId);
       if (food) {
         seen.add(dedupeKey);
         recentFoods.push(food);
@@ -1287,11 +1483,11 @@ export const getFoodItemById = async (
   }
 
   if (isSyntheticRecipeFoodId(id)) {
-    return fetchSyntheticRecipeFoodById(fromSyntheticRecipeFoodId(id));
+    return fetchSyntheticRecipeFoodById(fromSyntheticRecipeFoodId(id), authUserId);
   }
 
   if (isSyntheticMealFoodId(id)) {
-    return fetchSyntheticMealFoodById(fromSyntheticMealFoodId(id));
+    return fetchSyntheticMealFoodById(fromSyntheticMealFoodId(id), authUserId);
   }
 
   return fetchFoodItemByIdSupabase(id);
@@ -1424,8 +1620,21 @@ export const listFoodItems = async ({
   }
 
   if (source === "recipe") {
-    const recipes = await fetchRecipeRowsForSearch(query?.trim() ?? "", limit);
+    const recipes = await fetchVisibleRecipeRows({
+      authUserId,
+      query: query?.trim() ?? "",
+      limit,
+    });
     return recipes.map((recipe) => buildSyntheticRecipeFood(recipe));
+  }
+
+  if (source === "custom_meal") {
+    const meals = await fetchVisibleMealRows({
+      authUserId,
+      query: query?.trim() ?? "",
+      limit,
+    });
+    return meals.map((meal) => buildSyntheticMealFood(meal));
   }
 
   const rows = await fetchFoodRowsForList({
@@ -1435,6 +1644,60 @@ export const listFoodItems = async ({
   });
 
   return rows.map(toDbFoodItemFromSupabaseRow);
+};
+
+export const listUserCreatedRecipeFoods = async (
+  userExternalId: string,
+  limit = 200,
+): Promise<DBFoodItem[]> => {
+  const authUserId = await resolveSupabaseUserId(userExternalId);
+
+  if (!authUserId) {
+    return listOwnedLocalRecipeFoods(userExternalId, limit);
+  }
+
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from(SUPABASE_RECIPES_TABLE)
+    .select("*")
+    .eq("created_by_user_id", authUserId)
+    .order("updated_at", { ascending: false })
+    .limit(Math.max(limit, 1));
+
+  if (error) {
+    throw error;
+  }
+
+  return ((data as SupabaseCustomRecipeRow[]) ?? []).map((recipe) =>
+    buildSyntheticRecipeFood(recipe),
+  );
+};
+
+export const listUserCreatedCustomMealFoods = async (
+  userExternalId: string,
+  limit = 200,
+): Promise<DBFoodItem[]> => {
+  const authUserId = await resolveSupabaseUserId(userExternalId);
+
+  if (!authUserId) {
+    return listOwnedLocalCustomMealFoods(userExternalId, limit);
+  }
+
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from(SUPABASE_MEALS_TABLE)
+    .select("*")
+    .eq("created_by_user_id", authUserId)
+    .order("updated_at", { ascending: false })
+    .limit(Math.max(limit, 1));
+
+  if (error) {
+    throw error;
+  }
+
+  return ((data as SupabaseCustomMealRow[]) ?? []).map((meal) =>
+    buildSyntheticMealFood(meal),
+  );
 };
 
 export const searchFoodItems = async (
@@ -1452,14 +1715,24 @@ export const searchFoodItems = async (
     return [];
   }
 
-  const [foodRows, recipeRows] = await Promise.all([
+  const [foodRows, recipeRows, mealRows] = await Promise.all([
     fetchFoodRowsForList({ query: normalized, limit, source: null }),
-    fetchRecipeRowsForSearch(normalized, Math.max(8, Math.ceil(limit / 2))),
+    fetchVisibleRecipeRows({
+      authUserId,
+      query: normalized,
+      limit: Math.max(8, Math.ceil(limit / 2)),
+    }),
+    fetchVisibleMealRows({
+      authUserId,
+      query: normalized,
+      limit: Math.max(8, Math.ceil(limit / 2)),
+    }),
   ]);
 
   return [
     ...foodRows.map(toDbFoodItemFromSupabaseRow),
     ...recipeRows.map((recipe) => buildSyntheticRecipeFood(recipe)),
+    ...mealRows.map((meal) => buildSyntheticMealFood(meal)),
   ];
 };
 
@@ -1581,6 +1854,16 @@ export const getUserRecipeDetailsById = async (
     return null;
   }
 
+  if (
+    !canAccessOwnedOrPublicRow(
+      String(recipeRow.created_by_user_id),
+      parseBoolean(recipeRow.is_public),
+      authUserId,
+    )
+  ) {
+    return null;
+  }
+
   const ingredientRows = await fetchRecipeIngredientsByRecipeId(recipeId);
   const ingredientFoodIds = ingredientRows.map((row) =>
     parseRequiredNumber(row.food_item_id),
@@ -1626,6 +1909,10 @@ export const updateUserRecipe = async (
   const existing = await getUserRecipeDetailsById(input.recipeId);
   if (!existing) {
     throw new Error("Recipe could not be found.");
+  }
+
+  if (existing.createdByUserExternalId !== authUserId) {
+    throw new Error("Only your own recipes can be edited.");
   }
 
   const trimmedName = input.name.trim();
@@ -1722,6 +2009,15 @@ export const deleteUserRecipe = async (recipeId: number): Promise<void> => {
     return deleteUserRecipeLocal(recipeId);
   }
 
+  const existing = await getUserRecipeDetailsById(recipeId);
+  if (!existing) {
+    throw new Error("Recipe could not be found.");
+  }
+
+  if (existing.createdByUserExternalId !== authUserId) {
+    throw new Error("Only your own recipes can be deleted.");
+  }
+
   const supabase = getSupabaseClient();
   const { error } = await supabase
     .from(SUPABASE_RECIPES_TABLE)
@@ -1731,6 +2027,158 @@ export const deleteUserRecipe = async (recipeId: number): Promise<void> => {
   if (error) {
     throw new Error(
       "This recipe could not be deleted. Remove diary entries that still use it and try again.",
+    );
+  }
+};
+
+export const getUserCustomMealFoodById = async (
+  mealId: number,
+): Promise<DBFoodItem | null> => {
+  const authUserId = await resolveSupabaseUserId();
+  return fetchSyntheticMealFoodById(mealId, authUserId);
+};
+
+export const createUserCustomMeal = async (
+  input: CreateUserCustomMealInput,
+): Promise<DBFoodItem> => {
+  const authUserId = await resolveSupabaseUserId(input.userExternalId);
+  const trimmedName = input.name.trim();
+  const servingSizeG = roundTo(input.servingSizeG, 2);
+  const calories = roundTo(input.calories, 2);
+  const proteinG = roundTo(input.proteinG ?? 0, 3);
+  const carbsG = roundTo(input.carbsG ?? 0, 3);
+  const fatG = roundTo(input.fatG ?? 0, 3);
+  const isPublic = input.isPublic ?? true;
+
+  if (!trimmedName) {
+    throw new Error("Custom meal name is required.");
+  }
+
+  if (!Number.isFinite(servingSizeG) || servingSizeG <= 0) {
+    throw new Error("Serving size must be a positive number.");
+  }
+
+  if (
+    !Number.isFinite(calories) ||
+    calories <= 0 ||
+    [proteinG, carbsG, fatG].some((value) => !Number.isFinite(value) || value < 0)
+  ) {
+    throw new Error("Calories must be positive and macros cannot be negative.");
+  }
+
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from(SUPABASE_MEALS_TABLE)
+    .insert({
+      created_by_user_id: authUserId,
+      name: trimmedName,
+      description: normalizeOptionalText(input.description),
+      servings: 1,
+      total_weight_g: servingSizeG,
+      grams_per_serving: servingSizeG,
+      calories_per_serving: calories,
+      protein_g_per_serving: proteinG,
+      carbs_g_per_serving: carbsG,
+      fat_g_per_serving: fatG,
+      is_public: isPublic,
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return buildSyntheticMealFood(data as SupabaseCustomMealRow);
+};
+
+export const updateUserCustomMeal = async (
+  input: UpdateUserCustomMealInput,
+): Promise<DBFoodItem> => {
+  const authUserId = await resolveSupabaseUserId(input.userExternalId);
+  const existingRow = await fetchCustomMealRowById(input.mealId);
+
+  if (!existingRow) {
+    throw new Error("Custom meal could not be found.");
+  }
+
+  const existing = toDbCustomMealFromSupabaseRow(existingRow);
+  if (existing.createdByUserExternalId !== authUserId) {
+    throw new Error("Only your own custom meals can be edited.");
+  }
+
+  const trimmedName = input.name.trim();
+  const servingSizeG = roundTo(input.servingSizeG, 2);
+  const calories = roundTo(input.calories, 2);
+  const proteinG = roundTo(input.proteinG ?? 0, 3);
+  const carbsG = roundTo(input.carbsG ?? 0, 3);
+  const fatG = roundTo(input.fatG ?? 0, 3);
+  const isPublic = input.isPublic ?? existing.isPublic;
+
+  if (!trimmedName) {
+    throw new Error("Custom meal name is required.");
+  }
+
+  if (!Number.isFinite(servingSizeG) || servingSizeG <= 0) {
+    throw new Error("Serving size must be a positive number.");
+  }
+
+  if (
+    !Number.isFinite(calories) ||
+    calories <= 0 ||
+    [proteinG, carbsG, fatG].some((value) => !Number.isFinite(value) || value < 0)
+  ) {
+    throw new Error("Calories must be positive and macros cannot be negative.");
+  }
+
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from(SUPABASE_MEALS_TABLE)
+    .update({
+      name: trimmedName,
+      description: normalizeOptionalText(input.description),
+      servings: 1,
+      total_weight_g: servingSizeG,
+      grams_per_serving: servingSizeG,
+      calories_per_serving: calories,
+      protein_g_per_serving: proteinG,
+      carbs_g_per_serving: carbsG,
+      fat_g_per_serving: fatG,
+      is_public: isPublic,
+    })
+    .eq("id", input.mealId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return buildSyntheticMealFood(data as SupabaseCustomMealRow);
+};
+
+export const deleteUserCustomMeal = async (mealId: number): Promise<void> => {
+  const authUserId = await resolveSupabaseUserId();
+  const existingRow = await fetchCustomMealRowById(mealId);
+
+  if (!existingRow) {
+    throw new Error("Custom meal could not be found.");
+  }
+
+  const existing = toDbCustomMealFromSupabaseRow(existingRow);
+  if (existing.createdByUserExternalId !== authUserId) {
+    throw new Error("Only your own custom meals can be deleted.");
+  }
+
+  const supabase = getSupabaseClient();
+  const { error } = await supabase
+    .from(SUPABASE_MEALS_TABLE)
+    .delete()
+    .eq("id", mealId);
+
+  if (error) {
+    throw new Error(
+      "This custom meal could not be deleted. Remove diary entries that still use it and try again.",
     );
   }
 };

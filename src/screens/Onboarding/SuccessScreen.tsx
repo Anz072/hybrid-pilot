@@ -51,7 +51,7 @@ const SuccessScreen = ({ onFinish, route }: Props) => {
 
       <View style={styles.highlightCard}>
         <View style={styles.highlightHeader}>
-          <ForkKnifeIcon size={22} color={appColors.teal700} weight="fill" />
+          <ForkKnifeIcon size={22} color={appColors.green700} weight="fill" />
           <Text style={styles.highlightTitle}>Starting Targets</Text>
         </View>
         {goalRateLabel ? (
@@ -155,8 +155,8 @@ const styles = StyleSheet.create({
     height: 68,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: appColors.revolutBlue,
-    backgroundColor: appColors.revolutBlue,
+    borderColor: appColors.brand700,
+    backgroundColor: appColors.brand700,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 14,
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: appColors.green800,
+    color: appColors.green700,
     backgroundColor: appColors.greenSoftBg,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   pacePillText: {
-    color: appColors.blue700,
+    color: appColors.brand700,
     fontSize: 12,
     fontWeight: "800",
     letterSpacing: 0.4,

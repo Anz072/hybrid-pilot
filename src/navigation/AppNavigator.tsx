@@ -116,7 +116,7 @@ const AppNavigator = () => {
   if (isHydrating) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={appColors.foodPrimary} />
+        <ActivityIndicator size="large" color={appColors.brand500} />
         {bootstrapError ? (
           <Text style={styles.loadingError}>{bootstrapError}</Text>
         ) : null}

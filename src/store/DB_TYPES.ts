@@ -465,6 +465,42 @@ export type DBRecipeDetails = DBRecipe & {
   gramsPerServing: number | null;
 };
 
+export type DBCustomMeal = {
+  id: number;
+  userExternalId: string;
+  createdByUserExternalId: string;
+  linkedFoodId: number;
+  isPublic: boolean;
+  name: string;
+  description: string | null;
+  servings: number;
+  totalWeightG: number | null;
+  gramsPerServing: number | null;
+  caloriesPerServing: number | null;
+  proteinGPerServing: number | null;
+  carbsGPerServing: number | null;
+  fatGPerServing: number | null;
+  createdAt: DBIsoDateString;
+  updatedAt: DBIsoDateString;
+};
+
+export type CreateUserCustomMealInput = {
+  userExternalId: string;
+  createdByUserExternalId: string;
+  isPublic?: boolean;
+  name: string;
+  description?: string | null;
+  servingSizeG: number;
+  calories: number;
+  proteinG?: number;
+  carbsG?: number;
+  fatG?: number;
+};
+
+export type UpdateUserCustomMealInput = CreateUserCustomMealInput & {
+  mealId: number;
+};
+
 export type UserFoodLogSource =
   | "food_item"
   | "custom_recipe"

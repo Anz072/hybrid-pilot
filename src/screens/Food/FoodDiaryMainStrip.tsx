@@ -285,7 +285,7 @@ const FoodDiaryTimelineItem = ({
                       alignItems: "center",
                     }}
                   >
-                    <PlusCircleIcon size={14} color={appColors.foodPrimary} />
+                    <PlusCircleIcon size={14} color={appColors.brand500} />
                     <Text style={styles.emptyStateAction}>Tap to add more</Text>
                   </View>
                 </Pressable>
@@ -308,7 +308,7 @@ const FoodDiaryTimelineItem = ({
                     alignItems: "center",
                   }}
                 >
-                  <PlusCircleIcon size={14} color={appColors.foodPrimary} />
+                  <PlusCircleIcon size={14} color={appColors.brand500} />
                   <Text style={styles.emptyStateAction}>Tap to add food</Text>
                 </View>
               </Pressable>
@@ -410,8 +410,8 @@ const FoodDiaryMainStrip = ({
               : fallbackMaxCalories;
           const ratio = Math.max(0, Math.min(1, day.calories / ratioBase));
           const progressColor = selected
-            ? appColors.foodPrimaryDark
-            : appColors.foodPrimary;
+            ? appColors.brand700
+            : appColors.brand500;
           const fillColor = withOpacity(
             progressColor,
             selected ? 0.28 : 0.18,
@@ -443,7 +443,7 @@ const FoodDiaryMainStrip = ({
                 <Path
                   d={outlinePath}
                   stroke={
-                    selected ? appColors.foodPrimaryOverlay : appColors.borderSoft
+                    selected ? appColors.brand500Overlay : appColors.borderSoft
                   }
                   strokeWidth={OUTLINE_WIDTH}
                   fill="none"
@@ -611,7 +611,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   weekBudgetMetaLabel: {
-    color: appColors.foodPrimaryDark,
+    color: appColors.brand700,
     fontSize: 12,
     fontWeight: "800",
   },
@@ -621,7 +621,7 @@ const styles = StyleSheet.create({
     borderRadius: PILL_RADIUS,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.raw_hex_FBFAFF,
+    backgroundColor: appColors.surfaceFieldAlt,
     overflow: "hidden",
   },
   dayPillSelected: {
@@ -646,7 +646,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   dayNumberSelected: {
-    color: appColors.foodPrimaryDark,
+    color: appColors.brand700,
   },
   kcalText: {
     color: appColors.foodPlaceholder,
@@ -654,7 +654,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   kcalTextSelected: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
   },
   todayDot: {
     position: "absolute",
@@ -662,7 +662,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 999,
-    backgroundColor: appColors.foodPrimaryOverlay,
+    backgroundColor: appColors.brand500Overlay,
   },
   todayDot2: {
     position: "absolute",
@@ -670,7 +670,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 999,
-    backgroundColor: appColors.foodPrimaryOverlay,
+    backgroundColor: appColors.brand500Overlay,
   },
   timelineSection: {
     marginTop: 24,
@@ -699,7 +699,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   axisLabelActive: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
   },
   axisTrack: {
     flex: 1,
@@ -712,7 +712,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.lavenderDot,
   },
   axisDotActive: {
-    backgroundColor: appColors.foodPrimary,
+    backgroundColor: appColors.brand500,
   },
   axisLine: {
     width: 1,
@@ -732,7 +732,7 @@ const styles = StyleSheet.create({
   },
   hourCardActive: {
     borderWidth: 1,
-    borderColor: appColors.foodPrimary,
+    borderColor: appColors.brand500,
     backgroundColor: appColors.surfaceRaised,
   },
   hourHeader: {
@@ -790,7 +790,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   emptyStateAction: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -839,7 +839,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   entryTagText: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 10,
     fontWeight: "800",
     textTransform: "uppercase",

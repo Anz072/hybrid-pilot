@@ -294,7 +294,7 @@ const MicrosOverviewScreen = () => {
     : "Using general adult RDA and AI targets until your profile is complete.";
 
   const getMacroBarAccent = (item: MicronutrientRowWithTarget) =>
-    item.group === "Vitamins" ? appColors.foodPrimary : appColors.teal600;
+    item.group === "Vitamins" ? appColors.brand500 : appColors.green600;
 
   const getMacroBarPlaces = (item: MicronutrientRowWithTarget) => {
     if (item.unit === "mg") {
@@ -406,7 +406,7 @@ const MicrosOverviewScreen = () => {
 
           {loading ? (
             <View style={styles.loadingWrap}>
-              <ActivityIndicator color={appColors.foodPrimary} />
+              <ActivityIndicator color={appColors.brand500} />
             </View>
           ) : error ? (
             <Text style={styles.errorText}>{error}</Text>
@@ -564,12 +564,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   togglePillActive: {
-    backgroundColor: appColors.foodPrimaryDark,
-    borderColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.brand700,
+    borderColor: appColors.brand700,
   },
   toggleText: {
     ...appTypography.bodySmall,
-    color: appColors.foodAccentText,
+    color: appColors.brand300,
     fontWeight: "800",
   },
   toggleTextActive: {

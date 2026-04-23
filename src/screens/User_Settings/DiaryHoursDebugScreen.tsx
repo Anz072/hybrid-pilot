@@ -122,7 +122,7 @@ const DiaryHoursDebugScreen = ({ navigation }: Props) => {
 
         {loading ? (
           <View style={styles.loadingCard}>
-            <ActivityIndicator color={appColors.foodPrimary} />
+            <ActivityIndicator color={appColors.brand500} />
           </View>
         ) : !user ? (
           <View style={styles.card}>
@@ -161,7 +161,7 @@ const DiaryHoursDebugScreen = ({ navigation }: Props) => {
                     >
                       <MinusIcon
                         size={16}
-                        color={appColors.foodPrimaryDark}
+                        color={appColors.brand700}
                         weight="bold"
                       />
                     </Pressable>
@@ -183,7 +183,7 @@ const DiaryHoursDebugScreen = ({ navigation }: Props) => {
                     >
                       <PlusIcon
                         size={16}
-                        color={appColors.foodPrimaryDark}
+                        color={appColors.brand700}
                         weight="bold"
                       />
                     </Pressable>
@@ -208,7 +208,7 @@ const DiaryHoursDebugScreen = ({ navigation }: Props) => {
                     >
                       <MinusIcon
                         size={16}
-                        color={appColors.foodPrimaryDark}
+                        color={appColors.brand700}
                         weight="bold"
                       />
                     </Pressable>
@@ -229,7 +229,7 @@ const DiaryHoursDebugScreen = ({ navigation }: Props) => {
                     >
                       <PlusIcon
                         size={16}
-                        color={appColors.foodPrimaryDark}
+                        color={appColors.brand700}
                         weight="bold"
                       />
                     </Pressable>
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   statusText: {
-    color: appColors.foodPrimaryDark,
+    color: appColors.brand700,
     fontSize: 12,
     fontWeight: "800",
   },
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
     alignSelf: "flex-start",
     borderRadius: 999,
-    backgroundColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.brand700,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   currentValue: {
-    color: appColors.foodPrimaryDark,
+    color: appColors.brand700,
     fontSize: 24,
     lineHeight: 28,
     fontWeight: "800",

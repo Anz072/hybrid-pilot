@@ -210,7 +210,7 @@ const ScannedFoodLogScreen = () => {
         icon: (
           <CheckCircleIcon
             size={14}
-            color={appColors.foodPrimary}
+            color={appColors.brand500}
             weight="fill"
           />
         ),
@@ -221,7 +221,7 @@ const ScannedFoodLogScreen = () => {
       key: "date",
       label: formatFoodShortDate(date),
       icon: (
-        <CalendarIcon size={14} color={appColors.foodPrimary} weight="bold" />
+        <CalendarIcon size={14} color={appColors.brand500} weight="bold" />
       ),
     });
 
@@ -230,7 +230,7 @@ const ScannedFoodLogScreen = () => {
         key: "barcode",
         label: barcode,
         icon: (
-          <BarcodeIcon size={14} color={appColors.foodPrimary} weight="bold" />
+          <BarcodeIcon size={14} color={appColors.brand500} weight="bold" />
         ),
       });
     }
@@ -337,7 +337,7 @@ const ScannedFoodLogScreen = () => {
             onBack={() => navigation.goBack()}
           />
           <View style={styles.centerCard}>
-            <ActivityIndicator size="small" color={appColors.foodPrimaryDark} />
+            <ActivityIndicator size="small" color={appColors.brand700} />
             <Text style={styles.centerText}>Preparing the log screen.</Text>
           </View>
         </View>
@@ -405,7 +405,7 @@ const ScannedFoodLogScreen = () => {
                   icon: (
                     <StarIcon
                       size={14}
-                      color={isFavorite ? appColors.white : appColors.foodPrimary}
+                      color={isFavorite ? appColors.white : appColors.brand500}
                       weight={isFavorite ? "fill" : "bold"}
                     />
                   ),
@@ -438,7 +438,7 @@ const ScannedFoodLogScreen = () => {
             icon: (
               <ClockIcon
                 size={18}
-                color={appColors.foodPrimary}
+                color={appColors.brand500}
                 weight="bold"
               />
             ),
@@ -484,7 +484,7 @@ const ScannedFoodLogScreen = () => {
         ).map(([key, target]) => (
           <MacroBar
             key={key}
-            accent={appColors.foodPrimary}
+            accent={appColors.brand500}
             consumed={Number(food?.[key] ?? 0) * micronutrientFactor}
             target={target}
             label={key

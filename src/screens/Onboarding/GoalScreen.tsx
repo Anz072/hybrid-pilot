@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     backgroundColor: appColors.foodEyebrowBg,
     paddingHorizontal: 10,
     paddingVertical: 6,

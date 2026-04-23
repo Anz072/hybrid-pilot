@@ -16,7 +16,7 @@ const WelcomeScreen = ({ navigation }: Props) => {
 
       <View style={styles.heroRow}>
         <View style={styles.heroIconBadge}>
-          <RocketLaunchIcon size={24} color={appColors.foodPrimary} weight="fill" />
+          <RocketLaunchIcon size={24} color={appColors.brand500} weight="fill" />
         </View>
         <View style={styles.heroIconBadgeMuted}>
           <BarbellIcon size={20} color={appColors.slate900} weight="fill" />
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     backgroundColor: appColors.foodEyebrowBg,
     paddingHorizontal: 10,
     paddingVertical: 6,

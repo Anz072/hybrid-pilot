@@ -276,7 +276,7 @@ const AccountScreen = ({ navigation, route }: Props) => {
             ]}
           >
             {submissionMode === "google" ? (
-              <ActivityIndicator color={appColors.foodPrimaryDark} />
+              <ActivityIndicator color={appColors.brand700} />
             ) : null}
             <Text style={styles.googleButtonText}>
               {submissionMode === "google"
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     backgroundColor: appColors.foodEyebrowBg,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 10,
     borderRadius: 9999,
-    backgroundColor: appColors.revolutBlue,
+    backgroundColor: appColors.brand700,
     paddingHorizontal: 24,
     paddingVertical: 16,
   },

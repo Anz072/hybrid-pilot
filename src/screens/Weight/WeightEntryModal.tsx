@@ -203,6 +203,7 @@ const WeightEntryModal = ({
             styles.content,
             { paddingBottom: insets.bottom + 24 },
           ]}
+          focusedInputBottomOffset={132}
         >
           <View style={styles.card}>
             <View>
@@ -382,7 +383,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: appColors.teal700,
+    color: appColors.green700,
     backgroundColor: appColors.tealSoftBg,
     paddingHorizontal: 10,
     paddingVertical: 6,

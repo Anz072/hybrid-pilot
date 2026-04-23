@@ -65,9 +65,9 @@ type SearchFoodResult = SaveFoodItemInput & {
 };
 
 type FoodSearchSectionKey = "favorites" | "recent";
-type FoodSearchMode = "all" | "recipes";
+type FoodSearchMode = "all" | "recipes" | "custom_meals";
 type SearchResultCategory =
-  | "custom_recipes"
+  | "custom_foods"
   | "common_foods"
   | "branded_foods";
 type SearchResultSection = {
@@ -76,11 +76,24 @@ type SearchResultSection = {
   subtitle: string;
   items: SearchFoodResult[];
 };
+type LibrarySectionKey = "yours" | "public";
+type LibraryResultSection = {
+  key: LibrarySectionKey;
+  title: string;
+  subtitle: string;
+  emptyText: string;
+  items: SearchFoodResult[];
+};
 type RenderSectionOptions = {
   collapsible?: boolean;
   expanded?: boolean;
   onToggle?: () => void;
-  showCreateCustomFoodCta?: boolean;
+  emptyCta?: {
+    onPress: () => void;
+    pillText: string;
+    text: string;
+    title: string;
+  };
 };
 
 const DEFAULT_SECTION_STATE: FoodSearchSectionState = {
@@ -93,12 +106,12 @@ const REMOTE_SEARCH_MIN_QUERY_LENGTH = 3;
 const REMOTE_BARCODE_QUERY_PATTERN = /^\d{8,}$/;
 const MAX_SEARCH_RESULTS = 30;
 const SEARCH_RESULT_CATEGORY_ORDER: SearchResultCategory[] = [
-  "custom_recipes",
+  "custom_foods",
   "common_foods",
   "branded_foods",
 ];
 const SEARCH_RESULT_CATEGORY_PRIORITY: Record<SearchResultCategory, number> = {
-  custom_recipes: 0,
+  custom_foods: 0,
   common_foods: 1,
   branded_foods: 2,
 };
@@ -106,9 +119,9 @@ const SEARCH_RESULT_CATEGORY_META: Record<
   SearchResultCategory,
   Omit<SearchResultSection, "items" | "key">
 > = {
-  custom_recipes: {
-    title: "Custom Recipes",
-    subtitle: "Your saved recipes and custom foods first.",
+  custom_foods: {
+    title: "Custom Foods",
+    subtitle: "Saved custom foods and manual entries first.",
   },
   common_foods: {
     title: "Common Foods",
@@ -221,12 +234,8 @@ const getSearchResultDedupeKeys = (food: SearchFoodResult) => {
 const getSearchResultCategory = (
   food: SearchFoodResult,
 ): SearchResultCategory => {
-  if (
-    food.source === "recipe" ||
-    food.source === "custom" ||
-    food.source === "manual"
-  ) {
-    return "custom_recipes";
+  if (food.source === "custom" || food.source === "manual") {
+    return "custom_foods";
   }
 
   if ((food.brand ?? "").trim().length > 0) {
@@ -234,6 +243,159 @@ const getSearchResultCategory = (
   }
 
   return "common_foods";
+};
+
+const parseLibraryPayload = (food: Pick<SearchFoodResult, "rawPayload">) => {
+  if (!food.rawPayload) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(food.rawPayload) as Record<string, unknown>;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed
+      : null;
+  } catch {
+    return null;
+  }
+};
+
+const isCustomMealResult = (
+  food: Pick<SearchFoodResult, "source" | "sourceId" | "rawPayload">,
+) => {
+  if (food.source !== "recipe") {
+    return false;
+  }
+
+  if (food.sourceId?.startsWith("meal:")) {
+    return true;
+  }
+
+  return parseLibraryPayload(food)?.entityType === "custom_meal";
+};
+
+const isRecipeResult = (
+  food: Pick<SearchFoodResult, "source" | "sourceId" | "rawPayload">,
+) => food.source === "recipe" && !isCustomMealResult(food);
+
+const getLibraryOwnerUserId = (
+  food: Pick<SearchFoodResult, "rawPayload">,
+) => {
+  const value = parseLibraryPayload(food)?.createdByUserExternalId;
+  return typeof value === "string" && value.trim() ? value : null;
+};
+
+const isOwnedLibraryResult = (
+  food: Pick<SearchFoodResult, "rawPayload">,
+  userExternalId?: string | null,
+) => {
+  if (!userExternalId) {
+    return false;
+  }
+
+  return getLibraryOwnerUserId(food) === userExternalId;
+};
+
+const getRecipeIdFromResult = (
+  food: Pick<SearchFoodResult, "sourceId" | "source" | "rawPayload">,
+) => {
+  if (!isRecipeResult(food)) {
+    return null;
+  }
+
+  const recipeId = Number(food.sourceId);
+  return Number.isFinite(recipeId) ? recipeId : null;
+};
+
+const getMealIdFromResult = (
+  food: Pick<SearchFoodResult, "sourceId" | "source" | "rawPayload">,
+) => {
+  if (!isCustomMealResult(food)) {
+    return null;
+  }
+
+  if (food.sourceId?.startsWith("meal:")) {
+    const mealId = Number(food.sourceId.slice("meal:".length));
+    return Number.isFinite(mealId) ? mealId : null;
+  }
+
+  const payloadMealId = Number(parseLibraryPayload(food)?.mealId);
+  return Number.isFinite(payloadMealId) ? payloadMealId : null;
+};
+
+const getLibraryBadgeLabel = (
+  food: Pick<SearchFoodResult, "source" | "sourceId" | "rawPayload">,
+) => {
+  if (isCustomMealResult(food)) {
+    return "Custom Meal";
+  }
+
+  if (isRecipeResult(food)) {
+    return "Recipe";
+  }
+
+  return formatFoodSourceLabel(food.source);
+};
+
+const buildLibrarySections = ({
+  items,
+  userExternalId,
+  type,
+  hasQuery,
+}: {
+  items: SearchFoodResult[];
+  userExternalId?: string | null;
+  type: "recipes" | "custom_meals";
+  hasQuery: boolean;
+}): LibraryResultSection[] => {
+  const ownedItems = userExternalId
+    ? items.filter((item) => isOwnedLibraryResult(item, userExternalId))
+    : [];
+  const publicItems = items.filter(
+    (item) => !isOwnedLibraryResult(item, userExternalId),
+  );
+  const label = type === "recipes" ? "recipes" : "custom meals";
+
+  const sections: LibraryResultSection[] = [];
+
+  if (!hasQuery && userExternalId) {
+    sections.push({
+      key: "yours",
+      title: "Yours",
+      subtitle:
+        type === "recipes"
+          ? "Recipes you created and can edit."
+          : "Custom meals you created and can edit.",
+      emptyText: `No ${label} from you yet.`,
+      items: ownedItems,
+    });
+  } else if (hasQuery && ownedItems.length > 0) {
+    sections.push({
+      key: "yours",
+      title: "Yours",
+      subtitle:
+        type === "recipes"
+          ? "Matching recipes you created."
+          : "Matching custom meals you created.",
+      emptyText: `No ${label} from you matched this search.`,
+      items: ownedItems,
+    });
+  }
+
+  if (!hasQuery || publicItems.length > 0) {
+    sections.push({
+      key: "public",
+      title: "Public",
+      subtitle:
+        type === "recipes"
+          ? "Public recipes from other users. Add-only."
+          : "Public custom meals from other users. Add-only.",
+      emptyText: `No public ${label} ${hasQuery ? "matched this search" : "yet"}.`,
+      items: publicItems,
+    });
+  }
+
+  return sections;
 };
 
 const scoreSearchFoodResult = (food: SearchFoodResult, query: string) => {
@@ -411,6 +573,7 @@ const AddFoodScreen = () => {
   const [recent, setRecent] = useState<DBFoodItem[]>([]);
   const [favorites, setFavorites] = useState<DBFoodItem[]>([]);
   const [recipes, setRecipes] = useState<DBFoodItem[]>([]);
+  const [customMeals, setCustomMeals] = useState<DBFoodItem[]>([]);
   const [scannerVisible, setScannerVisible] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [searchMode, setSearchMode] = useState<FoodSearchMode>("all");
@@ -427,23 +590,35 @@ const AddFoodScreen = () => {
       source: "recipe",
       limit: 60,
     });
+    const customMealFoodsPromise = DB.listFoodItems({
+      source: "custom_meal",
+      limit: 60,
+    });
 
     if (!currentUser) {
-      setRecipes(await recipeFoodsPromise);
+      const [recipeFoods, customMealFoods] = await Promise.all([
+        recipeFoodsPromise,
+        customMealFoodsPromise,
+      ]);
+      setRecipes(recipeFoods);
+      setCustomMeals(customMealFoods);
       setRecent([]);
       setFavorites([]);
       return;
     }
 
-    const [recentFoods, favoriteFoods, recipeFoods] = await Promise.all([
+    const [recentFoods, favoriteFoods, recipeFoods, customMealFoods] =
+      await Promise.all([
       DB.getRecentFoodItems(currentUser.externalId, 10),
       DB.getFavoriteFoodItems(currentUser.externalId, 10),
       recipeFoodsPromise,
+      customMealFoodsPromise,
     ]);
 
     setRecent(recentFoods);
     setFavorites(favoriteFoods);
     setRecipes(recipeFoods);
+    setCustomMeals(customMealFoods);
   }, []);
 
   const searchFoods = useCallback(
@@ -455,7 +630,19 @@ const AddFoodScreen = () => {
       }
 
       const [localRows, remoteRows] = await Promise.all([
-        DB.searchFoodItems(normalizedQuery, 40),
+        mode === "recipes"
+          ? DB.listFoodItems({
+              source: "recipe",
+              query: normalizedQuery,
+              limit: 40,
+            })
+          : mode === "custom_meals"
+            ? DB.listFoodItems({
+                source: "custom_meal",
+                query: normalizedQuery,
+                limit: 40,
+              })
+            : DB.searchFoodItems(normalizedQuery, 40),
         mode === "all" && shouldSearchRemotely(normalizedQuery)
           ? API.usdaAPI.getFood(normalizedQuery, { pageSize: 12 })
           : Promise.resolve([]),
@@ -463,7 +650,11 @@ const AddFoodScreen = () => {
 
       const localResults = localRows
         .filter((food) =>
-          mode === "recipes" ? food.source === "recipe" : true,
+          mode === "recipes"
+            ? isRecipeResult(food)
+            : mode === "custom_meals"
+              ? isCustomMealResult(food)
+              : !isRecipeResult(food) && !isCustomMealResult(food),
         )
         .map(fromDbFoodItem);
       const localKeys = new Set(
@@ -609,6 +800,10 @@ const AddFoodScreen = () => {
 
   const recentResults = useMemo(() => recent.map(fromDbFoodItem), [recent]);
   const recipeResults = useMemo(() => recipes.map(fromDbFoodItem), [recipes]);
+  const customMealResults = useMemo(
+    () => customMeals.map(fromDbFoodItem),
+    [customMeals],
+  );
 
   const resolvedLoggedAt = useMemo(() => {
     if (loggedAt) {
@@ -644,7 +839,7 @@ const AddFoodScreen = () => {
     [date, mealType, navigation, resolvedContextLabel, resolvedLoggedAt],
   );
 
-  const openCreateCustomFood = useCallback(() => {
+  const openCreateCustomMeal = useCallback(() => {
     navigation.navigate("CreateCustomFood", {
       contextLabel: resolvedContextLabel,
       date,
@@ -673,9 +868,9 @@ const AddFoodScreen = () => {
 
   const openRecipeEditor = useCallback(
     (food: SearchFoodResult) => {
-      const recipeId = Number(food.sourceId);
+      const recipeId = getRecipeIdFromResult(food);
 
-      if (food.source !== "recipe" || !Number.isFinite(recipeId)) {
+      if (recipeId == null) {
         Alert.alert(
           "Recipe unavailable",
           "That saved recipe could not be opened for editing.",
@@ -689,6 +884,29 @@ const AddFoodScreen = () => {
         loggedAt: resolvedLoggedAt,
         mealType,
         recipeId,
+      });
+    },
+    [date, mealType, navigation, resolvedContextLabel, resolvedLoggedAt],
+  );
+
+  const openCustomMealEditor = useCallback(
+    (food: SearchFoodResult) => {
+      const mealId = getMealIdFromResult(food);
+
+      if (mealId == null) {
+        Alert.alert(
+          "Custom meal unavailable",
+          "That saved custom meal could not be opened for editing.",
+        );
+        return;
+      }
+
+      navigation.navigate("CreateCustomFood", {
+        contextLabel: resolvedContextLabel,
+        date,
+        loggedAt: resolvedLoggedAt,
+        mealType,
+        mealId,
       });
     },
     [date, mealType, navigation, resolvedContextLabel, resolvedLoggedAt],
@@ -745,8 +963,12 @@ const AddFoodScreen = () => {
       return recipeResults;
     }
 
+    if (searchMode === "custom_meals") {
+      return customMealResults;
+    }
+
     return [];
-  }, [query, recipeResults, results, searchMode]);
+  }, [customMealResults, query, recipeResults, results, searchMode]);
   const categorizedQueryResults = useMemo(
     () =>
       query.trim() && searchMode === "all"
@@ -754,8 +976,24 @@ const AddFoodScreen = () => {
         : [],
     [activeResults, query, searchMode],
   );
+  const librarySections = useMemo(
+    () =>
+      searchMode === "recipes" || searchMode === "custom_meals"
+        ? buildLibrarySections({
+            items: activeResults,
+            userExternalId: user?.externalId,
+            type: searchMode,
+            hasQuery: Boolean(query.trim()),
+          })
+        : [],
+    [activeResults, query, searchMode, user?.externalId],
+  );
   const searchPlaceholder =
-    searchMode === "recipes" ? "Search recipes" : "Search foods";
+    searchMode === "recipes"
+      ? "Search recipes"
+      : searchMode === "custom_meals"
+        ? "Search custom meals"
+        : "Search foods";
   const shouldShowScanner = searchMode === "all";
 
   const toggleSection = useCallback((section: FoodSearchSectionKey) => {
@@ -778,7 +1016,19 @@ const AddFoodScreen = () => {
   }, []);
 
   const renderFoodCard = (food: SearchFoodResult, isFavorite: boolean) => {
-    const isRecipe = food.source === "recipe";
+    const isRecipe = isRecipeResult(food);
+    const isCustomMeal = isCustomMealResult(food);
+    const isLibraryItem = isRecipe || isCustomMeal;
+    const isOwnedLibraryItem =
+      isLibraryItem && isOwnedLibraryResult(food, user?.externalId);
+    const primaryLabel = isLibraryItem ? "Add" : "Open";
+    const secondaryLabel = isRecipe
+      ? "Edit"
+      : isCustomMeal
+        ? "Edit"
+        : isFavorite
+          ? "Saved"
+          : "Save";
 
     return (
       <View key={food.key} style={styles.foodCard}>
@@ -790,7 +1040,7 @@ const AddFoodScreen = () => {
             <View style={styles.foodBadgeRow}>
               <View style={styles.foodBadge}>
                 <Text style={styles.foodBadgeText}>
-                  {formatFoodSourceLabel(food.source)}
+                  {getLibraryBadgeLabel(food)}
                 </Text>
               </View>
             </View>
@@ -801,7 +1051,7 @@ const AddFoodScreen = () => {
           <Text style={styles.foodName} numberOfLines={2}>
             {food.name}
           </Text>
-          <Text style={styles.foodMeta} numberOfLines={1}>
+          <Text style={styles.slate300} numberOfLines={1}>
             {food.brand ? `${food.brand} | ` : ""}
             {formatFoodItemServing(food)} serving
           </Text>
@@ -812,27 +1062,49 @@ const AddFoodScreen = () => {
           </Text>
         </Pressable>
         <View style={styles.foodActionColumn}>
-          <Pressable
-            onPress={() =>
-              isRecipe
-                ? openRecipeEditor(food)
-                : void toggleFavorite(food, isFavorite)
-            }
-            style={({ pressed }) => [
-              styles.secondaryAction,
-              !isRecipe && isFavorite && styles.secondaryActionActive,
-              pressed && styles.cardPressed,
-            ]}
-          >
-            <Text
-              style={[
-                styles.secondaryActionText,
-                !isRecipe && isFavorite && styles.secondaryActionTextActive,
+          {isLibraryItem ? (
+            isOwnedLibraryItem ? (
+              <Pressable
+                onPress={() =>
+                  isRecipe
+                    ? openRecipeEditor(food)
+                    : openCustomMealEditor(food)
+                }
+                style={({ pressed }) => [
+                  styles.secondaryAction,
+                  pressed && styles.cardPressed,
+                ]}
+              >
+                <Text style={styles.secondaryActionText}>{secondaryLabel}</Text>
+              </Pressable>
+            ) : (
+              <View style={[styles.secondaryAction, styles.secondaryActionMuted]}>
+                <Text
+                  style={[styles.secondaryActionText, styles.secondaryActionTextMuted]}
+                >
+                  Public
+                </Text>
+              </View>
+            )
+          ) : (
+            <Pressable
+              onPress={() => void toggleFavorite(food, isFavorite)}
+              style={({ pressed }) => [
+                styles.secondaryAction,
+                isFavorite && styles.secondaryActionActive,
+                pressed && styles.cardPressed,
               ]}
             >
-              {isRecipe ? "Edit" : isFavorite ? "Saved" : "Save"}
-            </Text>
-          </Pressable>
+              <Text
+                style={[
+                  styles.secondaryActionText,
+                  isFavorite && styles.secondaryActionTextActive,
+                ]}
+              >
+                {secondaryLabel}
+              </Text>
+            </Pressable>
+          )}
           <Pressable
             onPress={() => void openFoodEditor(food)}
             style={({ pressed }) => [
@@ -840,7 +1112,7 @@ const AddFoodScreen = () => {
               pressed && styles.cardPressed,
             ]}
           >
-            <Text style={styles.primaryActionText}>Open</Text>
+            <Text style={styles.primaryActionText}>{primaryLabel}</Text>
           </Pressable>
         </View>
       </View>
@@ -858,10 +1130,9 @@ const AddFoodScreen = () => {
     const expanded = options?.expanded ?? true;
     const toggleLabel = expanded ? "Hide" : "Open";
     const toggleColor = expanded
-      ? appColors.foodAccentText
-      : appColors.foodPrimary;
-    const shouldShowNoResultsExtra =
-      (options?.showCreateCustomFoodCta ?? false) && items.length === 0;
+      ? appColors.brand300
+      : appColors.brand500;
+    const shouldShowEmptyCta = Boolean(options?.emptyCta) && items.length === 0;
 
     const headerContent = (
       <View style={styles.sectionHeaderRow}>
@@ -920,23 +1191,27 @@ const AddFoodScreen = () => {
             {items.length === 0 ? (
               <>
                 <Text style={styles.emptyText}>{emptyText}</Text>
-                {shouldShowNoResultsExtra ? (
+                {shouldShowEmptyCta ? (
                   <View>
                     <Pressable
-                      onPress={openCreateCustomFood}
+                      onPress={options?.emptyCta?.onPress}
                       style={({ pressed }) => [
                         styles.moreRow,
                         pressed && styles.cardPressed,
                       ]}
                     >
                       <View style={styles.moreCopy}>
-                        <Text style={styles.moreTitle}>Create custom food</Text>
+                        <Text style={styles.moreTitle}>
+                          {options?.emptyCta?.title}
+                        </Text>
                         <Text style={styles.moreText}>
-                          Add a new item for {resolvedContextLabel}.
+                          {options?.emptyCta?.text}
                         </Text>
                       </View>
                       <View style={styles.morePill}>
-                        <Text style={styles.morePillText}>New</Text>
+                        <Text style={styles.morePillText}>
+                          {options?.emptyCta?.pillText}
+                        </Text>
                       </View>
                     </Pressable>
                   </View>
@@ -997,7 +1272,7 @@ const AddFoodScreen = () => {
                 color={
                   searchMode === "recipes"
                     ? appColors.white
-                    : appColors.foodPrimary
+                    : appColors.brand500
                 }
                 weight="fill"
               />
@@ -1008,6 +1283,32 @@ const AddFoodScreen = () => {
                 ]}
               >
                 Recipes
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setSearchMode("custom_meals")}
+              style={({ pressed }) => [
+                styles.searchModePill,
+                searchMode === "custom_meals" && styles.searchModePillActive,
+                pressed && styles.cardPressed,
+              ]}
+            >
+              <ForkKnifeIcon
+                size={14}
+                color={
+                  searchMode === "custom_meals"
+                    ? appColors.white
+                    : appColors.brand500
+                }
+                weight="fill"
+              />
+              <Text
+                style={[
+                  styles.searchModeText,
+                  searchMode === "custom_meals" && styles.searchModeTextActive,
+                ]}
+              >
+                Custom Meals
               </Text>
             </Pressable>
           </View>
@@ -1050,35 +1351,75 @@ const AddFoodScreen = () => {
             {searchMode === "recipes"
               ? query.trim()
                 ? isSearching
-                  ? "Searching your saved recipes..."
-                  : `${activeResults.length} saved recipes match this search.`
+                  ? "Searching your recipes and public recipes..."
+                  : `${activeResults.length} recipes match this search.`
                 : ""
+              : searchMode === "custom_meals"
+                ? query.trim()
+                  ? isSearching
+                    ? "Searching your custom meals and public custom meals..."
+                    : `${activeResults.length} custom meals match this search.`
+                  : ""
               : query.trim()
                 ? isSearching
                   ? "Searching your foods and USDA branded + generic foods..."
                   : activeResults.length > 0
-                    ? `${activeResults.length} matches grouped into custom recipes, common foods, and branded foods.`
-                    : "No foods matched yet. Try a broader name or create one."
+                    ? `${activeResults.length} matches grouped into custom foods, common foods, and branded foods.`
+                    : "No foods matched yet. Try a broader name or create a custom meal."
                 : ""}
           </Text>
         </View>
 
         {query.trim() ? (
-          searchMode === "recipes" ? (
-            renderSection(
-              "Recipes",
-              "Saved recipes matching your search.",
-              activeResults,
-              "No recipes matched that search yet.",
+          searchMode === "recipes" || searchMode === "custom_meals" ? (
+            activeResults.length === 0 ? (
+              renderSection(
+                searchMode === "recipes" ? "Recipes" : "Custom Meals",
+                searchMode === "recipes"
+                  ? "Search across your recipes and public recipes."
+                  : "Search across your custom meals and public custom meals.",
+                activeResults,
+                searchMode === "recipes"
+                  ? "No recipes matched that search yet."
+                  : "No custom meals matched that search yet.",
+                searchMode === "custom_meals"
+                  ? {
+                      emptyCta: {
+                        onPress: openCreateCustomMeal,
+                        pillText: "New",
+                        title: "Create custom meal",
+                        text: `Build a reusable meal for ${resolvedContextLabel}.`,
+                      },
+                    }
+                  : undefined,
+              )
+            ) : (
+              <>
+                {librarySections.map((section) => (
+                  <React.Fragment key={section.key}>
+                    {renderSection(
+                      section.title,
+                      section.subtitle,
+                      section.items,
+                      section.emptyText,
+                    )}
+                  </React.Fragment>
+                ))}
+              </>
             )
           ) : activeResults.length === 0 ? (
             renderSection(
               "Results",
-              "Try another search or create your own food.",
+              "Try another search or create your own custom meal.",
               activeResults,
               "No foods matched that search yet.",
               {
-                showCreateCustomFoodCta: true,
+                emptyCta: {
+                  onPress: openCreateCustomMeal,
+                  pillText: "New",
+                  title: "Create custom meal",
+                  text: `Build a reusable meal for ${resolvedContextLabel}.`,
+                },
               },
             )
           ) : (
@@ -1095,13 +1436,37 @@ const AddFoodScreen = () => {
               ))}
             </>
           )
-        ) : searchMode === "recipes" ? (
-          renderSection(
-            "Recipes",
-            "Saved recipes you can add like any other food item.",
-            activeResults,
-            "No recipes yet. Create one above and it will show up here.",
-          )
+        ) : searchMode === "recipes" || searchMode === "custom_meals" ? (
+          <>
+            {librarySections.map((section) => (
+              <React.Fragment key={section.key}>
+                {renderSection(
+                  section.title,
+                  section.subtitle,
+                  section.items,
+                  section.emptyText,
+                  section.key === "yours"
+                    ? {
+                        emptyCta:
+                          searchMode === "recipes"
+                            ? {
+                                onPress: openCreateRecipe,
+                                pillText: "Recipe",
+                                title: "Create recipe",
+                                text: `Save a recipe for ${resolvedContextLabel}.`,
+                              }
+                            : {
+                                onPress: openCreateCustomMeal,
+                                pillText: "New",
+                                title: "Create custom meal",
+                                text: `Build a reusable meal for ${resolvedContextLabel}.`,
+                              },
+                      }
+                    : undefined,
+                )}
+              </React.Fragment>
+            ))}
+          </>
         ) : (
           <>
             {renderSection(
@@ -1217,6 +1582,7 @@ const styles = StyleSheet.create({
   searchModeRow: {
     width: "100%",
     flexDirection: "row",
+    gap: 8,
     marginBottom: 12,
   },
   searchModePill: {
@@ -1231,11 +1597,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   searchModePillActive: {
-    backgroundColor: appColors.foodPrimaryDark,
-    borderColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.brand700,
+    borderColor: appColors.brand700,
   },
   searchModeText: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 12,
     fontWeight: "800",
   },
@@ -1244,7 +1610,7 @@ const styles = StyleSheet.create({
   },
   heroEyebrow: {
     alignSelf: "flex-start",
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -1269,7 +1635,7 @@ const styles = StyleSheet.create({
     borderColor: appColors.foodBorder,
   },
   contextPillText: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 12,
     fontWeight: "800",
   },
@@ -1297,8 +1663,8 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
   },
   heroActionPrimary: {
-    backgroundColor: appColors.foodPrimaryDark,
-    borderColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.brand700,
+    borderColor: appColors.brand700,
   },
   heroActionText: {
     color: appColors.textPrimary,
@@ -1348,15 +1714,15 @@ const styles = StyleSheet.create({
     borderColor: appColors.foodBorder,
   },
   selectedSlotRow: {
-    backgroundColor: appColors.raw_hex_F4F0FF,
-    borderColor: appColors.raw_hex_DCD2F8,
+    backgroundColor: appColors.surfaceCardAlt,
+    borderColor: appColors.borderStrong,
   },
   scanButton: {
     minWidth: 50,
     flexDirection: "row",
     gap: 6,
     borderRadius: 9999,
-    backgroundColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.brand700,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 12,
@@ -1420,7 +1786,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   countPillText: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 11,
     fontWeight: "800",
   },
@@ -1448,12 +1814,12 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.foodPillBg,
   },
   togglePillText: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 11,
     fontWeight: "800",
   },
   togglePillTextExpanded: {
-    color: appColors.foodAccentText,
+    color: appColors.brand300,
   },
   foodCard: {
     flexDirection: "row",
@@ -1489,7 +1855,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   foodBadgeText: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 10,
     fontWeight: "800",
   },
@@ -1504,14 +1870,14 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     marginBottom: 3,
   },
-  foodMeta: {
-    color: appColors.foodMeta,
+  slate300: {
+    color: appColors.slate300,
     fontSize: 12,
     lineHeight: 16,
     marginBottom: 3,
   },
   foodMacroText: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 11,
     fontWeight: "700",
   },
@@ -1534,13 +1900,20 @@ const styles = StyleSheet.create({
   secondaryActionActive: {
     backgroundColor: appColors.foodOrbBottom,
   },
+  secondaryActionMuted: {
+    backgroundColor: appColors.foodFieldBg,
+    borderColor: appColors.borderSoft,
+  },
   secondaryActionText: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 12,
     fontWeight: "800",
   },
   secondaryActionTextActive: {
-    color: appColors.foodAccentText,
+    color: appColors.brand300,
+  },
+  secondaryActionTextMuted: {
+    color: appColors.foodMuted,
   },
   primaryAction: {
     minWidth: 62,

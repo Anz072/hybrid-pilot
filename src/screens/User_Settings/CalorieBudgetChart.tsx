@@ -139,10 +139,10 @@ const styles = StyleSheet.create({
   barFill: {
     width: "100%",
     borderRadius: 8,
-    backgroundColor: appColors.foodPrimaryOverlay,
+    backgroundColor: appColors.brand500Overlay,
   },
   barFillHighlighted: {
-    backgroundColor: appColors.foodPrimary,
+    backgroundColor: appColors.brand500,
   },
   barLabel: {
     color: appColors.textMuted,

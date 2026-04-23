@@ -30,6 +30,7 @@ export type FoodStackParamList = {
     mealType?: string | null;
     loggedAt?: string | null;
     contextLabel?: string | null;
+    mealId?: number;
   };
   CreateRecipe: {
     date: string;

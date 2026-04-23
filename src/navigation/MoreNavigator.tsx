@@ -10,6 +10,10 @@ import DiaryHoursDebugScreen from "../screens/User_Settings/DiaryHoursDebugScree
 import TrainingTypesSettingsScreen from "../screens/User_Settings/TrainingTypesSettingsScreen";
 import ProteinFocusSettingsScreen from "../screens/User_Settings/ProteinFocusSettingsScreen";
 import SettingsScreen from "../screens/Settings/SettingsScreen";
+import {
+  UserCreatedCustomMealsScreen,
+  UserCreatedRecipesScreen,
+} from "../screens/User_Settings/UserCreatedFoodLibraryScreen";
 
 export type MoreParamList = {
   FoodLibrary: undefined;
@@ -22,6 +26,8 @@ export type MoreParamList = {
   TrainingTypesSettingsScreen: undefined;
   ProteinFocusSettingsScreen: undefined;
   CalorieScheduleScreen: undefined;
+  UserCreatedRecipesScreen: undefined;
+  UserCreatedCustomMealsScreen: undefined;
 };
 
 const Stack = createNativeStackNavigator<MoreParamList>();
@@ -62,6 +68,14 @@ const MoreNavigator = () => {
       <Stack.Screen
         name="CalorieScheduleScreen"
         component={CalorieScheduleScreen}
+      />
+      <Stack.Screen
+        name="UserCreatedRecipesScreen"
+        component={UserCreatedRecipesScreen}
+      />
+      <Stack.Screen
+        name="UserCreatedCustomMealsScreen"
+        component={UserCreatedCustomMealsScreen}
       />
     </Stack.Navigator>
   );

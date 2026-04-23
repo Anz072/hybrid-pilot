@@ -416,16 +416,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   seedButton: {
-    backgroundColor: appColors.green800,
+    backgroundColor: appColors.green700,
   },
   weightDownButton: {
-    backgroundColor: appColors.teal700,
+    backgroundColor: appColors.green700,
   },
   weightUpButton: {
-    backgroundColor: appColors.blue700,
+    backgroundColor: appColors.brand700,
   },
   weightMaintainButton: {
-    backgroundColor: appColors.violet600,
+    backgroundColor: appColors.brand700,
   },
   resetButton: {
     backgroundColor: appColors.danger800,
@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
     borderColor: appColors.slate200,
     borderRadius: 8,
     padding: 12,
-    backgroundColor: appColors.raw_hex_f8fafc,
+    backgroundColor: appColors.slate50,
   },
   seedGroup: {
     marginTop: 12,
@@ -452,7 +452,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   empty: {
-    color: appColors.raw_hex_64748b,
+    color: appColors.textMuted,
   },
   row: {
     flexDirection: "row",

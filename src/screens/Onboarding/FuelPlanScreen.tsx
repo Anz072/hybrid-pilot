@@ -69,13 +69,13 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
       {
         label: "Protein",
         value: Math.max(1, fuelPlan.protein * 4),
-        color: appColors.primaryAlt,
+        color: appColors.brand700,
         grams: fuelPlan.protein,
       },
       {
         label: "Carbs",
         value: Math.max(1, fuelPlan.carbs * 4),
-        color: appColors.foodPrimary,
+        color: appColors.brand500,
         grams: fuelPlan.carbs,
       },
       {
@@ -101,7 +101,7 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
       <OnboardingTopBar onBack={() => navigation.goBack()} stepLabel="Fuel Plan" />
       <Text style={styles.eyebrow}>Fuel Strategy</Text>
       <View style={styles.titleRow}>
-        <ForkKnifeIcon size={26} color={appColors.teal700} weight="fill" />
+        <ForkKnifeIcon size={26} color={appColors.green700} weight="fill" />
         <Text style={styles.title}>Initial Plan</Text>
       </View>
       <Text style={styles.subtitle}>
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: appColors.teal700,
+    color: appColors.green700,
     backgroundColor: appColors.tealSoftBg,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   pacePillText: {
-    color: appColors.blue700,
+    color: appColors.brand700,
     fontSize: 12,
     fontWeight: "800",
     letterSpacing: 0.4,

@@ -145,7 +145,7 @@ const FoodDiaryTimelineItem = ({
                               pressed && styles.cardPressed,
                             ]}
                           >
-                            <XIcon size={18} color={appColors.neutral300} />
+                            <XIcon size={18} color={appColors.slate300} />
                           </Pressable>
                         </View>
                         {/* <Text style={styles.entryCalories}>
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   axisLabelActive: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
   },
   axisTrack: {
     flex: 1,
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.lavenderDot,
   },
   axisDotActive: {
-    backgroundColor: appColors.foodPrimary,
+    backgroundColor: appColors.brand500,
   },
   axisLine: {
     width: 1,
@@ -324,8 +324,8 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   hourCardActive: {
-    borderColor: appColors.lavenderRowBorder,
-    backgroundColor: appColors.raw_hex_f3eefc,
+    borderColor: appColors.brand500,
+    backgroundColor: appColors.surfaceCardAlt,
   },
   hourHeader: {
     flexDirection: "row",
@@ -360,12 +360,12 @@ const styles = StyleSheet.create({
   },
   addPill: {
     borderRadius: 999,
-    backgroundColor: appColors.raw_hex_EFE9FA,
+    backgroundColor: appColors.surfaceFieldAlt,
     paddingHorizontal: 14,
     paddingVertical: 9,
   },
   addPillText: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 12,
     fontWeight: "800",
   },
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   emptyStateAction: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 3,
     paddingVertical: 2,
-    backgroundColor: appColors.raw_hex_6e52ea1f,
+    backgroundColor: appColors.brandOverlay18,
   },
   entryText: {
     color: appColors.black30,

@@ -243,7 +243,7 @@ const AdaptiveCaloriesSettingsScreen = ({ navigation }: Props) => {
           </View>
         ) : loading ? (
           <View style={styles.loadingCard}>
-            <ActivityIndicator size="small" color={appColors.foodPrimaryDark} />
+            <ActivityIndicator size="small" color={appColors.brand700} />
             <Text style={styles.cardText}>Loading adaptive calorie state...</Text>
           </View>
         ) : (
@@ -529,8 +529,8 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceGhost,
   },
   toggleButtonActive: {
-    backgroundColor: appColors.foodPrimaryDark,
-    borderColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.brand700,
+    borderColor: appColors.brand700,
   },
   toggleButtonText: {
     color: appColors.textPrimary,
@@ -601,7 +601,7 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     borderRadius: 9999,
-    backgroundColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.brand700,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
@@ -655,7 +655,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   historyConfidence: {
-    color: appColors.foodPrimaryDark,
+    color: appColors.brand700,
     fontSize: 11,
     fontWeight: "900",
   },

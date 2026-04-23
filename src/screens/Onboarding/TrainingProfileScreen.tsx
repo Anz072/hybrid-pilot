@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     backgroundColor: appColors.foodEyebrowBg,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   optionSelected: {
-    borderColor: appColors.revolutBlue,
+    borderColor: appColors.brand700,
     backgroundColor: appColors.slate900,
   },
   optionPressed: {
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
   },
   checkBadgeSelected: {
     backgroundColor: appColors.slate900,
-    borderColor: appColors.revolutBlue,
+    borderColor: appColors.brand700,
   },
   helper: {
     marginTop: 12,

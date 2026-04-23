@@ -4,7 +4,7 @@
     "slug": "HybridPilot",
     "version": "1.0.3",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/icon1.png",
     "scheme": "hybridpilot",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
@@ -20,8 +20,8 @@
     "android": {
       "package": "com.hybridpilot.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#191c1f"
+        "foregroundImage": "./assets/adaptive-icon1.png",
+        "backgroundColor": "#F6EFDf"
       },
       "edgeToEdgeEnabled": true,
       "softwareKeyboardLayoutMode": "resize",

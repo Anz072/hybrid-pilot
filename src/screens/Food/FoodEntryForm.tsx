@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
   },
   heroEyebrow: {
     alignSelf: "flex-start",
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -309,11 +309,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   heroActionActive: {
-    backgroundColor: appColors.foodPrimary,
-    borderColor: appColors.foodPrimary,
+    backgroundColor: appColors.brand500,
+    borderColor: appColors.brand500,
   },
   heroActionText: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 12,
     fontWeight: "800",
   },
@@ -338,13 +338,13 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   pillText: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 11,
     fontWeight: "800",
   },
   previewStrip: {
     borderRadius: 8,
-    backgroundColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.brand700,
     paddingHorizontal: 12,
     paddingVertical: 11,
   },
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   fieldLabel: {
-    color: appColors.foodLabel,
+    color: appColors.slate300,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
   },
   unitText: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 13,
     fontWeight: "800",
   },
@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   slotLabel: {
-    color: appColors.foodLabel,
+    color: appColors.slate300,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -459,12 +459,12 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   slotAction: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 12,
     fontWeight: "800",
   },
   slotTrailing: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 12,
     fontWeight: "800",
   },
@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   nutritionLabel: {
-    color: appColors.foodLabel,
+    color: appColors.slate300,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -500,7 +500,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     borderRadius: 999,
-    backgroundColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.brand700,
     paddingVertical: 13,
     marginBottom: 12,
   },

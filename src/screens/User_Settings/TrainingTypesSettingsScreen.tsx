@@ -106,7 +106,7 @@ const TrainingTypesSettingsScreen = ({ navigation }: Props) => {
                 <View style={styles.metricPill}>
                   <BarbellIcon
                     size={16}
-                    color={appColors.foodPrimaryDark}
+                    color={appColors.brand700}
                     weight="fill"
                   />
                   <Text style={styles.metricPillText}>
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     borderColor: appColors.slate100,
   },
   optionCardSelected: {
-    borderColor: appColors.foodPrimary,
+    borderColor: appColors.brand500,
     backgroundColor: appColors.foodEyebrowBg,
   },
   optionCardPressed: {
@@ -279,13 +279,13 @@ const styles = StyleSheet.create({
     borderColor: appColors.slate300,
   },
   checkBadgeSelected: {
-    backgroundColor: appColors.foodPrimaryDark,
-    borderColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.brand700,
+    borderColor: appColors.brand700,
   },
   primaryButton: {
     marginTop: 16,
     borderRadius: 999,
-    backgroundColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.brand700,
     paddingHorizontal: 16,
     paddingVertical: 14,
     alignItems: "center",

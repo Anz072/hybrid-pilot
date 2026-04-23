@@ -1005,6 +1005,7 @@ const CreateRecipeScreen = () => {
       <KeyboardAvoidingView
         style={styles.screen}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
       >
         <KeyboardAwareScrollView
           style={styles.screen}
@@ -1061,7 +1062,7 @@ const CreateRecipeScreen = () => {
               <View style={styles.contextPill}>
                 <CalendarIcon
                   size={14}
-                  color={appColors.foodPrimary}
+                  color={appColors.brand500}
                   weight="bold"
                 />
                 <Text style={styles.contextPillText}>
@@ -1071,7 +1072,7 @@ const CreateRecipeScreen = () => {
               <View style={styles.contextPill}>
                 <ClockIcon
                   size={14}
-                  color={appColors.foodPrimary}
+                  color={appColors.brand500}
                   weight="bold"
                 />
                 <Text style={styles.contextPillText}>{resolvedContextLabel}</Text>
@@ -1323,7 +1324,7 @@ const CreateRecipeScreen = () => {
                             </View>
                             <CaretRightIcon
                               size={14}
-                              color={appColors.foodPrimary}
+                              color={appColors.brand500}
                               weight="bold"
                             />
                           </View>
@@ -1601,7 +1602,7 @@ const styles = StyleSheet.create({
   },
   heroEyebrow: {
     alignSelf: "flex-start",
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -1644,13 +1645,13 @@ const styles = StyleSheet.create({
     borderColor: appColors.foodBorder,
   },
   contextPillText: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 12,
     fontWeight: "800",
   },
   previewStrip: {
     borderRadius: 8,
-    backgroundColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.brand700,
     paddingHorizontal: 14,
     paddingVertical: 13,
   },
@@ -1704,8 +1705,8 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   methodCardSelected: {
-    backgroundColor: appColors.foodPrimaryDark,
-    borderColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.brand700,
+    borderColor: appColors.brand700,
   },
   methodCardDisabled: {
     opacity: 0.8,
@@ -1752,10 +1753,10 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   methodBadgeSelected: {
-    backgroundColor: appColors.foodPrimary,
+    backgroundColor: appColors.brand500,
   },
   methodBadgeText: {
-    color: appColors.foodPrimaryDark,
+    color: appColors.brand700,
     fontSize: 10,
     fontWeight: "900",
     textTransform: "uppercase",
@@ -1765,7 +1766,7 @@ const styles = StyleSheet.create({
     color: appColors.white,
   },
   fieldLabel: {
-    color: appColors.foodLabel,
+    color: appColors.slate300,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -1845,7 +1846,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   resultCalories: {
-    color: appColors.foodPrimaryDark,
+    color: appColors.brand700,
     fontSize: 11,
     fontWeight: "800",
   },
@@ -1857,7 +1858,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   resultMeta: {
-    color: appColors.foodMeta,
+    color: appColors.slate300,
     fontSize: 11,
     lineHeight: 15,
   },
@@ -1865,7 +1866,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 999,
-    backgroundColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.brand700,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1873,7 +1874,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 8,
-    backgroundColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.brand700,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1915,7 +1916,7 @@ const styles = StyleSheet.create({
     lineHeight: 15,
   },
   ingredientPreviewText: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 11,
     lineHeight: 15,
     fontWeight: "700",
@@ -1927,7 +1928,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   ingredientAmountLabel: {
-    color: appColors.foodLabel,
+    color: appColors.slate300,
     fontSize: 10,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -1960,7 +1961,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   unitText: {
-    color: appColors.foodPrimary,
+    color: appColors.brand500,
     fontSize: 13,
     fontWeight: "800",
   },
@@ -1994,7 +1995,7 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   metricValue: {
-    color: appColors.foodPrimaryDark,
+    color: appColors.brand700,
     fontSize: 12,
     lineHeight: 17,
     fontWeight: "900",
@@ -2068,7 +2069,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.foodPrimaryDark,
+    backgroundColor: appColors.brand700,
   },
   deleteSwipe: {
     width: 96,

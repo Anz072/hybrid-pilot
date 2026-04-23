@@ -860,7 +860,7 @@ const WeightScreen = ({
                 {expanded ? (
                   <CaretUpIcon size={14} color={appColors.plumMutedAlt} weight="bold" />
                 ) : (
-                  <CaretDownIcon size={14} color={appColors.raw_hex_7A718B} weight="bold" />
+                  <CaretDownIcon size={14} color={appColors.textMuted} weight="bold" />
                 )}
               </View>
             </View>
@@ -924,7 +924,7 @@ const WeightScreen = ({
             <Text style={styles.heroInfoValue}>{currentWeightText} kg</Text>
           </View>
           <View style={styles.heroInfoPill}>
-            <TargetIcon size={13} color={appColors.raw_hex_6D28D9} weight="bold" />
+            <TargetIcon size={13} color={appColors.brand700} weight="bold" />
             <Text style={styles.heroInfoGoalText}>{goalChipText}</Text>
           </View>
         </View>
@@ -994,9 +994,9 @@ const WeightScreen = ({
             </View>
             <View style={styles.sectionToggle}>
               {hideInsights ? (
-                <CaretDownIcon size={18} color={appColors.plumLabel} weight="bold" />
+                <CaretDownIcon size={18} color={appColors.slate300} weight="bold" />
               ) : (
-                <CaretUpIcon size={18} color={appColors.plumLabel} weight="bold" />
+                <CaretUpIcon size={18} color={appColors.slate300} weight="bold" />
               )}
             </View>
           </View>
@@ -1027,9 +1027,9 @@ const WeightScreen = ({
             </View>
             <View style={styles.sectionToggle}>
               {hideHistory ? (
-                <CaretDownIcon size={18} color={appColors.plumLabel} weight="bold" />
+                <CaretDownIcon size={18} color={appColors.slate300} weight="bold" />
               ) : (
-                <CaretUpIcon size={18} color={appColors.plumLabel} weight="bold" />
+                <CaretUpIcon size={18} color={appColors.slate300} weight="bold" />
               )}
             </View>
           </View>
@@ -1047,7 +1047,7 @@ const WeightScreen = ({
   if (loading) {
     return (
       <View style={styles.centerState}>
-        <ActivityIndicator size="small" color={appColors.foodPrimary} />
+        <ActivityIndicator size="small" color={appColors.brand500} />
       </View>
     );
   }
@@ -1072,7 +1072,7 @@ const WeightScreen = ({
         ListEmptyComponent={
           hideHistory ? null : (
             <View style={[styles.card, styles.emptyCard]}>
-              <ChartLineIcon size={28} color={appColors.teal700} weight="bold" />
+              <ChartLineIcon size={28} color={appColors.green700} weight="bold" />
               <Text style={styles.sectionTitle}>Log your first weigh-in</Text>
               <Text style={styles.subtleText}>
                 Add your first weight entry to unlock trend lines, goal
@@ -1510,7 +1510,7 @@ const styles = StyleSheet.create({
   heroStatDivider: {
     width: 1,
     marginHorizontal: 14,
-    backgroundColor: appColors.raw_hex_EEE8F5,
+    backgroundColor: appColors.borderSoft,
   },
   heroStatLabel: {
     color: appColors.plumSoftText,
@@ -1519,14 +1519,14 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   heroStatValue: {
-    color: appColors.plum900,
+    color: appColors.plum,
     fontSize: 26,
     lineHeight: 30,
     fontWeight: "800",
     marginBottom: 6,
   },
   heroStatUnit: {
-    color: appColors.plumLabel,
+    color: appColors.slate300,
     fontSize: 16,
     fontWeight: "700",
   },
@@ -1548,22 +1548,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     borderRadius: 999,
-    backgroundColor: appColors.raw_hex_F6F2FB,
+    backgroundColor: appColors.surfaceFieldAlt,
     paddingHorizontal: 12,
     paddingVertical: 9,
   },
   heroInfoLabel: {
-    color: appColors.raw_hex_8A8199,
+    color: appColors.textMuted,
     fontSize: 12,
     fontWeight: "700",
   },
   heroInfoValue: {
-    color: appColors.plum810,
+    color: appColors.plum,
     fontSize: 13,
     fontWeight: "800",
   },
   heroInfoGoalText: {
-    color: appColors.raw_hex_5E3DB3,
+    color: appColors.brand700,
     fontSize: 13,
     fontWeight: "800",
   },
@@ -1596,7 +1596,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: appColors.teal700,
+    color: appColors.green700,
     backgroundColor: appColors.tealSoftBg,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -1604,7 +1604,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   heroTitle: {
-    color: appColors.plum900,
+    color: appColors.plum,
     fontSize: 24,
     lineHeight: 28,
     fontWeight: "500",
@@ -1615,7 +1615,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     borderRadius: 999,
-    backgroundColor: appColors.raw_hex_F2EDF8,
+    backgroundColor: appColors.surfaceFieldAlt,
     paddingHorizontal: 12,
     paddingVertical: 9,
   },
@@ -1653,7 +1653,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   title: {
-    color: appColors.plum950,
+    color: appColors.plum,
     fontSize: 32,
     lineHeight: 38,
     fontWeight: "900",
@@ -1671,7 +1671,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   subtleText: {
-    color: appColors.raw_hex_877E96,
+    color: appColors.textMuted,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -1686,29 +1686,29 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     borderRadius: 999,
-    backgroundColor: appColors.raw_hex_EEE7FA,
+    backgroundColor: appColors.surfaceCardAlt,
     paddingHorizontal: 12,
     paddingVertical: 9,
   },
   goalChipText: {
-    color: appColors.primaryAlt,
+    color: appColors.brand700,
     fontSize: 13,
     fontWeight: "800",
   },
   goalBandPill: {
-    backgroundColor: appColors.raw_hex_EFF6FF,
+    backgroundColor: appColors.surfaceFieldAlt,
   },
   goalLauncherPill: {
     alignSelf: "flex-start",
   },
   goalBandText: {
-    color: appColors.blue700,
+    color: appColors.brand700,
     fontSize: 12,
     fontWeight: "800",
   },
   warningCard: {
     backgroundColor: appColors.amberSoftStrong,
-    borderColor: appColors.raw_hex_FCD34D,
+    borderColor: appColors.amber300,
   },
   warningRow: {
     flexDirection: "row",
@@ -1716,7 +1716,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   warningTitle: {
-    color: appColors.raw_hex_78350F,
+    color: appColors.amber800,
     fontSize: 14,
     fontWeight: "800",
     marginBottom: 2,
@@ -1727,13 +1727,13 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   sectionTitle: {
-    color: appColors.plum900,
+    color: appColors.plum,
     fontSize: 20,
     fontWeight: "800",
     marginBottom: 2,
   },
   dashboardSectionTitle: {
-    color: appColors.plum900,
+    color: appColors.plum,
     fontSize: 28,
     fontWeight: "800",
     marginBottom: 2,
@@ -1929,7 +1929,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 18,
   },
   historyRowActive: {
-    backgroundColor: appColors.raw_hex_F8F4FE,
+    backgroundColor: appColors.surfaceRaised,
   },
   historyRowMain: {
     flexDirection: "row",
@@ -2039,7 +2039,7 @@ const styles = StyleSheet.create({
   fabHalo: {
     padding: 6,
     borderRadius: 999,
-    backgroundColor: appColors.raw_rgba168_143_214_0_18,
+    backgroundColor: appColors.brandOverlay18,
   },
   goalModalScreen: {
     flex: 1,
@@ -2117,7 +2117,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   insightTitle: {
-    color: appColors.plum740,
+    color: appColors.plum2,
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
@@ -2138,7 +2138,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 3,
     borderRadius: 999,
-    backgroundColor: appColors.raw_hex_B28AF5,
+    backgroundColor: appColors.brand400,
     marginTop: 12,
     marginBottom: 2,
   },
@@ -2154,26 +2154,26 @@ const styles = StyleSheet.create({
     borderColor: appColors.foodBorder,
   },
   insightToggleChipExpanded: {
-    backgroundColor: appColors.raw_hex_E8E0F4,
-    borderColor: appColors.raw_hex_D8CAE9,
+    backgroundColor: appColors.surfaceRaised,
+    borderColor: appColors.borderSoft,
   },
   insightToggleText: {
-    color: appColors.raw_hex_7B718B,
+    color: appColors.textMuted,
     fontSize: 12,
     fontWeight: "700",
   },
   insightToggleTextExpanded: {
-    color: appColors.plum730,
+    color: appColors.plum2,
   },
   insightExpandedBody: {
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: appColors.raw_hex_E5DDF0,
+    borderTopColor: appColors.borderSoft,
     gap: 6,
   },
   insightExpandedLabel: {
-    color: appColors.raw_hex_7E748F,
+    color: appColors.textMuted,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",

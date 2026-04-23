@@ -16,7 +16,8 @@
     "prebuild:ios": "expo prebuild -p ios",
     "prebuild:ios:clean": "expo prebuild -p ios --clean",
     "prebuild:android": "expo prebuild -p android",
-    "build:apk:local": "cd android && gradlew assembleRelease",
+    "build:apk:local": "cd android && gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a",
+    "build:aab:local": "cd android && gradlew bundleRelease -PreactNativeArchitectures=arm64-v8a",
     "build:apk:local:debug": "cd android && gradlew assembleDebug"
   },
   "dependencies": {

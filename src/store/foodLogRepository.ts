@@ -6,6 +6,13 @@ import type {
   UpdateQuickAddFoodLogInput,
   UpdateUserFoodLogInput,
 } from "./DB_TYPES";
+import {
+  buildFoodLogDuplicateKey,
+  countFoodLogsByDuplicateKey,
+  type FoodLogCopyResult,
+  type FoodLogDuplicateShape,
+  toFoodLogDuplicateShape,
+} from "./foodLogCopyUtils";
 
 const combineDateKeyWithTime = (dateKey: string, timeSource: string) => {
   const source = new Date(timeSource);
@@ -298,9 +305,13 @@ export const copyFoodLogsFromDate = async (
   userExternalId: string,
   fromDate: string,
   toDate: string,
-): Promise<void> => {
+): Promise<FoodLogCopyResult> => {
   await initDb();
   const db = await getDb();
+  const destinationEntries = await getUserFoodLogEntriesByDate(userExternalId, toDate);
+  const remainingDestinationMatches = countFoodLogsByDuplicateKey(
+    destinationEntries.map(toFoodLogDuplicateShape),
+  );
   const sourceEntries = await db.getAllAsync<{
     foodId: number;
     quantityG: number;
@@ -356,9 +367,48 @@ export const copyFoodLogsFromDate = async (
     fromDate,
   );
 
+  const sourceCount = sourceEntries.length + sourceQuickEntries.length;
+  let copiedCount = 0;
+  let skippedDuplicates = 0;
+
+  const shouldSkipDuplicate = (entry: FoodLogDuplicateShape) => {
+    const key = buildFoodLogDuplicateKey(entry);
+    const availableMatches = remainingDestinationMatches.get(key) ?? 0;
+
+    if (availableMatches <= 0) {
+      return false;
+    }
+
+    remainingDestinationMatches.set(key, availableMatches - 1);
+    skippedDuplicates += 1;
+    return true;
+  };
+
   for (const entry of sourceEntries) {
     const now = new Date().toISOString();
     const sourceTime = entry.loggedAt ?? entry.createdAt;
+
+    if (
+      shouldSkipDuplicate({
+        entrySource: "food_item",
+        foodId: entry.foodId,
+        loggedAt: entry.loggedAt,
+        createdAt: entry.createdAt,
+        quantityValue: entry.quantityG,
+        mealType: entry.mealType,
+        displayName: null,
+        calories: null,
+        proteinG: null,
+        carbsG: null,
+        fatG: null,
+        alcoholG: null,
+        systemCalculatedCalories: null,
+        isEnergyManuallySet: false,
+        quickAddName: null,
+      })
+    ) {
+      continue;
+    }
 
     await db.runAsync(
       `
@@ -373,11 +423,34 @@ export const copyFoodLogsFromDate = async (
       entry.mealType,
       now,
     );
+    copiedCount += 1;
   }
 
   for (const entry of sourceQuickEntries) {
     const now = new Date().toISOString();
     const sourceTime = entry.loggedAt ?? entry.createdAt;
+
+    if (
+      shouldSkipDuplicate({
+        entrySource: "quick_add",
+        foodId: null,
+        loggedAt: entry.loggedAt,
+        createdAt: entry.createdAt,
+        quantityValue: 1,
+        mealType: entry.mealType,
+        displayName: entry.name ?? "Quick Add",
+        calories: entry.calories,
+        proteinG: entry.proteinG,
+        carbsG: entry.carbsG,
+        fatG: entry.fatG,
+        alcoholG: entry.alcoholG,
+        systemCalculatedCalories: entry.systemCalculatedCalories,
+        isEnergyManuallySet: Boolean(entry.isEnergyManuallySet),
+        quickAddName: entry.name,
+      })
+    ) {
+      continue;
+    }
 
     await db.runAsync(
       `
@@ -412,5 +485,13 @@ export const copyFoodLogsFromDate = async (
       entry.isEnergyManuallySet,
       now,
     );
+    copiedCount += 1;
   }
+
+  return {
+    sourceCount,
+    destinationCount: destinationEntries.length,
+    copiedCount,
+    skippedDuplicates,
+  };
 };

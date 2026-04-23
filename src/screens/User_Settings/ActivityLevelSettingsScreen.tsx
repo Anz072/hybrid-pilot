@@ -183,7 +183,7 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>No active user</Text>
             <Text style={styles.cardText}>
-              Load a local account first before editing your goal settings.
+              Sign in to your account first before editing your goal settings.
             </Text>
           </View>
         ) : (

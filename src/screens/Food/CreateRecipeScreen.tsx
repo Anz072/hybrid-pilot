@@ -40,6 +40,7 @@ import type { FoodStackParamList } from "../../navigation/foodTypes";
 import { DB } from "../../store/DB";
 import type {
   DBFoodItem,
+  DBRecipe,
   DBRecipeDetails,
   RecipeBuildMethod,
   SaveFoodItemInput,
@@ -384,6 +385,8 @@ const calculateIngredientFactor = (ingredient: RecipeIngredientDraft) => {
   };
 };
 
+type RecipeSaveMode = "save" | "save_and_add";
+
 const CreateRecipeScreen = () => {
   const route = useRoute<CreateRecipeRoute>();
   const navigation = useNavigation<CreateRecipeNav>();
@@ -419,8 +422,9 @@ const CreateRecipeScreen = () => {
   const [recipeLoadError, setRecipeLoadError] = React.useState<string | null>(
     null,
   );
-  const [saving, setSaving] = React.useState(false);
+  const [saveMode, setSaveMode] = React.useState<RecipeSaveMode | null>(null);
   const [deleting, setDeleting] = React.useState(false);
+  const saving = saveMode != null;
 
   const resolvedLoggedAt = React.useMemo(() => {
     if (route.params.loggedAt) {
@@ -831,8 +835,8 @@ const CreateRecipeScreen = () => {
     );
   }, []);
 
-  const closeAfterSave = React.useCallback(() => {
-    if (isEditing) {
+  const closeAfterSave = React.useCallback((mode: RecipeSaveMode) => {
+    if (isEditing || mode === "save") {
       navigation.goBack();
       return;
     }
@@ -848,8 +852,16 @@ const CreateRecipeScreen = () => {
     navigation.goBack();
   }, [isEditing, navigation]);
 
+  const handleCancel = React.useCallback(() => {
+    if (saving || deleting) {
+      return;
+    }
+
+    navigation.goBack();
+  }, [deleting, navigation, saving]);
+
   const handleSave = React.useCallback(
-    async () => {
+    async (mode: RecipeSaveMode = "save") => {
       if (!user) {
         Alert.alert(
           "No account found",
@@ -902,7 +914,7 @@ const CreateRecipeScreen = () => {
       }
 
       try {
-        setSaving(true);
+        setSaveMode(mode);
 
         const payload = {
           userExternalId: user.externalId,
@@ -921,23 +933,35 @@ const CreateRecipeScreen = () => {
           ingredients: ingredientInputs,
         };
 
+        let savedRecipe: DBRecipe;
         if (isEditing && editingRecipeId != null) {
-          await DB.updateUserRecipe({
+          savedRecipe = await DB.updateUserRecipe({
             recipeId: editingRecipeId,
             ...payload,
           });
         } else {
-          await DB.createUserRecipe(payload);
+          savedRecipe = await DB.createUserRecipe(payload);
         }
 
-        closeAfterSave();
+        if (mode === "save_and_add") {
+          await DB.addUserFoodLog({
+            userExternalId: user.externalId,
+            foodId: savedRecipe.linkedFoodId,
+            date: route.params.date,
+            loggedAt: resolvedLoggedAt,
+            quantityG: 1,
+            mealType: route.params.mealType ?? null,
+          });
+        }
+
+        closeAfterSave(mode);
       } catch (error) {
         Alert.alert(
           isEditing ? "Could not update recipe" : "Could not save recipe",
           error instanceof Error ? error.message : "Please try again.",
         );
       } finally {
-        setSaving(false);
+        setSaveMode(null);
       }
     },
     [
@@ -953,8 +977,11 @@ const CreateRecipeScreen = () => {
       parsedServings,
       recipeDetails?.createdByUserExternalId,
       resolvedPreparedWeight,
+      resolvedLoggedAt,
       recipeName,
       prepTimeValue,
+      route.params.date,
+      route.params.mealType,
       steps,
       user,
     ],
@@ -1048,7 +1075,7 @@ const CreateRecipeScreen = () => {
                 <Text style={styles.heroMeta}>
                   {isEditing
                     ? "Update ingredients, servings, and preparation details. Saved changes show anywhere this recipe is used."
-                    : `Build a saved recipe for ${resolvedContextLabel}.`}
+                    : `Build a saved recipe for ${resolvedContextLabel}, then save it for later or Save and Add one serving right away.`}
                 </Text>
               </View>
               {isEditing ? (
@@ -1529,27 +1556,67 @@ const CreateRecipeScreen = () => {
                 </Text>
               </Pressable>
             ) : null}
-            <Pressable
-              onPress={() => {
-                void handleSave();
-              }}
-              disabled={saving || deleting}
-              style={({ pressed }) => [
-                styles.primaryButton,
-                (saving || deleting) && styles.disabled,
-                pressed && !saving && !deleting && styles.cardPressed,
-              ]}
-            >
-              <Text style={styles.primaryButtonText}>
-                {saving
-                  ? isEditing
-                    ? "Saving changes..."
-                    : "Saving..."
-                  : isEditing
-                    ? "Save changes"
-                    : "Create a recipe"}
-              </Text>
-            </Pressable>
+            <View style={styles.footerRow}>
+              <Pressable
+                onPress={handleCancel}
+                disabled={saving || deleting}
+                style={({ pressed }) => [
+                  styles.secondaryButton,
+                  styles.footerButton,
+                  (saving || deleting) && styles.disabled,
+                  pressed && !saving && !deleting && styles.cardPressed,
+                ]}
+              >
+                <Text style={styles.secondaryButtonText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  void handleSave("save");
+                }}
+                disabled={saving || deleting}
+                style={({ pressed }) => [
+                  isEditing ? styles.primaryButton : styles.secondaryButton,
+                  styles.footerButton,
+                  (saving || deleting) && styles.disabled,
+                  pressed && !saving && !deleting && styles.cardPressed,
+                ]}
+              >
+                <Text
+                  style={
+                    isEditing
+                      ? styles.primaryButtonText
+                      : styles.secondaryButtonText
+                  }
+                >
+                  {saving && saveMode === "save"
+                    ? isEditing
+                      ? "Saving changes..."
+                      : "Saving..."
+                    : isEditing
+                      ? "Save changes"
+                      : "Save"}
+                </Text>
+              </Pressable>
+            </View>
+            {!isEditing ? (
+              <Pressable
+                onPress={() => {
+                  void handleSave("save_and_add");
+                }}
+                disabled={saving || deleting}
+                style={({ pressed }) => [
+                  styles.primaryButton,
+                  (saving || deleting) && styles.disabled,
+                  pressed && !saving && !deleting && styles.cardPressed,
+                ]}
+              >
+                <Text style={styles.primaryButtonText}>
+                  {saving && saveMode === "save_and_add"
+                    ? "Saving and adding..."
+                    : "Save & Add"}
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
         ) : null}
       </KeyboardAvoidingView>
@@ -2096,6 +2163,13 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceOverlay,
     borderTopWidth: 1,
     borderTopColor: appColors.borderSoft,
+  },
+  footerRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  footerButton: {
+    flex: 1,
   },
   secondaryButton: {
     alignItems: "center",

@@ -142,7 +142,7 @@ const SettingsScreen = () => {
     if (!user?.externalId) {
       Alert.alert(
         "No active user",
-        "Create or load a local account first so the seeded weight history has somewhere to go.",
+        "Sign in to your account first so the seeded weight history has somewhere to go.",
       );
       return;
     }

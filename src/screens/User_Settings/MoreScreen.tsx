@@ -4,12 +4,13 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   BarbellIcon,
   BugIcon,
-  ClockIcon,
   CookingPotIcon,
   DatabaseIcon,
   ForkKnifeIcon,
   LightningIcon,
+  SlidersHorizontalIcon,
   TargetIcon,
+  UserCircleIcon,
 } from "phosphor-react-native";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -194,6 +195,36 @@ const MoreScreen = () => {
           values={weeklyValues}
         />
 
+        <Text style={styles.sectionTitle}>Account</Text>
+        <View style={styles.sectionCard}>
+          <MoreActionRow
+            description="Review your synced account, update profile details, and sign out when needed."
+            icon={
+              <UserCircleIcon
+                size={18}
+                color={appColors.brand700}
+                weight="fill"
+              />
+            }
+            onPress={() => navigation.navigate("ProfileSettingsScreen")}
+            title="Profile & account"
+            value={user?.email ?? user?.displayName ?? "Manage"}
+          />
+          <MoreActionRow
+            description="Tune the Food Diary timeline and other app-level preferences."
+            icon={
+              <SlidersHorizontalIcon
+                size={18}
+                color={appColors.brand700}
+                weight="fill"
+              />
+            }
+            onPress={() => navigation.navigate("PreferencesScreen")}
+            title="Preferences"
+            value={diaryHoursLabel}
+          />
+        </View>
+
         <Text style={styles.sectionTitle}>User Settings</Text>
         <View style={styles.sectionCard}>
           <MoreActionRow
@@ -320,19 +351,6 @@ const MoreScreen = () => {
 
         <Text style={styles.sectionTitle}>Debug Menu</Text>
         <View style={styles.sectionCard}>
-          <MoreActionRow
-            description="Edit the visible Food Diary timeline hours from the debug area instead of inside the diary."
-            icon={
-              <ClockIcon
-                size={18}
-                color={appColors.brand700}
-                weight="fill"
-              />
-            }
-            onPress={() => navigation.navigate("DiaryHoursDebugScreen")}
-            title="Diary timeline hours"
-            value={diaryHoursLabel}
-          />
           <MoreActionRow
             description="Inspect database counts, seed sample data, and run debug presets."
             icon={

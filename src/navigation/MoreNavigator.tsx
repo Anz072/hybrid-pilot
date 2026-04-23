@@ -6,7 +6,8 @@ import AdjustGoalSettingsScreen from "../screens/User_Settings/ActivityLevelSett
 import CalorieAllowanceSettingsScreen from "../screens/User_Settings/CalorieAllowanceSettingsScreen";
 import AdaptiveCaloriesSettingsScreen from "../screens/User_Settings/AdaptiveCaloriesSettingsScreen";
 import CalorieScheduleScreen from "../screens/User_Settings/CalorieScheduleScreen";
-import DiaryHoursDebugScreen from "../screens/User_Settings/DiaryHoursDebugScreen";
+import PreferencesScreen from "../screens/User_Settings/DiaryHoursDebugScreen";
+import ProfileSettingsScreen from "../screens/User_Settings/ProfileSettingsScreen";
 import TrainingTypesSettingsScreen from "../screens/User_Settings/TrainingTypesSettingsScreen";
 import ProteinFocusSettingsScreen from "../screens/User_Settings/ProteinFocusSettingsScreen";
 import SettingsScreen from "../screens/Settings/SettingsScreen";
@@ -18,8 +19,9 @@ import {
 export type MoreParamList = {
   FoodLibrary: undefined;
   MoreMainScreen: undefined;
+  ProfileSettingsScreen: undefined;
+  PreferencesScreen: undefined;
   SettingsScreen: undefined;
-  DiaryHoursDebugScreen: undefined;
   CalorieAllowanceSettingsScreen: undefined;
   AdaptiveCaloriesSettingsScreen: undefined;
   AdjustGoalSettingsScreen: undefined;
@@ -40,11 +42,12 @@ const MoreNavigator = () => {
     >
       <Stack.Screen name="MoreMainScreen" component={MoreScreen} />
       <Stack.Screen name="FoodLibrary" component={FoodLibraryScreen} />
-      <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
       <Stack.Screen
-        name="DiaryHoursDebugScreen"
-        component={DiaryHoursDebugScreen}
+        name="ProfileSettingsScreen"
+        component={ProfileSettingsScreen}
       />
+      <Stack.Screen name="PreferencesScreen" component={PreferencesScreen} />
+      <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
       <Stack.Screen
         name="CalorieAllowanceSettingsScreen"
         component={CalorieAllowanceSettingsScreen}

@@ -12,6 +12,7 @@ import { appColors } from "../../theme/colors";
 type FoodDiaryMoreSectionProps = {
   isDayComplete: boolean;
   isDayCompleteLoading: boolean;
+  isCopyingYesterday: boolean;
   selectedHour: number;
   onToggleDayComplete: () => void;
   onCopyYesterday: () => void;
@@ -23,6 +24,7 @@ type FoodDiaryMoreSectionProps = {
 const FoodDiaryMoreSection = ({
   isDayComplete,
   isDayCompleteLoading,
+  isCopyingYesterday,
   selectedHour,
   onToggleDayComplete,
   onCopyYesterday,
@@ -91,7 +93,7 @@ const FoodDiaryMoreSection = ({
           <View style={styles.moreCopy}>
             <Text style={styles.moreTitle}>Create recipe</Text>
             <Text style={styles.moreText}>
-              Build a reusable recipe and log one serving into {formatFoodHourLabel(selectedHour)}.
+              Build a reusable recipe, then save it or Save and Add one serving into {formatFoodHourLabel(selectedHour)}.
             </Text>
           </View>
           <View style={styles.morePill}>
@@ -99,20 +101,28 @@ const FoodDiaryMoreSection = ({
           </View>
         </Pressable>
         <Pressable
+          disabled={isCopyingYesterday}
           onPress={onCopyYesterday}
           style={({ pressed }) => [
             styles.moreRow,
+            isCopyingYesterday && styles.moreRowDisabled,
             pressed && styles.cardPressed,
           ]}
         >
           <View style={styles.moreCopy}>
-            <Text style={styles.moreTitle}>Copy yesterday</Text>
+            <Text style={styles.moreTitle}>
+              {isCopyingYesterday ? "Copying yesterday" : "Copy yesterday"}
+            </Text>
             <Text style={styles.moreText}>
-              Reuse the previous day when meals repeat.
+              {isCopyingYesterday
+                ? "Applying duplicate protection and copying only new entries."
+                : "Reuse the previous day when meals repeat. Matching entries already on this date will be skipped."}
             </Text>
           </View>
           <View style={styles.morePill}>
-            <Text style={styles.morePillText}>Copy</Text>
+            <Text style={styles.morePillText}>
+              {isCopyingYesterday ? "Working" : "Copy"}
+            </Text>
           </View>
         </Pressable>
         <Pressable

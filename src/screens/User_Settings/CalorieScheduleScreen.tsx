@@ -123,11 +123,11 @@ const CalorieScheduleScreen = ({ navigation }: Props) => {
         adaptiveLastCalculatedAt: new Date().toISOString(),
       });
       await supersedeOpenAdaptiveRecommendationForUser(user.externalId);
+      navigation.goBack();
     } catch {
       Alert.alert("Could not save schedule", "Please try again.");
     } finally {
       setSaving(false);
-      navigation.navigate("MoreMainScreen")
     }
   };
 
@@ -156,7 +156,7 @@ const CalorieScheduleScreen = ({ navigation }: Props) => {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>No active user</Text>
             <Text style={styles.cardText}>
-              Load a local account first before editing the calorie schedule.
+              Sign in to your account first before editing the calorie schedule.
             </Text>
           </View>
         ) : (

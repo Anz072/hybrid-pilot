@@ -11,6 +11,7 @@ import type {
   DBUserSettings,
   DBUserFoodLogEntry,
 } from "../../store/DB_TYPES";
+import { getFoodLogCopyPreview } from "../../store/foodLogCopyUtils";
 import {
   buildEffectiveCalorieTargetsForDates,
   getEffectiveCalorieTargetForDate,
@@ -33,6 +34,7 @@ import {
   formatFoodDateKey,
   formatFoodHourLabel,
   formatFoodLoggedTime,
+  formatFoodShortDate,
   getFoodLoggedHour,
   getFoodResolvedServing,
   parseFoodDateKey,
@@ -63,6 +65,9 @@ const normalizeVisibleHours = (startHour: number, endHour: number) => {
   };
 };
 
+const formatEntryCountLabel = (count: number) =>
+  `${count} ${count === 1 ? "entry" : "entries"}`;
+
 const FoodDiaryScreen = () => {
   const navigation = useNavigation<FoodDiaryNav>();
   const insets = useSafeAreaInsets();
@@ -86,6 +91,7 @@ const FoodDiaryScreen = () => {
     Record<string, boolean>
   >({});
   const [isDayCompleteLoading, setIsDayCompleteLoading] = useState(false);
+  const [isCopyingYesterday, setIsCopyingYesterday] = useState(false);
   const [adaptiveRecommendation, setAdaptiveRecommendation] =
     useState<DBAdaptiveCalorieRecommendation | null>(null);
   const [visibleStartHour, setVisibleStartHour] = useState(INITIAL_START);
@@ -368,14 +374,95 @@ const FoodDiaryScreen = () => {
   );
 
   const copyYesterday = useCallback(async () => {
-    if (!user) {
+    if (!user || isCopyingYesterday) {
       return;
     }
 
     const sourceDate = formatFoodDateKey(shiftFoodDate(selectedDate, -1));
-    await DB.copyFoodLogsFromDate(user.externalId, sourceDate, dateKey);
-    await loadData();
-  }, [dateKey, loadData, selectedDate, user]);
+    const sourceDateLabel = formatFoodShortDate(parseFoodDateKey(sourceDate));
+    const targetDateLabel = formatFoodShortDate(selectedDate);
+
+    try {
+      const [sourceEntries, destinationEntries] = await Promise.all([
+        DB.getUserFoodLogEntriesByDate(user.externalId, sourceDate),
+        DB.getUserFoodLogEntriesByDate(user.externalId, dateKey),
+      ]);
+      const preview = getFoodLogCopyPreview(sourceEntries, destinationEntries);
+
+      if (preview.sourceCount === 0) {
+        Alert.alert(
+          "Nothing to copy",
+          `No food entries were logged on ${sourceDateLabel}.`,
+        );
+        return;
+      }
+
+      if (preview.copiedCount === 0) {
+        Alert.alert(
+          "Already copied",
+          `${targetDateLabel} already has matching ${formatEntryCountLabel(preview.sourceCount)} from ${sourceDateLabel}. Duplicate protection will keep the diary unchanged.`,
+        );
+        return;
+      }
+
+      const confirmationMessage =
+        preview.destinationCount > 0
+          ? `${sourceDateLabel} has ${formatEntryCountLabel(preview.sourceCount)}. ${targetDateLabel} already has ${formatEntryCountLabel(preview.destinationCount)}. Duplicate protection will skip ${formatEntryCountLabel(preview.skippedDuplicates)} and copy ${formatEntryCountLabel(preview.copiedCount)}.`
+          : `Copy ${formatEntryCountLabel(preview.sourceCount)} from ${sourceDateLabel} into ${targetDateLabel}?`;
+
+      Alert.alert("Copy yesterday?", confirmationMessage, [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: `Copy ${preview.copiedCount}`,
+          onPress: () => {
+            void (async () => {
+              try {
+                setIsCopyingYesterday(true);
+
+                const result = await DB.copyFoodLogsFromDate(
+                  user.externalId,
+                  sourceDate,
+                  dateKey,
+                );
+
+                await loadData();
+
+                if (result.copiedCount === 0) {
+                  Alert.alert(
+                    "No new entries copied",
+                    `${targetDateLabel} already had matching entries. Duplicate protection kept the diary unchanged.`,
+                  );
+                  return;
+                }
+
+                Alert.alert(
+                  "Yesterday copied",
+                  result.skippedDuplicates > 0
+                    ? `Copied ${formatEntryCountLabel(result.copiedCount)} into ${targetDateLabel} and skipped ${formatEntryCountLabel(result.skippedDuplicates)} that were already there.`
+                    : `Copied ${formatEntryCountLabel(result.copiedCount)} into ${targetDateLabel}.`,
+                );
+              } catch {
+                Alert.alert(
+                  "Could not copy yesterday",
+                  "Please try again.",
+                );
+              } finally {
+                setIsCopyingYesterday(false);
+              }
+            })();
+          },
+        },
+      ]);
+    } catch {
+      Alert.alert(
+        "Could not review yesterday",
+        "Please try again.",
+      );
+    }
+  }, [dateKey, isCopyingYesterday, loadData, selectedDate, user]);
 
   const openAdaptiveSettings = useCallback(() => {
     const parentNavigation = navigation.getParent();
@@ -469,6 +556,7 @@ const FoodDiaryScreen = () => {
         <FoodDiaryMoreSection
           isDayComplete={isSelectedDayComplete}
           isDayCompleteLoading={isDayCompleteLoading}
+          isCopyingYesterday={isCopyingYesterday}
           selectedHour={selectedHour}
           onToggleDayComplete={() => {
             void toggleDayComplete();

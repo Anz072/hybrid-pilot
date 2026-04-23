@@ -90,7 +90,7 @@ const TrainingTypesSettingsScreen = ({ navigation }: Props) => {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>No active user</Text>
             <Text style={styles.cardText}>
-              Load a local account first before editing training settings.
+              Sign in to your account first before editing training settings.
             </Text>
           </View>
         ) : (

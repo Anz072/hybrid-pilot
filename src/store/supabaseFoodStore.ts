@@ -54,6 +54,13 @@ import {
   updateUserFoodLog as updateUserFoodLogLocal,
 } from "./foodLogRepository";
 import {
+  buildFoodLogDuplicateKey,
+  countFoodLogsByDuplicateKey,
+  type FoodLogCopyResult,
+  type FoodLogDuplicateShape,
+  toFoodLogDuplicateShape,
+} from "./foodLogCopyUtils";
+import {
   createUserRecipe as createUserRecipeLocal,
   deleteUserRecipe as deleteUserRecipeLocal,
   getUserRecipeDetailsById as getUserRecipeDetailsByIdLocal,
@@ -2560,7 +2567,7 @@ export const copyFoodLogsFromDate = async (
   userExternalId: string,
   fromDate: string,
   toDate: string,
-): Promise<void> => {
+): Promise<FoodLogCopyResult> => {
   const authUserId = await resolveSupabaseUserId(userExternalId);
 
   if (!authUserId) {
@@ -2582,8 +2589,74 @@ export const copyFoodLogsFromDate = async (
 
   const sourceRows = (data as SupabaseUserFoodEntryRow[]) ?? [];
   if (sourceRows.length === 0) {
-    return;
+    return {
+      sourceCount: 0,
+      destinationCount: 0,
+      copiedCount: 0,
+      skippedDuplicates: 0,
+    };
   }
+
+  const destinationEntries = await getUserFoodLogEntriesByDate(userExternalId, toDate);
+  const remainingDestinationMatches = countFoodLogsByDuplicateKey(
+    destinationEntries.map(toFoodLogDuplicateShape),
+  );
+  let copiedCount = 0;
+  let skippedDuplicates = 0;
+
+  const buildDuplicateShape = (
+    row: SupabaseUserFoodEntryRow,
+  ): FoodLogDuplicateShape => {
+    let foodId: number | null = null;
+
+    if (row.entry_type === "food_item") {
+      foodId = parseNullableNumber(row.food_item_id);
+    } else if (row.entry_type === "custom_recipe") {
+      const recipeId = parseNullableNumber(row.custom_recipe_id);
+      foodId = recipeId != null ? toSyntheticRecipeFoodId(recipeId) : null;
+    } else if (row.entry_type === "custom_meal") {
+      const mealId = parseNullableNumber(row.custom_meal_id);
+      foodId = mealId != null ? toSyntheticMealFoodId(mealId) : null;
+    }
+
+    return {
+      entrySource: isSupportedEntrySource(row.entry_type)
+        ? row.entry_type
+        : "food_item",
+      foodId,
+      loggedAt: normalizeOptionalText(row.logged_at),
+      createdAt: normalizeOptionalText(row.created_at),
+      quantityValue: parseNullableNumber(row.amount_value),
+      mealType: normalizeOptionalText(row.meal_type),
+      displayName: normalizeOptionalText(row.display_name),
+      calories: parseNullableNumber(row.calories),
+      proteinG: parseNullableNumber(row.protein_g),
+      carbsG: parseNullableNumber(row.carbs_g),
+      fatG: parseNullableNumber(row.fat_g),
+      alcoholG: parseNullableNumber(row.alcohol_g),
+      systemCalculatedCalories: parseNullableNumber(row.system_calculated_calories),
+      isEnergyManuallySet: parseBoolean(row.is_energy_manually_set),
+      quickAddName:
+        row.entry_type === "quick_add"
+          ? normalizeOptionalText(
+              parseJsonObject(row.metadata)?.quickAddName as string | null,
+            ) ?? normalizeOptionalText(row.display_name)
+          : null,
+    };
+  };
+
+  const shouldSkipDuplicate = (row: SupabaseUserFoodEntryRow) => {
+    const key = buildFoodLogDuplicateKey(buildDuplicateShape(row));
+    const availableMatches = remainingDestinationMatches.get(key) ?? 0;
+
+    if (availableMatches <= 0) {
+      return false;
+    }
+
+    remainingDestinationMatches.set(key, availableMatches - 1);
+    skippedDuplicates += 1;
+    return true;
+  };
 
   const payload = sourceRows.map((row) => {
     const sourceTime =
@@ -2615,10 +2688,24 @@ export const copyFoodLogsFromDate = async (
     };
   });
 
-  const insertResult = await supabase.from(SUPABASE_FOOD_ENTRIES_TABLE).insert(payload);
-  if (insertResult.error) {
-    throw insertResult.error;
+  const rowsToInsert = payload.filter((_, index) => !shouldSkipDuplicate(sourceRows[index]));
+
+  if (rowsToInsert.length > 0) {
+    const insertResult = await supabase
+      .from(SUPABASE_FOOD_ENTRIES_TABLE)
+      .insert(rowsToInsert);
+    if (insertResult.error) {
+      throw insertResult.error;
+    }
+
+    copiedCount = rowsToInsert.length;
+    await clearCompletedDiaryDayIfNeeded(authUserId, toDate);
   }
 
-  await clearCompletedDiaryDayIfNeeded(authUserId, toDate);
+  return {
+    sourceCount: sourceRows.length,
+    destinationCount: destinationEntries.length,
+    copiedCount,
+    skippedDuplicates,
+  };
 };

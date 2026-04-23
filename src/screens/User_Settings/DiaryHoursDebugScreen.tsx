@@ -21,7 +21,7 @@ import {
 import { appColors } from "../../theme/colors";
 import SettingsStackHeader from "./SettingsStackHeader";
 
-type Props = NativeStackScreenProps<MoreParamList, "DiaryHoursDebugScreen">;
+type Props = NativeStackScreenProps<MoreParamList, "PreferencesScreen">;
 
 const normalizeVisibleHours = (startHour: number, endHour: number) => {
   const boundedEnd = Math.max(1, Math.min(23, Math.round(endHour)));
@@ -36,7 +36,7 @@ const normalizeVisibleHours = (startHour: number, endHour: number) => {
   };
 };
 
-const DiaryHoursDebugScreen = ({ navigation }: Props) => {
+const PreferencesScreen = ({ navigation }: Props) => {
   const insets = useSafeAreaInsets();
   const user = useAppSelector((state) => state.user.currentUser);
   const [loading, setLoading] = React.useState(true);
@@ -114,10 +114,10 @@ const DiaryHoursDebugScreen = ({ navigation }: Props) => {
         showsVerticalScrollIndicator={false}
       >
         <SettingsStackHeader
-          eyebrow="Debug Menu"
+          eyebrow="Preferences"
           onBack={() => navigation.goBack()}
-          subtitle="This controls the visible timeline range inside Food Diary and now lives here instead of inside the diary screen."
-          title="Diary Timeline Hours"
+          subtitle="Set the visible Food Diary timeline range. Changes save automatically and apply the next time you open the diary."
+          title="Diary Preferences"
         />
 
         {loading ? (
@@ -128,7 +128,7 @@ const DiaryHoursDebugScreen = ({ navigation }: Props) => {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>No active user</Text>
             <Text style={styles.cardText}>
-              Create or load a local profile first before editing diary hours.
+              Sign in to your account first before editing diary preferences.
             </Text>
           </View>
         ) : (
@@ -411,4 +411,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default DiaryHoursDebugScreen;
+export default PreferencesScreen;

@@ -200,7 +200,7 @@ const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>No active user</Text>
             <Text style={styles.cardText}>
-              Load a local account first before editing nutrition settings.
+              Sign in to your account first before editing nutrition settings.
             </Text>
           </View>
         ) : (

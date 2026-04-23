@@ -137,6 +137,14 @@ export const signInWithGoogleViaSupabase =
     return createSessionFromRedirectUrl(winner.url);
   };
 
+export const signOutSupabaseSession = async (): Promise<void> => {
+  const { error } = await getSupabaseClient().auth.signOut();
+
+  if (error) {
+    throw error;
+  }
+};
+
 export const getGoogleDisplayName = (user: User, fallback?: string | null) => {
   const candidates = [
     user.user_metadata?.name,

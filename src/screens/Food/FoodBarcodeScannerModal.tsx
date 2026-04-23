@@ -91,6 +91,11 @@ const FoodBarcodeScannerModal = ({
     [isWithinScanWindow, registerScan],
   );
 
+  const handleManualBarcodeSubmit = React.useCallback(
+    (barcode: string) => registerScan(barcode, null),
+    [registerScan],
+  );
+
   const handleRequestPermission = async () => {
     const result = await requestPermission();
     if (!result.granted) {
@@ -122,6 +127,7 @@ const FoodBarcodeScannerModal = ({
       modalVisible={modalVisible}
       onDismissResultModal={dismissResultModal}
       onFinderLayout={setScanWindow}
+      onManualBarcodeSubmit={handleManualBarcodeSubmit}
       onRequestPermission={() => void handleRequestPermission()}
       scannedCode={scannedCode}
     />

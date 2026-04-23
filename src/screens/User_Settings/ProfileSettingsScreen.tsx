@@ -156,7 +156,7 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
           gender: selectedGender,
         },
       });
-      setStatusMessage("Profile saved.");
+      navigation.navigate("MoreMainScreen");
     } catch (error) {
       Alert.alert(
         "Could not save profile",
@@ -165,7 +165,15 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
     } finally {
       setSaving(false);
     }
-  }, [birthdateValue, dispatch, displayName, heightValue, selectedGender, user]);
+  }, [
+    birthdateValue,
+    dispatch,
+    displayName,
+    heightValue,
+    navigation,
+    selectedGender,
+    user,
+  ]);
 
   const handleSignOut = React.useCallback(() => {
     if (signingOut) {

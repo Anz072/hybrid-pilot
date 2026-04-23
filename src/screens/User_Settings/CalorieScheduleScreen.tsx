@@ -123,7 +123,7 @@ const CalorieScheduleScreen = ({ navigation }: Props) => {
         adaptiveLastCalculatedAt: new Date().toISOString(),
       });
       await supersedeOpenAdaptiveRecommendationForUser(user.externalId);
-      navigation.goBack();
+      navigation.navigate("MoreMainScreen");
     } catch {
       Alert.alert("Could not save schedule", "Please try again.");
     } finally {

@@ -135,6 +135,7 @@ const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
       const nextAutoPlan = await buildAutomaticFuelPlanSnapshot(savedUser);
       setAutoPlanCalories(nextAutoPlan?.calories ?? null);
       setInputValue(String(savedUser.calorieAllowance ?? clampCalorieTarget(nextCalories)));
+      navigation.navigate("MoreMainScreen");
     } catch {
       Alert.alert("Could not save calories", "Please try again.");
     } finally {
@@ -166,6 +167,7 @@ const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
       const nextAutoPlan = await buildAutomaticFuelPlanSnapshot(savedUser);
       setAutoPlanCalories(nextAutoPlan?.calories ?? savedUser.calorieAllowance ?? null);
       setInputValue(savedUser.calorieAllowance != null ? String(savedUser.calorieAllowance) : "");
+      navigation.navigate("MoreMainScreen");
     } catch {
       Alert.alert("Could not reset calories", "Please try again.");
     } finally {

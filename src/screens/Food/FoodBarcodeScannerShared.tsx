@@ -6,6 +6,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -29,7 +30,7 @@ export type ScannedFoodLookupResult = {
 
 const SCAN_DEBOUNCE_MS = 1000;
 
-type SupportedBarcodeType =
+export type SupportedBarcodeType =
   | "ean13"
   | "ean8"
   | "upc_a"
@@ -122,7 +123,7 @@ const isValidUPCE = (code: string): boolean => {
   return isValidUPCA(expanded);
 };
 
-const validateBarcode = (
+export const validateBarcode = (
   code: string,
   type?: SupportedBarcodeType | string | null,
 ): boolean => {
@@ -319,6 +320,7 @@ type FoodBarcodeScannerScaffoldProps = FoodBarcodeScannerModalProps & {
   locked: boolean;
   modalVisible: boolean;
   onFinderLayout: (layout: LayoutRectangle) => void;
+  onManualBarcodeSubmit: (barcode: string) => Promise<boolean> | boolean;
   onRequestPermission: () => void | Promise<void>;
   scannedCode: string | null;
   onDismissResultModal: () => void;
@@ -333,11 +335,16 @@ export const FoodBarcodeScannerScaffold = ({
   locked,
   modalVisible,
   onFinderLayout,
+  onManualBarcodeSubmit,
   onRequestPermission,
   onDismissResultModal,
   scannedCode,
 }: FoodBarcodeScannerScaffoldProps) => {
   const insets = useSafeAreaInsets();
+  const [manualBarcode, setManualBarcode] = React.useState("");
+  const [manualBarcodeError, setManualBarcodeError] = React.useState<
+    string | null
+  >(null);
   const screenRef = React.useRef<View | null>(null);
   const finderRef = React.useRef<View | null>(null);
 
@@ -361,6 +368,36 @@ export const FoodBarcodeScannerScaffold = ({
       });
     });
   }, [onFinderLayout]);
+
+  React.useEffect(() => {
+    if (visible) {
+      return;
+    }
+
+    setManualBarcode("");
+    setManualBarcodeError(null);
+  }, [visible]);
+
+  const handleManualBarcodeSubmit = React.useCallback(async () => {
+    const normalized = normalizeBarcodeValue(manualBarcode);
+
+    if (!normalized) {
+      setManualBarcodeError("Enter the barcode digits first.");
+      return;
+    }
+
+    if (!validateBarcode(normalized)) {
+      setManualBarcodeError("Enter a valid EAN, UPC, or GTIN barcode.");
+      return;
+    }
+
+    setManualBarcodeError(null);
+    const accepted = await onManualBarcodeSubmit(normalized);
+
+    if (accepted) {
+      setManualBarcode("");
+    }
+  }, [manualBarcode, onManualBarcodeSubmit]);
 
   return (
     <Modal
@@ -441,6 +478,49 @@ export const FoodBarcodeScannerScaffold = ({
             >
               <View style={styles.scanLine} />
             </View>
+          </View>
+
+          <View style={styles.manualCard}>
+            <Text style={styles.manualTitle}>Scan or enter barcode</Text>
+            <Text style={styles.manualText}>
+              Type the EAN, UPC, or GTIN digits if the camera cannot catch the label.
+            </Text>
+            <View style={styles.manualRow}>
+              <TextInput
+                value={manualBarcode}
+                onChangeText={(value) => {
+                  setManualBarcode(value);
+                  setManualBarcodeError(null);
+                }}
+                editable={!locked}
+                keyboardType="number-pad"
+                returnKeyType="search"
+                onSubmitEditing={() => {
+                  void handleManualBarcodeSubmit();
+                }}
+                placeholder="e.g. 737628064502"
+                placeholderTextColor={appColors.slate400}
+                style={[styles.manualInput, locked && styles.manualInputDisabled]}
+              />
+              <Pressable
+                onPress={() => {
+                  void handleManualBarcodeSubmit();
+                }}
+                disabled={locked}
+                style={({ pressed }) => [
+                  styles.manualButton,
+                  locked && styles.manualButtonDisabled,
+                  pressed && !locked && styles.buttonPressed,
+                ]}
+              >
+                <Text style={styles.manualButtonText}>
+                  {locked ? "Looking..." : "Look up"}
+                </Text>
+              </Pressable>
+            </View>
+            {manualBarcodeError ? (
+              <Text style={styles.manualError}>{manualBarcodeError}</Text>
+            ) : null}
           </View>
         </View>
 
@@ -547,6 +627,7 @@ export const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
     paddingHorizontal: 20,
+    justifyContent: "space-between",
   },
   headerRow: {
     flexDirection: "row",
@@ -650,11 +731,73 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
   },
+  manualCard: {
+    borderRadius: 8,
+    backgroundColor: appColors.darkInkOverlay78,
+    borderWidth: 1,
+    borderColor: appColors.surfaceGhostStrong,
+    padding: 16,
+  },
+  manualTitle: {
+    color: appColors.slate50,
+    fontSize: 16,
+    fontWeight: "900",
+    marginBottom: 4,
+  },
+  manualText: {
+    color: appColors.slate300,
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 12,
+  },
+  manualRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  manualInput: {
+    flex: 1,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: appColors.whiteOverlay18,
+    backgroundColor: appColors.slateOverlay72,
+    color: appColors.slate50,
+    fontSize: 15,
+    fontWeight: "800",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  manualInputDisabled: {
+    opacity: 0.7,
+  },
+  manualButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+    backgroundColor: appColors.brand500,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+  },
+  manualButtonDisabled: {
+    opacity: 0.7,
+  },
+  manualButtonText: {
+    color: appColors.white,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  manualError: {
+    color: appColors.dangerText,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: "700",
+    marginTop: 10,
+  },
   lookupBanner: {
     position: "absolute",
     left: 20,
     right: 20,
-    bottom: 122,
+    bottom: 196,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,

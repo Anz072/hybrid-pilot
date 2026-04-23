@@ -148,7 +148,7 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
         return;
       }
 
-      navigation.goBack();
+      navigation.navigate("MoreMainScreen");
     } catch {
       Alert.alert("Could not update goal", "Please try again.");
     } finally {

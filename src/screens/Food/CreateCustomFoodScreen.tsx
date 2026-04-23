@@ -22,7 +22,6 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   CalendarIcon,
   ForkKnifeIcon,
-  TrashIcon,
 } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
@@ -71,6 +70,8 @@ const parseMealPayload = (rawPayload: string | null) => {
   }
 };
 
+type CustomMealSaveMode = "save" | "save_and_add";
+
 const CreateCustomFoodScreen = () => {
   const [name, setName] = React.useState("");
   const [description, setDescription] = React.useState("");
@@ -85,8 +86,11 @@ const CreateCustomFoodScreen = () => {
   >(null);
   const [loadingMeal, setLoadingMeal] = React.useState(false);
   const [mealLoadError, setMealLoadError] = React.useState<string | null>(null);
-  const [saving, setSaving] = React.useState(false);
+  const [saveMode, setSaveMode] = React.useState<CustomMealSaveMode | null>(
+    null,
+  );
   const [deleting, setDeleting] = React.useState(false);
+  const saving = saveMode != null;
 
   const user = useAppSelector((state) => state.user.currentUser);
   const route = useRoute<CreateCustomFoodRoute>();
@@ -229,7 +233,12 @@ const CreateCustomFoodScreen = () => {
     setCalories((current) => normalizePositiveFoodInput(current, 1, 0));
   }, []);
 
-  const closeAfterCreate = React.useCallback(() => {
+  const closeAfterSave = React.useCallback((mode: CustomMealSaveMode) => {
+    if (isEditing || mode === "save") {
+      navigation.goBack();
+      return;
+    }
+
     const routes = navigation.getState().routes;
     const previousRoute = routes[routes.length - 2];
 
@@ -239,9 +248,17 @@ const CreateCustomFoodScreen = () => {
     }
 
     navigation.goBack();
-  }, [navigation]);
+  }, [isEditing, navigation]);
 
-  const handleSave = React.useCallback(async () => {
+  const handleCancel = React.useCallback(() => {
+    if (saving || deleting) {
+      return;
+    }
+
+    navigation.goBack();
+  }, [deleting, navigation, saving]);
+
+  const handleSave = React.useCallback(async (mode: CustomMealSaveMode = "save") => {
     if (!user) {
       Alert.alert(
         "No account found",
@@ -279,7 +296,7 @@ const CreateCustomFoodScreen = () => {
     }
 
     try {
-      setSaving(true);
+      setSaveMode(mode);
 
       const payload = {
         userExternalId: user.externalId,
@@ -294,45 +311,45 @@ const CreateCustomFoodScreen = () => {
         fatG: parsedFat,
       };
 
+      let mealFood;
       if (isEditing && mealId != null) {
-        await DB.updateUserCustomMeal({
+        mealFood = await DB.updateUserCustomMeal({
           mealId,
           ...payload,
         });
-        navigation.goBack();
-        return;
+      } else {
+        mealFood = await DB.createUserCustomMeal(payload);
       }
 
-      const mealFood = await DB.createUserCustomMeal(payload);
+      if (mode === "save_and_add") {
+        await DB.addUserFoodLog({
+          userExternalId: user.externalId,
+          foodId: mealFood.id,
+          date,
+          loggedAt: resolvedLoggedAt,
+          quantityG: parsedServing,
+          mealType: mealType ?? null,
+        });
+      }
 
-      await DB.addUserFoodLog({
-        userExternalId: user.externalId,
-        foodId: mealFood.id,
-        date,
-        loggedAt: resolvedLoggedAt,
-        quantityG: parsedServing,
-        mealType: mealType ?? null,
-      });
-
-      closeAfterCreate();
+      closeAfterSave(mode);
     } catch (error) {
       Alert.alert(
         isEditing ? "Could not update custom meal" : "Could not save custom meal",
         error instanceof Error ? error.message : "Please try again.",
       );
     } finally {
-      setSaving(false);
+      setSaveMode(null);
     }
   }, [
     canEditMeal,
-    closeAfterCreate,
+    closeAfterSave,
     date,
     isEditing,
     isPublic,
     loadedMealOwnerUserId,
     mealId,
     mealType,
-    navigation,
     parsedCalories,
     parsedCarbs,
     parsedFat,
@@ -394,7 +411,7 @@ const CreateCustomFoodScreen = () => {
           <Text style={styles.heroMeta}>
             {isEditing
               ? "Update the meal once and the saved version stays in sync everywhere it appears."
-              : "Save a reusable custom meal and log this serving into your diary right away."}
+              : "Save a reusable custom meal for later or Save and Add this serving to your diary right away."}
           </Text>
         </View>
 
@@ -535,45 +552,6 @@ const CreateCustomFoodScreen = () => {
           </View>
         </View>
       </View>
-
-      <Pressable
-        onPress={() => {
-          void handleSave();
-        }}
-        disabled={saving}
-        style={({ pressed }) => [
-          styles.primaryButton,
-          saving && styles.disabled,
-          pressed && !saving && styles.cardPressed,
-        ]}
-      >
-        <Text style={styles.primaryButtonText}>
-          {saving
-            ? isEditing
-              ? "Saving..."
-              : "Creating..."
-            : isEditing
-              ? "Save changes"
-              : "Create and add"}
-        </Text>
-      </Pressable>
-
-      {isEditing && canEditMeal ? (
-        <Pressable
-          onPress={handleDeleteMeal}
-          disabled={deleting}
-          style={({ pressed }) => [
-            styles.deleteButton,
-            deleting && styles.disabled,
-            pressed && !deleting && styles.cardPressed,
-          ]}
-        >
-          <TrashIcon size={16} color={appColors.revolutDark} weight="bold" />
-          <Text style={styles.deleteButtonText}>
-            {deleting ? "Deleting..." : "Delete custom meal"}
-          </Text>
-        </Pressable>
-      ) : null}
     </>
   );
 
@@ -617,6 +595,97 @@ const CreateCustomFoodScreen = () => {
             renderEditor()
           )}
         </KeyboardAwareScrollView>
+
+        {!loadingMeal && !mealLoadError ? (
+          <View
+            style={[
+              styles.footer,
+              { paddingBottom: Math.max(insets.bottom, 16) },
+            ]}
+          >
+            {isEditing && canEditMeal ? (
+              <Pressable
+                onPress={handleDeleteMeal}
+                disabled={deleting || saving}
+                style={({ pressed }) => [
+                  styles.secondaryButton,
+                  styles.deleteButton,
+                  (deleting || saving) && styles.disabled,
+                  pressed && !deleting && !saving && styles.cardPressed,
+                ]}
+              >
+                <Text
+                  style={[styles.secondaryButtonText, styles.deleteButtonText]}
+                >
+                  {deleting ? "Deleting..." : "Delete custom meal"}
+                </Text>
+              </Pressable>
+            ) : null}
+
+            <View style={styles.footerRow}>
+              <Pressable
+                onPress={handleCancel}
+                disabled={saving || deleting}
+                style={({ pressed }) => [
+                  styles.secondaryButton,
+                  styles.footerButton,
+                  (saving || deleting) && styles.disabled,
+                  pressed && !saving && !deleting && styles.cardPressed,
+                ]}
+              >
+                <Text style={styles.secondaryButtonText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  void handleSave("save");
+                }}
+                disabled={saving || deleting}
+                style={({ pressed }) => [
+                  isEditing ? styles.primaryButton : styles.secondaryButton,
+                  styles.footerButton,
+                  (saving || deleting) && styles.disabled,
+                  pressed && !saving && !deleting && styles.cardPressed,
+                ]}
+              >
+                <Text
+                  style={
+                    isEditing
+                      ? styles.primaryButtonText
+                      : styles.secondaryButtonText
+                  }
+                >
+                  {saving && saveMode === "save"
+                    ? isEditing
+                      ? "Saving changes..."
+                      : "Saving..."
+                    : isEditing
+                      ? "Save changes"
+                      : "Save"}
+                </Text>
+              </Pressable>
+            </View>
+
+            {!isEditing ? (
+              <Pressable
+                onPress={() => {
+                  void handleSave("save_and_add");
+                }}
+                disabled={saving || deleting}
+                style={({ pressed }) => [
+                  styles.primaryButton,
+                  (saving || deleting) && styles.disabled,
+                  pressed && !saving && !deleting && styles.cardPressed,
+                ]}
+              >
+                <Text style={styles.primaryButtonText}>
+                  {saving && saveMode === "save_and_add"
+                    ? "Saving and adding..."
+                    : "Save & Add"}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
       </KeyboardAvoidingView>
     </View>
   );
@@ -797,39 +866,60 @@ const styles = StyleSheet.create({
   gridCell: {
     width: "47%",
   },
+  footer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    gap: 10,
+    backgroundColor: appColors.surfaceOverlay,
+    borderTopWidth: 1,
+    borderTopColor: appColors.borderSoft,
+  },
+  footerRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  footerButton: {
+    flex: 1,
+  },
+  secondaryButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 9999,
+    backgroundColor: appColors.surfaceGhost,
+    borderWidth: 2,
+    borderColor: appColors.whiteOverlay18,
+    paddingVertical: 14,
+  },
+  secondaryButtonText: {
+    color: appColors.textPrimary,
+    fontSize: 14,
+    fontWeight: "600",
+  },
   primaryButton: {
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 9999,
     backgroundColor: appColors.revolutLight,
-    paddingHorizontal: 18,
     paddingVertical: 14,
-    marginBottom: 12,
   },
   primaryButtonText: {
     color: appColors.revolutDark,
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   deleteButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderRadius: 9999,
-    backgroundColor: appColors.surfaceGhost,
-    borderWidth: 1,
-    borderColor: appColors.foodBorder,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
+    backgroundColor: appColors.dangerSurface,
+    borderColor: appColors.danger600,
   },
   deleteButtonText: {
-    color: appColors.revolutDark,
-    fontSize: 13,
-    fontWeight: "700",
+    color: appColors.danger700,
   },
   disabled: {
-    opacity: 0.7,
+    opacity: 0.58,
   },
   cardPressed: {
     opacity: 0.9,

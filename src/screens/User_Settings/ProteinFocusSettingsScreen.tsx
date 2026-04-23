@@ -50,6 +50,7 @@ const ProteinFocusSettingsScreen = ({ navigation }: Props) => {
         proteinFocus: selectedProteinFocus,
         user,
       });
+      navigation.navigate("MoreMainScreen");
     } catch {
       Alert.alert("Could not save protein focus", "Please try again.");
     } finally {

@@ -56,6 +56,7 @@ const TrainingTypesSettingsScreen = ({ navigation }: Props) => {
           trainingTypes: selectedTraining,
         },
       });
+      navigation.navigate("MoreMainScreen");
     } catch {
       Alert.alert("Could not save training", "Please try again.");
     } finally {

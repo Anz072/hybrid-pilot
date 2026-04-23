@@ -1,5 +1,12 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { Alert, ScrollView, StyleSheet, View } from "react-native";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -52,6 +59,12 @@ type FoodDiaryNav = NativeStackNavigationProp<FoodStackParamList, "Diary">;
 const INITIAL_START = 7;
 const INITIAL_END = 22;
 
+type SnackbarState = {
+  message: string;
+  actionLabel?: string;
+  onAction?: () => void;
+};
+
 const normalizeVisibleHours = (startHour: number, endHour: number) => {
   const boundedEnd = Math.max(1, Math.min(23, Math.round(endHour)));
   const boundedStart = Math.max(
@@ -92,6 +105,7 @@ const FoodDiaryScreen = () => {
   >({});
   const [isDayCompleteLoading, setIsDayCompleteLoading] = useState(false);
   const [isCopyingYesterday, setIsCopyingYesterday] = useState(false);
+  const [snackbar, setSnackbar] = useState<SnackbarState | null>(null);
   const [adaptiveRecommendation, setAdaptiveRecommendation] =
     useState<DBAdaptiveCalorieRecommendation | null>(null);
   const [visibleStartHour, setVisibleStartHour] = useState(INITIAL_START);
@@ -226,6 +240,15 @@ const FoodDiaryScreen = () => {
   );
 
   React.useEffect(() => {
+    if (!snackbar) {
+      return;
+    }
+
+    const timeout = setTimeout(() => setSnackbar(null), 7000);
+    return () => clearTimeout(timeout);
+  }, [snackbar]);
+
+  React.useEffect(() => {
     setSelectedHour((current) =>
       Math.min(visibleEndHour, Math.max(visibleStartHour, current)),
     );
@@ -336,21 +359,80 @@ const FoodDiaryScreen = () => {
     [dateKey, isToday, navigation],
   );
 
-  const deleteEntry = useCallback(
-    (entryId: number) => {
-      Alert.alert("Remove food", "Delete this entry from your diary?", [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            await DB.deleteUserFoodLog(entryId);
-            await loadData();
-          },
-        },
-      ]);
+  const restoreDeletedEntry = useCallback(
+    async (entry: DBUserFoodLogEntry) => {
+      if (entry.entrySource === "quick_add") {
+        await DB.addQuickAddFoodLog({
+          userExternalId: entry.userExternalId,
+          date: entry.date,
+          loggedAt: entry.loggedAt ?? entry.createdAt,
+          mealType: entry.mealType ?? null,
+          name: entry.quickAddName,
+          calories: entry.calories,
+          proteinG: entry.proteinG,
+          carbsG: entry.carbsG,
+          fatG: entry.fatG,
+          alcoholG: entry.alcoholG ?? 0,
+          systemCalculatedCalories: entry.systemCalculatedCalories,
+          isEnergyManuallySet: entry.isEnergyManuallySet,
+        });
+        return;
+      }
+
+      if (entry.foodId == null) {
+        throw new Error("That food entry cannot be restored.");
+      }
+
+      await DB.addUserFoodLog({
+        userExternalId: entry.userExternalId,
+        foodId: entry.foodId,
+        date: entry.date,
+        loggedAt: entry.loggedAt ?? entry.createdAt,
+        quantityG: entry.quantityG,
+        mealType: entry.mealType ?? null,
+      });
     },
-    [loadData],
+    [],
+  );
+
+  const deleteEntry = useCallback(
+    (entry: DBUserFoodLogEntry) => {
+      const entrySnapshot = { ...entry };
+
+      setWeekEntries((current) =>
+        current.filter((item) => item.id !== entrySnapshot.id),
+      );
+      setSnackbar({
+        message: "Food deleted",
+        actionLabel: "Undo",
+        onAction: () => {
+          setSnackbar(null);
+          void (async () => {
+            try {
+              await restoreDeletedEntry(entrySnapshot);
+              await loadData();
+            } catch {
+              Alert.alert(
+                "Undo failed",
+                "Please add the food entry again.",
+              );
+            }
+          })();
+        },
+      });
+
+      void (async () => {
+        try {
+          await DB.deleteUserFoodLog(entrySnapshot.id);
+          await loadData();
+        } catch {
+          setSnackbar(null);
+          await loadData();
+          Alert.alert("Could not delete food", "Please try again.");
+        }
+      })();
+    },
+    [loadData, restoreDeletedEntry],
   );
 
   const editEntry = useCallback(
@@ -583,6 +665,25 @@ const FoodDiaryScreen = () => {
           }
         />
       </ScrollView>
+
+      {snackbar ? (
+        <View style={[styles.snackbar, { bottom: insets.bottom + 98 }]}>
+          <Text style={styles.snackbarText}>{snackbar.message}</Text>
+          {snackbar.actionLabel && snackbar.onAction ? (
+            <Pressable
+              onPress={snackbar.onAction}
+              style={({ pressed }) => [
+                styles.snackbarAction,
+                pressed && styles.snackbarActionPressed,
+              ]}
+            >
+              <Text style={styles.snackbarActionText}>
+                {snackbar.actionLabel}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 };
@@ -612,6 +713,39 @@ const styles = StyleSheet.create({
     height: 280,
     borderRadius: 999,
     backgroundColor: appColors.foodOrbBottom,
+  },
+  snackbar: {
+    position: "absolute",
+    left: 20,
+    right: 20,
+    borderRadius: 8,
+    backgroundColor: appColors.surfaceRaised,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  snackbarText: {
+    flex: 1,
+    color: appColors.white,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  snackbarAction: {
+    borderRadius: 999,
+    backgroundColor: appColors.revolutLight,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  snackbarActionPressed: {
+    opacity: 0.88,
+  },
+  snackbarActionText: {
+    color: appColors.revolutDark,
+    fontSize: 12,
+    fontWeight: "800",
   },
 });
 

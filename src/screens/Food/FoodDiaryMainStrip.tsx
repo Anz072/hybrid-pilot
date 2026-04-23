@@ -55,14 +55,14 @@ type FoodDiaryMainStripProps = {
   hourBuckets: FoodDiaryHourBucket[];
   selectedHour: number;
   onAddFood: (hour: number) => void;
-  onDeleteEntry: (entryId: number) => void;
+  onDeleteEntry: (entry: DBUserFoodLogEntry) => void;
   onEditEntry: (entry: DBUserFoodLogEntry) => void;
   onSelectHour: (hour: number) => void;
 };
 
 type FoodDiaryTimelineItemProps = {
   onAddFood: (hour: number) => void;
-  onDeleteEntry: (entryId: number) => void;
+  onDeleteEntry: (entry: DBUserFoodLogEntry) => void;
   onEditEntry: (entry: DBUserFoodLogEntry) => void;
   bucket: FoodDiaryHourBucket;
   collapsed: boolean;
@@ -209,7 +209,7 @@ const FoodDiaryTimelineItem = ({
                       overshootRight={false}
                       renderRightActions={() => (
                         <Pressable
-                          onPress={() => onDeleteEntry(entry.id)}
+                          onPress={() => onDeleteEntry(entry)}
                           style={({ pressed }) => [
                             styles.deleteSwipe,
                             pressed && styles.cardPressed,

@@ -26,13 +26,8 @@ import {
 } from "phosphor-react-native";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
-import { API } from "../../API/apiCaller";
 import { DB } from "../../store/DB";
-import type {
-  DBFoodItem,
-  DBUser,
-  SaveFoodItemInput,
-} from "../../store/DB_TYPES";
+import type { DBFoodItem, DBUser } from "../../store/DB_TYPES";
 import {
   getFoodSearchSectionState,
   saveFoodSearchSectionState,
@@ -52,6 +47,11 @@ import {
 } from "./foodUtils";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { appColors } from "../../theme/colors";
+import {
+  fromDbFoodItem,
+  searchFoodResults,
+  type FoodSearchResult,
+} from "./foodSearch";
 
 type AddFoodRoute = RouteProp<FoodStackParamList, "AddFood">;
 type AddFoodNav = CompositeNavigationProp<
@@ -59,10 +59,7 @@ type AddFoodNav = CompositeNavigationProp<
   NativeStackNavigationProp<RootStackParamList>
 >;
 
-type SearchFoodResult = SaveFoodItemInput & {
-  key: string;
-  localId: number | null;
-};
+type SearchFoodResult = FoodSearchResult;
 
 type FoodSearchSectionKey = "favorites" | "recent";
 type FoodSearchMode = "all" | "recipes" | "custom_meals";
@@ -102,8 +99,6 @@ const DEFAULT_SECTION_STATE: FoodSearchSectionState = {
 };
 
 const SEARCH_DEBOUNCE_MS = 350;
-const REMOTE_SEARCH_MIN_QUERY_LENGTH = 3;
-const REMOTE_BARCODE_QUERY_PATTERN = /^\d{8,}$/;
 const MAX_SEARCH_RESULTS = 30;
 const SEARCH_RESULT_CATEGORY_ORDER: SearchResultCategory[] = [
   "custom_foods",
@@ -136,101 +131,6 @@ const SEARCH_RESULT_CATEGORY_META: Record<
 const getSearchCacheKey = (mode: FoodSearchMode, query: string) =>
   `${mode}:${query}`;
 
-const getFoodIdentityKey = ({
-  barcode,
-  name,
-  source,
-  sourceId,
-}: Pick<SearchFoodResult, "barcode" | "name" | "source" | "sourceId">) => {
-  const fallback = name.trim().toLowerCase();
-  return `${source}:${sourceId?.trim() ?? barcode?.trim() ?? fallback}`;
-};
-
-const toSearchFoodResult = (
-  food: SaveFoodItemInput,
-  localId: number | null,
-): SearchFoodResult => ({
-  ...food,
-  key: `${getFoodIdentityKey({
-    source: food.source,
-    sourceId: food.sourceId,
-    barcode: food.barcode,
-    name: food.name,
-  })}:${localId ?? "remote"}`,
-  localId,
-});
-
-const fromDbFoodItem = (food: DBFoodItem): SearchFoodResult => {
-  const {
-    id,
-    createdAt: _createdAt,
-    updatedAt: _updatedAt,
-    ...saveInput
-  } = food;
-  return toSearchFoodResult(saveInput, id);
-};
-
-const normalizeSearchText = (value?: string | null) =>
-  (value ?? "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-
-const compactSearchText = (value?: string | null) =>
-  normalizeSearchText(value).replace(/\s+/g, "");
-
-const singularizeSearchWord = (value: string) => {
-  if (value.endsWith("ies") && value.length > 4) {
-    return `${value.slice(0, -3)}y`;
-  }
-
-  if (value.endsWith("s") && value.length > 3) {
-    return value.slice(0, -1);
-  }
-
-  return null;
-};
-
-const getSearchVariants = (query: string) => {
-  const normalizedQuery = normalizeSearchText(query);
-  if (!normalizedQuery) {
-    return [];
-  }
-
-  const variants = new Set<string>([normalizedQuery]);
-
-  if (!normalizedQuery.includes(" ")) {
-    const singular = singularizeSearchWord(normalizedQuery);
-    if (singular) {
-      variants.add(singular);
-    }
-  }
-
-  return [...variants];
-};
-
-const shouldSearchRemotely = (query: string) =>
-  query.length >= REMOTE_SEARCH_MIN_QUERY_LENGTH ||
-  REMOTE_BARCODE_QUERY_PATTERN.test(query);
-
-const getSearchResultDedupeKeys = (food: SearchFoodResult) => {
-  const dedupeKeys = new Set<string>([`identity:${getFoodIdentityKey(food)}`]);
-  const barcode = food.barcode?.trim();
-
-  if (barcode) {
-    dedupeKeys.add(`barcode:${barcode}`);
-  }
-
-  if (food.source !== "custom" && food.source !== "manual") {
-    const displayKey = compactSearchText(`${food.brand ?? ""} ${food.name}`);
-    if (displayKey) {
-      dedupeKeys.add(`display:${displayKey}`);
-    }
-  }
-
-  return [...dedupeKeys];
-};
-
 const getSearchResultCategory = (
   food: SearchFoodResult,
 ): SearchResultCategory => {
@@ -243,6 +143,21 @@ const getSearchResultCategory = (
   }
 
   return "common_foods";
+};
+
+const ADD_FOOD_SEARCH_RANK_OPTIONS = {
+  brandScoreBonus: 8,
+  categoryPriority: (food: SearchFoodResult) =>
+    SEARCH_RESULT_CATEGORY_PRIORITY[getSearchResultCategory(food)],
+  dedupe: {
+    includeDisplayKey: (food: SearchFoodResult) =>
+      food.source !== "custom" && food.source !== "manual",
+  },
+  incompleteScorePenalty: 25,
+  localScoreBonus: 130,
+  maxResults: MAX_SEARCH_RESULTS,
+  usdaScoreBonus: 30,
+  verifiedScoreBonus: 20,
 };
 
 const parseLibraryPayload = (food: Pick<SearchFoodResult, "rawPayload">) => {
@@ -398,159 +313,6 @@ const buildLibrarySections = ({
   return sections;
 };
 
-const scoreSearchFoodResult = (food: SearchFoodResult, query: string) => {
-  const queryVariants = getSearchVariants(query);
-  const compactQueryVariants = queryVariants.map(compactSearchText);
-  const tokenSet = new Set<string>();
-
-  for (const variant of queryVariants) {
-    variant
-      .split(" ")
-      .filter(Boolean)
-      .forEach((token) => tokenSet.add(token));
-  }
-
-  const tokens = [...tokenSet];
-  const normalizedName = normalizeSearchText(food.name);
-  const normalizedBrand = normalizeSearchText(food.brand);
-  const normalizedCombined = normalizeSearchText(
-    `${food.brand ?? ""} ${food.name}`,
-  );
-  const compactName = compactSearchText(food.name);
-  const compactCombined = compactSearchText(`${food.brand ?? ""} ${food.name}`);
-  const exactBarcodeMatch =
-    food.barcode?.trim() != null && food.barcode?.trim() === query.trim();
-
-  let score = 0;
-
-  if (exactBarcodeMatch) {
-    score += 1400;
-  }
-
-  if (queryVariants.some((variant) => normalizedName === variant)) {
-    score += 950;
-  }
-
-  if (queryVariants.some((variant) => normalizedCombined === variant)) {
-    score += 900;
-  }
-
-  if (queryVariants.some((variant) => normalizedBrand === variant)) {
-    score += 480;
-  }
-
-  if (
-    compactQueryVariants.some(
-      (variant) =>
-        variant.length > 0 &&
-        (compactName === variant || compactCombined.includes(variant)),
-    )
-  ) {
-    score += 760;
-  }
-
-  if (queryVariants.some((variant) => normalizedName.startsWith(variant))) {
-    score += 620;
-  }
-
-  if (queryVariants.some((variant) => normalizedCombined.startsWith(variant))) {
-    score += 540;
-  }
-
-  if (queryVariants.some((variant) => normalizedBrand.startsWith(variant))) {
-    score += 320;
-  }
-
-  if (queryVariants.some((variant) => normalizedName.includes(variant))) {
-    score += 300;
-  }
-
-  if (queryVariants.some((variant) => normalizedCombined.includes(variant))) {
-    score += 240;
-  }
-
-  if (queryVariants.some((variant) => normalizedBrand.includes(variant))) {
-    score += 140;
-  }
-
-  const matchedTokenCount = tokens.filter((token) =>
-    normalizedCombined.includes(token),
-  ).length;
-
-  score += matchedTokenCount * 70;
-
-  if (tokens.length > 0 && matchedTokenCount === tokens.length) {
-    score += 220;
-  }
-
-  if (food.localId != null) {
-    score += 130;
-  }
-
-  if (food.source === "usda") {
-    score += 30;
-  }
-
-  if (food.verified) {
-    score += 20;
-  }
-
-  if (food.brand) {
-    score += 8;
-  }
-
-  if (!food.isComplete) {
-    score -= 25;
-  }
-
-  return score;
-};
-
-const rankSearchResults = (query: string, results: SearchFoodResult[]) => {
-  const scoredResults = [...results].sort((left, right) => {
-    const categoryDifference =
-      SEARCH_RESULT_CATEGORY_PRIORITY[getSearchResultCategory(left)] -
-      SEARCH_RESULT_CATEGORY_PRIORITY[getSearchResultCategory(right)];
-
-    if (categoryDifference !== 0) {
-      return categoryDifference;
-    }
-
-    const scoreDifference =
-      scoreSearchFoodResult(right, query) - scoreSearchFoodResult(left, query);
-
-    if (scoreDifference !== 0) {
-      return scoreDifference;
-    }
-
-    if ((right.localId != null) !== (left.localId != null)) {
-      return Number(right.localId != null) - Number(left.localId != null);
-    }
-
-    return left.name.localeCompare(right.name);
-  });
-
-  const seen = new Set<string>();
-  const uniqueResults: SearchFoodResult[] = [];
-
-  for (const result of scoredResults) {
-    const dedupeKeys = getSearchResultDedupeKeys(result);
-
-    if (dedupeKeys.some((key) => seen.has(key))) {
-      continue;
-    }
-
-    uniqueResults.push(result);
-    dedupeKeys.forEach((key) => seen.add(key));
-
-    if (uniqueResults.length >= MAX_SEARCH_RESULTS) {
-      break;
-    }
-  }
-
-  return uniqueResults;
-};
-
 const buildCategorizedSearchSections = (
   items: SearchFoodResult[],
 ): SearchResultSection[] =>
@@ -629,49 +391,31 @@ const AddFoodScreen = () => {
         return cachedResults;
       }
 
-      const [localRows, remoteRows] = await Promise.all([
-        mode === "recipes"
-          ? DB.listFoodItems({
-              source: "recipe",
-              query: normalizedQuery,
-              limit: 40,
-            })
-          : mode === "custom_meals"
+      const rankedResults = await searchFoodResults({
+        query: normalizedQuery,
+        getLocalRows: (queryText) =>
+          mode === "recipes"
             ? DB.listFoodItems({
-                source: "custom_meal",
-                query: normalizedQuery,
+                source: "recipe",
+                query: queryText,
                 limit: 40,
               })
-            : DB.searchFoodItems(normalizedQuery, 40),
-        mode === "all" && shouldSearchRemotely(normalizedQuery)
-          ? API.usdaAPI.getFood(normalizedQuery, { pageSize: 12 })
-          : Promise.resolve([]),
-      ]);
-
-      const localResults = localRows
-        .filter((food) =>
+            : mode === "custom_meals"
+              ? DB.listFoodItems({
+                  source: "custom_meal",
+                  query: queryText,
+                  limit: 40,
+                })
+              : DB.searchFoodItems(queryText, 40),
+        filterLocalRow: (food) =>
           mode === "recipes"
             ? isRecipeResult(food)
             : mode === "custom_meals"
               ? isCustomMealResult(food)
               : !isRecipeResult(food) && !isCustomMealResult(food),
-        )
-        .map(fromDbFoodItem);
-      const localKeys = new Set(
-        localResults.flatMap(getSearchResultDedupeKeys),
-      );
-      const remoteResults = remoteRows
-        .filter((food) =>
-          getSearchResultDedupeKeys(toSearchFoodResult(food, null)).every(
-            (key) => !localKeys.has(key),
-          ),
-        )
-        .map((food) => toSearchFoodResult(food, null));
-
-      const rankedResults = rankSearchResults(normalizedQuery, [
-        ...localResults,
-        ...remoteResults,
-      ]);
+        includeRemote: mode === "all",
+        rankOptions: ADD_FOOD_SEARCH_RANK_OPTIONS,
+      });
       searchCacheRef.current.set(cacheKey, rankedResults);
 
       return rankedResults;
@@ -684,7 +428,12 @@ const AddFoodScreen = () => {
       return food.localId;
     }
 
-    const { key: _key, localId: _localId, ...saveInput } = food;
+    const {
+      key: _key,
+      localId: _localId,
+      localFood: _localFood,
+      ...saveInput
+    } = food;
     const savedId = await DB.saveFoodItem(saveInput);
 
     setResults((current) =>
@@ -794,14 +543,20 @@ const AddFoodScreen = () => {
   );
 
   const favoriteResults = useMemo(
-    () => favorites.map(fromDbFoodItem),
+    () => favorites.map((food) => fromDbFoodItem(food)),
     [favorites],
   );
 
-  const recentResults = useMemo(() => recent.map(fromDbFoodItem), [recent]);
-  const recipeResults = useMemo(() => recipes.map(fromDbFoodItem), [recipes]);
+  const recentResults = useMemo(
+    () => recent.map((food) => fromDbFoodItem(food)),
+    [recent],
+  );
+  const recipeResults = useMemo(
+    () => recipes.map((food) => fromDbFoodItem(food)),
+    [recipes],
+  );
   const customMealResults = useMemo(
-    () => customMeals.map(fromDbFoodItem),
+    () => customMeals.map((food) => fromDbFoodItem(food)),
     [customMeals],
   );
 

@@ -4,6 +4,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   BarbellIcon,
   BugIcon,
+  ChartLineUpIcon,
   CookingPotIcon,
   DatabaseIcon,
   ForkKnifeIcon,
@@ -194,6 +195,23 @@ const MoreScreen = () => {
           title="Weekly budget preview"
           values={weeklyValues}
         />
+
+        <Text style={styles.sectionTitle}>Insights</Text>
+        <View style={styles.sectionCard}>
+          <MoreActionRow
+            description="Review average calories vs target, completed diary days, weight movement, adaptive status, and repeated foods."
+            icon={
+              <ChartLineUpIcon
+                size={18}
+                color={appColors.brand700}
+                weight="fill"
+              />
+            }
+            onPress={() => navigation.navigate("WeeklyReviewScreen")}
+            title="Weekly review"
+            value="Open"
+          />
+        </View>
 
         <Text style={styles.sectionTitle}>Account</Text>
         <View style={styles.sectionCard}>

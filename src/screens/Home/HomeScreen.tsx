@@ -8,8 +8,11 @@ import {
   View,
 } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import type { CompositeNavigationProp } from "@react-navigation/native";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
+  CalendarCheckIcon,
   CaretRightIcon,
   ChartLineIcon,
   ScalesIcon,
@@ -21,6 +24,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { getEffectiveCalorieTargetForDate } from "../../engine/calorieTargets";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
+import type { MainTabParamList } from "../../navigation/MainTabNavigator";
 import AnimatedSwapImage from "../../components/AnimatedSwapImage";
 import { MacroBar } from "../Food/FoodDiaryHeroCard";
 import type { FoodNutritionTotals } from "../Food/foodUtils";
@@ -44,7 +48,10 @@ import {
   type MicronutrientTotals,
 } from "./homeNutrition";
 
-type RootNavigation = NativeStackNavigationProp<RootStackParamList>;
+type HomeNavigation = CompositeNavigationProp<
+  BottomTabNavigationProp<MainTabParamList, "Home">,
+  NativeStackNavigationProp<RootStackParamList>
+>;
 
 const EMPTY_TOTALS: FoodNutritionTotals = {
   calories: 0,
@@ -141,7 +148,7 @@ const CalorieGauge = ({
 
 const HomeScreen = () => {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation<RootNavigation>();
+  const navigation = useNavigation<HomeNavigation>();
   const user = useAppSelector((state) => state.user.currentUser);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -343,6 +350,46 @@ const HomeScreen = () => {
             </>
           )}
         </View>
+
+        <Pressable
+          onPress={() =>
+            navigation.navigate("More", {
+              screen: "WeeklyReviewScreen",
+            })
+          }
+          style={({ pressed }) => [
+            styles.sectionCard,
+            styles.weeklyReviewCard,
+            pressed && styles.cardPressed,
+          ]}
+        >
+          <View style={styles.sectionHeader}>
+            <View style={styles.weeklyReviewCopy}>
+              <Text style={styles.sectionEyebrow}>Insights</Text>
+              <Text style={styles.cardTitle}>Weekly review</Text>
+              <Text style={styles.cardText}>
+                Calories vs target, completed days, weight trend, adaptive status,
+                and repeated foods.
+              </Text>
+            </View>
+            <View style={[styles.cardIcon, styles.weeklyReviewIcon]}>
+              <CalendarCheckIcon
+                size={18}
+                color={appColors.textPrimary}
+                weight="fill"
+              />
+            </View>
+          </View>
+
+          <View style={styles.weeklyReviewFooter}>
+            <Text style={styles.weeklyReviewFooterText}>Open review</Text>
+            <CaretRightIcon
+              size={14}
+              color={appColors.textPrimary}
+              weight="bold"
+            />
+          </View>
+        </Pressable>
 
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
@@ -628,6 +675,31 @@ const styles = StyleSheet.create({
   },
   cardIconAlt: {
     backgroundColor: appColors.revolutTeal,
+  },
+  weeklyReviewCard: {
+    backgroundColor: appColors.surfaceCardAlt,
+  },
+  weeklyReviewCopy: {
+    flex: 1,
+  },
+  weeklyReviewIcon: {
+    backgroundColor: appColors.green700,
+  },
+  weeklyReviewFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: 999,
+    backgroundColor: appColors.surfaceGhost,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  weeklyReviewFooterText: {
+    ...appTypography.bodySmall,
+    color: appColors.textPrimary,
+    fontWeight: "700",
   },
   cardTitle: {
     ...appTypography.title,

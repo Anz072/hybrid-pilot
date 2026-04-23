@@ -11,6 +11,7 @@ import ProfileSettingsScreen from "../screens/User_Settings/ProfileSettingsScree
 import TrainingTypesSettingsScreen from "../screens/User_Settings/TrainingTypesSettingsScreen";
 import ProteinFocusSettingsScreen from "../screens/User_Settings/ProteinFocusSettingsScreen";
 import SettingsScreen from "../screens/Settings/SettingsScreen";
+import WeeklyReviewScreen from "../screens/User_Settings/WeeklyReviewScreen";
 import {
   UserCreatedCustomMealsScreen,
   UserCreatedRecipesScreen,
@@ -21,6 +22,7 @@ export type MoreParamList = {
   MoreMainScreen: undefined;
   ProfileSettingsScreen: undefined;
   PreferencesScreen: undefined;
+  WeeklyReviewScreen: undefined;
   SettingsScreen: undefined;
   CalorieAllowanceSettingsScreen: undefined;
   AdaptiveCaloriesSettingsScreen: undefined;
@@ -42,6 +44,7 @@ const MoreNavigator = () => {
     >
       <Stack.Screen name="MoreMainScreen" component={MoreScreen} />
       <Stack.Screen name="FoodLibrary" component={FoodLibraryScreen} />
+      <Stack.Screen name="WeeklyReviewScreen" component={WeeklyReviewScreen} />
       <Stack.Screen
         name="ProfileSettingsScreen"
         component={ProfileSettingsScreen}

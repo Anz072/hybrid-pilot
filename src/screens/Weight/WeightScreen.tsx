@@ -273,16 +273,6 @@ const WeightScreen = ({
     [allEntries],
   );
 
-  const pendingCount = React.useMemo(
-    () => allEntries.filter((entry) => entry.syncStatus !== "synced").length,
-    [allEntries],
-  );
-
-  const syncErrorCount = React.useMemo(
-    () => allEntries.filter((entry) => entry.syncStatus === "error").length,
-    [allEntries],
-  );
-
   const historyEntries = activeEntries;
 
   const chartEntries = React.useMemo(
@@ -386,10 +376,6 @@ const WeightScreen = ({
         )} kg band`
     : "Set a target to add a goal line and progress band to the chart.";
   const goalLauncherLabel = goal ? "Edit goal" : "Set goal";
-  const syncPillText =
-    pendingCount > 0
-      ? `Offline | ${pendingCount} pending`
-      : "Offline | Local only";
   const chartOldestEntry = chartEntries[chartEntries.length - 1] ?? null;
   const chartNewestEntry = chartEntries[0] ?? null;
   const averageWeightText =
@@ -426,20 +412,20 @@ const WeightScreen = ({
     setModalVisible(true);
   };
 
-  const syncGoalDraftFromGoal = React.useCallback(() => {
+  const resetGoalDraftFromGoal = React.useCallback(() => {
     setTargetWeightValue(goal ? formatWeightKg(goal.targetWeightKg) : "");
     setTargetDate(goal?.targetDate ? parseDateOnly(goal.targetDate) : null);
     setShowGoalDatePicker(false);
   }, [goal]);
 
   const openGoalModal = () => {
-    syncGoalDraftFromGoal();
+    resetGoalDraftFromGoal();
     setGoalModalVisible(true);
   };
 
   const closeGoalModal = () => {
     setGoalModalVisible(false);
-    syncGoalDraftFromGoal();
+    resetGoalDraftFromGoal();
   };
 
   const closeModal = () => {
@@ -748,12 +734,11 @@ const WeightScreen = ({
     setTargetDate(normalized);
   };
 
-  const handleSyncPillPress = () => {
-    const message =
-      pendingCount > 0
-        ? `${pendingCount} changes are stored locally and marked pending. They stay editable while offline.`
-        : "All visible entries are stored locally. Sync support can reconcile them when connected.";
-    Alert.alert("Sync status", message);
+  const handleDataStatusPress = () => {
+    Alert.alert(
+      "Weight data",
+      "Weight entries and goals are saved to your signed-in account.",
+    );
   };
 
   const insightCards: InsightCardProps[] = [
@@ -883,12 +868,12 @@ const WeightScreen = ({
       <View style={styles.header}>
         <Text style={styles.title}>Weight Diary</Text>
         <Pressable
-          onPress={handleSyncPillPress}
+          onPress={handleDataStatusPress}
           style={({ pressed }) => [
-            styles.heroSyncButton,
+            styles.heroStatusButton,
             pressed && styles.cardPressed,
           ]}
-          accessibilityLabel="Open sync status"
+          accessibilityLabel="Open weight data status"
         >
           <ArrowsClockwiseIcon size={18} color={appColors.plumMuted} weight="bold" />
         </Pressable>
@@ -1101,9 +1086,9 @@ const WeightScreen = ({
           const isLast = index === section.data.length - 1;
           const statusLabel =
             item.syncStatus === "error"
-              ? "Sync issue"
+              ? "Needs review"
               : item.syncStatus === "pending"
-                ? "Pending"
+                ? "Saving"
                 : null;
           const sourceLabel = toTitleCase(item.source);
           const hasSecondaryRow = Boolean(item.notes || item.syncError);
@@ -1176,7 +1161,7 @@ const WeightScreen = ({
                       </View>
                     ) : (
                       <Text style={styles.historyTimeText} numberOfLines={1}>
-                        Synced
+                        Saved
                       </Text>
                     )}
                   </View>
@@ -1205,7 +1190,7 @@ const WeightScreen = ({
                           weight="fill"
                         />
                         <Text style={styles.historyInlineWarningText}>
-                          Edit and retry sync
+                          Edit and try saving again
                         </Text>
                       </View>
                     ) : null}
@@ -1488,7 +1473,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     marginBottom: 18,
   },
-  heroSyncButton: {
+  heroStatusButton: {
     position: "absolute",
     right: 0,
     width: 42,
@@ -1618,10 +1603,6 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceFieldAlt,
     paddingHorizontal: 12,
     paddingVertical: 9,
-  },
-  syncPill: {
-    flexShrink: 1,
-    maxWidth: "100%",
   },
   expandInsightLike: {},
   pillText: {

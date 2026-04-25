@@ -1,6 +1,13 @@
 export type GoalType = "lose_fat" | "maintain" | "build_muscle";
 
-export type GoalRatePace = number | null;
+export type GoalStrategy =
+  | "deficit_light"
+  | "deficit_normal"
+  | "deficit_aggressive"
+  | "maintain"
+  | "surplus_light"
+  | "surplus_normal"
+  | "surplus_aggressive";
 
 export type BodyData = {
   birthdate: string;
@@ -36,7 +43,7 @@ export type FuelPlan = {
 
 export type OnboardingProfile = {
   goal: GoalType;
-  goalRateKgPerWeek: GoalRatePace;
+  goalStrategy: GoalStrategy;
   bodyData: BodyData;
   activity: ActivityLevel;
   training: TrainingSelection;
@@ -51,21 +58,21 @@ export type OnboardingParamList = {
   GoalRate: { goal: GoalType };
   BodyData: {
     goal: GoalType;
-    goalRateKgPerWeek: GoalRatePace;
+    goalStrategy: GoalStrategy;
     bodyData?: BodyData;
     training?: TrainingSelection;
     proteinFocus?: ProteinFocus;
   };
   Activity: {
     goal: GoalType;
-    goalRateKgPerWeek: GoalRatePace;
+    goalStrategy: GoalStrategy;
     bodyData: BodyData;
     training?: TrainingSelection;
     proteinFocus?: ProteinFocus;
   };
   Training: {
     goal: GoalType;
-    goalRateKgPerWeek: GoalRatePace;
+    goalStrategy: GoalStrategy;
     bodyData: BodyData;
     activity: ActivityLevel;
     training?: TrainingSelection;
@@ -73,7 +80,7 @@ export type OnboardingParamList = {
   };
   ProteinFocus: {
     goal: GoalType;
-    goalRateKgPerWeek: GoalRatePace;
+    goalStrategy: GoalStrategy;
     bodyData: BodyData;
     activity: ActivityLevel;
     training: TrainingSelection;
@@ -81,7 +88,7 @@ export type OnboardingParamList = {
   };
   FuelPlan: {
     goal: GoalType;
-    goalRateKgPerWeek: GoalRatePace;
+    goalStrategy: GoalStrategy;
     bodyData: BodyData;
     activity: ActivityLevel;
     training: TrainingSelection;

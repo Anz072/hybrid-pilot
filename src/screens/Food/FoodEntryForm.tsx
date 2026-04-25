@@ -180,7 +180,7 @@ const FoodEntryForm = ({
             onBlur={onAmountBlur}
             keyboardType={amountKeyboardType}
             placeholder={amountPlaceholder}
-            placeholderTextColor={appColors.foodPlaceholder}
+            placeholderTextColor={appColors.textMuted}
           />
           <View style={styles.unitPill}>
             <Text style={styles.unitText}>{amountUnit}</Text>
@@ -287,13 +287,13 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   heroTitle: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 18,
     fontWeight: "900",
     marginBottom: 3,
   },
   heroMeta: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
   },
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     gap: 6,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
     backgroundColor: appColors.white,
     paddingHorizontal: 10,
     paddingVertical: 8,
@@ -331,9 +331,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     borderRadius: 999,
-    backgroundColor: appColors.foodPillBg,
+    backgroundColor: appColors.surfaceGhost,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
     paddingHorizontal: 10,
     paddingVertical: 7,
   },
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   previewText: {
-    color: appColors.foodPreviewText,
+    color: appColors.brand300,
     fontSize: 12,
     lineHeight: 16,
   },
@@ -372,13 +372,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 14,
     fontWeight: "900",
     marginBottom: 2,
   },
   sectionSubtitle: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
     marginBottom: 10,
@@ -402,20 +402,20 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
     borderRadius: 8,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField,
     paddingHorizontal: 12,
     paddingVertical: 11,
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 14,
     fontWeight: "700",
   },
   unitPill: {
     borderRadius: 8,
-    backgroundColor: appColors.foodPillBg,
+    backgroundColor: appColors.surfaceGhost,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
     paddingHorizontal: 12,
     paddingVertical: 11,
   },
@@ -429,9 +429,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     borderRadius: 8,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
     padding: 11,
   },
   slotIcon: {
@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.foodPillBg,
+    backgroundColor: appColors.surfaceGhost,
   },
   slotCopy: {
     flex: 1,
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   slotValue: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 15,
     fontWeight: "900",
   },
@@ -476,9 +476,9 @@ const styles = StyleSheet.create({
   nutritionCell: {
     width: "47%",
     borderRadius: 8,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField,
     borderWidth: 1,
-    borderColor: appColors.foodSoftBorder,
+    borderColor: appColors.borderSoft,
     padding: 10,
   },
   nutritionLabel: {
@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   nutritionValue: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 16,
     fontWeight: "900",
   },
@@ -517,14 +517,14 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: appColors.white,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
     paddingVertical: 13,
   },
   secondaryButtonDanger: {
     borderColor: appColors.dangerBorder,
   },
   secondaryButtonText: {
-    color: appColors.foodInk,
+    color: appColors.textPrimary,
     fontSize: 14,
     fontWeight: "800",
   },
@@ -540,3 +540,4 @@ const styles = StyleSheet.create({
 });
 
 export default FoodEntryForm;
+

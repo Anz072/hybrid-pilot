@@ -1,9 +1,13 @@
 import type {
   ActivityLevel,
   FuelPlan,
-  GoalType,
   ProteinFocus,
 } from "../navigation/onboardingTypes";
+import {
+  isGoalType,
+  resolveGoalStrategy,
+  resolveGoalType,
+} from "./goalStrategy";
 import { getAgeFromBirthdateValue } from "../helpers";
 import {
   buildFuelPlan,
@@ -37,7 +41,6 @@ export const CALORIE_TARGET_STEP = 50;
 export const MIN_CALORIE_TARGET = 800;
 export const MAX_CALORIE_TARGET = 7000;
 
-const GOAL_TYPES: GoalType[] = ["lose_fat", "maintain", "build_muscle"];
 const ACTIVITY_LEVELS: ActivityLevel[] = [
   "sedentary",
   "lightly_active",
@@ -45,9 +48,6 @@ const ACTIVITY_LEVELS: ActivityLevel[] = [
   "very_active",
   "athlete",
 ];
-
-const isGoalType = (value: string): value is GoalType =>
-  GOAL_TYPES.includes(value as GoalType);
 
 const isActivityLevel = (value: string): value is ActivityLevel =>
   ACTIVITY_LEVELS.includes(value as ActivityLevel);
@@ -190,16 +190,18 @@ export const buildAutomaticFuelPlanForUser = ({
   user: DBUser;
   weightKg: number;
 }): FuelPlan | null => {
+  const goal = resolveGoalType(user.goal, user.goalStrategy);
+
   if (
     !Number.isFinite(weightKg) ||
     weightKg <= 0 ||
     user.birthdate == null ||
     user.heightCm == null ||
     user.activityLevel == null ||
-    user.goal == null ||
+    goal == null ||
     !isFuelPlanSex(user.gender) ||
     !isActivityLevel(user.activityLevel) ||
-    !isGoalType(user.goal)
+    !isGoalType(goal)
   ) {
     return null;
   }
@@ -215,7 +217,8 @@ export const buildAutomaticFuelPlanForUser = ({
     age,
     sex: user.gender,
     activity: user.activityLevel,
-    goal: user.goal,
+    goal,
+    goalStrategy: resolveGoalStrategy(goal, user.goalStrategy) ?? "maintain",
     proteinFocus: user.proteinFocus,
   });
 };

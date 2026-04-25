@@ -208,6 +208,7 @@ export const upsertGoogleUserAccount = async (
         heightCm: null,
         activityLevel: null,
         goal: null,
+        goalStrategy: null,
         trainingTypes: null,
         proteinFocus: null,
         calorieAllowance: null,

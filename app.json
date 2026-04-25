@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon1.png",
     "scheme": "hybridpilot",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/cat-1.png",

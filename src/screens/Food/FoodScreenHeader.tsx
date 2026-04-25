@@ -31,7 +31,7 @@ const FoodScreenHeader = ({
               pressed && styles.backButtonPressed,
             ]}
           >
-            <ArrowLeftIcon size={16} color={appColors.foodInk} weight="bold" />
+            <ArrowLeftIcon size={16} color={appColors.textPrimary} weight="bold" />
             <Text style={styles.backText}>Back</Text>
           </Pressable>
         ) : (
@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     backgroundColor: appColors.surfaceGhost,
-    borderColor: appColors.whiteOverlay18,
+    borderColor: appColors.surfaceGhostStrong,
   },
   backButtonPressed: {
     opacity: 0.85,
@@ -93,3 +93,4 @@ const styles = StyleSheet.create({
 });
 
 export default FoodScreenHeader;
+

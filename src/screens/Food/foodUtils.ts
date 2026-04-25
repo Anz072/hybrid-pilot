@@ -196,12 +196,10 @@ export const formatFoodSourceLabel = (source: string): string => {
 };
 
 export const calculateQuickAddCaloriesFromMacros = ({
-  alcoholG = 0,
   carbsG = 0,
   fatG = 0,
   proteinG = 0,
 }: {
-  alcoholG?: number | null;
   carbsG?: number | null;
   fatG?: number | null;
   proteinG?: number | null;
@@ -209,8 +207,7 @@ export const calculateQuickAddCaloriesFromMacros = ({
   roundTo(
     (proteinG ?? 0) * 4 +
       (carbsG ?? 0) * 4 +
-      (fatG ?? 0) * 9 +
-      (alcoholG ?? 0) * 7,
+      (fatG ?? 0) * 9,
     0,
   );
 

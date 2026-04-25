@@ -1,5 +1,9 @@
 import type { User } from "@supabase/supabase-js";
-import type { ProteinFocus } from "../../navigation/onboardingTypes";
+import type {
+  GoalStrategy,
+  ProteinFocus,
+} from "../../navigation/onboardingTypes";
+import { resolveGoalStrategy } from "../../engine/goalStrategy";
 import type { DBUser, DBUserGender, DBUserProvider } from "../../store/DB_TYPES";
 import { getSupabaseClient } from "./client";
 
@@ -14,6 +18,7 @@ type RawSupabaseProfileRow = {
   height_cm: number | string | null;
   activity_level: string | null;
   goal: string | null;
+  goal_strategy: string | null;
   training_types: unknown;
   protein_focus: string | null;
   calorie_allowance: number | string | null;
@@ -33,6 +38,7 @@ export type SupabaseProfile = {
   heightCm: number | null;
   activityLevel: string | null;
   goal: string | null;
+  goalStrategy: GoalStrategy | null;
   trainingTypes: string[] | null;
   proteinFocus: ProteinFocus | null;
   calorieAllowance: number | null;
@@ -52,6 +58,7 @@ export type UpsertSupabaseProfileInput = {
   heightCm?: number | null;
   activityLevel?: string | null;
   goal?: string | null;
+  goalStrategy?: GoalStrategy | null;
   trainingTypes?: string[] | null;
   proteinFocus?: ProteinFocus | null;
   calorieAllowance?: number | null;
@@ -131,6 +138,10 @@ const toSupabaseProfile = (row: RawSupabaseProfileRow): SupabaseProfile => {
     heightCm: parseNullableNumber(row.height_cm),
     activityLevel: normalizeOptionalText(row.activity_level),
     goal: normalizeOptionalText(row.goal),
+    goalStrategy: resolveGoalStrategy(
+      normalizeOptionalText(row.goal),
+      normalizeOptionalText(row.goal_strategy),
+    ),
     trainingTypes: normalizeTrainingTypes(row.training_types),
     proteinFocus: isProteinFocus(row.protein_focus) ? row.protein_focus : null,
     calorieAllowance: parseNullableNumber(row.calorie_allowance),
@@ -151,6 +162,7 @@ const toSupabaseProfileRow = (input: UpsertSupabaseProfileInput) => ({
   height_cm: input.heightCm ?? null,
   activity_level: normalizeOptionalText(input.activityLevel),
   goal: normalizeOptionalText(input.goal),
+  goal_strategy: resolveGoalStrategy(input.goal, input.goalStrategy),
   training_types:
     input.trainingTypes && input.trainingTypes.length > 0
       ? input.trainingTypes.map((item) => item.trim()).filter(Boolean)
@@ -249,6 +261,7 @@ export const buildSupabaseProfileInputFromDbUser = (
   heightCm: user.heightCm,
   activityLevel: user.activityLevel,
   goal: user.goal,
+  goalStrategy: user.goalStrategy,
   trainingTypes: user.trainingTypes,
   proteinFocus: user.proteinFocus,
   calorieAllowance: user.calorieAllowance,
@@ -273,6 +286,7 @@ export const toDbUserFromSupabaseProfile = (
   heightCm: profile.heightCm,
   activityLevel: profile.activityLevel,
   goal: profile.goal,
+  goalStrategy: profile.goalStrategy,
   trainingTypes: profile.trainingTypes,
   proteinFocus: profile.proteinFocus,
   calorieAllowance: profile.calorieAllowance,

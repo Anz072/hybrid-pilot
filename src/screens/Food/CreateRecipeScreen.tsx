@@ -877,7 +877,7 @@ const CreateRecipeScreen = () => {
             <TextInput
               style={styles.textInput}
               placeholder="Banana bread"
-              placeholderTextColor={appColors.foodPlaceholder}
+              placeholderTextColor={appColors.textMuted}
               value={name}
               onChangeText={setName}
             />
@@ -889,7 +889,7 @@ const CreateRecipeScreen = () => {
                   <TextInput
                     style={styles.textInput}
                     placeholder="1"
-                    placeholderTextColor={appColors.foodPlaceholder}
+                    placeholderTextColor={appColors.textMuted}
                     value={servingsValue}
                     onChangeText={setServingsValue}
                     onBlur={() =>
@@ -911,7 +911,7 @@ const CreateRecipeScreen = () => {
                   <TextInput
                     style={styles.textInput}
                     placeholder="Optional"
-                    placeholderTextColor={appColors.foodPlaceholder}
+                    placeholderTextColor={appColors.textMuted}
                     value={preparedWeightValue}
                     onChangeText={setPreparedWeightValue}
                     onBlur={() =>
@@ -978,13 +978,13 @@ const CreateRecipeScreen = () => {
               <View style={styles.searchInputWrap}>
                 <MagnifyingGlassIcon
                   size={18}
-                  color={appColors.foodPlaceholder}
+                  color={appColors.textMuted}
                   weight="bold"
                 />
                 <TextInput
                   style={styles.searchInput}
                   placeholder="Search ingredients"
-                  placeholderTextColor={appColors.foodPlaceholder}
+                  placeholderTextColor={appColors.textMuted}
                   value={ingredientQuery}
                   onChangeText={setIngredientQuery}
                   returnKeyType="search"
@@ -1152,7 +1152,7 @@ const CreateRecipeScreen = () => {
                               }
                               keyboardType="decimal-pad"
                               placeholder={formatNumberInput(serving.value)}
-                              placeholderTextColor={appColors.foodPlaceholder}
+                              placeholderTextColor={appColors.textMuted}
                             />
                             <View
                               style={[
@@ -1181,7 +1181,7 @@ const CreateRecipeScreen = () => {
                   <TextInput
                     style={styles.textInput}
                     placeholder="Optional"
-                    placeholderTextColor={appColors.foodPlaceholder}
+                    placeholderTextColor={appColors.textMuted}
                     value={prepTimeValue}
                     onChangeText={setPrepTimeValue}
                     keyboardType="decimal-pad"
@@ -1198,7 +1198,7 @@ const CreateRecipeScreen = () => {
                   <TextInput
                     style={styles.textInput}
                     placeholder="Optional"
-                    placeholderTextColor={appColors.foodPlaceholder}
+                    placeholderTextColor={appColors.textMuted}
                     value={cookTimeValue}
                     onChangeText={setCookTimeValue}
                     keyboardType="decimal-pad"
@@ -1214,7 +1214,7 @@ const CreateRecipeScreen = () => {
             <TextInput
               style={styles.textInput}
               placeholder="https://..."
-              placeholderTextColor={appColors.foodPlaceholder}
+              placeholderTextColor={appColors.textMuted}
               value={linkValue}
               onChangeText={setLinkValue}
               autoCapitalize="none"
@@ -1227,7 +1227,7 @@ const CreateRecipeScreen = () => {
             <TextInput
               style={[styles.textInput, styles.multilineInput]}
               placeholder="Describe the recipe, notes, or serving details."
-              placeholderTextColor={appColors.foodPlaceholder}
+              placeholderTextColor={appColors.textMuted}
               value={descriptionValue}
               onChangeText={setDescriptionValue}
               multiline
@@ -1283,7 +1283,7 @@ const CreateRecipeScreen = () => {
                     <TextInput
                       style={[styles.textInput, styles.stepInput]}
                       placeholder="Describe this step"
-                      placeholderTextColor={appColors.foodPlaceholder}
+                      placeholderTextColor={appColors.textMuted}
                       value={step}
                       onChangeText={(value) => updateStep(index, value)}
                       multiline
@@ -1398,7 +1398,7 @@ const CreateRecipeScreen = () => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: appColors.foodScreenBg,
+    backgroundColor: appColors.surfaceCanvas,
   },
   content: {
     paddingHorizontal: 18,
@@ -1410,7 +1410,7 @@ const styles = StyleSheet.create({
     width: 250,
     height: 250,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbTop,
+    backgroundColor: appColors.brand800,
   },
   bgOrbBottom: {
     position: "absolute",
@@ -1419,7 +1419,7 @@ const styles = StyleSheet.create({
     width: 280,
     height: 280,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbBottom,
+    backgroundColor: appColors.success700,
   },
   heroCard: {
     backgroundColor: appColors.surfaceCard,
@@ -1442,7 +1442,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   heroTitle: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 22,
     fontWeight: "500",
     marginBottom: 4,
@@ -1455,7 +1455,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   heroMeta: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
   },
@@ -1469,12 +1469,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: appColors.foodPillBg,
+    backgroundColor: appColors.surfaceGhost,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
   },
   contextPillText: {
     color: appColors.brand500,
@@ -1494,13 +1494,13 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   previewText: {
-    color: appColors.foodPreviewText,
+    color: appColors.brand300,
     fontSize: 12,
     lineHeight: 16,
     marginBottom: 2,
   },
   previewSubtext: {
-    color: appColors.foodPreviewText,
+    color: appColors.brand300,
     fontSize: 12,
     lineHeight: 16,
   },
@@ -1513,13 +1513,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 20,
     fontWeight: "500",
     marginBottom: 12,
   },
   sectionSubtitle: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
     marginBottom: 10,
@@ -1532,8 +1532,8 @@ const styles = StyleSheet.create({
     gap: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
-    backgroundColor: appColors.foodFieldBg,
+    borderColor: appColors.borderStrong,
+    backgroundColor: appColors.surfaceField,
     padding: 14,
   },
   methodCardSelected: {
@@ -1562,7 +1562,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   methodTitle: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 14,
     fontWeight: "600",
     flex: 1,
@@ -1571,12 +1571,12 @@ const styles = StyleSheet.create({
     color: appColors.white,
   },
   methodDescription: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
   },
   methodDescriptionSelected: {
-    color: appColors.foodPreviewText,
+    color: appColors.brand300,
   },
   methodBadge: {
     borderRadius: 999,
@@ -1611,12 +1611,12 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
     borderRadius: 8,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField,
     paddingHorizontal: 14,
     paddingVertical: 13,
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -1632,16 +1632,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
     borderRadius: 8,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField,
     paddingLeft: 12,
     paddingRight: 10,
   },
   searchInput: {
     flex: 1,
     paddingVertical: 11,
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -1651,7 +1651,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   resultsMeta: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
   },
@@ -1660,9 +1660,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     borderRadius: 8,
-    backgroundColor: appColors.foodSurfaceAlt,
+    backgroundColor: appColors.surfaceCardAlt,
     borderWidth: 1,
-    borderColor: appColors.foodSoftBorder,
+    borderColor: appColors.borderSoft,
     paddingHorizontal: 12,
     paddingVertical: 11,
   },
@@ -1683,7 +1683,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   resultTitle: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 13,
     fontWeight: "800",
     flex: 1,
@@ -1735,14 +1735,14 @@ const styles = StyleSheet.create({
     flexDirection: "column",
   },
   ingredientTitle: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 15,
     fontWeight: "700",
     flexShrink: 1,
     marginBottom: 2,
   },
   ingredientMeta: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 11,
     flexShrink: 1,
     lineHeight: 15,
@@ -1822,7 +1822,7 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     flex: 1,
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
   },
@@ -1851,7 +1851,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   stepsSubtitle: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
   },
@@ -1861,8 +1861,8 @@ const styles = StyleSheet.create({
   stepCard: {
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
-    backgroundColor: appColors.foodFieldBg,
+    borderColor: appColors.borderStrong,
+    backgroundColor: appColors.surfaceField,
     padding: 12,
   },
   stepHeaderRow: {
@@ -1873,7 +1873,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   stepTitle: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 13,
     fontWeight: "900",
   },
@@ -1881,7 +1881,7 @@ const styles = StyleSheet.create({
     minHeight: 76,
   },
   emptyText: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
   },
@@ -1893,7 +1893,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: appColors.surfaceGhost,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
   },
   iconButtonPrimary: {
     width: 34,
@@ -1942,7 +1942,7 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
     backgroundColor: appColors.surfaceGhost,
     borderWidth: 2,
-    borderColor: appColors.whiteOverlay18,
+    borderColor: appColors.surfaceGhostStrong,
     paddingVertical: 14,
   },
   secondaryButtonText: {
@@ -1961,11 +1961,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 9999,
-    backgroundColor: appColors.revolutLight,
+    backgroundColor: appColors.slate50,
     paddingVertical: 14,
   },
   primaryButtonText: {
-    color: appColors.revolutDark,
+    color: appColors.slate900,
     fontSize: 14,
     fontWeight: "600",
   },
@@ -1978,3 +1978,4 @@ const styles = StyleSheet.create({
 });
 
 export default CreateRecipeScreen;
+

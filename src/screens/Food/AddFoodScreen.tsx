@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   LayoutAnimation,
   Pressable,
@@ -18,7 +19,6 @@ import {
   BarcodeIcon,
   CaretDownIcon,
   CaretUpIcon,
-  CalendarIcon,
   CookingPotIcon,
   ForkKnifeIcon,
   LightningIcon,
@@ -30,7 +30,9 @@ import { DB } from "../../store/DB";
 import type { DBFoodItem, DBUser } from "../../store/DB_TYPES";
 import {
   getFoodSearchSectionState,
+  getFoodTrackingPreferences,
   saveFoodSearchSectionState,
+  saveFoodTrackingPreferences,
   type FoodSearchSectionState,
 } from "../../storage/localStore";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
@@ -42,8 +44,8 @@ import {
   formatFoodLoggedTime,
   formatFoodMacro,
   formatFoodNumber,
-  formatFoodShortDate,
   formatFoodSourceLabel,
+  getFoodDefaultLogAmount,
 } from "./foodUtils";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { appColors } from "../../theme/colors";
@@ -98,7 +100,7 @@ const DEFAULT_SECTION_STATE: FoodSearchSectionState = {
   recentExpanded: true,
 };
 
-const SEARCH_DEBOUNCE_MS = 350;
+const SEARCH_DEBOUNCE_MS = 240;
 const MAX_SEARCH_RESULTS = 30;
 const SEARCH_RESULT_CATEGORY_ORDER: SearchResultCategory[] = [
   "custom_foods",
@@ -342,6 +344,8 @@ const AddFoodScreen = () => {
   const [sectionState, setSectionState] = useState<FoodSearchSectionState>(
     DEFAULT_SECTION_STATE,
   );
+  const [fastLogEnabled, setFastLogEnabled] = useState(false);
+  const [quickLoggingKey, setQuickLoggingKey] = useState<string | null>(null);
   const searchCacheRef = React.useRef(new Map<string, SearchFoodResult[]>());
 
   const loadStaticLists = useCallback(async () => {
@@ -493,6 +497,23 @@ const AddFoodScreen = () => {
     };
 
     void loadSectionState();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadTrackingPreferences = async () => {
+      const preferences = await getFoodTrackingPreferences();
+      if (!cancelled) {
+        setFastLogEnabled(preferences.fastLogEnabled);
+      }
+    };
+
+    void loadTrackingPreferences();
 
     return () => {
       cancelled = true;
@@ -709,6 +730,46 @@ const AddFoodScreen = () => {
     ]);
   };
 
+  const toggleFastLog = useCallback(() => {
+    setFastLogEnabled((current) => {
+      const nextValue = !current;
+      void saveFoodTrackingPreferences({ fastLogEnabled: nextValue });
+      return nextValue;
+    });
+  }, []);
+
+  const quickLogFood = async (food: SearchFoodResult) => {
+    if (!user) {
+      Alert.alert(
+        "No account found",
+        "Create or restore a user before adding food.",
+      );
+      return;
+    }
+
+    if (quickLoggingKey) {
+      return;
+    }
+
+    try {
+      setQuickLoggingKey(food.key);
+      const foodId = await persistFoodIfNeeded(food);
+      await DB.addUserFoodLog({
+        userExternalId: user.externalId,
+        foodId,
+        date,
+        loggedAt: resolvedLoggedAt,
+        quantityG: getFoodDefaultLogAmount(food),
+        mealType,
+      });
+      navigation.goBack();
+    } catch {
+      Alert.alert("Could not log food", "Please review the food and try again.");
+    } finally {
+      setQuickLoggingKey(null);
+    }
+  };
+
   const activeResults = useMemo(() => {
     if (query.trim()) {
       return results;
@@ -776,7 +837,14 @@ const AddFoodScreen = () => {
     const isLibraryItem = isRecipe || isCustomMeal;
     const isOwnedLibraryItem =
       isLibraryItem && isOwnedLibraryResult(food, user?.externalId);
-    const primaryLabel = isLibraryItem ? "Add" : "Open";
+    const isQuickLogging = quickLoggingKey === food.key;
+    const primaryLabel = fastLogEnabled
+      ? isQuickLogging
+        ? "Logging"
+        : "Log"
+      : isLibraryItem
+        ? "Add"
+        : "Open";
     const secondaryLabel = isRecipe
       ? "Edit"
       : isCustomMeal
@@ -861,12 +929,19 @@ const AddFoodScreen = () => {
             </Pressable>
           )}
           <Pressable
-            onPress={() => void openFoodEditor(food)}
+            disabled={isQuickLogging}
+            onPress={() =>
+              fastLogEnabled ? void quickLogFood(food) : void openFoodEditor(food)
+            }
             style={({ pressed }) => [
               styles.primaryAction,
+              isQuickLogging && styles.primaryActionLoading,
               pressed && styles.cardPressed,
             ]}
           >
+            {isQuickLogging ? (
+              <ActivityIndicator color={appColors.white} size="small" />
+            ) : null}
             <Text style={styles.primaryActionText}>{primaryLabel}</Text>
           </Pressable>
         </View>
@@ -988,9 +1063,6 @@ const AddFoodScreen = () => {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top + 14 }]}>
-      <View style={styles.bgOrbTop} />
-      <View style={styles.bgOrbBottom} />
-
       <KeyboardAwareScrollView
         style={styles.screen}
         contentContainerStyle={styles.content}
@@ -1068,22 +1140,59 @@ const AddFoodScreen = () => {
             </Pressable>
           </View>
           <View style={styles.contextRow}>
+            <View style={styles.contextPill}>
+              <Text style={styles.contextPillText}>
+                For {resolvedContextLabel}
+              </Text>
+            </View>
             {mealType ? (
               <View style={styles.contextPill}>
                 <Text style={styles.contextPillText}>{mealType}</Text>
               </View>
             ) : null}
+            <Pressable
+              onPress={toggleFastLog}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: fastLogEnabled }}
+              style={({ pressed }) => [
+                styles.fastLogToggle,
+                fastLogEnabled && styles.fastLogToggleActive,
+                pressed && styles.cardPressed,
+              ]}
+            >
+              <LightningIcon
+                size={14}
+                color={fastLogEnabled ? appColors.white : appColors.brand500}
+                weight="fill"
+              />
+              <Text
+                style={[
+                  styles.fastLogText,
+                  fastLogEnabled && styles.fastLogTextActive,
+                ]}
+              >
+                Fast log
+              </Text>
+              <Text
+                style={[
+                  styles.fastLogState,
+                  fastLogEnabled && styles.fastLogStateActive,
+                ]}
+              >
+                {fastLogEnabled ? "On" : "Off"}
+              </Text>
+            </Pressable>
           </View>
           <View style={styles.searchRow}>
             <View style={styles.searchInputWrap}>
               <MagnifyingGlassIcon
                 size={18}
-                color={appColors.foodPlaceholder}
+                color={appColors.textMuted}
                 weight="bold"
               />
               <TextInput
                 placeholder={searchPlaceholder}
-                placeholderTextColor={appColors.foodPlaceholder}
+                placeholderTextColor={appColors.textMuted}
                 value={query}
                 onChangeText={setQuery}
                 style={styles.searchInput}
@@ -1262,29 +1371,12 @@ const AddFoodScreen = () => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: appColors.foodScreenBg,
+    backgroundColor: appColors.surfaceCanvas,
   },
   content: {
     paddingHorizontal: 18,
     paddingBottom: 36,
-  },
-  bgOrbTop: {
-    position: "absolute",
-    top: -90,
-    right: -70,
-    width: 250,
-    height: 250,
-    borderRadius: 999,
-    backgroundColor: appColors.foodOrbTop,
-  },
-  bgOrbBottom: {
-    position: "absolute",
-    bottom: -120,
-    left: -90,
-    width: 280,
-    height: 280,
-    borderRadius: 999,
-    backgroundColor: appColors.foodOrbBottom,
+    paddingTop: 2,
   },
   heroCard: {
     backgroundColor: appColors.surfaceCard,
@@ -1304,19 +1396,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
     moreTitle: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 15,
     fontWeight: "900",
     marginBottom: 4,
   },
   moreText: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
   },
   morePill: {
     borderRadius: 9999,
-    backgroundColor: appColors.revolutLight,
+    backgroundColor: appColors.slate50,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
@@ -1330,7 +1422,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   morePillText: {
-    color: appColors.revolutDark,
+    color: appColors.slate900,
     fontSize: 12,
     fontWeight: "800",
   },
@@ -1346,9 +1438,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
+    borderRadius: 8,
     paddingVertical: 12,
   },
   searchModePillActive: {
@@ -1374,6 +1467,7 @@ const styles = StyleSheet.create({
   },
   contextRow: {
     flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     flexWrap: "wrap",
     marginBottom: 12,
@@ -1382,26 +1476,57 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: appColors.foodPillBg,
+    backgroundColor: appColors.surfaceGhost,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
   },
   contextPillText: {
     color: appColors.brand500,
     fontSize: 12,
     fontWeight: "800",
   },
+  fastLogToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: 8,
+    backgroundColor: appColors.surfaceField,
+    borderWidth: 1,
+    borderColor: appColors.borderStrong,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  fastLogToggleActive: {
+    backgroundColor: appColors.brand700,
+    borderColor: appColors.brand700,
+  },
+  fastLogText: {
+    color: appColors.brand500,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  fastLogTextActive: {
+    color: appColors.white,
+  },
+  fastLogState: {
+    color: appColors.textSecondary,
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  fastLogStateActive: {
+    color: appColors.brand300,
+  },
   heroTitle: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 22,
     fontWeight: "500",
     marginBottom: 4,
   },
   heroText: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
   },
@@ -1413,7 +1538,7 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
     backgroundColor: appColors.surfaceGhost,
     borderWidth: 2,
-    borderColor: appColors.whiteOverlay18,
+    borderColor: appColors.surfaceGhostStrong,
     paddingHorizontal: 14,
     paddingVertical: 11,
   },
@@ -1440,16 +1565,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
     borderRadius: 8,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField,
     paddingLeft: 12,
     paddingRight: 8,
   },
   searchInput: {
     flex: 1,
     paddingVertical: 11,
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -1464,9 +1589,9 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   moreRowAccent: {
-    backgroundColor: appColors.foodPillBg,
+    backgroundColor: appColors.surfaceGhost,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
   },
   selectedSlotRow: {
     backgroundColor: appColors.surfaceCardAlt,
@@ -1489,7 +1614,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   searchHint: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
     marginTop: 8,
@@ -1520,22 +1645,22 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sectionTitle: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 14,
     fontWeight: "900",
     marginBottom: 2,
   },
   sectionSubtitle: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
   },
   countPill: {
     minWidth: 28,
     borderRadius: 999,
-    backgroundColor: appColors.foodPillBg,
+    backgroundColor: appColors.surfaceGhost,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
     paddingHorizontal: 8,
     paddingVertical: 5,
     alignItems: "center",
@@ -1550,7 +1675,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   emptyText: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
   },
@@ -1559,14 +1684,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 5,
     borderRadius: 999,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
   togglePillExpanded: {
-    backgroundColor: appColors.foodPillBg,
+    backgroundColor: appColors.surfaceGhost,
   },
   togglePillText: {
     color: appColors.brand500,
@@ -1580,9 +1705,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     borderRadius: 8,
-    backgroundColor: appColors.foodSurfaceAlt,
+    backgroundColor: appColors.surfaceCardAlt,
     borderWidth: 1,
-    borderColor: appColors.foodSoftBorder,
+    borderColor: appColors.borderSoft,
     paddingHorizontal: 12,
     paddingVertical: 12,
   },
@@ -1605,7 +1730,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: appColors.surfaceGhost,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
     paddingHorizontal: 7,
     paddingVertical: 4,
   },
@@ -1615,18 +1740,18 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   foodCalories: {
-    color: appColors.foodInk,
+    color: appColors.textPrimary,
     fontSize: 12,
     fontWeight: "800",
   },
   foodName: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 14,
     fontWeight: "800",
     marginBottom: 3,
   },
   slate300: {
-    color: appColors.slate300,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 16,
     marginBottom: 3,
@@ -1647,16 +1772,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
     backgroundColor: appColors.surfaceGhost,
     paddingHorizontal: 10,
     paddingVertical: 7,
   },
   secondaryActionActive: {
-    backgroundColor: appColors.foodOrbBottom,
+    backgroundColor: appColors.success700,
   },
   secondaryActionMuted: {
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField,
     borderColor: appColors.borderSoft,
   },
   secondaryActionText: {
@@ -1665,24 +1790,29 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   secondaryActionTextActive: {
-    color: appColors.brand300,
+    color: appColors.white,
   },
   secondaryActionTextMuted: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
   },
   primaryAction: {
     minWidth: 62,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 9999,
-    backgroundColor: appColors.revolutLight,
+    backgroundColor: appColors.brand700,
+    gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
+  primaryActionLoading: {
+    opacity: 0.8,
+  },
   primaryActionText: {
-    color: appColors.revolutDark,
+    color: appColors.white,
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "800",
   },
   cardPressed: {
     opacity: 0.9,
@@ -1690,3 +1820,4 @@ const styles = StyleSheet.create({
 });
 
 export default AddFoodScreen;
+

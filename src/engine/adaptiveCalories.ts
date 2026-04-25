@@ -3,6 +3,11 @@ import {
   clampCalorieTarget,
 } from "./calorieTargets";
 import {
+  formatGoalStrategyMeta,
+  getGoalCalorieOffset,
+  resolveGoalStrategy,
+} from "./goalStrategy";
+import {
   collapseEntriesByLocalDate,
   computeEmaSeries,
 } from "../screens/Weight/weightUtils";
@@ -27,12 +32,6 @@ export const ADAPTIVE_MIN_RECOMMENDATION_DELTA = 100;
 export const ADAPTIVE_MAX_DAILY_SHIFT = 150;
 export const ADAPTIVE_KCAL_PER_KG = 7700;
 export const ADAPTIVE_ALGORITHM_VERSION = "v1";
-
-const GOAL_OFFSETS: Record<"lose_fat" | "maintain" | "build_muscle", number> = {
-  lose_fat: -350,
-  maintain: 0,
-  build_muscle: 250,
-};
 
 const toDateKey = (date: Date): string =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
@@ -61,11 +60,6 @@ const roundToCalorieStep = (value: number): number =>
     Math.round(value / CALORIE_TARGET_STEP) * CALORIE_TARGET_STEP,
   );
 
-const isAdaptiveGoal = (
-  value: DBUser["goal"],
-): value is "lose_fat" | "maintain" | "build_muscle" =>
-  value === "lose_fat" || value === "maintain" || value === "build_muscle";
-
 const buildEmptySummary = (
   windowDays: number,
 ): AdaptiveRecommendationInputSummary => ({
@@ -84,8 +78,10 @@ const buildEmptySummary = (
   avgLoggedCalories: null,
 });
 
-const getGoalOffset = (goal: DBUser["goal"]): number =>
-  isAdaptiveGoal(goal) ? GOAL_OFFSETS[goal] : 0;
+const getGoalOffset = (
+  goal: DBUser["goal"],
+  goalStrategy: DBUser["goalStrategy"],
+): number => getGoalCalorieOffset(goal, goalStrategy);
 
 export const getCompleteDiaryDaysInWindow = ({
   diaryDays,
@@ -231,6 +227,7 @@ export const getAdaptiveRecommendationConfidence = ({
 
 export const getAdaptiveRecommendationReason = ({
   goal,
+  goalStrategy,
   avgLoggedCalories,
   observedWeeklyChangeKg,
   estimatedTdee,
@@ -238,6 +235,7 @@ export const getAdaptiveRecommendationReason = ({
   recommendedBaseCalories,
 }: {
   goal: DBUser["goal"];
+  goalStrategy: DBUser["goalStrategy"];
   avgLoggedCalories: number;
   observedWeeklyChangeKg: number | null;
   estimatedTdee: number;
@@ -252,13 +250,7 @@ export const getAdaptiveRecommendationReason = ({
     currentBaseCalories != null
       ? `Current base target is ${currentBaseCalories} kcal/day.`
       : "No current base target was set.";
-  const goalText = isAdaptiveGoal(goal)
-    ? goal === "lose_fat"
-      ? "Weight-loss offset applied."
-      : goal === "build_muscle"
-        ? "Muscle-gain offset applied."
-        : "Maintenance target applied."
-    : "Maintenance target applied.";
+  const goalText = `${formatGoalStrategyMeta(goal, goalStrategy)} applied.`;
 
   return `Average logged intake was ${Math.round(avgLoggedCalories)} kcal/day. ${trendText} Estimated maintenance is ${Math.round(
     estimatedTdee,
@@ -498,7 +490,8 @@ export const buildAdaptiveRecommendation = ({
   }
 
   const currentBaseCalories = user.calorieAllowance ?? null;
-  const goalOffset = getGoalOffset(user.goal);
+  const resolvedGoalStrategy = resolveGoalStrategy(user.goal, user.goalStrategy);
+  const goalOffset = getGoalOffset(user.goal, resolvedGoalStrategy);
   const uncappedRecommendation = roundToCalorieStep(estimatedTdee + goalOffset);
   const recommendedBaseCalories =
     currentBaseCalories == null
@@ -519,6 +512,7 @@ export const buildAdaptiveRecommendation = ({
       : recommendedBaseCalories - currentBaseCalories;
   const reason = getAdaptiveRecommendationReason({
     goal: user.goal,
+    goalStrategy: resolvedGoalStrategy,
     avgLoggedCalories: summary.avgLoggedCalories,
     observedWeeklyChangeKg: summary.observedWeeklyChangeKg,
     estimatedTdee,
@@ -562,6 +556,7 @@ export const buildAdaptiveRecommendation = ({
       ...summary,
       goalOffset,
       currentGoal: user.goal,
+      currentGoalStrategy: resolvedGoalStrategy,
     },
   };
 

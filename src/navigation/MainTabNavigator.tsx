@@ -326,7 +326,7 @@ const MainTabNavigator = () => {
                 <View style={styles.shortcutTabButton}>
                   <PlusIcon
                     size={26}
-                    color={appColors.revolutDark}
+                    color={appColors.slate900}
                     weight="bold"
                   />
                 </View>
@@ -548,7 +548,7 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 999,
-    backgroundColor: appColors.revolutLight,
+    backgroundColor: appColors.slate50,
     borderWidth: 3,
     borderColor: appColors.surfaceBase,
     alignItems: "center",
@@ -560,7 +560,7 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: appColors.tabScrim,
+    backgroundColor: appColors.surfaceOverlay,
   },
   sheet: {
     backgroundColor: appColors.surfaceBase,
@@ -593,7 +593,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: appColors.surfaceGhost,
     borderWidth: 2,
-    borderColor: appColors.whiteOverlay18,
+    borderColor: appColors.surfaceGhostStrong,
   },
   headerSpacer: {
     width: 42,
@@ -641,3 +641,4 @@ const styles = StyleSheet.create({
 });
 
 export default MainTabNavigator;
+

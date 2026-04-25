@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { formatFoodHourLabel } from "./foodUtils";
 import { appColors } from "../../theme/colors";
+import { ShieldCheckIcon, ShieldIcon } from "phosphor-react-native";
 
 type FoodDiaryMoreSectionProps = {
   isDayComplete: boolean;
@@ -34,8 +35,48 @@ const FoodDiaryMoreSection = ({
 }: FoodDiaryMoreSectionProps) => {
   return (
     <View style={styles.card}>
-      <Text style={styles.sectionTitle}>More Actions</Text>
+      <Text style={styles.sectionTitle}>Actions</Text>
       <View style={styles.stack}>
+        <Pressable
+          disabled={isCopyingYesterday}
+          onPress={onCopyYesterday}
+          style={({ pressed }) => [
+            styles.moreRow,
+            isCopyingYesterday && styles.moreRowDisabled,
+            pressed && styles.cardPressed,
+          ]}
+        >
+          <Text style={styles.moreTitle}>
+            {isCopyingYesterday ? "Copying yesterday" : "Copy yesterday"}
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={onQuickAddFood}
+          style={({ pressed }) => [
+            styles.moreRow,
+            pressed && styles.cardPressed,
+          ]}
+        >
+          <Text style={styles.moreTitle}>Quick add</Text>
+        </Pressable>
+        <Pressable
+          onPress={onCreateCustomFood}
+          style={({ pressed }) => [
+            styles.moreRow,
+            pressed && styles.cardPressed,
+          ]}
+        >
+          <Text style={styles.moreTitle}>Create a custom meal</Text>
+        </Pressable>
+        <Pressable
+          onPress={onCreateRecipe}
+          style={({ pressed }) => [
+            styles.moreRow,
+            pressed && styles.cardPressed,
+          ]}
+        >
+          <Text style={styles.moreTitle}>Create a recipe</Text>
+        </Pressable>
         <Pressable
           disabled={isDayCompleteLoading}
           onPress={onToggleDayComplete}
@@ -60,8 +101,8 @@ const FoodDiaryMoreSection = ({
               {isDayCompleteLoading
                 ? "Please wait while the diary day status is being saved."
                 : isDayComplete
-                ? "This day is counted toward adaptive calorie analysis until the diary changes again."
-                : "Confirm this day is fully logged so adaptive calories can use it."}
+                  ? "This day is counted toward adaptive calorie analysis until the diary changes again."
+                  : "Confirm this day is fully logged so adaptive calories can use it."}
             </Text>
           </View>
           <View
@@ -71,75 +112,11 @@ const FoodDiaryMoreSection = ({
               isDayCompleteLoading && styles.morePillLoading,
             ]}
           >
-            {isDayCompleteLoading ? (
-              <ActivityIndicator
-                color={isDayComplete ? appColors.white : appColors.revolutDark}
-                size="small"
-              />
+            {!isDayComplete ? (
+              <ShieldIcon size={32} />
             ) : (
-              <Text style={styles.morePillText}>
-                {isDayComplete ? "Done" : "Mark"}
-              </Text>
+              <ShieldCheckIcon size={32} />
             )}
-          </View>
-        </Pressable>
-        <Pressable
-          onPress={onCreateRecipe}
-          style={({ pressed }) => [
-            styles.moreRow,
-            pressed && styles.cardPressed,
-          ]}
-        >
-          <View style={styles.moreCopy}>
-            <Text style={styles.moreTitle}>Create recipe</Text>
-            <Text style={styles.moreText}>
-              Build a reusable recipe, then save it or Save and Add one serving into {formatFoodHourLabel(selectedHour)}.
-            </Text>
-          </View>
-          <View style={styles.morePill}>
-            <Text style={styles.morePillText}>Recipe</Text>
-          </View>
-        </Pressable>
-        <Pressable
-          disabled={isCopyingYesterday}
-          onPress={onCopyYesterday}
-          style={({ pressed }) => [
-            styles.moreRow,
-            isCopyingYesterday && styles.moreRowDisabled,
-            pressed && styles.cardPressed,
-          ]}
-        >
-          <View style={styles.moreCopy}>
-            <Text style={styles.moreTitle}>
-              {isCopyingYesterday ? "Copying yesterday" : "Copy yesterday"}
-            </Text>
-            <Text style={styles.moreText}>
-              {isCopyingYesterday
-                ? "Applying duplicate protection and copying only new entries."
-                : "Reuse the previous day when meals repeat. Matching entries already on this date will be skipped."}
-            </Text>
-          </View>
-          <View style={styles.morePill}>
-            <Text style={styles.morePillText}>
-              {isCopyingYesterday ? "Working" : "Copy"}
-            </Text>
-          </View>
-        </Pressable>
-        <Pressable
-          onPress={onCreateCustomFood}
-          style={({ pressed }) => [
-            styles.moreRow,
-            pressed && styles.cardPressed,
-          ]}
-        >
-          <View style={styles.moreCopy}>
-            <Text style={styles.moreTitle}>Create custom meal</Text>
-            <Text style={styles.moreText}>
-              Build a reusable meal and add it directly into {formatFoodHourLabel(selectedHour)}.
-            </Text>
-          </View>
-          <View style={styles.morePill}>
-            <Text style={styles.morePillText}>New</Text>
           </View>
         </Pressable>
       </View>
@@ -157,13 +134,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    color: appColors.foodText,
-    fontSize: 22,
+    color: appColors.textPrimary,
+    fontSize: 18,
     fontWeight: "500",
-    marginBottom: 14,
+    marginBottom: 12,
   },
   sectionText: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 14,
@@ -173,7 +150,7 @@ const styles = StyleSheet.create({
   },
   infoCard: {
     borderRadius: 8,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField,
     padding: 14,
   },
   hourRow: {
@@ -192,7 +169,7 @@ const styles = StyleSheet.create({
     borderColor: appColors.brand700,
   },
   hourChipLabel: {
-    color: appColors.foodInk,
+    color: appColors.textPrimary,
     fontSize: 14,
     fontWeight: "900",
     marginBottom: 4,
@@ -207,11 +184,12 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   hourChipTextActive: {
-    color: appColors.foodPreviewText,
+    color: appColors.brand300,
   },
   moreRow: {
     flexDirection: "row",
     alignItems: "center",
+    textAlign: "center",
     gap: 12,
     borderRadius: 8,
     backgroundColor: appColors.surfaceCardAlt,
@@ -220,9 +198,9 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   moreRowAccent: {
-    backgroundColor: appColors.foodPillBg,
+    backgroundColor: appColors.surfaceGhost,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
   },
   moreRowDisabled: {
     opacity: 0.75,
@@ -235,24 +213,30 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   moreTitle: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 15,
     fontWeight: "900",
     marginBottom: 4,
+    textAlign: "center",
+    width: "100%",
   },
   moreText: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
+    textAlign: "center",
   },
   morePill: {
-    borderRadius: 9999,
-    backgroundColor: appColors.revolutLight,
+    borderRadius: 8,
+    backgroundColor: appColors.surfaceCard,
+    borderWidth: 1,
+    borderColor: appColors.borderStrong,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   morePillAccent: {
-    backgroundColor: appColors.brand500,
+    backgroundColor: appColors.brand700,
+    borderColor: appColors.brand700,
   },
   morePillLoading: {
     minWidth: 48,
@@ -260,9 +244,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   morePillText: {
-    color: appColors.revolutDark,
+    color: appColors.brand700,
     fontSize: 12,
     fontWeight: "800",
+  },
+  morePillTextAccent: {
+    color: appColors.white,
   },
   cardPressed: {
     opacity: 0.9,

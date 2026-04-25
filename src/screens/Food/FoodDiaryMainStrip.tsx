@@ -163,7 +163,7 @@ const FoodDiaryTimelineItem = ({
               style={[
                 styles.hourTitle,
                 bucket.entries.length === 0 && {
-                  color: withOpacity(appColors.foodText, 0.6),
+                  color: withOpacity(appColors.textPrimary, 0.6),
                 },
               ]}
             >
@@ -185,6 +185,19 @@ const FoodDiaryTimelineItem = ({
             </View>
           ) : null}
           <View style={styles.hourHeaderActions}>
+            <Pressable
+              onPress={(event) =>
+                runWithoutToggling(event, () => onAddFood(bucket.hour))
+              }
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.hourAddButton,
+                pressed && styles.cardPressed,
+              ]}
+              accessibilityLabel={`Add food at ${formatFoodHourLabel(bucket.hour)}`}
+            >
+              <PlusIcon size={15} color={appColors.white} weight="bold" />
+            </Pressable>
             {collapsed ? (
               <CaretDownIcon size={16} />
             ) : (
@@ -382,7 +395,7 @@ const FoodDiaryMainStrip = ({
             pressed && styles.cardPressed,
           ]}
         >
-          <CaretDoubleLeftIcon size={18} color={appColors.lavenderShadow} />
+          <CaretDoubleLeftIcon size={18} color={appColors.brand400} />
         </Pressable>
         <View style={styles.headerCopy}>
           <Text style={styles.title}>Week view</Text>
@@ -395,7 +408,7 @@ const FoodDiaryMainStrip = ({
             pressed && styles.cardPressed,
           ]}
         >
-          <CaretDoubleRightIcon size={18} color={appColors.lavenderShadow} />
+          <CaretDoubleRightIcon size={18} color={appColors.brand400} />
         </Pressable>
       </View>
 
@@ -443,7 +456,7 @@ const FoodDiaryMainStrip = ({
                 <Path
                   d={outlinePath}
                   stroke={
-                    selected ? appColors.brand500Overlay : appColors.borderSoft
+                    selected ? appColors.brand700 : appColors.borderSoft
                   }
                   strokeWidth={OUTLINE_WIDTH}
                   fill="none"
@@ -578,7 +591,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 8,
     borderRadius: 8,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField,
     paddingHorizontal: 14,
     paddingVertical: 13,
     flexDirection: "row",
@@ -625,7 +638,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   dayPillSelected: {
-    backgroundColor: appColors.lavenderPanel,
+    backgroundColor: appColors.brand800,
   },
   dayPillFill: {
     position: "absolute",
@@ -634,14 +647,14 @@ const styles = StyleSheet.create({
     left: 0,
   },
   weekday: {
-    color: appColors.foodPlaceholder,
+    color: appColors.textMuted,
     fontSize: 12,
   },
   weekdaySelected: {
-    color: appColors.plum700,
+    color: appColors.brand400,
   },
   dayNumber: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -649,7 +662,7 @@ const styles = StyleSheet.create({
     color: appColors.brand700,
   },
   kcalText: {
-    color: appColors.foodPlaceholder,
+    color: appColors.textMuted,
     fontSize: 10,
     marginBottom: 2,
   },
@@ -662,7 +675,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 999,
-    backgroundColor: appColors.brand500Overlay,
+    backgroundColor: appColors.brand800,
   },
   todayDot2: {
     position: "absolute",
@@ -670,13 +683,13 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 999,
-    backgroundColor: appColors.brand500Overlay,
+    backgroundColor: appColors.brand800,
   },
   timelineSection: {
     marginTop: 24,
   },
   sectionTitle: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 22,
     fontWeight: "900",
     marginBottom: 12,
@@ -694,7 +707,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   axisLabel: {
-    color: appColors.foodPlaceholder,
+    color: appColors.textMuted,
     fontSize: 12,
     fontWeight: "800",
   },
@@ -709,7 +722,7 @@ const styles = StyleSheet.create({
     width: 9,
     height: 9,
     borderRadius: 999,
-    backgroundColor: appColors.lavenderDot,
+    backgroundColor: appColors.brand400,
   },
   axisDotActive: {
     backgroundColor: appColors.brand500,
@@ -717,7 +730,7 @@ const styles = StyleSheet.create({
   axisLine: {
     width: 1,
     flex: 1,
-    backgroundColor: appColors.foodSectionBg,
+    backgroundColor: appColors.surfaceCardAlt,
     marginBottom: -8,
   },
   timelineContent: {
@@ -725,7 +738,7 @@ const styles = StyleSheet.create({
   },
   hourCard: {
     borderRadius: 8,
-    backgroundColor: appColors.foodSurfaceAlt,
+    backgroundColor: appColors.surfaceCardAlt,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
     padding: 10,
@@ -745,8 +758,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   hourHeaderActions: {
-    alignItems: "flex-end",
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
+  },
+  hourAddButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: appColors.brand700,
+    alignItems: "center",
+    justifyContent: "center",
   },
   rowBetween: {
     flexDirection: "row",
@@ -757,11 +779,11 @@ const styles = StyleSheet.create({
   hourTitle: {
     fontSize: 12,
     fontWeight: "600",
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     letterSpacing: 0.5,
   },
   hourText: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
     maxWidth: 210,
@@ -784,7 +806,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   emptyStateText: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 13,
     fontWeight: "800",
     marginBottom: 2,
@@ -815,7 +837,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   entryTitle: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 14,
     marginBottom: 4,
     fontWeight: "500",
@@ -832,9 +854,9 @@ const styles = StyleSheet.create({
   },
   entryTag: {
     borderRadius: 999,
-    backgroundColor: appColors.foodPillBg,
+    backgroundColor: appColors.surfaceGhost,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
     paddingHorizontal: 7,
     paddingVertical: 3,
   },
@@ -865,3 +887,4 @@ const styles = StyleSheet.create({
 });
 
 export default FoodDiaryMainStrip;
+

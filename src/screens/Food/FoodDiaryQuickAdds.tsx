@@ -66,19 +66,21 @@ const FoodDiaryQuickAdds = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: appColors.whiteOverlay96,
+    backgroundColor: appColors.surfaceCard,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
     padding: 16,
     marginBottom: 16,
   },
   sectionTitle: {
-    color: appColors.foodText,
-    fontSize: 22,
-    fontWeight: "900",
+    color: appColors.textPrimary,
+    fontSize: 18,
+    fontWeight: "500",
     marginBottom: 4,
   },
   sectionText: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 14,
@@ -90,9 +92,9 @@ const styles = StyleSheet.create({
   favoriteCard: {
     width: 214,
     borderRadius: 8,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField,
     borderWidth: 1,
-    borderColor: appColors.foodSoftBorder,
+    borderColor: appColors.borderSoft,
     padding: 14,
   },
   favoriteEyebrow: {
@@ -104,13 +106,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   favoriteName: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 16,
     fontWeight: "900",
     marginBottom: 6,
   },
   favoriteMeta: {
-    color: appColors.slate300,
+    color: appColors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
     marginBottom: 4,

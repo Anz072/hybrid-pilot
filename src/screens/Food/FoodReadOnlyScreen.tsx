@@ -344,10 +344,10 @@ const FoodReadOnlyScreen = () => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: appColors.foodScreenBg,
+    backgroundColor: appColors.surfaceCanvas,
   },
   title: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 24,
     fontWeight: "900",
     marginTop: 16,
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     width: 250,
     height: 250,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbTop,
+    backgroundColor: appColors.brand800,
   },
   bgOrbBottom: {
     position: "absolute",
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
     width: 280,
     height: 280,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbBottom,
+    backgroundColor: appColors.success700,
   },
   centerCard: {
     alignItems: "center",
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   centerText: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 13,
     fontWeight: "700",
   },
@@ -405,13 +405,13 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   heroTitle: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 20,
     fontWeight: "900",
     marginBottom: 4,
   },
   heroMeta: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
   },
@@ -425,12 +425,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: appColors.foodPillBg,
+    backgroundColor: appColors.surfaceGhost,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
   },
   contextPillText: {
     color: appColors.brand500,
@@ -450,13 +450,13 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   previewText: {
-    color: appColors.foodPreviewText,
+    color: appColors.brand300,
     fontSize: 12,
     lineHeight: 16,
     marginBottom: 2,
   },
   previewSubtext: {
-    color: appColors.foodPreviewText,
+    color: appColors.brand300,
     fontSize: 12,
     lineHeight: 16,
   },
@@ -467,13 +467,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 14,
     fontWeight: "900",
     marginBottom: 2,
   },
   sectionSubtitle: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
     marginBottom: 10,
@@ -484,9 +484,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 12,
     borderRadius: 8,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
     paddingHorizontal: 12,
     paddingVertical: 11,
     marginBottom: 8,
@@ -500,7 +500,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   readOnlyValue: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 14,
     fontWeight: "800",
     flex: 1,
@@ -514,9 +514,9 @@ const styles = StyleSheet.create({
   nutritionCell: {
     width: "47%",
     borderRadius: 8,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField,
     borderWidth: 1,
-    borderColor: appColors.foodSoftBorder,
+    borderColor: appColors.borderSoft,
     padding: 10,
   },
   nutritionLabel: {
@@ -528,7 +528,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   nutritionValue: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 16,
     fontWeight: "900",
   },
@@ -551,3 +551,4 @@ const styles = StyleSheet.create({
 });
 
 export default FoodReadOnlyScreen;
+

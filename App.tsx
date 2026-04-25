@@ -27,6 +27,7 @@ import { StatusBar } from "expo-status-bar";
 import AppNavigator from "./src/navigation/AppNavigator";
 import { store } from "./src/store/appStore";
 import { applyInterFontDefaults } from "./src/theme/applyInterFontDefaults";
+import { appColors } from "./src/theme/colors";
 
 applyInterFontDefaults();
 
@@ -62,7 +63,11 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <StatusBar style="light" />
+      <StatusBar
+        style="dark"
+        backgroundColor={appColors.surfaceCanvas}
+        animated
+      />
       <Provider store={store}>
         <AppNavigator />
       </Provider>

@@ -158,7 +158,7 @@ const FoodDiaryDateStrip = ({
               >
                 <Path
                   d={outlinePath}
-                  stroke={appColors.lavenderShadow}
+                  stroke={appColors.brand400}
                   strokeWidth={OUTLINE_WIDTH}
                   fill="none"
                   strokeLinecap="round"
@@ -268,17 +268,17 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   dayPillSelected: {
-    backgroundColor: appColors.lavenderPanel,
+    backgroundColor: appColors.brand800,
   },
   weekday: {
-    color: appColors.foodPlaceholder,
+    color: appColors.textMuted,
     fontSize: 12,
   },
   weekdaySelected: {
-    color: appColors.plum700,
+    color: appColors.brand400,
   },
   dayNumber: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
     color: appColors.brand700,
   },
   kcalText: {
-    color: appColors.foodPlaceholder,
+    color: appColors.textMuted,
     fontSize: 10,
     marginBottom: 2,
   },
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 999,
-    backgroundColor: appColors.brand500Overlay,
+    backgroundColor: appColors.brand800,
   },
   todayDot2: {
     position: "absolute",
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 999,
-    backgroundColor: appColors.brand500Overlay,
+    backgroundColor: appColors.brand800,
   },
   cardPressed: {
     opacity: 0.9,
@@ -315,3 +315,4 @@ const styles = StyleSheet.create({
 });
 
 export default FoodDiaryDateStrip;
+

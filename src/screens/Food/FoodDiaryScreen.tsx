@@ -31,7 +31,7 @@ import FoodDiaryMainStrip, {
 } from "./FoodDiaryMainStrip";
 import AdaptiveCaloriesBanner from "./AdaptiveCaloriesBanner";
 import FoodDiaryMoreSection from "./FoodDiaryMoreSection";
-// import FoodDiaryQuickAdds from "./FoodDiaryQuickAdds";
+import FoodDiaryQuickAdds from "./FoodDiaryQuickAdds";
 import type {
   FoodDiaryFavoriteFood,
   FoodDiaryHourBucket,
@@ -585,9 +585,6 @@ const FoodDiaryScreen = () => {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.orbTop} />
-      <View style={styles.orbBottom} />
-
       <ScrollView
         style={styles.screen}
         contentContainerStyle={[
@@ -627,13 +624,13 @@ const FoodDiaryScreen = () => {
           onSelectHour={setSelectedHour}
         />
 
-        {/* <FoodDiaryQuickAdds
+        <FoodDiaryQuickAdds
           favoriteFoods={favoriteFoods}
           selectedHour={selectedHour}
           onAddFavorite={(food, hour) => {
             openFavoriteEditorAtHour(food, hour);
           }}
-        /> */}
+        />
 
         <FoodDiaryMoreSection
           isDayComplete={isSelectedDayComplete}
@@ -691,35 +688,17 @@ const FoodDiaryScreen = () => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: appColors.foodScreenBg,
+    backgroundColor: appColors.surfaceCanvas,
   },
   content: {
     paddingHorizontal: 18,
-  },
-  orbTop: {
-    position: "absolute",
-    top: -90,
-    right: -70,
-    width: 250,
-    height: 250,
-    borderRadius: 999,
-    backgroundColor: appColors.foodOrbTop,
-  },
-  orbBottom: {
-    position: "absolute",
-    bottom: -120,
-    left: -90,
-    width: 280,
-    height: 280,
-    borderRadius: 999,
-    backgroundColor: appColors.foodOrbBottom,
   },
   snackbar: {
     position: "absolute",
     left: 20,
     right: 20,
     borderRadius: 8,
-    backgroundColor: appColors.surfaceRaised,
+    backgroundColor: appColors.slate900,
     paddingHorizontal: 16,
     paddingVertical: 14,
     flexDirection: "row",
@@ -735,7 +714,7 @@ const styles = StyleSheet.create({
   },
   snackbarAction: {
     borderRadius: 999,
-    backgroundColor: appColors.revolutLight,
+    backgroundColor: appColors.surfaceCard,
     paddingHorizontal: 14,
     paddingVertical: 9,
   },
@@ -743,10 +722,11 @@ const styles = StyleSheet.create({
     opacity: 0.88,
   },
   snackbarActionText: {
-    color: appColors.revolutDark,
+    color: appColors.slate900,
     fontSize: 12,
     fontWeight: "800",
   },
 });
 
 export default FoodDiaryScreen;
+

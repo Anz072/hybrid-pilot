@@ -24,7 +24,6 @@ import type {
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import {
-  CalendarIcon,
   ClockIcon,
   FireIcon,
   PencilSimpleIcon,
@@ -41,7 +40,6 @@ import {
   buildFoodLoggedAt,
   calculateQuickAddCaloriesFromMacros,
   formatFoodLoggedTime,
-  formatFoodShortDate,
   normalizePositiveFoodInput,
 } from "./foodUtils";
 
@@ -79,7 +77,6 @@ const QuickAddFoodScreen = () => {
   const [proteinValue, setProteinValue] = React.useState("");
   const [fatValue, setFatValue] = React.useState("");
   const [carbsValue, setCarbsValue] = React.useState("");
-  const [alcoholValue, setAlcoholValue] = React.useState("");
   const [nameValue, setNameValue] = React.useState("");
   const [showTimePicker, setShowTimePicker] = React.useState(false);
   const [isEnergyManuallySet, setIsEnergyManuallySet] = React.useState(false);
@@ -129,9 +126,10 @@ const QuickAddFoodScreen = () => {
         setProteinValue(formatNumberInput(nextEntry.proteinG));
         setFatValue(formatNumberInput(nextEntry.fatG));
         setCarbsValue(formatNumberInput(nextEntry.carbsG));
-        setAlcoholValue(formatNumberInput(nextEntry.alcoholG));
         setNameValue(nextEntry.quickAddName ?? "");
-        setIsEnergyManuallySet(nextEntry.isEnergyManuallySet);
+        setIsEnergyManuallySet(
+          nextEntry.isEnergyManuallySet || (nextEntry.alcoholG ?? 0) > 0,
+        );
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -152,19 +150,14 @@ const QuickAddFoodScreen = () => {
   );
   const fatG = React.useMemo(() => toSafeNumber(fatValue), [fatValue]);
   const carbsG = React.useMemo(() => toSafeNumber(carbsValue), [carbsValue]);
-  const alcoholG = React.useMemo(
-    () => toSafeNumber(alcoholValue),
-    [alcoholValue],
-  );
   const macroCalculatedCalories = React.useMemo(
     () =>
       calculateQuickAddCaloriesFromMacros({
         proteinG,
         carbsG,
         fatG,
-        alcoholG,
       }),
-    [alcoholG, carbsG, fatG, proteinG],
+    [carbsG, fatG, proteinG],
   );
   const displayedEnergyValue = isEnergyManuallySet
     ? energyValue
@@ -186,13 +179,9 @@ const QuickAddFoodScreen = () => {
 
     return 1;
   }, [entry?.calories, macroCalculatedCalories]);
-  const resolvedName = nameValue.trim() || "Quick Add";
   const helperText = isEnergyManuallySet
     ? `System calculates ${macroCalculatedCalories.toFixed(0)} kcal from macros.`
     : `Macro sum is ${macroCalculatedCalories.toFixed(0)} kcal.`;
-  const contextLabel = route.params.contextLabel?.trim()
-    ? route.params.contextLabel
-    : formatFoodLoggedTime(loggedAtDate.toISOString());
 
   const closeAfterSave = React.useCallback(() => {
     if (route.params.entryId) {
@@ -258,7 +247,6 @@ const QuickAddFoodScreen = () => {
           proteinG,
           carbsG,
           fatG,
-          alcoholG,
           systemCalculatedCalories: macroCalculatedCalories,
           isEnergyManuallySet,
         });
@@ -273,7 +261,6 @@ const QuickAddFoodScreen = () => {
           proteinG,
           carbsG,
           fatG,
-          alcoholG,
           systemCalculatedCalories: macroCalculatedCalories,
           isEnergyManuallySet,
         });
@@ -286,7 +273,6 @@ const QuickAddFoodScreen = () => {
       setSaving(false);
     }
   }, [
-    alcoholG,
     calories,
     carbsG,
     closeAfterSave,
@@ -396,7 +382,7 @@ const QuickAddFoodScreen = () => {
                 </Text>
                 <PencilSimpleIcon
                   size={16}
-                  color={appColors.revolutDark}
+                  color={appColors.slate900}
                 />
               </Pressable>
             </View>
@@ -417,7 +403,7 @@ const QuickAddFoodScreen = () => {
                 onBlur={handleEnergyBlur}
                 keyboardType="decimal-pad"
                 placeholder="0"
-                placeholderTextColor={appColors.foodPlaceholder}
+                placeholderTextColor={appColors.textMuted}
               />
               <View style={styles.unitPill}>
                 <Text style={styles.unitText}>kcal</Text>
@@ -438,7 +424,7 @@ const QuickAddFoodScreen = () => {
                     onChangeText={setProteinValue}
                     keyboardType="decimal-pad"
                     placeholder="0"
-                    placeholderTextColor={appColors.foodPlaceholder}
+                    placeholderTextColor={appColors.textMuted}
                   />
                   <Text style={styles.nutrientUnit}>g</Text>
                 </View>
@@ -453,7 +439,7 @@ const QuickAddFoodScreen = () => {
                     onChangeText={setFatValue}
                     keyboardType="decimal-pad"
                     placeholder="0"
-                    placeholderTextColor={appColors.foodPlaceholder}
+                    placeholderTextColor={appColors.textMuted}
                   />
                   <Text style={styles.nutrientUnit}>g</Text>
                 </View>
@@ -468,7 +454,7 @@ const QuickAddFoodScreen = () => {
                     onChangeText={setCarbsValue}
                     keyboardType="decimal-pad"
                     placeholder="0"
-                    placeholderTextColor={appColors.foodPlaceholder}
+                    placeholderTextColor={appColors.textMuted}
                   />
                   <Text style={styles.nutrientUnit}>g</Text>
                 </View>
@@ -481,7 +467,7 @@ const QuickAddFoodScreen = () => {
               value={nameValue}
               onChangeText={setNameValue}
               placeholder="Quick Add"
-              placeholderTextColor={appColors.foodPlaceholder}
+              placeholderTextColor={appColors.textMuted}
             />
           </View>
 
@@ -530,7 +516,7 @@ const QuickAddFoodScreen = () => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: appColors.foodScreenBg,
+    backgroundColor: appColors.surfaceCanvas,
   },
   content: {
     paddingHorizontal: 18,
@@ -542,7 +528,7 @@ const styles = StyleSheet.create({
     width: 250,
     height: 250,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbTop,
+    backgroundColor: appColors.brand800,
   },
   bgOrbBottom: {
     position: "absolute",
@@ -551,7 +537,7 @@ const styles = StyleSheet.create({
     width: 280,
     height: 280,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbBottom,
+    backgroundColor: appColors.success700,
   },
   heroCard: {
     backgroundColor: appColors.surfaceCard,
@@ -581,21 +567,21 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   heroTitle: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 22,
     fontWeight: "500",
     marginBottom: 4,
   },
   heroMeta: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
   },
   heroPill: {
     borderRadius: 999,
-    backgroundColor: appColors.foodPillBg,
+    backgroundColor: appColors.surfaceGhost,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
     paddingHorizontal: 10,
     paddingVertical: 7,
   },
@@ -614,12 +600,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: appColors.foodPillBg,
+    backgroundColor: appColors.surfaceGhost,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
   },
   contextPillText: {
     color: appColors.brand500,
@@ -644,7 +630,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   previewText: {
-    color: appColors.foodPreviewText,
+    color: appColors.brand300,
     fontSize: 12,
     lineHeight: 16,
   },
@@ -657,13 +643,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 14,
     fontWeight: "900",
     marginBottom: 10,
   },
   sectionSubtitle: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
     marginBottom: 10,
@@ -694,16 +680,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: appColors.brand700,
     borderRadius: 8,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField,
     paddingHorizontal: 14,
     paddingVertical: 13,
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 20,
     fontWeight: "800",
   },
   unitPill: {
     borderRadius: 9999,
-    backgroundColor: appColors.foodPillBg,
+    backgroundColor: appColors.surfaceGhost,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
     paddingHorizontal: 16,
@@ -715,7 +701,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   helperText: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
     marginTop: 8,
@@ -733,9 +719,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 8,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
     borderRadius: 8,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField,
     paddingHorizontal: 12,
   },
   nutrientInputWrapWide: {
@@ -744,15 +730,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 8,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
     borderRadius: 8,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField,
     paddingHorizontal: 12,
   },
   nutrientInput: {
     flex: 1,
     paddingVertical: 11,
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -763,12 +749,12 @@ const styles = StyleSheet.create({
   },
   textInput: {
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
     borderRadius: 8,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField,
     paddingHorizontal: 14,
     paddingVertical: 13,
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -789,11 +775,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     borderRadius: 9999,
-    backgroundColor: appColors.revolutLight,
+    backgroundColor: appColors.slate50,
     paddingVertical: 14,
   },
   primaryButtonText: {
-    color: appColors.revolutDark,
+    color: appColors.slate900,
     fontSize: 14,
     fontWeight: "600",
   },
@@ -806,3 +792,4 @@ const styles = StyleSheet.create({
 });
 
 export default QuickAddFoodScreen;
+

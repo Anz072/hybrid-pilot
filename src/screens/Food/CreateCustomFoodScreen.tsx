@@ -457,7 +457,7 @@ const CreateCustomFoodScreen = () => {
         <TextInput
           style={styles.input}
           placeholder="Chicken rice bowl"
-          placeholderTextColor={appColors.foodPlaceholder}
+          placeholderTextColor={appColors.textMuted}
           value={name}
           onChangeText={setName}
         />
@@ -468,7 +468,7 @@ const CreateCustomFoodScreen = () => {
         <TextInput
           style={[styles.input, styles.textArea]}
           placeholder="Optional notes, ingredients, or prep details"
-          placeholderTextColor={appColors.foodPlaceholder}
+          placeholderTextColor={appColors.textMuted}
           value={description}
           onChangeText={setDescription}
           multiline
@@ -482,7 +482,7 @@ const CreateCustomFoodScreen = () => {
           <TextInput
             style={styles.input}
             placeholder="100"
-            placeholderTextColor={appColors.foodPlaceholder}
+            placeholderTextColor={appColors.textMuted}
             value={servingSize}
             onChangeText={setServingSize}
             onBlur={handleServingBlur}
@@ -510,7 +510,7 @@ const CreateCustomFoodScreen = () => {
             <TextInput
               style={styles.input}
               placeholder="0"
-              placeholderTextColor={appColors.foodPlaceholder}
+              placeholderTextColor={appColors.textMuted}
               value={calories}
               onChangeText={setCalories}
               onBlur={handleCaloriesBlur}
@@ -522,7 +522,7 @@ const CreateCustomFoodScreen = () => {
             <TextInput
               style={styles.input}
               placeholder="0"
-              placeholderTextColor={appColors.foodPlaceholder}
+              placeholderTextColor={appColors.textMuted}
               value={protein}
               onChangeText={setProtein}
               keyboardType="decimal-pad"
@@ -533,7 +533,7 @@ const CreateCustomFoodScreen = () => {
             <TextInput
               style={styles.input}
               placeholder="0"
-              placeholderTextColor={appColors.foodPlaceholder}
+              placeholderTextColor={appColors.textMuted}
               value={carbs}
               onChangeText={setCarbs}
               keyboardType="decimal-pad"
@@ -544,7 +544,7 @@ const CreateCustomFoodScreen = () => {
             <TextInput
               style={styles.input}
               placeholder="0"
-              placeholderTextColor={appColors.foodPlaceholder}
+              placeholderTextColor={appColors.textMuted}
               value={fat}
               onChangeText={setFat}
               keyboardType="decimal-pad"
@@ -694,7 +694,7 @@ const CreateCustomFoodScreen = () => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: appColors.foodScreenBg,
+    backgroundColor: appColors.surfaceCanvas,
   },
   content: {
     paddingHorizontal: 18,
@@ -707,7 +707,7 @@ const styles = StyleSheet.create({
     width: 250,
     height: 250,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbTop,
+    backgroundColor: appColors.brand800,
   },
   bgOrbBottom: {
     position: "absolute",
@@ -716,7 +716,7 @@ const styles = StyleSheet.create({
     width: 280,
     height: 280,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbBottom,
+    backgroundColor: appColors.success700,
   },
   heroCard: {
     backgroundColor: appColors.surfaceCard,
@@ -739,13 +739,13 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   heroTitle: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 22,
     fontWeight: "500",
     marginBottom: 3,
   },
   heroMeta: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
   },
@@ -760,9 +760,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     borderRadius: 999,
-    backgroundColor: appColors.foodPillBg,
+    backgroundColor: appColors.surfaceGhost,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
     paddingHorizontal: 10,
     paddingVertical: 7,
   },
@@ -784,13 +784,13 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   previewText: {
-    color: appColors.foodPreviewText,
+    color: appColors.brand300,
     fontSize: 12,
     lineHeight: 16,
     marginBottom: 2,
   },
   previewSubtext: {
-    color: appColors.foodPreviewText,
+    color: appColors.brand300,
     fontSize: 12,
     lineHeight: 16,
   },
@@ -803,13 +803,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 14,
     fontWeight: "900",
     marginBottom: 2,
   },
   sectionSubtitle: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
     marginBottom: 10,
@@ -833,12 +833,12 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
     borderRadius: 8,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField,
     paddingHorizontal: 14,
     paddingVertical: 13,
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -847,9 +847,9 @@ const styles = StyleSheet.create({
   },
   unitPill: {
     borderRadius: 999,
-    backgroundColor: appColors.foodPillBg,
+    backgroundColor: appColors.surfaceGhost,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
     paddingHorizontal: 12,
     paddingVertical: 11,
   },
@@ -891,7 +891,7 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
     backgroundColor: appColors.surfaceGhost,
     borderWidth: 2,
-    borderColor: appColors.whiteOverlay18,
+    borderColor: appColors.surfaceGhostStrong,
     paddingVertical: 14,
   },
   secondaryButtonText: {
@@ -903,11 +903,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 9999,
-    backgroundColor: appColors.revolutLight,
+    backgroundColor: appColors.warning600,
     paddingVertical: 14,
   },
   primaryButtonText: {
-    color: appColors.revolutDark,
+    color: appColors.slate900,
     fontSize: 14,
     fontWeight: "600",
   },
@@ -927,3 +927,4 @@ const styles = StyleSheet.create({
 });
 
 export default CreateCustomFoodScreen;
+

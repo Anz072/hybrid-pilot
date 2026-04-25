@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   title: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 24,
     fontWeight: "900",
     marginTop: 16,
@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
     width: 250,
     height: 250,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbTop,
+    backgroundColor: appColors.brand800,
   },
   bgOrbBottom: {
     position: "absolute",
@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
     width: 280,
     height: 280,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbBottom,
+    backgroundColor: appColors.success700,
   },
   centerCard: {
     alignItems: "center",
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   centerText: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 13,
     fontWeight: "700",
   },
@@ -504,9 +504,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 12,
     gap: 10,
-    backgroundColor: appColors.whiteOverlay96,
+    backgroundColor: appColors.surfaceOverlay,
     borderTopWidth: 1,
-    borderTopColor: appColors.foodSoftBorder,
+    borderTopColor: appColors.borderSoft,
   },
   primaryButton: {
     flexDirection: "row",
@@ -547,3 +547,4 @@ const styles = StyleSheet.create({
 });
 
 export default EditFoodEntryScreen;
+

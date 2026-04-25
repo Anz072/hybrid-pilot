@@ -44,13 +44,13 @@ const styles = StyleSheet.create({
     gap: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: appColors.foodSoftBorder,
-    backgroundColor: appColors.foodFieldBg,
+    borderColor: appColors.borderSoft,
+    backgroundColor: appColors.surfaceField,
     padding: 14,
   },
   cardChecked: {
     borderColor: appColors.brand500,
-    backgroundColor: appColors.brand500Overlay,
+    backgroundColor: appColors.brand800,
   },
   cardPressed: {
     opacity: 0.9,
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 8,
     borderWidth: 1.5,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
     backgroundColor: appColors.surfaceCardAlt,
     alignItems: "center",
     justifyContent: "center",
@@ -75,15 +75,16 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   title: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 15,
     fontWeight: "800",
   },
   description: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 18,
   },
 });
 
 export default PublicVisibilityCheckbox;
+

@@ -75,24 +75,24 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   title: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 18,
     fontWeight: "900",
   },
   confidencePill: {
     alignSelf: "flex-start",
     borderRadius: 9999,
-    backgroundColor: appColors.revolutLight,
+    backgroundColor: appColors.slate50,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   confidenceText: {
-    color: appColors.revolutDark,
+    color: appColors.slate900,
     fontSize: 11,
     fontWeight: "800",
   },
   body: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 14,

@@ -91,7 +91,7 @@ const LoginScreen = ({ onAuthenticated }: LoginScreenProps) => {
           ]}
         >
           {signingIn ? (
-            <ActivityIndicator color={appColors.revolutDark} />
+            <ActivityIndicator color={appColors.slate900} />
           ) : null}
           <Text style={styles.buttonText}>
             {signingIn ? "Signing in..." : "Continue with Google"}
@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbTop,
+    backgroundColor: appColors.brand800,
   },
   orbBottom: {
     position: "absolute",
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     width: 280,
     height: 280,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbBottom,
+    backgroundColor: appColors.success700,
   },
   card: {
     backgroundColor: appColors.surfaceCard,
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.revolutLight,
+    backgroundColor: appColors.slate50,
     marginBottom: 16,
   },
   eyebrow: {
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 10,
     borderRadius: 9999,
-    backgroundColor: appColors.revolutLight,
+    backgroundColor: appColors.slate50,
     paddingHorizontal: 24,
     paddingVertical: 16,
   },
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     ...appTypography.button,
-    color: appColors.revolutDark,
+    color: appColors.slate900,
   },
   errorText: {
     ...appTypography.bodySmall,
@@ -192,3 +192,4 @@ const styles = StyleSheet.create({
 });
 
 export default LoginScreen;
+

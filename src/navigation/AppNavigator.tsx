@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceGhost,
     borderRadius: 9999,
     borderWidth: 2,
-    borderColor: appColors.revolutLight,
+    borderColor: appColors.slate50,
     paddingHorizontal: 24,
     paddingVertical: 14,
   },

@@ -84,7 +84,7 @@ const FoodDiaryHeroCard = ({
     <View style={styles.hero}>
       <View style={styles.progressPanel}>
         <MacroBar
-          accent={appColors.plum}
+          accent={appColors.brand700}
           consumed={Number(totals.calories.toFixed(0))}
           label="Energy"
           places={0}
@@ -92,21 +92,21 @@ const FoodDiaryHeroCard = ({
           unit="kcal"
         />
         <MacroBar
-          accent={appColors.emerald500}
+          accent={appColors.success500}
           consumed={Number(totals.proteinG.toFixed(0))}
           label="Protein"
           target={user?.proteinG ?? null}
           unit="g"
         />
         <MacroBar
-          accent={appColors.cyan500}
+          accent={appColors.brand400}
           consumed={Number(totals.carbsG.toFixed(0))}
           label="Carbs"
           target={user?.carbsG ?? null}
           unit="g"
         />
         <MacroBar
-          accent={appColors.amber600}
+          accent={appColors.warning600}
           consumed={Number(totals.fatG.toFixed(0))}
           label="Fat"
           target={user?.fatG ?? null}
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
   },
   progressHeadline: {
     flex: 1,
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 13,
     lineHeight: 16,
   },
@@ -146,11 +146,11 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   progressHeadlineMuted: {
-    color: appColors.plum2,
+    color: appColors.textSecondary,
     fontWeight: "400",
   },
   progressPercent: {
-    color: appColors.plum,
+    color: appColors.textPrimary,
     fontSize: 14,
     fontWeight: "400",
   },
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
   progressTrack: {
     marginTop: -3,
     flexDirection: "row",
-    height: 6,
+    height: 14,
     borderRadius: 999,
     backgroundColor: appColors.surfaceGhostStrong,
     overflow: "hidden",
@@ -175,3 +175,4 @@ const styles = StyleSheet.create({
 });
 
 export default FoodDiaryHeroCard;
+

@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { XIcon } from "phosphor-react-native";
 import { DB } from "../../store/DB";
@@ -406,6 +407,7 @@ export const FoodBarcodeScannerScaffold = ({
       presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
+      <StatusBar style="light" backgroundColor={appColors.slate950} animated />
       <View
         ref={screenRef}
         style={styles.screen}
@@ -596,8 +598,8 @@ export const styles = StyleSheet.create({
     maxWidth: 320,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: appColors.brandOverlay34,
-    backgroundColor: appColors.darkInkOverlay82,
+    borderColor: appColors.brand700,
+    backgroundColor: appColors.surfaceOverlay,
     padding: 22,
     gap: 12,
   },
@@ -643,9 +645,9 @@ export const styles = StyleSheet.create({
   },
   headerBadge: {
     borderRadius: 999,
-    backgroundColor: appColors.slateOverlay72,
+    backgroundColor: appColors.surfaceOverlay,
     borderWidth: 1,
-    borderColor: appColors.whiteOverlay18,
+    borderColor: appColors.surfaceGhostStrong,
     paddingHorizontal: 12,
     paddingVertical: 9,
   },
@@ -658,14 +660,14 @@ export const styles = StyleSheet.create({
   },
   backendBadge: {
     borderRadius: 999,
-    backgroundColor: appColors.brandOverlay18,
+    backgroundColor: appColors.brand800,
     borderWidth: 1,
-    borderColor: appColors.brandOverlay38,
+    borderColor: appColors.brand700,
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
   backendBadgeText: {
-    color: appColors.violetSoftBg,
+    color: appColors.brand300,
     fontSize: 12,
     fontWeight: "800",
   },
@@ -675,9 +677,9 @@ export const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.slateOverlay72,
+    backgroundColor: appColors.surfaceOverlay,
     borderWidth: 1,
-    borderColor: appColors.whiteOverlay18,
+    borderColor: appColors.surfaceGhostStrong,
   },
   finderWrap: {
     ...StyleSheet.absoluteFillObject,
@@ -691,8 +693,8 @@ export const styles = StyleSheet.create({
     alignSelf: "center",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: appColors.whiteOverlay82,
-    backgroundColor: appColors.whiteOverlay04,
+    borderColor: appColors.white,
+    backgroundColor: appColors.surfaceGhost,
     overflow: "hidden",
     justifyContent: "center",
   },
@@ -700,8 +702,8 @@ export const styles = StyleSheet.create({
     height: 2,
     marginHorizontal: 20,
     borderRadius: 999,
-    backgroundColor: appColors.violet400,
-    shadowColor: appColors.violet400,
+    backgroundColor: appColors.brand400,
+    shadowColor: appColors.brand400,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
     shadowRadius: 10,
@@ -709,7 +711,7 @@ export const styles = StyleSheet.create({
   },
   footerCard: {
     borderRadius: 8,
-    backgroundColor: appColors.darkInkOverlay78,
+    backgroundColor: appColors.surfaceOverlay,
     borderWidth: 1,
     borderColor: appColors.surfaceGhostStrong,
     padding: 18,
@@ -727,13 +729,13 @@ export const styles = StyleSheet.create({
     marginBottom: 8,
   },
   footerHint: {
-    color: appColors.foodPreviewText,
+    color: appColors.brand300,
     fontSize: 12,
     fontWeight: "700",
   },
   manualCard: {
     borderRadius: 8,
-    backgroundColor: appColors.darkInkOverlay78,
+    backgroundColor: appColors.surfaceOverlay,
     borderWidth: 1,
     borderColor: appColors.surfaceGhostStrong,
     padding: 16,
@@ -759,8 +761,8 @@ export const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: appColors.whiteOverlay18,
-    backgroundColor: appColors.slateOverlay72,
+    borderColor: appColors.surfaceGhostStrong,
+    backgroundColor: appColors.surfaceOverlay,
     color: appColors.slate50,
     fontSize: 15,
     fontWeight: "800",
@@ -804,7 +806,7 @@ export const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: appColors.surfaceOverlay,
     borderWidth: 1,
-    borderColor: appColors.whiteOverlay16,
+    borderColor: appColors.surfaceGhostStrong,
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
@@ -818,13 +820,13 @@ export const styles = StyleSheet.create({
     marginBottom: 2,
   },
   lookupText: {
-    color: appColors.foodPreviewText,
+    color: appColors.brand300,
     fontSize: 12,
     fontWeight: "700",
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: appColors.darkInkOverlay60,
+    backgroundColor: appColors.surfaceOverlay,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 24,
@@ -869,3 +871,4 @@ export const styles = StyleSheet.create({
     opacity: 0.9,
   },
 });
+

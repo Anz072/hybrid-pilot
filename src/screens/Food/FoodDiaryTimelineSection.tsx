@@ -84,7 +84,7 @@ const FoodDiaryTimelineItem = ({
               style={[
                 styles.hourTitle,
                 bucket.entries.length === 0 && {
-                  color: withOpacity(appColors.foodText, 0.6),
+                  color: withOpacity(appColors.textPrimary, 0.6),
                 },
               ]}
             >
@@ -266,13 +266,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 22,
     fontWeight: "900",
     marginBottom: 16,
   },
   sectionText: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 14,
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   axisLabel: {
-    color: appColors.foodPlaceholder,
+    color: appColors.textMuted,
     fontSize: 12,
     fontWeight: "800",
   },
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
     width: 9,
     height: 9,
     borderRadius: 999,
-    backgroundColor: appColors.lavenderDot,
+    backgroundColor: appColors.brand400,
   },
   axisDotActive: {
     backgroundColor: appColors.brand500,
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
   axisLine: {
     width: 1,
     flex: 1,
-    backgroundColor: appColors.foodSectionBg,
+    backgroundColor: appColors.surfaceCardAlt,
     marginBottom: -8,
   },
   timelineContent: {
@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
   },
   hourCard: {
     borderRadius: 8,
-    backgroundColor: appColors.foodSurfaceAlt,
+    backgroundColor: appColors.surfaceCardAlt,
     padding: 10,
   },
   hourCardActive: {
@@ -349,11 +349,11 @@ const styles = StyleSheet.create({
   hourTitle: {
     fontSize: 12,
     fontWeight: "600",
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     letterSpacing: 0.5,
   },
   hourText: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
     maxWidth: 210,
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   collapseText: {
-    color: appColors.foodPlaceholder,
+    color: appColors.textMuted,
     fontSize: 11,
     fontWeight: "800",
   },
@@ -382,12 +382,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: appColors.white,
     borderWidth: 1,
-    borderColor: appColors.foodTimelineBorder,
+    borderColor: appColors.borderSoft,
     paddingHorizontal: 12,
     paddingVertical: 12,
   },
   emptyStateText: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 13,
     fontWeight: "800",
     marginBottom: 2,
@@ -415,21 +415,21 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   entryTitle: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 16,
     marginBottom: 4,
     fontWeight: "700",
   },
   entryTime: {
-    color: appColors.black65,
+    color: appColors.slate300,
     fontSize: 10,
     borderRadius: 8,
     paddingHorizontal: 3,
     paddingVertical: 2,
-    backgroundColor: appColors.brandOverlay18,
+    backgroundColor: appColors.brand800,
   },
   entryText: {
-    color: appColors.black30,
+    color: appColors.slate400,
     fontSize: 12,
     lineHeight: 17,
   },
@@ -448,3 +448,4 @@ const styles = StyleSheet.create({
 });
 
 export default FoodDiaryTimelineSection;
+

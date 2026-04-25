@@ -11,6 +11,7 @@ import {
   upsertSupabaseProfile,
   type SupabaseProfile,
 } from "../API/supabase/supabaseProfiles";
+import { resolveGoalStrategy } from "../engine/goalStrategy";
 import { getLocalAccount } from "../storage/localStore";
 import type {
   AdaptiveCalorieMode,
@@ -273,6 +274,11 @@ const toDbUserFromProfile = ({
     localId: legacyUser?.id ?? 0,
     provider,
   });
+  const goal = base.goal ?? legacyUser?.goal ?? null;
+  const goalStrategy = resolveGoalStrategy(
+    goal,
+    base.goalStrategy ?? legacyUser?.goalStrategy ?? null,
+  );
 
   return {
     ...base,
@@ -294,7 +300,8 @@ const toDbUserFromProfile = ({
     gender: base.gender ?? legacyUser?.gender ?? null,
     heightCm: base.heightCm ?? legacyUser?.heightCm ?? null,
     activityLevel: base.activityLevel ?? legacyUser?.activityLevel ?? null,
-    goal: base.goal ?? legacyUser?.goal ?? null,
+    goal,
+    goalStrategy,
     trainingTypes: base.trainingTypes ?? legacyUser?.trainingTypes ?? null,
     proteinFocus: base.proteinFocus ?? legacyUser?.proteinFocus ?? null,
     calorieAllowance:

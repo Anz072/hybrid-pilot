@@ -33,39 +33,39 @@ const ActivityLevelScreen = ({ navigation, route }: Props) => {
       value: "sedentary",
       note: "Mostly seated, minimal movement.",
       accent: appColors.brand300,
-      bgColor: appColors.brandOverlay18,
-      borderColor: appColors.cyan500,
+      bgColor: appColors.brand800,
+      borderColor: appColors.brand400,
     },
     {
       label: "Light movement",
       value: "lightly_active",
       note: "Daily steps with occasional activity.",
-      accent: appColors.emerald500,
-      bgColor: appColors.tealOverlay18,
-      borderColor: appColors.emerald500,
+      accent: appColors.success500,
+      bgColor: appColors.success700,
+      borderColor: appColors.success500,
     },
     {
       label: "Regular training",
       value: "moderately_active",
       note: "Frequent workouts through the week.",
-      accent: appColors.amberSoft,
-      bgColor: appColors.amberOverlay18,
-      borderColor: appColors.amber600,
+      accent: appColors.warningSurface,
+      bgColor: appColors.warning800,
+      borderColor: appColors.warning600,
     },
     {
       label: "High output",
       value: "very_active",
       note: "Demanding routine and heavy training volume.",
       accent: appColors.dangerSoftBg,
-      bgColor: appColors.dangerOverlay18,
+      bgColor: appColors.danger800,
       borderColor: appColors.danger600,
     },
     {
       label: "Beast mode",
       value: "athlete",
       note: "Performance-centric, high weekly load.",
-      accent: appColors.violetSoftBg,
-      bgColor: appColors.brandOverlay18,
+      accent: appColors.brand700,
+      bgColor: appColors.brand800,
       borderColor: appColors.brand700,
     },
   ];
@@ -104,7 +104,7 @@ const ActivityLevelScreen = ({ navigation, route }: Props) => {
             label: "Goal",
             value: formatGoalSummary(
               route.params.goal,
-              route.params.goalRateKgPerWeek,
+              route.params.goalStrategy,
             ),
             onEdit: () => navigation.push("Goal"),
           },
@@ -114,7 +114,7 @@ const ActivityLevelScreen = ({ navigation, route }: Props) => {
             onEdit: () =>
               navigation.push("BodyData", {
                 goal: route.params.goal,
-                goalRateKgPerWeek: route.params.goalRateKgPerWeek,
+                goalStrategy: route.params.goalStrategy,
                 bodyData: route.params.bodyData,
                 training: route.params.training,
                 proteinFocus: route.params.proteinFocus,
@@ -131,14 +131,14 @@ const ActivityLevelScreen = ({ navigation, route }: Props) => {
               subtitle={item.note}
               dataToSend={{
                 goal: route.params.goal,
-                goalRateKgPerWeek: route.params.goalRateKgPerWeek,
+                goalStrategy: route.params.goalStrategy,
                 bodyData: route.params.bodyData,
                 activity: item.value,
                 training: route.params.training,
                 proteinFocus: route.params.proteinFocus,
               }}
               value={item.value}
-              borderColor={appColors.charcoal}
+              borderColor={appColors.borderStrong}
               navigation={navigation}
               navGoal="Training"
             />
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     width: 180,
     height: 180,
     borderRadius: 999,
-    backgroundColor: appColors.skySoftBg,
+    backgroundColor: appColors.brand800,
   },
   bgOrbBottom: {
     position: "absolute",
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 999,
-    backgroundColor: appColors.foodEyebrowBg,
+    backgroundColor: appColors.brand800,
   },
   headerWrap: {
     marginTop: 18,
@@ -192,8 +192,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: appColors.sky800,
-    backgroundColor: appColors.skySoftBg,
+    color: appColors.brand800,
+    backgroundColor: appColors.brand800,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
@@ -263,3 +263,4 @@ const styles = StyleSheet.create({
 });
 
 export default ActivityLevelScreen;
+

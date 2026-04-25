@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbTop,
+    backgroundColor: appColors.brand800,
   },
   orbBottom: {
     position: "absolute",
@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
     width: 240,
     height: 240,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbBottom,
+    backgroundColor: appColors.success700,
   },
   card: {
     backgroundColor: appColors.surfaceCard,
@@ -667,3 +667,4 @@ const styles = StyleSheet.create({
 });
 
 export default AdaptiveCaloriesSettingsScreen;
+

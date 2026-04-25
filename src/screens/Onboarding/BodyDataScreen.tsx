@@ -20,13 +20,13 @@ import type {
   BodyData,
   OnboardingParamList,
 } from "../../navigation/onboardingTypes";
+import { formatGoalStrategyMeta } from "../../engine/goalStrategy";
 import {
   buildBirthdateIsoString,
   formatDateToYmd,
   getAgeToday,
   parseBirthdateValue,
 } from "../../helpers";
-import { formatGoalRateKg } from "./initialCalculations";
 import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
 import OnboardingTopBar from "./OnboardingTopBar";
 import { appColors } from "../../theme/colors";
@@ -115,7 +115,7 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
 
     navigation.push("Activity", {
       goal: route.params.goal,
-      goalRateKgPerWeek: route.params.goalRateKgPerWeek,
+      goalStrategy: route.params.goalStrategy,
       bodyData,
       training: route.params.training,
       proteinFocus: route.params.proteinFocus,
@@ -152,11 +152,10 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
             Quick setup for a better TDEE estimate. We use your birthdate to
             calculate age automatically.
           </Text>
-          {route.params.goalRateKgPerWeek != null ? (
-            <Text style={styles.contextNote}>
-              Target pace selected: {formatGoalRateKg(route.params.goalRateKgPerWeek)} kg per week.
-            </Text>
-          ) : null}
+          <Text style={styles.contextNote}>
+            Selected approach:{" "}
+            {formatGoalStrategyMeta(route.params.goal, route.params.goalStrategy)}.
+          </Text>
         </View>
 
         <View style={styles.formCard}>
@@ -267,7 +266,7 @@ const styles = StyleSheet.create({
     width: 170,
     height: 170,
     borderRadius: 999,
-    backgroundColor: appColors.blueSoftBg,
+    backgroundColor: appColors.brand800,
   },
   bgOrbBottom: {
     position: "absolute",
@@ -276,7 +275,7 @@ const styles = StyleSheet.create({
     width: 210,
     height: 210,
     borderRadius: 999,
-    backgroundColor: appColors.foodEyebrowBg,
+    backgroundColor: appColors.brand800,
   },
   headerWrap: {
     marginTop: 18,
@@ -294,8 +293,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: appColors.sky800,
-    backgroundColor: appColors.skySoftBg,
+    color: appColors.brand800,
+    backgroundColor: appColors.brand800,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
@@ -316,7 +315,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 13,
     lineHeight: 19,
-    color: appColors.green700,
+    color: appColors.success700,
     fontWeight: "700",
   },
   formCard: {
@@ -327,7 +326,7 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: appColors.lavenderBorder,
+    borderColor: appColors.borderStrong,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 14,
@@ -371,7 +370,7 @@ const styles = StyleSheet.create({
   pickerWrap: {
     marginTop: 8,
     borderWidth: 1,
-    borderColor: appColors.lavenderBorder,
+    borderColor: appColors.borderStrong,
     borderRadius: 8,
     paddingVertical: 8,
   },
@@ -392,7 +391,7 @@ const styles = StyleSheet.create({
   },
   sexChip: {
     borderWidth: 1,
-    borderColor: appColors.lavenderBorder,
+    borderColor: appColors.borderStrong,
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -416,3 +415,4 @@ const styles = StyleSheet.create({
 });
 
 export default BodyDataScreen;
+

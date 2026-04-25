@@ -42,14 +42,14 @@ const CHART_TOP_PADDING = 14;
 const CHART_BOTTOM_PADDING = 34;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-const TREND_LINE_COLOR = appColors.violet500;
-const TREND_HALO_COLOR = appColors.violetSoftBg;
+const TREND_LINE_COLOR = appColors.brand600;
+const TREND_HALO_COLOR = appColors.brand700;
 const DAILY_LINE_COLOR = appColors.slate300;
 const DAILY_POINT_STROKE = appColors.slate400;
 const DAILY_POINT_FILL = appColors.white;
-const CURRENT_POINT_FILL = appColors.violet500;
+const CURRENT_POINT_FILL = appColors.brand600;
 const GRID_COLOR = appColors.borderSoft;
-const AXIS_TEXT_COLOR = appColors.plumPlaceholderAlt;
+const AXIS_TEXT_COLOR = appColors.textMuted;
 const GOAL_BAND_FILL = appColors.borderSoft;
 const GOAL_LINE_COLOR = appColors.brand400;
 
@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   periodLabel: {
-    color: appColors.plum2,
+    color: appColors.textSecondary,
     fontSize: 14,
     fontWeight: "700",
     marginBottom: 4,
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
   },
   logsPill: {
     borderRadius: 999,
-    backgroundColor: appColors.lavenderSurface,
+    backgroundColor: appColors.surfaceFieldAlt,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
@@ -614,9 +614,9 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   chartFrame: {
-    backgroundColor: appColors.foodScreenBg,
+    backgroundColor: appColors.surfaceCanvas,
     overflow: "hidden",
-    borderColor: appColors.foodSectionBg,
+    borderColor: appColors.surfaceCardAlt,
     paddingVertical: 6,
   },
   rangeRail: {
@@ -642,7 +642,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.16,
     shadowRadius: 10,
-    backgroundColor: appColors.blue600
+    backgroundColor: appColors.brand600
   },
   segmentPressed: {
     opacity: 0.92,
@@ -653,7 +653,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   segmentTextActive: {
-    color: appColors.plum,
+    color: appColors.textPrimary
   },
   legendCard: {
     marginTop: 14,
@@ -666,7 +666,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 15,
     borderWidth: 1,
-    borderColor: appColors.foodSectionBg,
+    borderColor: appColors.surfaceCardAlt,
   },
   legendItem: {
     flexDirection: "row",
@@ -700,10 +700,11 @@ const styles = StyleSheet.create({
     backgroundColor: TREND_LINE_COLOR,
   },
   legendText: {
-    color: appColors.plum690,
+    color: appColors.textSecondary,
     fontSize: 13,
     fontWeight: "700",
   },
 });
 
 export default WeightTrendChart;
+

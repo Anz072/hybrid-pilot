@@ -294,7 +294,7 @@ const MicrosOverviewScreen = () => {
     : "Using general adult RDA and AI targets until your profile is complete.";
 
   const getMacroBarAccent = (item: MicronutrientRowWithTarget) =>
-    item.group === "Vitamins" ? appColors.brand500 : appColors.green600;
+    item.group === "Vitamins" ? appColors.brand500 : appColors.success600;
 
   const getMacroBarPlaces = (item: MicronutrientRowWithTarget) => {
     if (item.unit === "mg") {
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbTop,
+    backgroundColor: appColors.brand800,
   },
   orbBottom: {
     position: "absolute",
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
     width: 260,
     height: 260,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbBottom,
+    backgroundColor: appColors.success700,
   },
   headerRow: {
     flexDirection: "row",
@@ -692,3 +692,4 @@ const styles = StyleSheet.create({
 });
 
 export default MicrosOverviewScreen;
+

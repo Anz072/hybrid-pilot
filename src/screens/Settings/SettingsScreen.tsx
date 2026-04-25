@@ -416,10 +416,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   seedButton: {
-    backgroundColor: appColors.green700,
+    backgroundColor: appColors.success700,
   },
   weightDownButton: {
-    backgroundColor: appColors.green700,
+    backgroundColor: appColors.success700,
   },
   weightUpButton: {
     backgroundColor: appColors.brand700,

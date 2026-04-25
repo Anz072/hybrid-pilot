@@ -1,6 +1,7 @@
 import React from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -15,7 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getEffectiveCalorieTargetForDate } from "../../engine/calorieTargets";
 import type { MoreParamList } from "../../navigation/MoreNavigator";
 import { DB } from "../../store/DB";
-import { useAppSelector } from "../../store/hooks";
+import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import type {
   DBAdaptiveCalorieRecommendation,
   DBDiaryDayStatus,
@@ -33,6 +34,10 @@ import {
 } from "../Food/foodUtils";
 import { formatWeightKg } from "../Weight/weightUtils";
 import SettingsStackHeader from "./SettingsStackHeader";
+import {
+  applyAdaptiveRecommendationForUser,
+  rejectAdaptiveRecommendationForUser,
+} from "./adaptiveCaloriesActions";
 
 type Props = NativeStackScreenProps<MoreParamList, "WeeklyReviewScreen">;
 
@@ -273,14 +278,22 @@ const clampRatio = (value: number): number => {
 
 const WeeklyReviewScreen = ({ navigation }: Props) => {
   const insets = useSafeAreaInsets();
+  const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.user.currentUser);
   const [review, setReview] = React.useState<WeeklyReviewState>(EMPTY_REVIEW);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
   const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [actionBusy, setActionBusy] = React.useState<"accept" | "dismiss" | null>(
+    null,
+  );
+  const [nextActionNote, setNextActionNote] = React.useState<string | null>(null);
 
   const loadReview = React.useCallback(
-    async (options?: { refreshing?: boolean }) => {
+    async (options?: {
+      refreshing?: boolean;
+      userBaseCaloriesOverride?: number | null;
+    }) => {
       if (!user) {
         setReview(EMPTY_REVIEW);
         setLoading(false);
@@ -323,7 +336,8 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
           diaryStatuses,
           entries,
           settings,
-          userBaseCalories: user.calorieAllowance,
+          userBaseCalories:
+            options?.userBaseCaloriesOverride ?? user.calorieAllowance,
           weekDates,
         });
         setReview({
@@ -357,6 +371,10 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
     }, [loadReview]),
   );
 
+  React.useEffect(() => {
+    setNextActionNote(null);
+  }, [review.proposedRecommendation?.id]);
+
   const elapsedDayReviews = React.useMemo(() => {
     const elapsedKeys = new Set(
       review.reviewDates.map((date) => formatFoodDateKey(date)),
@@ -388,6 +406,13 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
     () => getWeightTrend(review.weightEntries),
     [review.weightEntries],
   );
+  const weightTrendLabel =
+    weightTrend.delta != null
+      ? formatSignedWeightDelta(weightTrend.delta)
+      : weightTrend.last
+        ? `${formatWeightKg(weightTrend.last.valueKg)} kg`
+        : "--";
+  const completionQualityLabel = `${completedDays}/${review.dayReviews.length || 7} complete`;
   const adaptiveStatus = !review.settings?.adaptiveCaloriesEnabled
     ? "Off"
     : review.proposedRecommendation
@@ -417,6 +442,76 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
             review.adaptiveRecommendation.createdAt,
           ).toLocaleDateString()}`
         : "No saved adaptive recommendation yet.";
+  const hasOpenProposal = review.proposedRecommendation != null;
+  const nextActionTitle = !review.settings?.adaptiveCaloriesEnabled
+    ? "Turn on adaptive calories"
+    : hasOpenProposal
+      ? "Review this calorie proposal"
+      : completedDays < 4
+        ? "Complete more diary days"
+        : "Keep collecting this week's signal";
+  const nextActionText = !review.settings?.adaptiveCaloriesEnabled
+    ? "You're already tracking intake, weight, and diary completion here. Turn adaptive calories on when you want a weekly recommendation to act on."
+    : hasOpenProposal
+      ? `Calories vs target are ${calorieDelta != null ? formatSignedCalories(calorieDelta) : "--"}, weight trend is ${weightTrendLabel}, and completion quality is ${completionQualityLabel}. This proposal suggests ${formatFoodNumber(review.proposedRecommendation?.recommendedBaseCalories ?? 0, " kcal")}.`
+      : completedDays < 4
+        ? `Completion quality is ${completionQualityLabel}. Finish logging and mark full days complete so the next adaptive recommendation has a stronger signal.`
+        : `Calories vs target are ${calorieDelta != null ? formatSignedCalories(calorieDelta) : "--"} and weight trend is ${weightTrendLabel}. Keep logging and weigh in again if you want the next recommendation to be stronger.`;
+
+  const openAdaptiveSettings = React.useCallback(() => {
+    navigation.navigate("AdaptiveCaloriesSettingsScreen");
+  }, [navigation]);
+
+  const handleApplyRecommendation = React.useCallback(async () => {
+    if (!user || !review.proposedRecommendation) {
+      return;
+    }
+
+    setActionBusy("accept");
+
+    try {
+      const savedUser = await applyAdaptiveRecommendationForUser({
+        dispatch,
+        recommendation: review.proposedRecommendation,
+        user,
+        settings: review.settings,
+      });
+      setNextActionNote(null);
+      await loadReview({
+        userBaseCaloriesOverride: savedUser.calorieAllowance ?? null,
+      });
+    } catch {
+      Alert.alert("Could not apply recommendation", "Please try again.");
+    } finally {
+      setActionBusy(null);
+    }
+  }, [dispatch, loadReview, review.proposedRecommendation, review.settings, user]);
+
+  const handleDismissRecommendation = React.useCallback(async () => {
+    if (!review.proposedRecommendation) {
+      return;
+    }
+
+    setActionBusy("dismiss");
+
+    try {
+      await rejectAdaptiveRecommendationForUser({
+        recommendation: review.proposedRecommendation,
+      });
+      setNextActionNote(null);
+      await loadReview();
+    } catch {
+      Alert.alert("Could not dismiss recommendation", "Please try again.");
+    } finally {
+      setActionBusy(null);
+    }
+  }, [loadReview, review.proposedRecommendation]);
+
+  const handlePostponeRecommendation = React.useCallback(() => {
+    setNextActionNote(
+      "This proposal will stay open so you can come back to it later.",
+    );
+  }, []);
 
   return (
     <View style={styles.screen}>
@@ -476,6 +571,114 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
           </View>
         ) : (
           <>
+            <View style={styles.nextActionCard}>
+              <View style={styles.rowBetween}>
+                <View style={styles.copyColumn}>
+                  <Text style={styles.eyebrow}>Next action</Text>
+                  <Text style={styles.nextActionTitle}>{nextActionTitle}</Text>
+                  <Text style={styles.cardText}>{nextActionText}</Text>
+                </View>
+                <View style={styles.nextActionIcon}>
+                  <LightningIcon
+                    size={24}
+                    color={
+                      hasOpenProposal ? appColors.warning300 : appColors.brand300
+                    }
+                    weight="fill"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.nextActionStats}>
+                <View style={styles.nextActionStat}>
+                  <Text style={styles.metricLabel}>Calories vs target</Text>
+                  <Text style={styles.nextActionStatValue}>
+                    {calorieDelta != null ? formatSignedCalories(calorieDelta) : "--"}
+                  </Text>
+                </View>
+                <View style={styles.nextActionStat}>
+                  <Text style={styles.metricLabel}>Weight trend</Text>
+                  <Text style={styles.nextActionStatValue}>{weightTrendLabel}</Text>
+                </View>
+                <View style={styles.nextActionStat}>
+                  <Text style={styles.metricLabel}>Completion quality</Text>
+                  <Text style={styles.nextActionStatValue}>
+                    {completionQualityLabel}
+                  </Text>
+                </View>
+              </View>
+
+              {hasOpenProposal ? (
+                <>
+                  <Pressable
+                    onPress={() => void handleApplyRecommendation()}
+                    disabled={actionBusy != null}
+                    style={({ pressed }) => [
+                      styles.primaryButton,
+                      actionBusy != null && styles.buttonDisabled,
+                      pressed && actionBusy == null && styles.buttonPressed,
+                    ]}
+                  >
+                    <Text style={styles.primaryButtonText}>
+                      {actionBusy === "accept"
+                        ? "Applying update..."
+                        : "Accept update"}
+                    </Text>
+                  </Pressable>
+
+                  <View style={styles.nextActionButtonRow}>
+                    <Pressable
+                      onPress={handlePostponeRecommendation}
+                      disabled={actionBusy != null}
+                      style={({ pressed }) => [
+                        styles.secondaryButton,
+                        styles.nextActionButton,
+                        actionBusy != null && styles.buttonDisabled,
+                        pressed && actionBusy == null && styles.buttonPressed,
+                      ]}
+                    >
+                      <Text style={styles.secondaryButtonText}>Postpone</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => void handleDismissRecommendation()}
+                      disabled={actionBusy != null}
+                      style={({ pressed }) => [
+                        styles.secondaryButton,
+                        styles.nextActionButton,
+                        styles.dismissButton,
+                        actionBusy != null && styles.buttonDisabled,
+                        pressed && actionBusy == null && styles.buttonPressed,
+                      ]}
+                    >
+                      <Text
+                        style={[styles.secondaryButtonText, styles.dismissButtonText]}
+                      >
+                        {actionBusy === "dismiss"
+                          ? "Dismissing..."
+                          : "Dismiss"}
+                      </Text>
+                    </Pressable>
+                  </View>
+                </>
+              ) : (
+                <Pressable
+                  onPress={openAdaptiveSettings}
+                  style={({ pressed }) => [
+                    styles.secondaryButton,
+                    pressed && styles.buttonPressed,
+                  ]}
+                >
+                  <Text style={styles.secondaryButtonText}>
+                    Open adaptive calories
+                  </Text>
+                </Pressable>
+              )}
+
+              {nextActionNote ? (
+                <Text style={styles.nextActionNote}>{nextActionNote}</Text>
+              ) : null}
+            </View>
+
             <View style={styles.heroCard}>
               <View style={styles.heroTopRow}>
                 <View style={styles.copyColumn}>
@@ -510,7 +713,7 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
 
               <View style={styles.heroMetrics}>
                 <View style={styles.metricCard}>
-                  <Text style={styles.metricLabel}>Completed days</Text>
+                  <Text style={styles.metricLabel}>Completion quality</Text>
                   <Text style={styles.metricValue}>
                     {completedDays}/{review.dayReviews.length || 7}
                   </Text>
@@ -582,7 +785,7 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
                     size={24}
                     color={
                       review.proposedRecommendation
-                        ? appColors.amber300
+                        ? appColors.warning300
                         : appColors.brand300
                     }
                     weight="fill"
@@ -716,7 +919,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbTop,
+    backgroundColor: appColors.brand800,
   },
   orbBottom: {
     position: "absolute",
@@ -725,7 +928,7 @@ const styles = StyleSheet.create({
     width: 250,
     height: 250,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbBottom,
+    backgroundColor: appColors.success700,
   },
   heroCard: {
     backgroundColor: appColors.surfaceCard,
@@ -747,7 +950,58 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.brandOverlay18,
+    backgroundColor: appColors.brand800,
+  },
+  nextActionCard: {
+    backgroundColor: appColors.surfaceCard,
+    borderRadius: 8,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: appColors.brand500,
+    marginBottom: 14,
+  },
+  nextActionTitle: {
+    ...appTypography.displayCard,
+    color: appColors.textPrimary,
+  },
+  nextActionIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: appColors.brand800,
+  },
+  nextActionStats: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 18,
+  },
+  nextActionStat: {
+    flex: 1,
+    borderRadius: 8,
+    backgroundColor: appColors.surfaceField,
+    padding: 12,
+  },
+  nextActionStatValue: {
+    color: appColors.textPrimary,
+    fontSize: 14,
+    lineHeight: 19,
+    fontWeight: "700",
+  },
+  nextActionButtonRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 10,
+  },
+  nextActionButton: {
+    flex: 1,
+    marginTop: 0,
+  },
+  nextActionNote: {
+    ...appTypography.bodySmall,
+    color: appColors.textSecondary,
+    marginTop: 12,
   },
   eyebrow: {
     alignSelf: "flex-start",
@@ -776,7 +1030,7 @@ const styles = StyleSheet.create({
   metricCard: {
     flex: 1,
     borderRadius: 8,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField,
     padding: 12,
   },
   metricGrid: {
@@ -872,7 +1126,7 @@ const styles = StyleSheet.create({
   progressFill: {
     height: "100%",
     borderRadius: 999,
-    backgroundColor: appColors.green600,
+    backgroundColor: appColors.success600,
   },
   dayStack: {
     gap: 12,
@@ -883,7 +1137,7 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 12,
     borderRadius: 8,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField
   },
   dayDate: {
     width: 58,
@@ -923,7 +1177,7 @@ const styles = StyleSheet.create({
   },
   completionPillDone: {
     color: appColors.white,
-    backgroundColor: appColors.green700,
+    backgroundColor: appColors.success700,
   },
   smallProgressTrack: {
     height: 5,
@@ -947,7 +1201,7 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 12,
     borderRadius: 8,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField
   },
   rankPill: {
     width: 30,
@@ -955,7 +1209,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.brandOverlay18,
+    backgroundColor: appColors.brand800,
   },
   rankText: {
     color: appColors.brand300,
@@ -992,10 +1246,34 @@ const styles = StyleSheet.create({
     borderColor: appColors.borderStrong,
     backgroundColor: appColors.surfaceGhost,
   },
+  primaryButton: {
+    marginTop: 16,
+    borderRadius: 999,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: appColors.brand700,
+  },
+  primaryButtonText: {
+    color: appColors.white,
+    fontSize: 14,
+    fontWeight: "700",
+  },
   secondaryButtonText: {
     color: appColors.textPrimary,
     fontSize: 14,
     fontWeight: "700",
+  },
+  dismissButton: {
+    backgroundColor: appColors.dangerSurface,
+    borderColor: appColors.danger600,
+  },
+  dismissButtonText: {
+    color: appColors.danger700,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
   buttonPressed: {
     opacity: 0.9,
@@ -1003,3 +1281,4 @@ const styles = StyleSheet.create({
 });
 
 export default WeeklyReviewScreen;
+

@@ -75,6 +75,7 @@ const AccountScreen = ({ navigation, route }: Props) => {
       heightCm: onboarding.bodyData.heightCm,
       activityLevel: onboarding.activity,
       goal: onboarding.goal,
+      goalStrategy: onboarding.goalStrategy,
       trainingTypes: onboarding.training,
       proteinFocus: onboarding.proteinFocus,
       calorieAllowance: onboarding.fuelPlan.calories,
@@ -195,7 +196,7 @@ const AccountScreen = ({ navigation, route }: Props) => {
               label: "Goal",
               value: formatGoalSummary(
                 route.params.onboarding.goal,
-                route.params.onboarding.goalRateKgPerWeek,
+                route.params.onboarding.goalStrategy,
               ),
               onEdit: () => navigation.push("Goal"),
             },
@@ -205,7 +206,7 @@ const AccountScreen = ({ navigation, route }: Props) => {
               onEdit: () =>
                 navigation.push("BodyData", {
                   goal: route.params.onboarding.goal,
-                  goalRateKgPerWeek: route.params.onboarding.goalRateKgPerWeek,
+                  goalStrategy: route.params.onboarding.goalStrategy,
                   bodyData: route.params.onboarding.bodyData,
                   training: route.params.onboarding.training,
                   proteinFocus: route.params.onboarding.proteinFocus,
@@ -217,7 +218,7 @@ const AccountScreen = ({ navigation, route }: Props) => {
               onEdit: () =>
                 navigation.push("Activity", {
                   goal: route.params.onboarding.goal,
-                  goalRateKgPerWeek: route.params.onboarding.goalRateKgPerWeek,
+                  goalStrategy: route.params.onboarding.goalStrategy,
                   bodyData: route.params.onboarding.bodyData,
                   training: route.params.onboarding.training,
                   proteinFocus: route.params.onboarding.proteinFocus,
@@ -229,7 +230,7 @@ const AccountScreen = ({ navigation, route }: Props) => {
               onEdit: () =>
                 navigation.push("Training", {
                   goal: route.params.onboarding.goal,
-                  goalRateKgPerWeek: route.params.onboarding.goalRateKgPerWeek,
+                  goalStrategy: route.params.onboarding.goalStrategy,
                   bodyData: route.params.onboarding.bodyData,
                   activity: route.params.onboarding.activity,
                   training: route.params.onboarding.training,
@@ -244,7 +245,7 @@ const AccountScreen = ({ navigation, route }: Props) => {
               onEdit: () =>
                 navigation.push("ProteinFocus", {
                   goal: route.params.onboarding.goal,
-                  goalRateKgPerWeek: route.params.onboarding.goalRateKgPerWeek,
+                  goalStrategy: route.params.onboarding.goalStrategy,
                   bodyData: route.params.onboarding.bodyData,
                   activity: route.params.onboarding.activity,
                   training: route.params.onboarding.training,
@@ -313,7 +314,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: "uppercase",
     color: appColors.brand500,
-    backgroundColor: appColors.foodEyebrowBg,
+    backgroundColor: appColors.brand800,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
@@ -344,7 +345,7 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: appColors.charcoal,
+    borderColor: appColors.borderStrong,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 14,
@@ -383,3 +384,4 @@ const styles = StyleSheet.create({
 });
 
 export default AccountScreen;
+

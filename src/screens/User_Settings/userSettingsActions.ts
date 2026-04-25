@@ -3,7 +3,11 @@ import {
   buildMacroTargetsForCalories,
   scaleMacroTargetsToCalories,
 } from "../../engine/calorieTargets";
-import type { ProteinFocus } from "../../navigation/onboardingTypes";
+import { resolveGoalStrategy } from "../../engine/goalStrategy";
+import type {
+  GoalStrategy,
+  ProteinFocus,
+} from "../../navigation/onboardingTypes";
 import { getLocalAccount, saveLocalAccount } from "../../storage/localStore";
 import { DB } from "../../store/DB";
 import type { AppDispatch } from "../../store/appStore";
@@ -170,17 +174,25 @@ export const saveAutomaticFuelPlanForUser = async ({
   activityLevel,
   dispatch,
   goal,
+  goalStrategy,
   user,
 }: {
   activityLevel?: DBUser["activityLevel"];
   dispatch: AppDispatch;
   goal?: DBUser["goal"];
+  goalStrategy?: GoalStrategy | null;
   user: DBUser;
 }): Promise<DBUser | null> => {
+  const nextGoal = goal ?? user.goal;
+  const nextGoalStrategy = resolveGoalStrategy(
+    nextGoal,
+    goalStrategy ?? user.goalStrategy,
+  );
   const nextUser = {
     ...user,
     activityLevel: activityLevel ?? user.activityLevel,
-    goal: goal ?? user.goal,
+    goal: nextGoal,
+    goalStrategy: nextGoalStrategy,
   };
   const weightKg = await getLatestUserWeightKg(user.externalId);
 
@@ -203,6 +215,7 @@ export const saveAutomaticFuelPlanForUser = async ({
     patch: {
       activityLevel: nextUser.activityLevel,
       goal: nextUser.goal,
+      goalStrategy: nextUser.goalStrategy,
       calorieAllowance: plan.calories,
       proteinG: plan.protein,
       carbsG: plan.carbs,

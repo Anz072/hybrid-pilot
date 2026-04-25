@@ -843,7 +843,7 @@ const WeightScreen = ({
                   {expanded ? "Hide" : "Open"}
                 </Text>
                 {expanded ? (
-                  <CaretUpIcon size={14} color={appColors.plumMutedAlt} weight="bold" />
+                  <CaretUpIcon size={14} color={appColors.textSecondary} weight="bold" />
                 ) : (
                   <CaretDownIcon size={14} color={appColors.textMuted} weight="bold" />
                 )}
@@ -875,7 +875,7 @@ const WeightScreen = ({
           ]}
           accessibilityLabel="Open weight data status"
         >
-          <ArrowsClockwiseIcon size={18} color={appColors.plumMuted} weight="bold" />
+          <ArrowsClockwiseIcon size={18} color={appColors.textSecondary} weight="bold" />
         </Pressable>
       </View>
       <View style={styles.heroCard}>
@@ -1057,7 +1057,7 @@ const WeightScreen = ({
         ListEmptyComponent={
           hideHistory ? null : (
             <View style={[styles.card, styles.emptyCard]}>
-              <ChartLineIcon size={28} color={appColors.green700} weight="bold" />
+              <ChartLineIcon size={28} color={appColors.success700} weight="bold" />
               <Text style={styles.sectionTitle}>Log your first weigh-in</Text>
               <Text style={styles.subtleText}>
                 Add your first weight entry to unlock trend lines, goal
@@ -1186,7 +1186,7 @@ const WeightScreen = ({
                       <View style={styles.historyInlineWarning}>
                         <WarningCircleIcon
                           size={12}
-                          color={appColors.amber600}
+                          color={appColors.warning600}
                           weight="fill"
                         />
                         <Text style={styles.historyInlineWarningText}>
@@ -1394,7 +1394,7 @@ const WeightScreen = ({
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: appColors.revolutLight,
+    backgroundColor: appColors.slate50,
     width: 64,
     height: 64,
     borderRadius: 32,
@@ -1416,7 +1416,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.96 }],
   },
   buttonText: {
-    color: appColors.revolutDark,
+    color: appColors.slate900,
     fontSize: 34,
     lineHeight: 34,
     fontWeight: "700",
@@ -1498,13 +1498,13 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.borderSoft,
   },
   heroStatLabel: {
-    color: appColors.plumSoftText,
+    color: appColors.textMuted,
     fontSize: 13,
     fontWeight: "700",
     marginBottom: 6,
   },
   heroStatValue: {
-    color: appColors.plum,
+    color: appColors.textPrimary,
     fontSize: 26,
     lineHeight: 30,
     fontWeight: "800",
@@ -1543,7 +1543,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   heroInfoValue: {
-    color: appColors.plum,
+    color: appColors.textPrimary,
     fontSize: 13,
     fontWeight: "800",
   },
@@ -1560,7 +1560,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   heroStatusText: {
-    color: appColors.plumPlaceholderAlt,
+    color: appColors.textMuted,
     fontSize: 12,
     lineHeight: 17,
   },
@@ -1581,15 +1581,15 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: appColors.green700,
-    backgroundColor: appColors.tealSoftBg,
+    color: appColors.success700,
+    backgroundColor: appColors.success700,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
     marginBottom: 10,
   },
   heroTitle: {
-    color: appColors.plum,
+    color: appColors.textPrimary,
     fontSize: 24,
     lineHeight: 28,
     fontWeight: "500",
@@ -1634,7 +1634,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   title: {
-    color: appColors.plum,
+    color: appColors.textPrimary,
     fontSize: 32,
     lineHeight: 38,
     fontWeight: "900",
@@ -1657,7 +1657,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   sectionCaption: {
-    color: appColors.plumSoft,
+    color: appColors.textMuted,
     fontSize: 13,
     lineHeight: 18,
     marginTop: 4,
@@ -1688,8 +1688,8 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   warningCard: {
-    backgroundColor: appColors.amberSoftStrong,
-    borderColor: appColors.amber300,
+    backgroundColor: appColors.warningSurfaceStrong,
+    borderColor: appColors.warning300,
   },
   warningRow: {
     flexDirection: "row",
@@ -1697,24 +1697,24 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   warningTitle: {
-    color: appColors.amber800,
+    color: appColors.warning800,
     fontSize: 14,
     fontWeight: "800",
     marginBottom: 2,
   },
   warningText: {
-    color: appColors.amber700,
+    color: appColors.warning700,
     fontSize: 13,
     lineHeight: 18,
   },
   sectionTitle: {
-    color: appColors.plum,
+    color: appColors.textPrimary,
     fontSize: 20,
     fontWeight: "800",
     marginBottom: 2,
   },
   dashboardSectionTitle: {
-    color: appColors.plum,
+    color: appColors.textPrimary,
     fontSize: 28,
     fontWeight: "800",
     marginBottom: 2,
@@ -1988,7 +1988,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   statusChipWarning: {
-    backgroundColor: appColors.amberSoftStrong,
+    backgroundColor: appColors.warningSurfaceStrong,
   },
   statusChipText: {
     color: appColors.textSecondary,
@@ -1996,19 +1996,19 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   statusChipTextWarning: {
-    color: appColors.amber700,
+    color: appColors.warning700,
   },
   historyInlineWarning: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
     borderRadius: 999,
-    backgroundColor: appColors.amberSoftStrong,
+    backgroundColor: appColors.warningSurfaceStrong,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   historyInlineWarningText: {
-    color: appColors.amber700,
+    color: appColors.warning700,
     fontSize: 11,
     fontWeight: "700",
   },
@@ -2020,7 +2020,7 @@ const styles = StyleSheet.create({
   fabHalo: {
     padding: 6,
     borderRadius: 999,
-    backgroundColor: appColors.brandOverlay18,
+    backgroundColor: appColors.brand800,
   },
   goalModalScreen: {
     flex: 1,
@@ -2098,7 +2098,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   insightTitle: {
-    color: appColors.plum2,
+    color: appColors.textSecondary,
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
@@ -2106,7 +2106,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   insightValue: {
-    color: appColors.tabFocused,
+    color: appColors.textPrimary,
     fontSize: 22,
     fontWeight: "900",
   },
@@ -2132,7 +2132,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     backgroundColor: appColors.surfaceGhost,
     borderWidth: 1,
-    borderColor: appColors.foodBorder,
+    borderColor: appColors.borderStrong,
   },
   insightToggleChipExpanded: {
     backgroundColor: appColors.surfaceRaised,
@@ -2144,7 +2144,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   insightToggleTextExpanded: {
-    color: appColors.plum2,
+    color: appColors.textSecondary,
   },
   insightExpandedBody: {
     marginTop: 12,
@@ -2187,10 +2187,11 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceGhost,
   },
   collapsedSectionText: {
-    color: appColors.plumSoft,
+    color: appColors.textMuted,
     fontSize: 12,
     lineHeight: 18,
   },
 });
 
 export default WeightScreen;
+

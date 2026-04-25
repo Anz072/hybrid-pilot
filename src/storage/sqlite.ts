@@ -897,6 +897,15 @@ const migrations: Migration[] = [
     `);
     },
   },
+  {
+    version: 22,
+    name: "user_goal_strategy",
+    up: async (db) => {
+      await db.execAsync(`
+      ALTER TABLE users ADD COLUMN goal_strategy TEXT;
+    `);
+    },
+  },
 ];
 
 const trackedTables = [

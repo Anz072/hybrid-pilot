@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
   chartWrap: {
     overflow: "hidden",
     borderRadius: 8,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField,
     paddingHorizontal: 12,
     paddingVertical: 14,
   },
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   barFill: {
     width: "100%",
     borderRadius: 8,
-    backgroundColor: appColors.brand500Overlay,
+    backgroundColor: appColors.brand800,
   },
   barFillHighlighted: {
     backgroundColor: appColors.brand500,
@@ -162,3 +162,4 @@ const styles = StyleSheet.create({
 });
 
 export default CalorieBudgetChart;
+

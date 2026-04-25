@@ -520,6 +520,15 @@ export const getFavoriteFoodIds = async (
   return rows.map((row) => row.foodId);
 };
 
+const buildFoodSearchTokens = (query?: string | null) =>
+  (query ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(" ")
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 2)
+    .slice(0, 6);
+
 export const listFoodItems = async ({
   query,
   limit = 120,
@@ -532,11 +541,20 @@ export const listFoodItems = async ({
   const normalizedQuery = query?.trim();
 
   if (normalizedQuery) {
+    const tokenClauses = buildFoodSearchTokens(normalizedQuery).map(() => `
+      (
+        lower(name) LIKE lower(?)
+        OR lower(COALESCE(brand_name, '')) LIKE lower(?)
+        OR COALESCE(barcode, '') LIKE ?
+      )
+    `);
+
     clauses.push(`
       (
         lower(name) LIKE lower(?)
         OR lower(COALESCE(brand_name, '')) LIKE lower(?)
         OR COALESCE(barcode, '') LIKE ?
+        ${tokenClauses.length ? `OR (${tokenClauses.join(" AND ")})` : ""}
       )
     `);
     params.push(
@@ -544,6 +562,9 @@ export const listFoodItems = async ({
       `%${normalizedQuery}%`,
       `%${normalizedQuery}%`,
     );
+    for (const token of buildFoodSearchTokens(normalizedQuery)) {
+      params.push(`%${token}%`, `%${token}%`, `%${token}%`);
+    }
   }
 
   if (source) {

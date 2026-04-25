@@ -7,7 +7,12 @@ import {
   Text,
   View,
 } from "react-native";
-import { CheckIcon, GaugeIcon, TargetIcon } from "phosphor-react-native";
+import {
+  CheckIcon,
+  FireIcon,
+  ShieldCheckIcon,
+  TrendUpIcon,
+} from "phosphor-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -17,12 +22,13 @@ import {
 } from "../../engine/calorieTargets";
 import {
   formatGoalStrategyMeta,
+  formatSignedCalories,
+  getGoalStrategyOption,
+  getGoalTypeForStrategy,
+  listGoalStrategyOptions,
   resolveGoalStrategy,
 } from "../../engine/goalStrategy";
-import type {
-  ActivityLevel,
-  GoalType,
-} from "../../navigation/onboardingTypes";
+import type { GoalStrategy } from "../../navigation/onboardingTypes";
 import type { MoreParamList } from "../../navigation/MoreNavigator";
 import { DB } from "../../store/DB";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
@@ -30,17 +36,15 @@ import { appColors } from "../../theme/colors";
 import CalorieBudgetChart from "./CalorieBudgetChart";
 import SettingsStackHeader from "./SettingsStackHeader";
 import {
-  ACTIVITY_LEVEL_OPTIONS,
-  formatActivityLevelLabel,
   formatGoalLabel,
-  GOAL_OPTIONS,
+  formatGoalStrategyLabel,
 } from "./userProfileOptions";
 import {
   getLatestUserWeightKg,
   saveAutomaticFuelPlanForUser,
 } from "./userSettingsActions";
 
-type Props = NativeStackScreenProps<MoreParamList, "AdjustGoalSettingsScreen">;
+type Props = NativeStackScreenProps<MoreParamList, "GoalStrategySettingsScreen">;
 
 const buildCurrentWeekDates = (reference: Date): Date[] => {
   const weekStart = new Date(reference);
@@ -54,17 +58,43 @@ const buildCurrentWeekDates = (reference: Date): Date[] => {
   });
 };
 
-const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
+const GOAL_STRATEGY_SECTIONS = [
+  {
+    key: "deficit",
+    title: "Deficit",
+    icon: <FireIcon size={18} color={appColors.danger700} weight="fill" />,
+    optionValues: [
+      "deficit_light",
+      "deficit_normal",
+      "deficit_aggressive",
+    ] as GoalStrategy[],
+  },
+  {
+    key: "maintain",
+    title: "Maintain",
+    icon: (
+      <ShieldCheckIcon size={18} color={appColors.brand700} weight="fill" />
+    ),
+    optionValues: ["maintain"] as GoalStrategy[],
+  },
+  {
+    key: "surplus",
+    title: "Surplus",
+    icon: <TrendUpIcon size={18} color={appColors.success700} weight="fill" />,
+    optionValues: [
+      "surplus_light",
+      "surplus_normal",
+      "surplus_aggressive",
+    ] as GoalStrategy[],
+  },
+] as const;
+
+const GoalStrategySettingsScreen = ({ navigation }: Props) => {
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.user.currentUser);
-  const [selectedActivity, setSelectedActivity] =
-    React.useState<ActivityLevel | null>(
-      (user?.activityLevel as ActivityLevel | null) ?? null,
-    );
-  const [selectedGoal, setSelectedGoal] = React.useState<GoalType | null>(
-    (user?.goal as GoalType | null) ?? null,
-  );
+  const [selectedStrategy, setSelectedStrategy] =
+    React.useState<GoalStrategy>("maintain");
   const [latestWeightKg, setLatestWeightKg] = React.useState<number | null>(null);
   const [settings, setSettings] = React.useState<Awaited<
     ReturnType<typeof DB.getUserSettings>
@@ -72,9 +102,10 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
   const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
-    setSelectedActivity((user?.activityLevel as ActivityLevel | null) ?? null);
-    setSelectedGoal((user?.goal as GoalType | null) ?? null);
-  }, [user?.activityLevel, user?.goal]);
+    setSelectedStrategy(
+      resolveGoalStrategy(user?.goal, user?.goalStrategy) ?? "maintain",
+    );
+  }, [user?.goal, user?.goalStrategy]);
 
   const loadContext = React.useCallback(async () => {
     if (!user) {
@@ -94,20 +125,29 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
     void loadContext();
   }, [loadContext]);
 
+  const previewGoal = React.useMemo(
+    () => getGoalTypeForStrategy(selectedStrategy),
+    [selectedStrategy],
+  );
+  const selectedOption = React.useMemo(
+    () => getGoalStrategyOption(selectedStrategy),
+    [selectedStrategy],
+  );
+
   const previewPlan = React.useMemo(() => {
-    if (!user || !selectedActivity || !selectedGoal || latestWeightKg == null) {
+    if (!user || latestWeightKg == null) {
       return null;
     }
 
     return buildAutomaticFuelPlanForUser({
       user: {
         ...user,
-        activityLevel: selectedActivity,
-        goal: selectedGoal,
+        goal: previewGoal,
+        goalStrategy: selectedStrategy,
       },
       weightKg: latestWeightKg,
     });
-  }, [latestWeightKg, selectedActivity, selectedGoal, user]);
+  }, [latestWeightKg, previewGoal, selectedStrategy, user]);
 
   const weekDates = React.useMemo(() => buildCurrentWeekDates(new Date()), []);
   const weeklyValues = React.useMemo(
@@ -130,7 +170,7 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
   );
 
   const handleSave = async () => {
-    if (!user || !selectedActivity || !selectedGoal) {
+    if (!user) {
       return;
     }
 
@@ -138,23 +178,23 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
 
     try {
       const savedUser = await saveAutomaticFuelPlanForUser({
-        activityLevel: selectedActivity,
         dispatch,
-        goal: selectedGoal,
+        goal: previewGoal,
+        goalStrategy: selectedStrategy,
         user,
       });
 
       if (!savedUser) {
         Alert.alert(
-          "Could not update goal",
-          "Make sure you have a valid birthdate, height, goal, activity level, and at least one logged body weight.",
+          "Could not update goal strategy",
+          "Make sure you have a valid birthdate, height, and at least one logged body weight.",
         );
         return;
       }
 
       navigation.navigate("MoreMainScreen");
     } catch {
-      Alert.alert("Could not update goal", "Please try again.");
+      Alert.alert("Could not update goal strategy", "Please try again.");
     } finally {
       setSaving(false);
     }
@@ -179,15 +219,15 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
         <SettingsStackHeader
           eyebrow="User Settings"
           onBack={() => navigation.goBack()}
-          subtitle="Adjust the body-change goal and the activity baseline together. Deficit or surplus intensity is managed separately in Goal strategy. Saving rebuilds your automatic fuel plan from the latest logged body weight."
-          title="Adjust Goal"
+          subtitle="Pick how hard calories should sit below or above maintenance. Saving updates goal direction when needed and rebuilds your automatic fuel plan."
+          title="Goal Strategy"
         />
 
         {!user ? (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>No active user</Text>
             <Text style={styles.cardText}>
-              Sign in to your account first before editing your goal settings.
+              Sign in to your account first before editing your goal strategy.
             </Text>
           </View>
         ) : (
@@ -195,22 +235,15 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
             <View style={styles.card}>
               <View style={styles.summaryRow}>
                 <View style={styles.summaryCopy}>
-                  <Text style={styles.cardTitle}>Current plan</Text>
+                  <Text style={styles.cardTitle}>Current strategy</Text>
                   <Text style={styles.cardText}>
-                    {formatGoalLabel(user.goal)} /{" "}
                     {formatGoalStrategyMeta(
                       user.goal,
                       resolveGoalStrategy(user.goal, user.goalStrategy),
-                    )}{" "}
-                    / {formatActivityLevelLabel(user.activityLevel)}
+                    )}
                   </Text>
                 </View>
                 <View style={styles.metricPill}>
-                  <GaugeIcon
-                    size={16}
-                    color={appColors.brand700}
-                    weight="fill"
-                  />
                   <Text style={styles.metricPillText}>
                     {previewPlan?.calories ?? user.calorieAllowance ?? "--"} kcal
                   </Text>
@@ -221,155 +254,99 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
                 <View style={styles.previewStat}>
                   <Text style={styles.previewLabel}>Goal</Text>
                   <Text style={styles.previewValue}>
-                    {formatGoalLabel(selectedGoal)}
+                    {formatGoalLabel(previewGoal)}
                   </Text>
                 </View>
                 <View style={styles.previewStat}>
-                  <Text style={styles.previewLabel}>Activity</Text>
+                  <Text style={styles.previewLabel}>Strategy</Text>
                   <Text style={styles.previewValue}>
-                    {formatActivityLevelLabel(selectedActivity)}
+                    {formatGoalStrategyLabel(selectedStrategy)}
+                  </Text>
+                </View>
+                <View style={styles.previewStat}>
+                  <Text style={styles.previewLabel}>Offset</Text>
+                  <Text style={styles.previewValue}>
+                    {formatSignedCalories(selectedOption.dailyCalorieDelta)}
                   </Text>
                 </View>
               </View>
             </View>
 
-            <View style={styles.card}>
-              <View style={styles.sectionHeader}>
-                <TargetIcon
-                  size={18}
-                  color={appColors.brand700}
-                  weight="fill"
-                />
-                <Text style={styles.sectionTitle}>Goal</Text>
-              </View>
+            {GOAL_STRATEGY_SECTIONS.map((section) => {
+              const options = listGoalStrategyOptions().filter((option) =>
+                section.optionValues.includes(option.value),
+              );
 
-              <View style={styles.optionStack}>
-                {GOAL_OPTIONS.map((option) => {
-                  const selected = selectedGoal === option.value;
-                  const optionPlan =
-                    user && latestWeightKg != null && selectedActivity
-                      ? buildAutomaticFuelPlanForUser({
-                          user: {
-                            ...user,
-                            activityLevel: selectedActivity,
-                            goal: option.value,
-                          },
-                          weightKg: latestWeightKg,
-                        })
-                      : null;
+              return (
+                <View key={section.key} style={styles.card}>
+                  <View style={styles.sectionHeader}>
+                    {section.icon}
+                    <Text style={styles.sectionTitle}>{section.title}</Text>
+                  </View>
 
-                  return (
-                    <Pressable
-                      key={option.value}
-                      onPress={() => setSelectedGoal(option.value)}
-                      style={({ pressed }) => [
-                        styles.optionCard,
-                        selected && styles.optionCardSelected,
-                        pressed && styles.optionCardPressed,
-                      ]}
-                    >
-                      <View style={styles.optionCopy}>
-                        <Text style={styles.optionTitle}>{option.label}</Text>
-                        <Text style={styles.optionText}>{option.description}</Text>
-                      </View>
-                      <View style={styles.optionMeta}>
-                        <Text style={styles.optionCalories}>
-                          {optionPlan?.calories ?? "--"} kcal
-                        </Text>
-                        <View
-                          style={[
-                            styles.checkBadge,
-                            selected && styles.checkBadgeSelected,
+                  <View style={styles.optionStack}>
+                    {options.map((option) => {
+                      const selected = selectedStrategy === option.value;
+
+                      return (
+                        <Pressable
+                          key={option.value}
+                          onPress={() => setSelectedStrategy(option.value)}
+                          style={({ pressed }) => [
+                            styles.optionCard,
+                            selected && styles.optionCardSelected,
+                            pressed && styles.optionCardPressed,
                           ]}
                         >
-                          {selected ? (
-                            <CheckIcon
-                              size={14}
-                              color={appColors.white}
-                              weight="bold"
-                            />
-                          ) : null}
-                        </View>
-                      </View>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
+                          <View style={styles.optionCopy}>
+                            <Text style={styles.optionTitle}>{option.label}</Text>
+                            <Text style={styles.optionText}>
+                              {option.description}
+                            </Text>
+                          </View>
+                          <View style={styles.optionMeta}>
+                            <Text style={styles.optionCalories}>
+                              {formatSignedCalories(option.dailyCalorieDelta)}
+                            </Text>
+                            <Text style={styles.optionRate}>
+                              {option.approxWeeklyRateKg != null
+                                ? `${option.goal === "lose_fat" ? "Lose" : "Gain"} ${option.approxWeeklyRateKg.toFixed(2)} kg/week`
+                                : "Hold body weight"}
+                            </Text>
+                            <View
+                              style={[
+                                styles.checkBadge,
+                                selected && styles.checkBadgeSelected,
+                              ]}
+                            >
+                              {selected ? (
+                                <CheckIcon
+                                  size={14}
+                                  color={appColors.white}
+                                  weight="bold"
+                                />
+                              ) : null}
+                            </View>
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              );
+            })}
 
             <View style={styles.card}>
-              <View style={styles.sectionHeader}>
-                <GaugeIcon
-                  size={18}
-                  color={appColors.brand700}
-                  weight="fill"
-                />
-                <Text style={styles.sectionTitle}>Activity baseline</Text>
-              </View>
-
-              <View style={styles.optionStack}>
-                {ACTIVITY_LEVEL_OPTIONS.map((option) => {
-                  const selected = selectedActivity === option.value;
-                  const optionPlan =
-                    user && latestWeightKg != null && selectedGoal
-                      ? buildAutomaticFuelPlanForUser({
-                          user: {
-                            ...user,
-                            activityLevel: option.value,
-                            goal: selectedGoal,
-                          },
-                          weightKg: latestWeightKg,
-                        })
-                      : null;
-
-                  return (
-                    <Pressable
-                      key={option.value}
-                      onPress={() => setSelectedActivity(option.value)}
-                      style={({ pressed }) => [
-                        styles.optionCard,
-                        selected && styles.optionCardSelected,
-                        pressed && styles.optionCardPressed,
-                      ]}
-                    >
-                      <View style={styles.optionCopy}>
-                        <Text style={styles.optionTitle}>{option.label}</Text>
-                        <Text style={styles.optionText}>{option.description}</Text>
-                      </View>
-                      <View style={styles.optionMeta}>
-                        <Text style={styles.optionCalories}>
-                          {optionPlan?.calories ?? "--"} kcal
-                        </Text>
-                        <View
-                          style={[
-                            styles.checkBadge,
-                            selected && styles.checkBadgeSelected,
-                          ]}
-                        >
-                          {selected ? (
-                            <CheckIcon
-                              size={14}
-                              color={appColors.white}
-                              weight="bold"
-                            />
-                          ) : null}
-                        </View>
-                      </View>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
               <Pressable
                 onPress={() => void handleSave()}
-                disabled={saving || !selectedActivity || !selectedGoal}
+                disabled={saving}
                 style={({ pressed }) => [
                   styles.primaryButton,
                   pressed && !saving && styles.optionCardPressed,
                 ]}
               >
                 <Text style={styles.primaryButtonText}>
-                  {saving ? "Saving..." : "Save goal + activity"}
+                  {saving ? "Saving..." : "Save goal strategy"}
                 </Text>
               </Pressable>
             </View>
@@ -447,9 +424,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   metricPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
     borderRadius: 999,
     backgroundColor: appColors.brand800,
     paddingHorizontal: 12,
@@ -531,12 +505,17 @@ const styles = StyleSheet.create({
   },
   optionMeta: {
     alignItems: "flex-end",
-    gap: 8,
+    gap: 6,
   },
   optionCalories: {
     color: appColors.brand700,
     fontSize: 13,
     fontWeight: "800",
+  },
+  optionRate: {
+    color: appColors.slate200,
+    fontSize: 11,
+    fontWeight: "700",
   },
   checkBadge: {
     width: 24,
@@ -553,7 +532,6 @@ const styles = StyleSheet.create({
     borderColor: appColors.brand700,
   },
   primaryButton: {
-    marginTop: 16,
     borderRadius: 999,
     backgroundColor: appColors.brand700,
     paddingHorizontal: 16,
@@ -568,5 +546,5 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ActivityLevelSettingsScreen;
+export default GoalStrategySettingsScreen;
 

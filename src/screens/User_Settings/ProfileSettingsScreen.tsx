@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     width: 190,
     height: 190,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbTop,
+    backgroundColor: appColors.brand800,
   },
   orbBottom: {
     position: "absolute",
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbBottom,
+    backgroundColor: appColors.success700,
   },
   card: {
     backgroundColor: appColors.surfaceCard,
@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
   },
   unitPill: {
     borderRadius: 999,
-    backgroundColor: appColors.foodEyebrowBg,
+    backgroundColor: appColors.brand800,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
@@ -512,7 +512,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   optionChipSelected: {
-    backgroundColor: appColors.foodEyebrowBg,
+    backgroundColor: appColors.brand800,
     borderColor: appColors.brand500,
   },
   optionChipText: {
@@ -569,3 +569,4 @@ const styles = StyleSheet.create({
 });
 
 export default ProfileSettingsScreen;
+

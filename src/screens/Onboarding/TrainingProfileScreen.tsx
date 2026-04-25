@@ -103,7 +103,7 @@ const TrainingProfileScreen = ({ navigation, route }: Props) => {
             label: "Goal",
             value: formatGoalSummary(
               route.params.goal,
-              route.params.goalRateKgPerWeek,
+              route.params.goalStrategy,
             ),
             onEdit: () => navigation.push("Goal"),
           },
@@ -113,7 +113,7 @@ const TrainingProfileScreen = ({ navigation, route }: Props) => {
             onEdit: () =>
               navigation.push("BodyData", {
                 goal: route.params.goal,
-                goalRateKgPerWeek: route.params.goalRateKgPerWeek,
+                goalStrategy: route.params.goalStrategy,
                 bodyData: route.params.bodyData,
                 training: selectedTraining,
                 proteinFocus: route.params.proteinFocus,
@@ -125,7 +125,7 @@ const TrainingProfileScreen = ({ navigation, route }: Props) => {
             onEdit: () =>
               navigation.push("Activity", {
                 goal: route.params.goal,
-                goalRateKgPerWeek: route.params.goalRateKgPerWeek,
+                goalStrategy: route.params.goalStrategy,
                 bodyData: route.params.bodyData,
                 training: selectedTraining,
                 proteinFocus: route.params.proteinFocus,
@@ -183,7 +183,7 @@ const TrainingProfileScreen = ({ navigation, route }: Props) => {
         onPress={() =>
           navigation.push("ProteinFocus", {
             goal: route.params.goal,
-            goalRateKgPerWeek: route.params.goalRateKgPerWeek,
+            goalStrategy: route.params.goalStrategy,
             bodyData: route.params.bodyData,
             activity: route.params.activity,
             training: selectedTraining,
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: "uppercase",
     color: appColors.brand500,
-    backgroundColor: appColors.foodEyebrowBg,
+    backgroundColor: appColors.brand800,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
@@ -304,3 +304,4 @@ const styles = StyleSheet.create({
 });
 
 export default TrainingProfileScreen;
+

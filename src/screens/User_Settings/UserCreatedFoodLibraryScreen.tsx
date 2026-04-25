@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbTop,
+    backgroundColor: appColors.brand800,
   },
   orbBottom: {
     position: "absolute",
@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
     width: 230,
     height: 230,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbBottom,
+    backgroundColor: appColors.success700,
   },
   centerState: {
     flex: 1,
@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField
   },
   summaryCopy: {
     flex: 1,
@@ -600,8 +600,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   statusChipPublic: {
-    backgroundColor: appColors.foodPillBg,
-    borderColor: appColors.foodBorder,
+    backgroundColor: appColors.surfaceGhost,
+    borderColor: appColors.borderStrong,
   },
   statusChipPrivate: {
     backgroundColor: appColors.surfaceGhost,
@@ -654,3 +654,4 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 });
+

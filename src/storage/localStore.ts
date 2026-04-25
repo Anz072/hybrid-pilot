@@ -2,6 +2,7 @@ import type {
   ActivityLevel,
   BodyData,
   FuelPlan,
+  GoalStrategy,
   GoalType,
   ProteinFocus,
   TrainingSelection,
@@ -12,12 +13,13 @@ const KEY_ONBOARDING_COMPLETE = "onboardingComplete";
 const KEY_LOCAL_ACCOUNT = "localAccount";
 const KEY_ONBOARDING_PROFILE = "onboardingProfile";
 const KEY_FOOD_SEARCH_SECTION_STATE = "foodSearchSectionState";
+const KEY_FOOD_TRACKING_PREFERENCES = "foodTrackingPreferences";
 
 export type AuthProvider = "local" | "google";
 
 export type OnboardingProfile = {
   goal: GoalType;
-  goalRateKgPerWeek: number | null;
+  goalStrategy: GoalStrategy;
   bodyData: BodyData;
   activity: ActivityLevel;
   training: TrainingSelection;
@@ -28,6 +30,10 @@ export type OnboardingProfile = {
 export type FoodSearchSectionState = {
   favoritesExpanded: boolean;
   recentExpanded: boolean;
+};
+
+export type FoodTrackingPreferences = {
+  fastLogEnabled: boolean;
 };
 
 export type LocalAccount = {
@@ -48,6 +54,10 @@ export type BuildLocalAccountInput = {
 const DEFAULT_FOOD_SEARCH_SECTION_STATE: FoodSearchSectionState = {
   favoritesExpanded: true,
   recentExpanded: true,
+};
+
+const DEFAULT_FOOD_TRACKING_PREFERENCES: FoodTrackingPreferences = {
+  fastLogEnabled: false,
 };
 
 const safeParse = <T>(raw: string | null): T | null => {
@@ -128,6 +138,22 @@ export const getFoodSearchSectionState = async (): Promise<FoodSearchSectionStat
 
   return {
     ...DEFAULT_FOOD_SEARCH_SECTION_STATE,
+    ...(parsed ?? {}),
+  };
+};
+
+export const saveFoodTrackingPreferences = async (
+  preferences: FoodTrackingPreferences,
+): Promise<void> => {
+  await setKv(KEY_FOOD_TRACKING_PREFERENCES, JSON.stringify(preferences));
+};
+
+export const getFoodTrackingPreferences = async (): Promise<FoodTrackingPreferences> => {
+  const value = await getKv(KEY_FOOD_TRACKING_PREFERENCES);
+  const parsed = safeParse<Partial<FoodTrackingPreferences>>(value);
+
+  return {
+    ...DEFAULT_FOOD_TRACKING_PREFERENCES,
     ...(parsed ?? {}),
   };
 };

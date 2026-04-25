@@ -8,8 +8,9 @@ import type {
   OnboardingProfile,
 } from "../../navigation/onboardingTypes";
 import { Pie, PolarChart } from "victory-native";
+import { getGoalStrategyRateLabel } from "../../engine/goalStrategy";
 import { getAgeFromBirthdateValue } from "../../helpers";
-import { buildFuelPlan, getGoalRateLabel } from "./initialCalculations";
+import { buildFuelPlan } from "./initialCalculations";
 import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
 import OnboardingReviewCard from "./OnboardingReviewCard";
 import OnboardingTopBar from "./OnboardingTopBar";
@@ -35,7 +36,7 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
   const insets = useSafeAreaInsets();
   const {
     goal,
-    goalRateKgPerWeek,
+    goalStrategy,
     bodyData,
     activity,
     training,
@@ -49,14 +50,14 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
     age,
     activity,
     goal,
-    goalRateKgPerWeek,
+    goalStrategy,
     proteinFocus,
   });
-  const goalRateLabel = getGoalRateLabel(goal, goalRateKgPerWeek);
+  const goalRateLabel = getGoalStrategyRateLabel(goal, goalStrategy);
 
   const onboarding: OnboardingProfile = {
     goal,
-    goalRateKgPerWeek,
+    goalStrategy,
     bodyData,
     activity,
     training,
@@ -81,7 +82,7 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
       {
         label: "Fats",
         value: Math.max(1, fuelPlan.fats * 9),
-        color: appColors.violet400,
+        color: appColors.brand400,
         grams: fuelPlan.fats,
       },
     ],
@@ -101,7 +102,7 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
       <OnboardingTopBar onBack={() => navigation.goBack()} stepLabel="Fuel Plan" />
       <Text style={styles.eyebrow}>Fuel Strategy</Text>
       <View style={styles.titleRow}>
-        <ForkKnifeIcon size={26} color={appColors.green700} weight="fill" />
+        <ForkKnifeIcon size={26} color={appColors.success700} weight="fill" />
         <Text style={styles.title}>Initial Plan</Text>
       </View>
       <Text style={styles.subtitle}>
@@ -117,7 +118,7 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
         items={[
           {
             label: "Goal",
-            value: formatGoalSummary(goal, goalRateKgPerWeek),
+            value: formatGoalSummary(goal, goalStrategy),
             onEdit: () => navigation.push("Goal"),
           },
           {
@@ -126,7 +127,7 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
             onEdit: () =>
               navigation.push("BodyData", {
                 goal,
-                goalRateKgPerWeek,
+                goalStrategy,
                 bodyData,
                 training,
                 proteinFocus,
@@ -138,7 +139,7 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
             onEdit: () =>
               navigation.push("Activity", {
                 goal,
-                goalRateKgPerWeek,
+                goalStrategy,
                 bodyData,
                 training,
                 proteinFocus,
@@ -150,7 +151,7 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
             onEdit: () =>
               navigation.push("Training", {
                 goal,
-                goalRateKgPerWeek,
+                goalStrategy,
                 bodyData,
                 activity,
                 training,
@@ -163,7 +164,7 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
             onEdit: () =>
               navigation.push("ProteinFocus", {
                 goal,
-                goalRateKgPerWeek,
+                goalStrategy,
                 bodyData,
                 activity,
                 training,
@@ -255,8 +256,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: appColors.green700,
-    backgroundColor: appColors.tealSoftBg,
+    color: appColors.success700,
+    backgroundColor: appColors.success700,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
@@ -281,7 +282,7 @@ const styles = StyleSheet.create({
   },
   pacePill: {
     alignSelf: "flex-start",
-    backgroundColor: appColors.blueSoftBg,
+    backgroundColor: appColors.brand800,
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -390,3 +391,4 @@ const styles = StyleSheet.create({
 });
 
 export default FuelPlanScreen;
+

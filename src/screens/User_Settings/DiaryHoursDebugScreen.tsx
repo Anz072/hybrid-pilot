@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
     width: 190,
     height: 190,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbTop,
+    backgroundColor: appColors.brand800,
   },
   orbBottom: {
     position: "absolute",
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
     width: 230,
     height: 230,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbBottom,
+    backgroundColor: appColors.success700,
   },
   loadingCard: {
     borderRadius: 8,
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
   },
   statusPill: {
     borderRadius: 999,
-    backgroundColor: appColors.foodEyebrowBg,
+    backgroundColor: appColors.brand800,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
   rangeCard: {
     flex: 1,
     borderRadius: 8,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField,
     padding: 14,
   },
   rangeLabel: {
@@ -412,3 +412,4 @@ const styles = StyleSheet.create({
 });
 
 export default PreferencesScreen;
+

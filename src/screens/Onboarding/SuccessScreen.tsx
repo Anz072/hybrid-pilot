@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CheckCircleIcon, ForkKnifeIcon } from "phosphor-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { OnboardingParamList } from "../../navigation/onboardingTypes";
-import { getGoalRateLabel } from "./initialCalculations";
+import { getGoalStrategyRateLabel } from "../../engine/goalStrategy";
 import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
 import {
   formatActivitySummary,
@@ -19,9 +19,9 @@ type Props = NativeStackScreenProps<OnboardingParamList, "Success"> & {
 
 const SuccessScreen = ({ onFinish, route }: Props) => {
   const insets = useSafeAreaInsets();
-  const goalRateLabel = getGoalRateLabel(
+  const goalRateLabel = getGoalStrategyRateLabel(
     route.params.onboarding.goal,
-    route.params.onboarding.goalRateKgPerWeek,
+    route.params.onboarding.goalStrategy,
   );
 
   return (
@@ -38,7 +38,7 @@ const SuccessScreen = ({ onFinish, route }: Props) => {
       <View style={styles.bgOrbBottom} />
 
       <View style={styles.badge}>
-        <CheckCircleIcon size={34} color={appColors.green600} weight="fill" />
+        <CheckCircleIcon size={34} color={appColors.success600} weight="fill" />
       </View>
 
       <Text style={styles.eyebrow}>Ready</Text>
@@ -51,7 +51,7 @@ const SuccessScreen = ({ onFinish, route }: Props) => {
 
       <View style={styles.highlightCard}>
         <View style={styles.highlightHeader}>
-          <ForkKnifeIcon size={22} color={appColors.green700} weight="fill" />
+          <ForkKnifeIcon size={22} color={appColors.success700} weight="fill" />
           <Text style={styles.highlightTitle}>Starting Targets</Text>
         </View>
         {goalRateLabel ? (
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     width: 180,
     height: 180,
     borderRadius: 999,
-    backgroundColor: appColors.greenSoftBg,
+    backgroundColor: appColors.success700,
   },
   bgOrbBottom: {
     position: "absolute",
@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 999,
-    backgroundColor: appColors.greenSoftBg,
+    backgroundColor: appColors.success700,
   },
   badge: {
     width: 68,
@@ -167,8 +167,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: appColors.green700,
-    backgroundColor: appColors.greenSoftBg,
+    color: appColors.success700,
+    backgroundColor: appColors.success700,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
   },
   pacePill: {
     alignSelf: "flex-start",
-    backgroundColor: appColors.blueSoftBg,
+    backgroundColor: appColors.brand800,
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -289,3 +289,4 @@ const styles = StyleSheet.create({
 });
 
 export default SuccessScreen;
+

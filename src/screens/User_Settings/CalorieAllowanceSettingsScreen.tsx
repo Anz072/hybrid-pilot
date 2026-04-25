@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbTop,
+    backgroundColor: appColors.brand800,
   },
   orbBottom: {
     position: "absolute",
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbBottom,
+    backgroundColor: appColors.success700,
   },
   card: {
     backgroundColor: appColors.surfaceCard,
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
   inputCard: {
     flex: 1,
     borderRadius: 8,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField,
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     borderRadius: 8,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField,
     padding: 14,
   },
   statLabel: {
@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     borderRadius: 999,
-    backgroundColor: appColors.foodEyebrowBg,
+    backgroundColor: appColors.brand800,
     paddingHorizontal: 16,
     paddingVertical: 13,
     alignItems: "center",
@@ -459,3 +459,4 @@ const styles = StyleSheet.create({
 });
 
 export default CalorieAllowanceSettingsScreen;
+

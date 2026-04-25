@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     width: 210,
     height: 210,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbTop,
+    backgroundColor: appColors.brand800,
   },
   bgOrbBottom: {
     position: "absolute",
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     width: 240,
     height: 240,
     borderRadius: 999,
-    backgroundColor: appColors.foodEyebrowBg,
+    backgroundColor: appColors.brand800,
   },
   heroRow: {
     flexDirection: "row",
@@ -89,9 +89,9 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 999,
-    backgroundColor: appColors.foodEyebrowBg,
+    backgroundColor: appColors.brand800,
     borderWidth: 1,
-    borderColor: appColors.foodOrbTop,
+    borderColor: appColors.brand700,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: "uppercase",
     color: appColors.brand500,
-    backgroundColor: appColors.foodEyebrowBg,
+    backgroundColor: appColors.brand800,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
@@ -152,3 +152,4 @@ const styles = StyleSheet.create({
 });
 
 export default WelcomeScreen;
+

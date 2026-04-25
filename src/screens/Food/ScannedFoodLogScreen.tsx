@@ -534,10 +534,10 @@ const ScannedFoodLogScreen = () => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: appColors.foodScreenBg,
+    backgroundColor: appColors.surfaceCanvas,
   },
   title: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 24,
     fontWeight: "900",
     marginTop: 16,
@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
     width: 250,
     height: 250,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbTop,
+    backgroundColor: appColors.brand800,
   },
   bgOrbBottom: {
     position: "absolute",
@@ -562,7 +562,7 @@ const styles = StyleSheet.create({
     width: 280,
     height: 280,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbBottom,
+    backgroundColor: appColors.success700,
   },
   centerCard: {
     alignItems: "center",
@@ -574,7 +574,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   centerText: {
-    color: appColors.foodMuted,
+    color: appColors.textSecondary,
     fontSize: 13,
     fontWeight: "700",
   },
@@ -593,11 +593,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 9999,
-    backgroundColor: appColors.revolutLight,
+    backgroundColor: appColors.slate50,
     paddingVertical: 14,
   },
   stickyPrimaryButtonText: {
-    color: appColors.revolutDark,
+    color: appColors.slate900,
     fontSize: 14,
     fontWeight: "600",
   },
@@ -605,12 +605,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 9999,
-    backgroundColor: appColors.revolutLight,
+    backgroundColor: appColors.slate50,
     paddingVertical: 14,
     marginBottom: 12,
   },
   primaryButtonText: {
-    color: appColors.revolutDark,
+    color: appColors.slate900,
     fontSize: 14,
     fontWeight: "600",
   },
@@ -623,3 +623,4 @@ const styles = StyleSheet.create({
 });
 
 export default ScannedFoodLogScreen;
+

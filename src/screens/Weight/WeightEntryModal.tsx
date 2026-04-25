@@ -356,11 +356,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     borderRadius: 9999,
-    backgroundColor: appColors.revolutLight,
+    backgroundColor: appColors.slate50,
     paddingVertical: 14,
   },
   primaryButtonText: {
-    color: appColors.revolutDark,
+    color: appColors.slate900,
     fontSize: 14,
     fontWeight: "600",
   },
@@ -383,15 +383,15 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: appColors.green700,
-    backgroundColor: appColors.tealSoftBg,
+    color: appColors.success700,
+    backgroundColor: appColors.success700,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
     marginBottom: 10,
   },
   heroTitle: {
-    color: appColors.foodText,
+    color: appColors.textPrimary,
     fontSize: 22,
     fontWeight: "500",
     marginBottom: 4,
@@ -511,3 +511,4 @@ const styles = StyleSheet.create({
 });
 
 export default WeightEntryModal;
+

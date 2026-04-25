@@ -2,66 +2,31 @@ import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { FireIcon, TrendUpIcon } from "phosphor-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { GoalType, OnboardingParamList } from "../../navigation/onboardingTypes";
+import type {
+  GoalType,
+  OnboardingParamList,
+} from "../../navigation/onboardingTypes";
+import {
+  formatSignedCalories,
+  listGoalStrategyOptionsForGoal,
+} from "../../engine/goalStrategy";
 import OnboardingButton from "./onboardingButton";
 import OnboardingTopBar from "./OnboardingTopBar";
 import { appColors } from "../../theme/colors";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "GoalRate">;
 
-type GoalRateOption = {
-  label: string;
-  subtitle: string;
-  value: number;
-};
-
-const LOSS_OPTIONS: GoalRateOption[] = [
-  {
-    label: "0.25 kg per week",
-    subtitle: "Easiest to recover from and great when performance matters.",
-    value: 0.25,
-  },
-  {
-    label: "0.50 kg per week",
-    subtitle: "Balanced pace and the best starting point for most people.",
-    value: 0.5,
-  },
-  {
-    label: "0.75 kg per week",
-    subtitle: "More aggressive, so hunger and recovery need closer attention.",
-    value: 0.75,
-  },
-];
-
-const GAIN_OPTIONS: GoalRateOption[] = [
-  {
-    label: "0.10 kg per week",
-    subtitle: "Very lean, slower progress with minimal overshooting.",
-    value: 0.1,
-  },
-  {
-    label: "0.20 kg per week",
-    subtitle: "Balanced pace and the best starting point for most people.",
-    value: 0.2,
-  },
-  {
-    label: "0.30 kg per week",
-    subtitle: "Faster scale progress, but body-fat gain is more likely.",
-    value: 0.3,
-  },
-];
-
 const buildScreenContent = (goal: GoalType) => {
   if (goal === "lose_fat") {
     return {
-      eyebrow: "Fat Loss Pace",
-      title: "How fast do you want to lose weight?",
-      subtitle: "Choose a weekly pace so we can set a more realistic calorie target.",
+      eyebrow: "Deficit Level",
+      title: "How strong should the deficit be?",
+      subtitle: "Choose how aggressively you want calories to sit below maintenance.",
       notes: [
-        "0.50 kg/week is the most sustainable default for most users.",
-        "If training performance matters a lot, start at 0.25 kg/week and review after 2-3 weeks.",
+        "Normal deficit is the most sustainable default for most users.",
+        "If training performance matters a lot, start lighter and review after 2-3 weeks.",
       ],
-      options: LOSS_OPTIONS,
+      options: listGoalStrategyOptionsForGoal(goal),
       icon: <FireIcon size={26} color={appColors.danger700} weight="fill" />,
       accentBackground: appColors.dangerSoftBg,
       accentText: appColors.danger700,
@@ -69,17 +34,17 @@ const buildScreenContent = (goal: GoalType) => {
   }
 
   return {
-    eyebrow: "Muscle Gain Pace",
-    title: "How fast do you want to gain weight?",
-    subtitle: "A lean gain works best when the weekly pace matches your training quality.",
+    eyebrow: "Surplus Level",
+    title: "How strong should the surplus be?",
+    subtitle: "Choose how aggressively calories should sit above maintenance.",
     notes: [
-      "0.20 kg/week is the most balanced starting point for most users.",
-      "If you want to stay leaner, begin at 0.10 kg/week and increase only if progress stalls.",
+      "Normal surplus is the most balanced starting point for most users.",
+      "If you want to stay leaner, begin light and increase only if progress stalls.",
     ],
-    options: GAIN_OPTIONS,
-    icon: <TrendUpIcon size={26} color={appColors.green700} weight="fill" />,
-    accentBackground: appColors.greenSoftBg,
-    accentText: appColors.green700,
+    options: listGoalStrategyOptionsForGoal(goal),
+    icon: <TrendUpIcon size={26} color={appColors.success700} weight="fill" />,
+    accentBackground: appColors.success700,
+    accentText: appColors.success700,
   };
 };
 
@@ -121,14 +86,14 @@ const GoalRateScreen = ({ navigation, route }: Props) => {
           <OnboardingButton
             key={option.value}
             label={option.label}
-            subtitle={option.subtitle}
-            value={String(option.value)}
-            borderColor={appColors.charcoal}
+            subtitle={`${option.description} ${formatSignedCalories(option.dailyCalorieDelta)}.`}
+            value={option.value}
+            borderColor={appColors.borderStrong}
             navigation={navigation}
             navGoal="BodyData"
             dataToSend={{
               goal: route.params.goal,
-              goalRateKgPerWeek: option.value,
+              goalStrategy: option.value,
             }}
           />
         ))}
@@ -163,7 +128,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbBottom,
+    backgroundColor: appColors.success700,
     opacity: 0.3,
   },
   headerWrap: {
@@ -218,3 +183,4 @@ const styles = StyleSheet.create({
 });
 
 export default GoalRateScreen;
+

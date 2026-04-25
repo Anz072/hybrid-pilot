@@ -1,9 +1,14 @@
 import { getDb, initDb } from "../storage/sqlite";
-import type { ProteinFocus } from "../navigation/onboardingTypes";
+import type {
+  GoalStrategy,
+  ProteinFocus,
+} from "../navigation/onboardingTypes";
+import { resolveGoalStrategy } from "../engine/goalStrategy";
 import type { DBUser } from "./DB_TYPES";
 
-type RawDBUser = Omit<DBUser, "trainingTypes" | "proteinFocus"> & {
+type RawDBUser = Omit<DBUser, "trainingTypes" | "proteinFocus" | "goalStrategy"> & {
   trainingTypes: string | null;
+  goalStrategy: string | null;
   proteinFocus: string | null;
 };
 
@@ -28,6 +33,7 @@ export const upsertUser = async (input: DBUser): Promise<void> => {
       height_cm,
       activity_level,
       goal,
+      goal_strategy,
       training_types,
       protein_focus,
       calorieAllowance,
@@ -35,7 +41,7 @@ export const upsertUser = async (input: DBUser): Promise<void> => {
       carbsG,
       fatG
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(external_id) DO UPDATE SET
       provider = excluded.provider,
       display_name = excluded.display_name,
@@ -45,6 +51,7 @@ export const upsertUser = async (input: DBUser): Promise<void> => {
       height_cm = excluded.height_cm,
       activity_level = excluded.activity_level,
       goal = excluded.goal,
+      goal_strategy = excluded.goal_strategy,
       training_types = excluded.training_types,
       protein_focus = excluded.protein_focus,
       calorieAllowance = excluded.calorieAllowance,
@@ -62,6 +69,7 @@ export const upsertUser = async (input: DBUser): Promise<void> => {
     input.heightCm,
     input.activityLevel,
     input.goal,
+    input.goalStrategy,
     trainingTypesJson,
     input.proteinFocus,
     input.calorieAllowance,
@@ -89,6 +97,7 @@ export const getFirstUser = async (): Promise<DBUser | null> => {
       height_cm AS heightCm,
       activity_level AS activityLevel,
       goal,
+      goal_strategy AS goalStrategy,
       training_types AS trainingTypes,
       protein_focus AS proteinFocus,
       calorieAllowance,
@@ -108,6 +117,11 @@ export const getFirstUser = async (): Promise<DBUser | null> => {
   return {
     ...row,
     gender: (row.gender as DBUser["gender"]) ?? null,
+    goalStrategy:
+      resolveGoalStrategy(
+        row.goal,
+        (row.goalStrategy as GoalStrategy | null) ?? null,
+      ) ?? null,
     trainingTypes:
       typeof row.trainingTypes === "string"
         ? (JSON.parse(row.trainingTypes) as string[])
@@ -140,6 +154,7 @@ export const getUserByExternalId = async (
       height_cm AS heightCm,
       activity_level AS activityLevel,
       goal,
+      goal_strategy AS goalStrategy,
       training_types AS trainingTypes,
       protein_focus AS proteinFocus,
       calorieAllowance,
@@ -160,6 +175,11 @@ export const getUserByExternalId = async (
   return {
     ...row,
     gender: (row.gender as DBUser["gender"]) ?? null,
+    goalStrategy:
+      resolveGoalStrategy(
+        row.goal,
+        (row.goalStrategy as GoalStrategy | null) ?? null,
+      ) ?? null,
     trainingTypes:
       typeof row.trainingTypes === "string"
         ? (JSON.parse(row.trainingTypes) as string[])

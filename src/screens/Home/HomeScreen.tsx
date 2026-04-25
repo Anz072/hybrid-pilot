@@ -326,21 +326,21 @@ const HomeScreen = () => {
 
               <View style={styles.macroStack}>
                 <MacroBar
-                  accent={appColors.emerald500}
+                  accent={appColors.success500}
                   consumed={todayTotals.proteinG}
                   label="Protein"
                   target={user?.proteinG ?? null}
                   unit="g"
                 />
                 <MacroBar
-                  accent={appColors.cyan500}
+                  accent={appColors.brand400}
                   consumed={todayTotals.carbsG}
                   label="Carbs"
                   target={user?.carbsG ?? null}
                   unit="g"
                 />
                 <MacroBar
-                  accent={appColors.amber600}
+                  accent={appColors.warning600}
                   consumed={todayTotals.fatG}
                   label="Fat"
                   target={user?.fatG ?? null}
@@ -547,7 +547,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbTop,
+    backgroundColor: appColors.brand800,
   },
   orbBottom: {
     position: "absolute",
@@ -556,7 +556,7 @@ const styles = StyleSheet.create({
     width: 260,
     height: 260,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbBottom,
+    backgroundColor: appColors.success700,
   },
   heroCard: {
     backgroundColor: appColors.surfaceCard,
@@ -674,7 +674,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.brand700,
   },
   cardIconAlt: {
-    backgroundColor: appColors.revolutTeal,
+    backgroundColor: appColors.success600,
   },
   weeklyReviewCard: {
     backgroundColor: appColors.surfaceCardAlt,
@@ -683,7 +683,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   weeklyReviewIcon: {
-    backgroundColor: appColors.green700,
+    backgroundColor: appColors.success700,
   },
   weeklyReviewFooter: {
     flexDirection: "row",
@@ -838,3 +838,5 @@ const styles = StyleSheet.create({
 });
 
 export default HomeScreen;
+
+

@@ -26,22 +26,22 @@ const GoalScreen = ({ navigation }: Props) => {
       label: "Lose fat",
       value: "lose_fat",
       subtitle: "Slight calorie deficit with protein-first targets.",
-      icon: <FireIcon size={36} color={appColors.overlayGray} weight="fill" />,
-      borderColor: appColors.charcoal,
+      icon: <FireIcon size={36} color={appColors.slate300} weight="fill" />,
+      borderColor: appColors.borderStrong,
     },
     {
       label: "Maintain",
       value: "maintain",
       subtitle: "Balanced intake to keep performance steady.",
-      icon: <ShieldCheckIcon size={36} color={appColors.overlayGray} weight="fill" />,
-      borderColor: appColors.charcoal,
+      icon: <ShieldCheckIcon size={36} color={appColors.slate300} weight="fill" />,
+      borderColor: appColors.borderStrong,
     },
     {
       label: "Build muscle",
       value: "build_muscle",
       subtitle: "Lean surplus and recovery-focused macro split.",
-      icon: <TrendUpIcon size={36} color={appColors.overlayGray} weight="fill" />,
-      borderColor: appColors.charcoal,
+      icon: <TrendUpIcon size={36} color={appColors.slate300} weight="fill" />,
+      borderColor: appColors.borderStrong,
     },
   ];
 
@@ -66,7 +66,7 @@ const GoalScreen = ({ navigation }: Props) => {
               value={option.value}
               dataToSend={
                 option.value === "maintain"
-                  ? { goal: option.value, goalRateKgPerWeek: null }
+                  ? { goal: option.value, goalStrategy: "maintain" }
                   : { goal: option.value }
               }
               borderColor={option.borderColor}
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     width: 180,
     height: 180,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbTop,
+    backgroundColor: appColors.brand800,
   },
   bgOrbBottom: {
     position: "absolute",
@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 999,
-    backgroundColor: appColors.foodEyebrowBg,
+    backgroundColor: appColors.brand800,
   },
   headerWrap: {
     marginTop: 20,
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: "uppercase",
     color: appColors.brand500,
-    backgroundColor: appColors.foodEyebrowBg,
+    backgroundColor: appColors.brand800,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
@@ -142,3 +142,4 @@ const styles = StyleSheet.create({
 });
 
 export default GoalScreen;
+

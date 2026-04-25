@@ -1,12 +1,13 @@
 import type {
   ActivityLevel,
   BodyData,
+  GoalStrategy,
   GoalType,
   ProteinFocus,
   TrainingSelection,
   TrainingType,
 } from "../../navigation/onboardingTypes";
-import { getGoalRateLabel } from "./initialCalculations";
+import { formatGoalStrategyLabel } from "../../engine/goalStrategy";
 import { formatProteinFocusSummary as formatProteinFocusSummaryFromEngine } from "../../engine/proteinFocus";
 
 const GOAL_LABELS: Record<GoalType, string> = {
@@ -33,9 +34,9 @@ const TRAINING_LABELS: Record<TrainingType, string> = {
 
 export const formatGoalSummary = (
   goal: GoalType,
-  goalRateKgPerWeek: number | null,
+  goalStrategy: GoalStrategy,
 ): string => {
-  const pace = getGoalRateLabel(goal, goalRateKgPerWeek);
+  const pace = formatGoalStrategyLabel(goalStrategy);
   return pace ? `${GOAL_LABELS[goal]} / ${pace}` : GOAL_LABELS[goal];
 };
 

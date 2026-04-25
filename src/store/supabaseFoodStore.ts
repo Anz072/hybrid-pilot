@@ -344,6 +344,15 @@ const listDateKeysBetween = (startDate: string, endDate: string): string[] => {
 const sanitizeSupabaseSearch = (value: string) =>
   value.replace(/[(),]/g, " ").replace(/\s+/g, " ").trim();
 
+const buildSupabaseSearchTokens = (value: string) =>
+  sanitizeSupabaseSearch(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(" ")
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 2)
+    .slice(0, 6);
+
 const toSyntheticRecipeFoodId = (recipeId: number) => -Math.abs(recipeId);
 const fromSyntheticRecipeFoodId = (foodId: number) => Math.abs(foodId);
 const isSyntheticRecipeFoodId = (foodId: number) =>
@@ -812,8 +821,18 @@ const applyNameDescriptionSearch = <
     return builder;
   }
 
-  return builder.or(
-    `name.ilike.%${normalizedQuery}%,description.ilike.%${normalizedQuery}%`,
+  const tokens = buildSupabaseSearchTokens(normalizedQuery);
+
+  if (tokens.length === 0) {
+    return builder.or(
+      `name.ilike.%${normalizedQuery}%,description.ilike.%${normalizedQuery}%`,
+    );
+  }
+
+  return tokens.reduce(
+    (queryBuilder, token) =>
+      queryBuilder.or(`name.ilike.%${token}%,description.ilike.%${token}%`),
+    builder,
   );
 };
 
@@ -1064,9 +1083,18 @@ const fetchFoodRowsForList = async ({
   }
 
   if (normalizedQuery) {
-    builder = builder.or(
-      `name.ilike.%${normalizedQuery}%,brand_name.ilike.%${normalizedQuery}%,barcode.ilike.%${normalizedQuery}%`,
-    );
+    const tokenFilters = buildSupabaseSearchTokens(normalizedQuery);
+    const phraseFilter = `name.ilike.%${normalizedQuery}%,brand_name.ilike.%${normalizedQuery}%,barcode.ilike.%${normalizedQuery}%`;
+
+    builder = tokenFilters.length
+      ? tokenFilters.reduce(
+          (queryBuilder, token) =>
+            queryBuilder.or(
+              `name.ilike.%${token}%,brand_name.ilike.%${token}%,barcode.ilike.%${token}%`,
+            ),
+          builder,
+        )
+      : builder.or(phraseFilter);
   }
 
   const { data, error } = await builder;

@@ -4,6 +4,7 @@ import type {
   ProteinFocus,
   TrainingType,
 } from "../../navigation/onboardingTypes";
+import { formatGoalStrategyLabel as formatGoalStrategyLabelFromEngine } from "../../engine/goalStrategy";
 import { formatProteinFocusLabel as formatProteinFocusLabelFromEngine } from "../../engine/proteinFocus";
 
 export const GOAL_OPTIONS: Array<{
@@ -111,6 +112,9 @@ export const formatGoalLabel = (value: string | null | undefined): string => {
   const match = GOAL_OPTIONS.find((option) => option.value === value);
   return match?.label ?? value;
 };
+
+export const formatGoalStrategyLabel = (value: string | null | undefined): string =>
+  formatGoalStrategyLabelFromEngine(value);
 
 export const formatTrainingTypeLabel = (value: string): string => {
   const match = TRAINING_TYPE_OPTIONS.find((option) => option.value === value);

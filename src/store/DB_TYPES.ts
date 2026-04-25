@@ -1,6 +1,9 @@
 export type DBIsoDateString = string;
 
-import type { ProteinFocus } from "../navigation/onboardingTypes";
+import type {
+  GoalStrategy,
+  ProteinFocus,
+} from "../navigation/onboardingTypes";
 
 export type DBUserProvider = "local" | "google" | "apple" | "email";
 export type DBUserGender = "male" | "female" | "other" | null;
@@ -17,6 +20,7 @@ export type DBUser = {
   heightCm: number | null;
   activityLevel: string | null;
   goal: string | null;
+  goalStrategy: GoalStrategy | null;
   trainingTypes: string[] | null;
   proteinFocus: ProteinFocus | null;
   calorieAllowance: number | null;

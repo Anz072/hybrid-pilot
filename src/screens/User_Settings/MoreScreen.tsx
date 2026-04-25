@@ -3,10 +3,8 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   BarbellIcon,
-  BugIcon,
   ChartLineUpIcon,
   CookingPotIcon,
-  DatabaseIcon,
   ForkKnifeIcon,
   LightningIcon,
   SlidersHorizontalIcon,
@@ -19,6 +17,9 @@ import {
   buildEffectiveCalorieTargetsForDates,
   getWeeklyCalorieBudget,
 } from "../../engine/calorieTargets";
+import {
+  resolveGoalStrategy,
+} from "../../engine/goalStrategy";
 import type { MoreParamList } from "../../navigation/MoreNavigator";
 import { DB } from "../../store/DB";
 import { useAppSelector } from "../../store/hooks";
@@ -30,6 +31,7 @@ import {
   formatActivityLevelLabel,
   formatGoalLabel,
   formatProteinFocusLabel,
+  formatGoalStrategyLabel,
   formatTrainingSummary,
 } from "./userProfileOptions";
 
@@ -278,6 +280,21 @@ const MoreScreen = () => {
             )}`}
           />
           <MoreActionRow
+            description="Choose whether calories should run at a light, normal, or aggressive deficit or surplus, or stay at maintenance."
+            icon={
+              <TargetIcon
+                size={18}
+                color={appColors.brand700}
+                weight="fill"
+              />
+            }
+            onPress={() => navigation.navigate("GoalStrategySettingsScreen")}
+            title="Goal strategy"
+            value={formatGoalStrategyLabel(
+              resolveGoalStrategy(user?.goal, user?.goalStrategy),
+            )}
+          />
+          <MoreActionRow
             description="Set how strongly your macro targets should bias toward protein grams per kilogram."
             icon={
               <BarbellIcon
@@ -366,36 +383,6 @@ const MoreScreen = () => {
             }
           />
         </View>
-
-        <Text style={styles.sectionTitle}>Debug Menu</Text>
-        <View style={styles.sectionCard}>
-          <MoreActionRow
-            description="Inspect database counts, seed sample data, and run debug presets."
-            icon={
-              <BugIcon
-                size={18}
-                color={appColors.brand700}
-                weight="fill"
-              />
-            }
-            onPress={() => navigation.navigate("SettingsScreen")}
-            title="Debug tools"
-            value="Open"
-          />
-          <MoreActionRow
-            description="Browse saved local food items already stored on the device."
-            icon={
-              <DatabaseIcon
-                size={18}
-                color={appColors.brand700}
-                weight="fill"
-              />
-            }
-            onPress={() => navigation.navigate("FoodLibrary")}
-            title="Local Food Item Library"
-            value="Browse"
-          />
-        </View>
       </ScrollView>
     </View>
   );
@@ -416,7 +403,7 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbTop,
+    backgroundColor: appColors.brand800,
   },
   orbBottom: {
     position: "absolute",
@@ -425,7 +412,7 @@ const styles = StyleSheet.create({
     width: 230,
     height: 230,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbBottom,
+    backgroundColor: appColors.success700,
   },
   heroCard: {
     backgroundColor: appColors.surfaceCard,
@@ -458,7 +445,7 @@ const styles = StyleSheet.create({
   metricCard: {
     flex: 1,
     borderRadius: 8,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField,
     padding: 14,
   },
   metricLabel: {
@@ -509,7 +496,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.foodEyebrowBg,
+    backgroundColor: appColors.brand800,
   },
   actionCopy: {
     flex: 1,
@@ -545,3 +532,4 @@ const styles = StyleSheet.create({
 });
 
 export default MoreScreen;
+

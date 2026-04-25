@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
     width: 190,
     height: 190,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbTop,
+    backgroundColor: appColors.brand800,
   },
   orbBottom: {
     position: "absolute",
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 999,
-    backgroundColor: appColors.foodOrbBottom,
+    backgroundColor: appColors.success700,
   },
   card: {
     backgroundColor: appColors.surfaceCard,
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
   },
   optionCard: {
     borderRadius: 8,
-    backgroundColor: appColors.foodFieldBg,
+    backgroundColor: appColors.surfaceField,
     padding: 14,
     flexDirection: "row",
     gap: 12,
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
   },
   optionCardSelected: {
     borderColor: appColors.brand500,
-    backgroundColor: appColors.foodEyebrowBg,
+    backgroundColor: appColors.brand800,
   },
   optionCardPressed: {
     opacity: 0.92,
@@ -295,3 +295,4 @@ const styles = StyleSheet.create({
 });
 
 export default ProteinFocusSettingsScreen;
+

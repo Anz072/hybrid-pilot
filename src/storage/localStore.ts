@@ -14,6 +14,7 @@ const KEY_LOCAL_ACCOUNT = "localAccount";
 const KEY_ONBOARDING_PROFILE = "onboardingProfile";
 const KEY_FOOD_SEARCH_SECTION_STATE = "foodSearchSectionState";
 const KEY_FOOD_TRACKING_PREFERENCES = "foodTrackingPreferences";
+const KEY_ADAPTIVE_RECOMMENDATION_SEEN = "adaptiveRecommendationSeen";
 
 export type AuthProvider = "local" | "google";
 
@@ -59,6 +60,9 @@ const DEFAULT_FOOD_SEARCH_SECTION_STATE: FoodSearchSectionState = {
 const DEFAULT_FOOD_TRACKING_PREFERENCES: FoodTrackingPreferences = {
   fastLogEnabled: false,
 };
+
+const getAdaptiveRecommendationSeenKey = (userExternalId: string) =>
+  `${KEY_ADAPTIVE_RECOMMENDATION_SEEN}:${userExternalId}`;
 
 const safeParse = <T>(raw: string | null): T | null => {
   if (!raw) {
@@ -156,6 +160,25 @@ export const getFoodTrackingPreferences = async (): Promise<FoodTrackingPreferen
     ...DEFAULT_FOOD_TRACKING_PREFERENCES,
     ...(parsed ?? {}),
   };
+};
+
+export const markAdaptiveRecommendationSeen = async (
+  userExternalId: string,
+  recommendationId: number,
+): Promise<void> => {
+  await setKv(
+    getAdaptiveRecommendationSeenKey(userExternalId),
+    String(recommendationId),
+  );
+};
+
+export const getLastSeenAdaptiveRecommendationId = async (
+  userExternalId: string,
+): Promise<number | null> => {
+  const value = await getKv(getAdaptiveRecommendationSeenKey(userExternalId));
+  const parsed = Number.parseInt(value ?? "", 10);
+
+  return Number.isFinite(parsed) ? parsed : null;
 };
 
 export const buildLocalAccount = (input: BuildLocalAccountInput): LocalAccount => {

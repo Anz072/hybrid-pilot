@@ -5,6 +5,7 @@ import { appColors } from "../../theme/colors";
 
 type AdaptiveCaloriesBannerProps = {
   recommendation: DBAdaptiveCalorieRecommendation;
+  onDismiss?: () => void;
   onReview: () => void;
 };
 
@@ -13,6 +14,7 @@ const formatDelta = (value: number) =>
 
 const AdaptiveCaloriesBanner = ({
   recommendation,
+  onDismiss,
   onReview,
 }: AdaptiveCaloriesBannerProps) => {
   const currentBaseCalories = recommendation.currentBaseCalories;
@@ -39,15 +41,28 @@ const AdaptiveCaloriesBanner = ({
           : `Suggested base target ${recommendation.recommendedBaseCalories} kcal/day based on your recent complete diary days and weight trend.`}
       </Text>
 
-      <Pressable
-        onPress={onReview}
-        style={({ pressed }) => [
-          styles.reviewButton,
-          pressed && styles.reviewButtonPressed,
-        ]}
-      >
-        <Text style={styles.reviewButtonText}>Review recommendation</Text>
-      </Pressable>
+      <View style={styles.actionRow}>
+        <Pressable
+          onPress={onReview}
+          style={({ pressed }) => [
+            styles.reviewButton,
+            pressed && styles.reviewButtonPressed,
+          ]}
+        >
+          <Text style={styles.reviewButtonText}>Review recommendation</Text>
+        </Pressable>
+        {onDismiss ? (
+          <Pressable
+            onPress={onDismiss}
+            style={({ pressed }) => [
+              styles.dismissButton,
+              pressed && styles.reviewButtonPressed,
+            ]}
+          >
+            <Text style={styles.dismissButtonText}>Close</Text>
+          </Pressable>
+        ) : null}
+      </View>
     </View>
   );
 };
@@ -97,6 +112,11 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 14,
   },
+  actionRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
   reviewButton: {
     alignSelf: "flex-start",
     borderRadius: 9999,
@@ -109,6 +129,20 @@ const styles = StyleSheet.create({
   },
   reviewButtonText: {
     color: appColors.white,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  dismissButton: {
+    alignSelf: "flex-start",
+    borderRadius: 9999,
+    borderWidth: 1,
+    borderColor: appColors.borderStrong,
+    backgroundColor: appColors.surfaceGhost,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  dismissButtonText: {
+    color: appColors.textPrimary,
     fontSize: 13,
     fontWeight: "800",
   },

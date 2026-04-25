@@ -20,6 +20,7 @@ import type {
   DBUserSettings,
 } from "../../store/DB_TYPES";
 import { appColors } from "../../theme/colors";
+import { markAdaptiveRecommendationSeen } from "../../storage/localStore";
 import SettingsStackHeader from "./SettingsStackHeader";
 import {
   applyAdaptiveRecommendationForUser,
@@ -138,6 +139,14 @@ const AdaptiveCaloriesSettingsScreen = ({ navigation }: Props) => {
       void loadScreen();
     }, [loadScreen]),
   );
+
+  React.useEffect(() => {
+    if (!user || !latestRecommendation) {
+      return;
+    }
+
+    void markAdaptiveRecommendationSeen(user.externalId, latestRecommendation.id);
+  }, [latestRecommendation, user]);
 
   const handleToggleAdaptive = async () => {
     if (!user) {

@@ -406,58 +406,55 @@ const HomeScreen = () => {
             </View>
           </View>
 
-          <View style={styles.progressGrid}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.progressGrid}
+          >
             <View style={styles.progressMetric}>
               <View style={styles.progressMetricHeader}>
                 <ScalesIcon
-                  size={14}
+                  size={16}
                   color={appColors.textSecondary}
                   weight="bold"
                 />
-                <Text style={styles.progressMetricLabel}>Current weight</Text>
               </View>
               <Text style={styles.progressMetricValue}>
                 {currentWeightKg != null
                   ? `${formatWeightKg(currentWeightKg)} kg`
                   : "--"}
               </Text>
-              <Text style={styles.progressMetricCaption}>
-                Most recent logged check-in.
-              </Text>
+              <Text style={styles.progressMetricLabel}>Latest entry</Text>
             </View>
 
             <View style={styles.progressMetric}>
               <View style={styles.progressMetricHeader}>
                 <TrendUpIcon
-                  size={14}
+                  size={16}
                   color={appColors.textSecondary}
                   weight="bold"
                 />
-                <Text style={styles.progressMetricLabel}>7 day trend</Text>
               </View>
               <Text style={styles.progressMetricValue}>
                 {formatTrendValue(sevenDayTrendKg)}
               </Text>
-              <Text style={styles.progressMetricCaption}>Versus 7 day average.</Text>
+              <Text style={styles.progressMetricLabel}>7 day average</Text>
             </View>
 
             <View style={styles.progressMetric}>
               <View style={styles.progressMetricHeader}>
                 <TargetIcon
-                  size={14}
+                  size={16}
                   color={appColors.textSecondary}
                   weight="bold"
                 />
-                <Text style={styles.progressMetricLabel}>Percent to goal</Text>
               </View>
               <Text style={styles.progressMetricValue}>
                 {goalProgressPercent != null ? `${goalProgressPercent}%` : "--"}
               </Text>
-              <Text style={styles.progressMetricCaption}>
-                Based on your current weight goal.
-              </Text>
+              <Text style={styles.progressMetricLabel}>Percent to goal</Text>
             </View>
-          </View>
+          </ScrollView>
         </View>
 
         <Pressable
@@ -712,28 +709,34 @@ const styles = StyleSheet.create({
   },
   progressGrid: {
     gap: 12,
+    flexDirection: "row",
   },
   progressMetric: {
     borderRadius: 8,
     backgroundColor: appColors.surfaceCardAlt,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
-    padding: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    width: 156,
   },
   progressMetricHeader: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 8,
     marginBottom: 10,
   },
   progressMetricLabel: {
     ...appTypography.bodySmall,
     color: appColors.textSecondary,
+    textAlign: "center",
   },
   progressMetricValue: {
     ...appTypography.displayCard,
     color: appColors.textPrimary,
-    marginBottom: 6,
+    marginBottom: 8,
+    textAlign: "center",
   },
   progressMetricCaption: {
     ...appTypography.bodySmall,
@@ -838,5 +841,4 @@ const styles = StyleSheet.create({
 });
 
 export default HomeScreen;
-
 

@@ -33,12 +33,14 @@ import FoodScreenHeader from "./FoodScreenHeader";
 import PublicVisibilityCheckbox from "./PublicVisibilityCheckbox";
 import {
   buildFoodLoggedAt,
+  calculateQuickAddCaloriesFromMacros,
   formatFoodLoggedTime,
   formatFoodMacro,
   formatFoodShortDate,
   normalizePositiveFoodInput,
 } from "./foodUtils";
 import { appColors } from "../../theme/colors";
+import { sharedStyleValues } from "../../theme/sharedStyles";
 
 type CreateCustomFoodRoute = RouteProp<FoodStackParamList, "CreateCustomFood">;
 type CreateCustomFoodNav = CompositeNavigationProp<
@@ -48,6 +50,11 @@ type CreateCustomFoodNav = CompositeNavigationProp<
 
 const parseLocalizedNumber = (value: string): number =>
   Number(value.trim().replace(",", "."));
+
+const toSafeNumber = (value: string): number => {
+  const parsed = parseLocalizedNumber(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
 
 const formatPreviewNumber = (
   value: number,
@@ -80,6 +87,7 @@ const CreateCustomFoodScreen = () => {
   const [protein, setProtein] = React.useState("0");
   const [carbs, setCarbs] = React.useState("0");
   const [fat, setFat] = React.useState("0");
+  const [isCaloriesManuallySet, setIsCaloriesManuallySet] = React.useState(false);
   const [isPublic, setIsPublic] = React.useState(true);
   const [loadedMealOwnerUserId, setLoadedMealOwnerUserId] = React.useState<
     string | null
@@ -125,16 +133,46 @@ const CreateCustomFoodScreen = () => {
     () => parseLocalizedNumber(servingSize),
     [servingSize],
   );
-  const parsedCalories = React.useMemo(
-    () => parseLocalizedNumber(calories),
-    [calories],
-  );
   const parsedProtein = React.useMemo(
     () => parseLocalizedNumber(protein),
     [protein],
   );
   const parsedCarbs = React.useMemo(() => parseLocalizedNumber(carbs), [carbs]);
   const parsedFat = React.useMemo(() => parseLocalizedNumber(fat), [fat]);
+  const macroCalculatedCalories = React.useMemo(
+    () =>
+      calculateQuickAddCaloriesFromMacros({
+        proteinG: parsedProtein,
+        carbsG: parsedCarbs,
+        fatG: parsedFat,
+      }),
+    [parsedCarbs, parsedFat, parsedProtein],
+  );
+  const displayedCaloriesValue = isCaloriesManuallySet
+    ? calories
+    : macroCalculatedCalories > 0
+      ? String(macroCalculatedCalories)
+      : "";
+  const resolvedCalories = React.useMemo(
+    () => toSafeNumber(displayedCaloriesValue),
+    [displayedCaloriesValue],
+  );
+  const requiredCaloriesFallback = React.useMemo(() => {
+    const parsedCalories = toSafeNumber(calories);
+
+    if (parsedCalories > 0) {
+      return parsedCalories;
+    }
+
+    if (macroCalculatedCalories > 0) {
+      return macroCalculatedCalories;
+    }
+
+    return 1;
+  }, [calories, macroCalculatedCalories]);
+  const caloriesHelperText = isCaloriesManuallySet
+    ? `System calculates ${macroCalculatedCalories.toFixed(0)} kcal from macros.`
+    : `Macro sum is ${macroCalculatedCalories.toFixed(0)} kcal.`;
 
   const canEditMeal =
     !isEditing ||
@@ -204,6 +242,16 @@ const CreateCustomFoodScreen = () => {
           Number.isFinite(meal.carbsG ?? NaN) ? String(meal.carbsG) : "0",
         );
         setFat(Number.isFinite(meal.fatG ?? NaN) ? String(meal.fatG) : "0");
+        const loadedCalculatedCalories = calculateQuickAddCaloriesFromMacros({
+          proteinG: meal.proteinG ?? 0,
+          carbsG: meal.carbsG ?? 0,
+          fatG: meal.fatG ?? 0,
+        });
+        setIsCaloriesManuallySet(
+          Number.isFinite(meal.calories ?? NaN) &&
+            (meal.calories ?? 0) > 0 &&
+            Math.abs((meal.calories ?? 0) - loadedCalculatedCalories) > 0.5,
+        );
         setIsPublic(meal.isPublic);
       } catch (error) {
         if (!cancelled) {
@@ -230,8 +278,20 @@ const CreateCustomFoodScreen = () => {
   }, []);
 
   const handleCaloriesBlur = React.useCallback(() => {
-    setCalories((current) => normalizePositiveFoodInput(current, 1, 0));
-  }, []);
+    if (isCaloriesManuallySet) {
+      setCalories((current) =>
+        normalizePositiveFoodInput(current, requiredCaloriesFallback, 0),
+      );
+      return;
+    }
+
+    if (macroCalculatedCalories <= 0) {
+      setCalories(
+        normalizePositiveFoodInput("", requiredCaloriesFallback, 0),
+      );
+      setIsCaloriesManuallySet(true);
+    }
+  }, [isCaloriesManuallySet, macroCalculatedCalories, requiredCaloriesFallback]);
 
   const closeAfterSave = React.useCallback((mode: CustomMealSaveMode) => {
     if (isEditing || mode === "save") {
@@ -273,7 +333,7 @@ const CreateCustomFoodScreen = () => {
     }
 
     if (
-      [parsedServing, parsedCalories].some(
+      [parsedServing, resolvedCalories].some(
         (value) => Number.isNaN(value) || value <= 0,
       ) ||
       [parsedProtein, parsedCarbs, parsedFat].some(
@@ -305,7 +365,7 @@ const CreateCustomFoodScreen = () => {
         name: trimmedName,
         description: trimmedDescription || null,
         servingSizeG: parsedServing,
-        calories: parsedCalories,
+        calories: resolvedCalories,
         proteinG: parsedProtein,
         carbsG: parsedCarbs,
         fatG: parsedFat,
@@ -350,11 +410,11 @@ const CreateCustomFoodScreen = () => {
     loadedMealOwnerUserId,
     mealId,
     mealType,
-    parsedCalories,
     parsedCarbs,
     parsedFat,
     parsedProtein,
     parsedServing,
+    resolvedCalories,
     resolvedLoggedAt,
     trimmedDescription,
     trimmedName,
@@ -400,53 +460,6 @@ const CreateCustomFoodScreen = () => {
 
   const renderEditor = () => (
     <>
-      <View style={styles.heroCard}>
-        <View style={styles.heroHeaderCopy}>
-          <Text style={styles.heroEyebrow}>
-            {isEditing ? "Saved custom meal" : "Quick custom meal"}
-          </Text>
-          <Text style={styles.heroTitle}>
-            {trimmedName || (isEditing ? "Edit custom meal" : "New custom meal")}
-          </Text>
-          <Text style={styles.heroMeta}>
-            {isEditing
-              ? "Update the meal once and the saved version stays in sync everywhere it appears."
-              : "Save a reusable custom meal for later or Save and Add this serving to your diary right away."}
-          </Text>
-        </View>
-
-        <View style={styles.pillRow}>
-          <View style={styles.pill}>
-            <ForkKnifeIcon size={14} color={appColors.brand500} weight="fill" />
-            <Text style={styles.pillText}>{resolvedContextLabel}</Text>
-          </View>
-          <View style={styles.pill}>
-            <CalendarIcon size={14} color={appColors.brand500} weight="bold" />
-            <Text style={styles.pillText}>{formatFoodShortDate(date)}</Text>
-          </View>
-          {trimmedMealType ? (
-            <View style={styles.pill}>
-              <Text style={styles.pillText}>{trimmedMealType}</Text>
-            </View>
-          ) : null}
-        </View>
-
-        <View style={styles.previewStrip}>
-          <Text style={styles.previewValue}>
-            {formatPreviewNumber(parsedCalories, " kcal")}
-          </Text>
-          <Text style={styles.previewText}>
-            {`${formatFoodMacro(parsedProtein, "P")} | ${formatFoodMacro(
-              parsedCarbs,
-              "C",
-            )} | ${formatFoodMacro(parsedFat, "F")}`}
-          </Text>
-          <Text style={styles.previewSubtext}>
-            Serving size {formatPreviewNumber(parsedServing, " g")}
-          </Text>
-        </View>
-      </View>
-
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Meal Details</Text>
         <Text style={styles.sectionSubtitle}>
@@ -511,11 +524,15 @@ const CreateCustomFoodScreen = () => {
               style={styles.input}
               placeholder="0"
               placeholderTextColor={appColors.textMuted}
-              value={calories}
-              onChangeText={setCalories}
+              value={displayedCaloriesValue}
+              onChangeText={(value) => {
+                setCalories(value);
+                setIsCaloriesManuallySet(value.trim().length > 0);
+              }}
               onBlur={handleCaloriesBlur}
               keyboardType="decimal-pad"
             />
+            <Text style={styles.helperText}>{caloriesHelperText}</Text>
           </View>
           <View style={styles.gridCell}>
             <Text style={styles.fieldLabel}>Protein (g)</Text>
@@ -692,12 +709,9 @@ const CreateCustomFoodScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: appColors.surfaceCanvas,
-  },
+  screen: sharedStyleValues.screen,
   content: {
-    paddingHorizontal: 18,
+    ...sharedStyleValues.content,
     paddingBottom: 36,
   },
   bgOrbTop: {
@@ -718,59 +732,16 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: appColors.success700,
   },
-  heroCard: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 16,
-    marginBottom: 16,
-  },
+  heroCard: sharedStyleValues.card,
   heroHeaderCopy: {
     marginBottom: 10,
   },
-  heroEyebrow: {
-    alignSelf: "flex-start",
-    color: appColors.brand500,
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.7,
-    marginBottom: 4,
-  },
-  heroTitle: {
-    color: appColors.textPrimary,
-    fontSize: 22,
-    fontWeight: "500",
-    marginBottom: 3,
-  },
-  heroMeta: {
-    color: appColors.textSecondary,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  pillRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 7,
-    marginBottom: 10,
-  },
-  pill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderRadius: 999,
-    backgroundColor: appColors.surfaceGhost,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-  pillText: {
-    color: appColors.brand500,
-    fontSize: 11,
-    fontWeight: "800",
-  },
+  heroEyebrow: sharedStyleValues.eyebrow,
+  heroTitle: sharedStyleValues.heroTitleLarge,
+  heroMeta: sharedStyleValues.metaText,
+  pillRow: sharedStyleValues.pillRow,
+  pill: sharedStyleValues.pill,
+  pillText: sharedStyleValues.pillText,
   previewStrip: {
     borderRadius: 8,
     backgroundColor: appColors.brand700,
@@ -794,69 +765,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
   },
-  card: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 16,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    color: appColors.textPrimary,
-    fontSize: 14,
-    fontWeight: "900",
-    marginBottom: 2,
-  },
-  sectionSubtitle: {
-    color: appColors.textSecondary,
-    fontSize: 12,
-    lineHeight: 17,
-    marginBottom: 10,
-  },
-  fieldLabel: {
-    color: appColors.slate300,
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-    marginBottom: 6,
-  },
-  fieldLabelSpacing: {
-    marginTop: 10,
-  },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceField,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    color: appColors.textPrimary,
-    fontSize: 14,
-    fontWeight: "700",
-  },
+  card: sharedStyleValues.card,
+  sectionTitle: sharedStyleValues.sectionTitle,
+  sectionSubtitle: sharedStyleValues.sectionSubtitle,
+  fieldLabel: sharedStyleValues.fieldLabel,
+  fieldLabelSpacing: sharedStyleValues.fieldLabelSpacing,
+  inputRow: sharedStyleValues.inputRow,
+  input: sharedStyleValues.input,
   textArea: {
     minHeight: 96,
   },
+  helperText: {
+    color: appColors.textSecondary,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 8,
+  },
   unitPill: {
-    borderRadius: 999,
-    backgroundColor: appColors.surfaceGhost,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
+    ...sharedStyleValues.unitPillRound,
   },
   unitText: {
-    color: appColors.brand500,
+    ...sharedStyleValues.unitText,
     fontSize: 12,
-    fontWeight: "800",
   },
   grid: {
     flexDirection: "row",
@@ -867,50 +797,24 @@ const styles = StyleSheet.create({
     width: "47%",
   },
   footer: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingHorizontal: 18,
-    paddingTop: 12,
-    gap: 10,
-    backgroundColor: appColors.surfaceOverlay,
-    borderTopWidth: 1,
-    borderTopColor: appColors.borderSoft,
+    ...sharedStyleValues.footer,
+    gap: 8,
+    marginBottom: 16
   },
-  footerRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  footerButton: {
-    flex: 1,
-  },
+  footerRow: sharedStyleValues.footerRow,
+  footerButton: sharedStyleValues.footerButton,
   secondaryButton: {
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 9999,
-    backgroundColor: appColors.surfaceGhost,
-    borderWidth: 2,
-    borderColor: appColors.surfaceGhostStrong,
-    paddingVertical: 14,
+    ...sharedStyleValues.buttonBase,
+    ...sharedStyleValues.secondaryButton,
+    paddingVertical: 12,
   },
-  secondaryButtonText: {
-    color: appColors.textPrimary,
-    fontSize: 14,
-    fontWeight: "600",
-  },
+  secondaryButtonText: sharedStyleValues.secondaryButtonText,
   primaryButton: {
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 9999,
-    backgroundColor: appColors.warning600,
-    paddingVertical: 14,
+    ...sharedStyleValues.buttonBase,
+    ...sharedStyleValues.warningPrimaryButton,
+    paddingVertical: 12,
   },
-  primaryButtonText: {
-    color: appColors.slate900,
-    fontSize: 14,
-    fontWeight: "600",
-  },
+  primaryButtonText: sharedStyleValues.warningPrimaryButtonText,
   deleteButton: {
     backgroundColor: appColors.dangerSurface,
     borderColor: appColors.danger600,
@@ -918,12 +822,8 @@ const styles = StyleSheet.create({
   deleteButtonText: {
     color: appColors.danger700,
   },
-  disabled: {
-    opacity: 0.58,
-  },
-  cardPressed: {
-    opacity: 0.9,
-  },
+  disabled: sharedStyleValues.disabled,
+  cardPressed: sharedStyleValues.pressed,
 });
 
 export default CreateCustomFoodScreen;

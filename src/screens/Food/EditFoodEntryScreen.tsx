@@ -45,6 +45,7 @@ import {
 } from "../../engine/micronutrients";
 import { getAgeFromBirthdateValue } from "../../helpers";
 import { appColors } from "../../theme/colors";
+import { sharedStyleValues } from "../../theme/sharedStyles";
 
 type Props = NativeStackScreenProps<FoodStackParamList, "EditFoodEntry">;
 
@@ -484,66 +485,25 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: appColors.success700,
   },
-  centerCard: {
-    alignItems: "center",
-    gap: 10,
-    borderRadius: 8,
-    backgroundColor: appColors.white,
-    padding: 16,
-  },
-  centerText: {
-    color: appColors.textSecondary,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  footer: {
-    position: "absolute",
-    right: 0,
-    bottom: 0,
-    left: 0,
-    paddingHorizontal: 18,
-    paddingTop: 12,
-    gap: 10,
-    backgroundColor: appColors.surfaceOverlay,
-    borderTopWidth: 1,
-    borderTopColor: appColors.borderSoft,
-  },
+  centerCard: sharedStyleValues.centerCard,
+  centerText: sharedStyleValues.centerText,
+  footer: sharedStyleValues.footer,
   primaryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderRadius: 999,
-    backgroundColor: appColors.brand700,
-    paddingVertical: 13,
+    ...sharedStyleValues.buttonBase,
+    ...sharedStyleValues.buttonWithIcon,
+    ...sharedStyleValues.primaryButton,
   },
-  primaryButtonText: {
-    color: appColors.white,
-    fontSize: 14,
-    fontWeight: "800",
-  },
+  primaryButtonText: sharedStyleValues.primaryButtonText,
   secondaryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderRadius: 999,
-    backgroundColor: appColors.white,
-    borderWidth: 1,
-    borderColor: appColors.dangerBorder,
-    paddingVertical: 13,
+    ...sharedStyleValues.buttonBase,
+    ...sharedStyleValues.buttonWithIcon,
+    ...sharedStyleValues.outlineButton,
+    ...sharedStyleValues.dangerButton,
+    backgroundColor: appColors.surfaceCard,
   },
-  secondaryButtonText: {
-    color: appColors.danger700,
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  disabled: {
-    opacity: 0.58,
-  },
-  cardPressed: {
-    opacity: 0.9,
-  },
+  secondaryButtonText: sharedStyleValues.dangerButtonText,
+  disabled: sharedStyleValues.disabled,
+  cardPressed: sharedStyleValues.pressed,
 });
 
 export default EditFoodEntryScreen;

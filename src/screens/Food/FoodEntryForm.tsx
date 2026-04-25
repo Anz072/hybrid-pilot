@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import type { KeyboardTypeOptions } from "react-native";
 import { appColors } from "../../theme/colors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { sharedStyleValues } from "../../theme/sharedStyles";
 
 export type FoodEntryFormPill = {
   key: string;
@@ -261,12 +262,7 @@ const FoodEntryForm = ({
 };
 
 const styles = StyleSheet.create({
-  heroCard: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 16,
-  },
+  heroCard: sharedStyleValues.cardCompact,
   heroHeaderRow: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -277,26 +273,9 @@ const styles = StyleSheet.create({
   heroHeaderCopy: {
     flex: 1,
   },
-  heroEyebrow: {
-    alignSelf: "flex-start",
-    color: appColors.brand500,
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.7,
-    marginBottom: 4,
-  },
-  heroTitle: {
-    color: appColors.textPrimary,
-    fontSize: 18,
-    fontWeight: "900",
-    marginBottom: 3,
-  },
-  heroMeta: {
-    color: appColors.textSecondary,
-    fontSize: 12,
-    lineHeight: 17,
-  },
+  heroEyebrow: sharedStyleValues.eyebrow,
+  heroTitle: sharedStyleValues.heroTitle,
+  heroMeta: sharedStyleValues.metaText,
   heroAction: {
     flexDirection: "row",
     alignItems: "center",
@@ -320,28 +299,9 @@ const styles = StyleSheet.create({
   heroActionTextActive: {
     color: appColors.white,
   },
-  pillRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 7,
-    marginBottom: 10,
-  },
-  pill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderRadius: 999,
-    backgroundColor: appColors.surfaceGhost,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-  pillText: {
-    color: appColors.brand500,
-    fontSize: 11,
-    fontWeight: "800",
-  },
+  pillRow: sharedStyleValues.pillRow,
+  pill: sharedStyleValues.pill,
+  pillText: sharedStyleValues.pillText,
   previewStrip: {
     borderRadius: 8,
     backgroundColor: appColors.brand700,
@@ -359,71 +319,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
   },
-  cardX: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 16,
-  },
-  card: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    color: appColors.textPrimary,
-    fontSize: 14,
-    fontWeight: "900",
-    marginBottom: 2,
-  },
-  sectionSubtitle: {
-    color: appColors.textSecondary,
-    fontSize: 12,
-    lineHeight: 17,
-    marginBottom: 10,
-  },
-  fieldLabel: {
-    color: appColors.slate300,
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-    marginBottom: 6,
-  },
-  fieldLabelSpacing: {
-    marginTop: 10,
-  },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceField,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    color: appColors.textPrimary,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  unitPill: {
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceGhost,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-  },
-  unitText: {
-    color: appColors.brand500,
-    fontSize: 13,
-    fontWeight: "800",
-  },
+  cardX: sharedStyleValues.cardCompact,
+  card: sharedStyleValues.cardCompact,
+  sectionTitle: sharedStyleValues.sectionTitle,
+  sectionSubtitle: sharedStyleValues.sectionSubtitle,
+  fieldLabel: sharedStyleValues.fieldLabel,
+  fieldLabelSpacing: sharedStyleValues.fieldLabelSpacing,
+  inputRow: sharedStyleValues.inputRow,
+  input: sharedStyleValues.inputCompact,
+  unitPill: sharedStyleValues.unitPill,
+  unitText: sharedStyleValues.unitText,
   slotRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -468,19 +373,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
   },
-  nutritionGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  nutritionCell: {
-    width: "47%",
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceField,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 10,
-  },
+  nutritionGrid: sharedStyleValues.nutritionGrid,
+  nutritionCell: sharedStyleValues.nutritionCell,
   nutritionLabel: {
     color: appColors.slate300,
     fontSize: 11,
@@ -489,54 +383,27 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     marginBottom: 6,
   },
-  nutritionValue: {
-    color: appColors.textPrimary,
-    fontSize: 16,
-    fontWeight: "900",
-  },
+  nutritionValue: sharedStyleValues.nutritionValue,
   primaryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderRadius: 999,
-    backgroundColor: appColors.brand700,
-    paddingVertical: 13,
+    ...sharedStyleValues.buttonBase,
+    ...sharedStyleValues.buttonWithIcon,
+    ...sharedStyleValues.primaryButton,
     marginBottom: 12,
   },
-  primaryButtonText: {
-    color: appColors.white,
-    fontSize: 14,
-    fontWeight: "800",
-  },
+  primaryButtonText: sharedStyleValues.primaryButtonText,
   secondaryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderRadius: 999,
-    backgroundColor: appColors.white,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    paddingVertical: 13,
+    ...sharedStyleValues.buttonBase,
+    ...sharedStyleValues.buttonWithIcon,
+    ...sharedStyleValues.outlineButton,
   },
   secondaryButtonDanger: {
-    borderColor: appColors.dangerBorder,
+    ...sharedStyleValues.dangerButton,
+    backgroundColor: appColors.surfaceCard,
   },
-  secondaryButtonText: {
-    color: appColors.textPrimary,
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  secondaryButtonTextDanger: {
-    color: appColors.danger700,
-  },
-  disabled: {
-    opacity: 0.58,
-  },
-  cardPressed: {
-    opacity: 0.9,
-  },
+  secondaryButtonText: sharedStyleValues.outlineButtonText,
+  secondaryButtonTextDanger: sharedStyleValues.dangerButtonText,
+  disabled: sharedStyleValues.disabled,
+  cardPressed: sharedStyleValues.pressed,
 });
 
 export default FoodEntryForm;

@@ -58,6 +58,7 @@ import {
   OpenFoodMapMicronutrientKey,
 } from "../../engine/micronutrients";
 import { getAgeFromBirthdateValue } from "../../helpers";
+import { sharedStyleValues } from "../../theme/sharedStyles";
 
 type ScannedFoodRoute = RouteProp<FoodStackParamList, "ScannedFood">;
 type ScannedFoodNav = CompositeNavigationProp<
@@ -564,62 +565,22 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: appColors.success700,
   },
-  centerCard: {
-    alignItems: "center",
-    gap: 10,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceCard,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 16,
-  },
-  centerText: {
-    color: appColors.textSecondary,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  stickyFooter: {
-    position: "absolute",
-    right: 0,
-    bottom: 0,
-    left: 0,
-    paddingHorizontal: 18,
-    paddingTop: 12,
-    backgroundColor: appColors.surfaceOverlay,
-    borderTopWidth: 1,
-    borderTopColor: appColors.borderSoft,
-  },
+  centerCard: sharedStyleValues.centerCard,
+  centerText: sharedStyleValues.centerText,
+  stickyFooter: sharedStyleValues.footer,
   stickyPrimaryButton: {
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 9999,
-    backgroundColor: appColors.slate50,
-    paddingVertical: 14,
+    ...sharedStyleValues.buttonBase,
+    ...sharedStyleValues.lightPrimaryButton,
   },
-  stickyPrimaryButtonText: {
-    color: appColors.slate900,
-    fontSize: 14,
-    fontWeight: "600",
-  },
+  stickyPrimaryButtonText: sharedStyleValues.lightPrimaryButtonText,
   primaryButton: {
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 9999,
-    backgroundColor: appColors.slate50,
-    paddingVertical: 14,
+    ...sharedStyleValues.buttonBase,
+    ...sharedStyleValues.lightPrimaryButton,
     marginBottom: 12,
   },
-  primaryButtonText: {
-    color: appColors.slate900,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  disabled: {
-    opacity: 0.58,
-  },
-  cardPressed: {
-    opacity: 0.9,
-  },
+  primaryButtonText: sharedStyleValues.lightPrimaryButtonText,
+  disabled: sharedStyleValues.disabled,
+  cardPressed: sharedStyleValues.pressed,
 });
 
 export default ScannedFoodLogScreen;

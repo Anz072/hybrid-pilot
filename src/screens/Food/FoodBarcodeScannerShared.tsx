@@ -1,8 +1,10 @@
 import React from "react";
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
   LayoutRectangle,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -447,84 +449,93 @@ export const FoodBarcodeScannerScaffold = ({
           </View>
         )}
 
-        <View
-          style={[
-            styles.overlay,
-            {
-              paddingTop: insets.top + 14,
-              paddingBottom: insets.bottom + 24,
-            },
-          ]}
+        <KeyboardAvoidingView
+          style={styles.overlayAvoiding}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
           pointerEvents="box-none"
         >
-          <View style={styles.headerRow}>
-            <View style={styles.headerGroup}>
-            </View>
-            <Pressable
-              onPress={onClose}
-              style={({ pressed }) => [
-                styles.closeButton,
-                pressed && styles.buttonPressed,
-              ]}
-              accessibilityLabel="Close barcode scanner"
-            >
-              <XIcon size={18} color={appColors.slate50} weight="bold" />
-            </Pressable>
-          </View>
-
-          <View style={styles.finderWrap} pointerEvents="none">
-            <View
-              ref={finderRef}
-              style={styles.finderFrame}
-              onLayout={() => reportFinderLayout()}
-            >
-              <View style={styles.scanLine} />
-            </View>
-          </View>
-
-          <View style={styles.manualCard}>
-            <Text style={styles.manualTitle}>Scan or enter barcode</Text>
-            <Text style={styles.manualText}>
-              Type the EAN, UPC, or GTIN digits if the camera cannot catch the label.
-            </Text>
-            <View style={styles.manualRow}>
-              <TextInput
-                value={manualBarcode}
-                onChangeText={(value) => {
-                  setManualBarcode(value);
-                  setManualBarcodeError(null);
-                }}
-                editable={!locked}
-                keyboardType="number-pad"
-                returnKeyType="search"
-                onSubmitEditing={() => {
-                  void handleManualBarcodeSubmit();
-                }}
-                placeholder="e.g. 737628064502"
-                placeholderTextColor={appColors.slate400}
-                style={[styles.manualInput, locked && styles.manualInputDisabled]}
-              />
+          <View
+            style={[
+              styles.overlay,
+              {
+                paddingTop: insets.top + 14,
+                paddingBottom: insets.bottom + 24,
+              },
+            ]}
+            pointerEvents="box-none"
+          >
+            <View style={styles.headerRow}>
+              <View style={styles.headerGroup} />
               <Pressable
-                onPress={() => {
-                  void handleManualBarcodeSubmit();
-                }}
-                disabled={locked}
+                onPress={onClose}
                 style={({ pressed }) => [
-                  styles.manualButton,
-                  locked && styles.manualButtonDisabled,
-                  pressed && !locked && styles.buttonPressed,
+                  styles.closeButton,
+                  pressed && styles.buttonPressed,
                 ]}
+                accessibilityLabel="Close barcode scanner"
               >
-                <Text style={styles.manualButtonText}>
-                  {locked ? "Looking..." : "Look up"}
-                </Text>
+                <XIcon size={18} color={appColors.slate50} weight="bold" />
               </Pressable>
             </View>
-            {manualBarcodeError ? (
-              <Text style={styles.manualError}>{manualBarcodeError}</Text>
-            ) : null}
+
+            <View style={styles.finderWrap} pointerEvents="none">
+              <View
+                ref={finderRef}
+                style={styles.finderFrame}
+                onLayout={() => reportFinderLayout()}
+              >
+                <View style={styles.scanLine} />
+              </View>
+            </View>
+
+            <View style={styles.manualCard}>
+              <Text style={styles.manualTitle}>Scan or enter barcode</Text>
+              <Text style={styles.manualText}>
+                Type the EAN, UPC, or GTIN digits if the camera cannot catch the label.
+              </Text>
+              <View style={styles.manualRow}>
+                <TextInput
+                  value={manualBarcode}
+                  onChangeText={(value) => {
+                    setManualBarcode(value);
+                    setManualBarcodeError(null);
+                  }}
+                  editable={!locked}
+                  keyboardType="number-pad"
+                  returnKeyType="search"
+                  onSubmitEditing={() => {
+                    void handleManualBarcodeSubmit();
+                  }}
+                  placeholder="e.g. 737628064502"
+                  placeholderTextColor={appColors.slate400}
+                  style={[
+                    styles.manualInput,
+                    locked && styles.manualInputDisabled,
+                  ]}
+                />
+                <Pressable
+                  onPress={() => {
+                    void handleManualBarcodeSubmit();
+                  }}
+                  disabled={locked}
+                  style={({ pressed }) => [
+                    styles.manualButton,
+                    locked && styles.manualButtonDisabled,
+                    pressed && !locked && styles.buttonPressed,
+                  ]}
+                >
+                  <Text style={styles.manualButtonText}>
+                    {locked ? "Looking..." : "Look up"}
+                  </Text>
+                </Pressable>
+              </View>
+              {manualBarcodeError ? (
+                <Text style={styles.manualError}>{manualBarcodeError}</Text>
+              ) : null}
+            </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
 
         {locked && !modalVisible ? (
           <View style={styles.lookupBanner} pointerEvents="none">
@@ -630,6 +641,9 @@ export const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     paddingHorizontal: 20,
     justifyContent: "space-between",
+  },
+  overlayAvoiding: {
+    ...StyleSheet.absoluteFillObject,
   },
   headerRow: {
     flexDirection: "row",

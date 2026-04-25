@@ -28,6 +28,7 @@ import { DB } from "../../store/DB";
 import type { DBFoodItem } from "../../store/DB_TYPES";
 import { useAppSelector } from "../../store/hooks";
 import { appColors } from "../../theme/colors";
+import { sharedStyleValues } from "../../theme/sharedStyles";
 import { MacroBar } from "./FoodDiaryHeroCard";
 import FoodScreenHeader from "./FoodScreenHeader";
 import {
@@ -342,10 +343,7 @@ const FoodReadOnlyScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: appColors.surfaceCanvas,
-  },
+  screen: sharedStyleValues.screen,
   title: {
     color: appColors.textPrimary,
     fontSize: 24,
@@ -353,9 +351,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 12,
   },
-  content: {
-    paddingHorizontal: 18,
-  },
+  content: sharedStyleValues.content,
   bgOrbTop: {
     position: "absolute",
     top: -90,
@@ -374,47 +370,15 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: appColors.success700,
   },
-  centerCard: {
-    alignItems: "center",
-    gap: 10,
-    borderRadius: 8,
-    backgroundColor: appColors.white,
-    padding: 16,
-  },
-  centerText: {
-    color: appColors.textSecondary,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  heroCard: {
-    backgroundColor: appColors.white,
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 16,
-  },
+  centerCard: sharedStyleValues.centerCard,
+  centerText: sharedStyleValues.centerText,
+  heroCard: sharedStyleValues.cardCompact,
   heroHeaderCopy: {
     marginBottom: 12,
   },
-  heroEyebrow: {
-    alignSelf: "flex-start",
-    color: appColors.brand500,
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.7,
-    marginBottom: 4,
-  },
-  heroTitle: {
-    color: appColors.textPrimary,
-    fontSize: 20,
-    fontWeight: "900",
-    marginBottom: 4,
-  },
-  heroMeta: {
-    color: appColors.textSecondary,
-    fontSize: 12,
-    lineHeight: 17,
-  },
+  heroEyebrow: sharedStyleValues.eyebrow,
+  heroTitle: sharedStyleValues.heroTitle,
+  heroMeta: sharedStyleValues.metaText,
   heroPillsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -432,11 +396,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: appColors.borderStrong,
   },
-  contextPillText: {
-    color: appColors.brand500,
-    fontSize: 12,
-    fontWeight: "800",
-  },
+  contextPillText: sharedStyleValues.contextPillText,
   previewStrip: {
     borderRadius: 8,
     backgroundColor: appColors.brand700,
@@ -460,24 +420,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
   },
-  card: {
-    backgroundColor: appColors.white,
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    color: appColors.textPrimary,
-    fontSize: 14,
-    fontWeight: "900",
-    marginBottom: 2,
-  },
-  sectionSubtitle: {
-    color: appColors.textSecondary,
-    fontSize: 12,
-    lineHeight: 17,
-    marginBottom: 10,
-  },
+  card: sharedStyleValues.cardCompact,
+  sectionTitle: sharedStyleValues.sectionTitle,
+  sectionSubtitle: sharedStyleValues.sectionSubtitle,
   readOnlyRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -506,19 +451,8 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "right",
   },
-  nutritionGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  nutritionCell: {
-    width: "47%",
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceField,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 10,
-  },
+  nutritionGrid: sharedStyleValues.nutritionGrid,
+  nutritionCell: sharedStyleValues.nutritionCell,
   nutritionLabel: {
     color: appColors.slate300,
     fontSize: 11,
@@ -527,27 +461,14 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     marginBottom: 6,
   },
-  nutritionValue: {
-    color: appColors.textPrimary,
-    fontSize: 16,
-    fontWeight: "900",
-  },
+  nutritionValue: sharedStyleValues.nutritionValue,
   primaryButton: {
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 999,
-    backgroundColor: appColors.brand700,
-    paddingVertical: 13,
+    ...sharedStyleValues.buttonBase,
+    ...sharedStyleValues.primaryButton,
     marginBottom: 12,
   },
-  primaryButtonText: {
-    color: appColors.white,
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  cardPressed: {
-    opacity: 0.9,
-  },
+  primaryButtonText: sharedStyleValues.primaryButtonText,
+  cardPressed: sharedStyleValues.pressed,
 });
 
 export default FoodReadOnlyScreen;

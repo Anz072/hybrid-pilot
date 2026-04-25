@@ -53,6 +53,10 @@ import {
   refreshAdaptiveRecommendationForUser,
   setDiaryDayCompletionAndRefresh,
 } from "../User_Settings/adaptiveCaloriesActions";
+import {
+  getLastSeenAdaptiveRecommendationId,
+  markAdaptiveRecommendationSeen,
+} from "../../storage/localStore";
 
 type FoodDiaryNav = NativeStackNavigationProp<FoodStackParamList, "Diary">;
 
@@ -80,6 +84,17 @@ const normalizeVisibleHours = (startHour: number, endHour: number) => {
 
 const formatEntryCountLabel = (count: number) =>
   `${count} ${count === 1 ? "entry" : "entries"}`;
+
+const shouldShowAdaptiveRecommendationBanner = (
+  recommendation: DBAdaptiveCalorieRecommendation | null,
+  lastSeenRecommendationId: number | null,
+) => {
+  if (!recommendation) {
+    return null;
+  }
+
+  return recommendation.id === lastSeenRecommendationId ? null : recommendation;
+};
 
 const FoodDiaryScreen = () => {
   const navigation = useNavigation<FoodDiaryNav>();
@@ -156,12 +171,19 @@ const FoodDiaryScreen = () => {
       return;
     }
 
-    const [favorites, nextSettings, weekEntries, weekDayStatuses] =
+    const [
+      favorites,
+      nextSettings,
+      weekEntries,
+      weekDayStatuses,
+      lastSeenRecommendationId,
+    ] =
       await Promise.all([
         DB.getFavoriteFoodItems(currentUser.externalId, 10),
         DB.getUserSettings(currentUser.externalId),
         DB.getUserFoodLogEntriesBetween(currentUser.externalId, weekStart, weekEnd),
         DB.listDiaryDayStatusesBetween(currentUser.externalId, weekStart, weekEnd),
+        getLastSeenAdaptiveRecommendationId(currentUser.externalId),
       ]);
 
     const weekEntriesByDate = weekDateKeys.map((weekDateKey) =>
@@ -216,7 +238,12 @@ const FoodDiaryScreen = () => {
         const refreshResult = await refreshAdaptiveRecommendationForUser({
           userExternalId: currentUser.externalId,
         });
-        setAdaptiveRecommendation(refreshResult.latestRecommendation);
+        setAdaptiveRecommendation(
+          shouldShowAdaptiveRecommendationBanner(
+            refreshResult.latestRecommendation,
+            lastSeenRecommendationId,
+          ),
+        );
         if (refreshResult.settings) {
           setSettings(refreshResult.settings);
         }
@@ -226,7 +253,12 @@ const FoodDiaryScreen = () => {
             currentUser.externalId,
             "proposed",
           );
-        setAdaptiveRecommendation(latestOpenRecommendation);
+        setAdaptiveRecommendation(
+          shouldShowAdaptiveRecommendationBanner(
+            latestOpenRecommendation,
+            lastSeenRecommendationId,
+          ),
+        );
       }
     } else {
       setAdaptiveRecommendation(null);
@@ -546,7 +578,23 @@ const FoodDiaryScreen = () => {
     }
   }, [dateKey, isCopyingYesterday, loadData, selectedDate, user]);
 
+  const dismissAdaptiveRecommendation = useCallback(() => {
+    if (!user || !adaptiveRecommendation) {
+      return;
+    }
+
+    const recommendationId = adaptiveRecommendation.id;
+    setAdaptiveRecommendation(null);
+    void markAdaptiveRecommendationSeen(user.externalId, recommendationId);
+  }, [adaptiveRecommendation, user]);
+
   const openAdaptiveSettings = useCallback(() => {
+    if (user && adaptiveRecommendation) {
+      const recommendationId = adaptiveRecommendation.id;
+      setAdaptiveRecommendation(null);
+      void markAdaptiveRecommendationSeen(user.externalId, recommendationId);
+    }
+
     const parentNavigation = navigation.getParent();
     if (!parentNavigation) {
       return;
@@ -557,7 +605,7 @@ const FoodDiaryScreen = () => {
     }).navigate("More", {
       screen: "AdaptiveCaloriesSettingsScreen",
     });
-  }, [navigation]);
+  }, [adaptiveRecommendation, navigation, user]);
 
   const toggleDayComplete = useCallback(async () => {
     if (!user || isDayCompleteLoading) {
@@ -596,6 +644,7 @@ const FoodDiaryScreen = () => {
         {adaptiveRecommendation ? (
           <AdaptiveCaloriesBanner
             recommendation={adaptiveRecommendation}
+            onDismiss={dismissAdaptiveRecommendation}
             onReview={openAdaptiveSettings}
           />
         ) : null}

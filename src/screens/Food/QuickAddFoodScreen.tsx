@@ -23,11 +23,7 @@ import type {
 } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
-import {
-  ClockIcon,
-  FireIcon,
-  PencilSimpleIcon,
-} from "phosphor-react-native";
+import { ClockIcon, FireIcon, PencilSimpleIcon } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
@@ -35,6 +31,7 @@ import { DB } from "../../store/DB";
 import type { DBUserFoodLogEntry } from "../../store/DB_TYPES";
 import { useAppSelector } from "../../store/hooks";
 import { appColors } from "../../theme/colors";
+import { sharedStyleValues } from "../../theme/sharedStyles";
 import FoodScreenHeader from "./FoodScreenHeader";
 import {
   buildFoodLoggedAt,
@@ -372,18 +369,11 @@ const QuickAddFoodScreen = () => {
                   pressed && styles.cardPressed,
                 ]}
               >
-                <ClockIcon
-                  size={14}
-                  color={appColors.brand500}
-                  weight="bold"
-                />
+                <ClockIcon size={14} color={appColors.brand500} weight="bold" />
                 <Text style={styles.contextPillText}>
                   {formatFoodLoggedTime(loggedAtDate.toISOString())}
                 </Text>
-                <PencilSimpleIcon
-                  size={16}
-                  color={appColors.slate900}
-                />
+                <PencilSimpleIcon size={16} color={appColors.slate900} />
               </Pressable>
             </View>
             <View style={styles.energyLabelContainer}>
@@ -514,13 +504,8 @@ const QuickAddFoodScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: appColors.surfaceCanvas,
-  },
-  content: {
-    paddingHorizontal: 18,
-  },
+  screen: sharedStyleValues.screen,
+  content: sharedStyleValues.content,
   bgOrbTop: {
     position: "absolute",
     top: -90,
@@ -539,14 +524,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: appColors.success700,
   },
-  heroCard: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 16,
-    marginBottom: 16,
-  },
+  heroCard: sharedStyleValues.card,
   heroHeaderRow: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -557,39 +535,17 @@ const styles = StyleSheet.create({
   heroHeaderCopy: {
     flex: 1,
   },
-  heroEyebrow: {
-    alignSelf: "flex-start",
-    color: appColors.brand500,
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.7,
-    marginBottom: 4,
-  },
+  heroEyebrow: sharedStyleValues.eyebrow,
   heroTitle: {
-    color: appColors.textPrimary,
-    fontSize: 22,
-    fontWeight: "500",
+    ...sharedStyleValues.heroTitleLarge,
     marginBottom: 4,
   },
-  heroMeta: {
-    color: appColors.textSecondary,
-    fontSize: 12,
-    lineHeight: 17,
-  },
+  heroMeta: sharedStyleValues.metaText,
   heroPill: {
-    borderRadius: 999,
-    backgroundColor: appColors.surfaceGhost,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    ...sharedStyleValues.pill,
+    gap: 0,
   },
-  heroPillText: {
-    color: appColors.brand500,
-    fontSize: 11,
-    fontWeight: "800",
-  },
+  heroPillText: sharedStyleValues.pillText,
   heroPillsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -607,11 +563,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: appColors.borderStrong,
   },
-  contextPillText: {
-    color: appColors.brand500,
-    fontSize: 12,
-    fontWeight: "800",
-  },
+  contextPillText: sharedStyleValues.contextPillText,
   contextPillAction: {
     color: appColors.brand300,
     fontSize: 11,
@@ -634,37 +586,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
   },
-  card: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 16,
-    marginBottom: 16,
-  },
+  card: sharedStyleValues.card,
   sectionTitle: {
-    color: appColors.textPrimary,
-    fontSize: 14,
-    fontWeight: "900",
+    ...sharedStyleValues.sectionTitle,
     marginBottom: 10,
   },
-  sectionSubtitle: {
-    color: appColors.textSecondary,
-    fontSize: 12,
-    lineHeight: 17,
-    marginBottom: 10,
-  },
+  sectionSubtitle: sharedStyleValues.sectionSubtitle,
   energyLabelContainer: {
     flexDirection: "row",
     alignItems: "center",
     gap: 2,
   },
   fieldLabel: {
-    color: appColors.slate300,
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
+    ...sharedStyleValues.fieldLabel,
     marginBottom: 8,
   },
   fieldSpacing: {
@@ -676,30 +610,19 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   energyInput: {
-    flex: 1,
+    ...sharedStyleValues.input,
     borderWidth: 1,
     borderColor: appColors.brand700,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceField,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    color: appColors.textPrimary,
     fontSize: 20,
     fontWeight: "800",
   },
   unitPill: {
-    borderRadius: 9999,
-    backgroundColor: appColors.surfaceGhost,
-    borderWidth: 1,
+    ...sharedStyleValues.unitPillRound,
     borderColor: appColors.borderSoft,
     paddingHorizontal: 16,
     paddingVertical: 16,
   },
-  unitText: {
-    color: appColors.brand500,
-    fontSize: 13,
-    fontWeight: "800",
-  },
+  unitText: sharedStyleValues.unitText,
   helperText: {
     color: appColors.textSecondary,
     fontSize: 12,
@@ -747,49 +670,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
   },
-  textInput: {
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceField,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    color: appColors.textPrimary,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  footer: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingHorizontal: 18,
-    paddingTop: 12,
-    backgroundColor: appColors.surfaceOverlay,
-    borderTopWidth: 1,
-    borderTopColor: appColors.borderSoft,
-  },
+  textInput: sharedStyleValues.input,
+  footer: sharedStyleValues.footer,
   primaryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderRadius: 9999,
-    backgroundColor: appColors.slate50,
-    paddingVertical: 14,
+    ...sharedStyleValues.buttonBase,
+    ...sharedStyleValues.buttonWithIcon,
+    ...sharedStyleValues.primaryButton,
+    marginBottom: 12,
   },
-  primaryButtonText: {
-    color: appColors.slate900,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  disabled: {
-    opacity: 0.58,
-  },
-  cardPressed: {
-    opacity: 0.9,
-  },
+  primaryButtonText: sharedStyleValues.lightPrimaryButtonText,
+  disabled: sharedStyleValues.disabled,
+  cardPressed: sharedStyleValues.pressed,
 });
 
 export default QuickAddFoodScreen;
-

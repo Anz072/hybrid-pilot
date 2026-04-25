@@ -45,6 +45,7 @@ import type {
 } from "../../store/DB_TYPES";
 import { useAppSelector } from "../../store/hooks";
 import { appColors } from "../../theme/colors";
+import { sharedStyleValues } from "../../theme/sharedStyles";
 import FoodBarcodeScannerModal from "./FoodBarcodeScannerModal";
 import FoodScreenHeader from "./FoodScreenHeader";
 import PublicVisibilityCheckbox from "./PublicVisibilityCheckbox";
@@ -1396,13 +1397,8 @@ const CreateRecipeScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: appColors.surfaceCanvas,
-  },
-  content: {
-    paddingHorizontal: 18,
-  },
+  screen: sharedStyleValues.screen,
+  content: sharedStyleValues.content,
   bgOrbTop: {
     position: "absolute",
     top: -90,
@@ -1421,30 +1417,13 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: appColors.success700,
   },
-  heroCard: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 16,
-    marginBottom: 16,
-  },
+  heroCard: sharedStyleValues.card,
   heroHeaderCopy: {
     flex: 1,
   },
-  heroEyebrow: {
-    alignSelf: "flex-start",
-    color: appColors.brand500,
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.7,
-    marginBottom: 4,
-  },
+  heroEyebrow: sharedStyleValues.eyebrow,
   heroTitle: {
-    color: appColors.textPrimary,
-    fontSize: 22,
-    fontWeight: "500",
+    ...sharedStyleValues.heroTitleLarge,
     marginBottom: 4,
   },
   heroHeaderRow: {
@@ -1454,11 +1433,7 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 12,
   },
-  heroMeta: {
-    color: appColors.textSecondary,
-    fontSize: 12,
-    lineHeight: 17,
-  },
+  heroMeta: sharedStyleValues.metaText,
   heroPillsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1476,11 +1451,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: appColors.borderStrong,
   },
-  contextPillText: {
-    color: appColors.brand500,
-    fontSize: 12,
-    fontWeight: "800",
-  },
+  contextPillText: sharedStyleValues.contextPillText,
   previewStrip: {
     borderRadius: 8,
     backgroundColor: appColors.brand700,
@@ -1504,14 +1475,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
   },
-  card: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 16,
-    marginBottom: 16,
-  },
+  card: sharedStyleValues.card,
   sectionTitle: {
     color: appColors.textPrimary,
     fontSize: 20,
@@ -1597,29 +1561,11 @@ const styles = StyleSheet.create({
   methodBadgeTextSelected: {
     color: appColors.white,
   },
-  fieldLabel: {
-    color: appColors.slate300,
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-    marginBottom: 6,
-  },
+  fieldLabel: sharedStyleValues.fieldLabel,
   fieldSpacing: {
     marginTop: 10,
   },
-  textInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceField,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    color: appColors.textPrimary,
-    fontSize: 14,
-    fontWeight: "700",
-  },
+  textInput: sharedStyleValues.input,
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1788,15 +1734,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   unitPill: {
-    paddingRight:8,
+    ...sharedStyleValues.unitPill,
+    paddingRight: 8,
     paddingLeft: 2,
     paddingVertical: 12,
   },
-  unitText: {
-    color: appColors.brand500,
-    fontSize: 13,
-    fontWeight: "800",
-  },
+  unitText: sharedStyleValues.unitText,
   twoUpGrid: {
     flexDirection: "row",
     gap: 8,
@@ -1917,39 +1860,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
   },
-  footer: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingHorizontal: 18,
-    paddingTop: 12,
-    gap: 10,
-    backgroundColor: appColors.surfaceOverlay,
-    borderTopWidth: 1,
-    borderTopColor: appColors.borderSoft,
-  },
-  footerRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  footerButton: {
-    flex: 1,
-  },
+  footer: sharedStyleValues.footer,
+  footerRow: sharedStyleValues.footerRow,
+  footerButton: sharedStyleValues.footerButton,
   secondaryButton: {
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 9999,
-    backgroundColor: appColors.surfaceGhost,
-    borderWidth: 2,
-    borderColor: appColors.surfaceGhostStrong,
-    paddingVertical: 14,
+    ...sharedStyleValues.buttonBase,
+    ...sharedStyleValues.secondaryButton,
   },
-  secondaryButtonText: {
-    color: appColors.textPrimary,
-    fontSize: 14,
-    fontWeight: "600",
-  },
+  secondaryButtonText: sharedStyleValues.secondaryButtonText,
   deleteButton: {
     backgroundColor: appColors.dangerSurface,
     borderColor: appColors.danger600,
@@ -1958,23 +1876,12 @@ const styles = StyleSheet.create({
     color: appColors.danger700,
   },
   primaryButton: {
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 9999,
-    backgroundColor: appColors.slate50,
-    paddingVertical: 14,
+    ...sharedStyleValues.buttonBase,
+    ...sharedStyleValues.lightPrimaryButton,
   },
-  primaryButtonText: {
-    color: appColors.slate900,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  disabled: {
-    opacity: 0.58,
-  },
-  cardPressed: {
-    opacity: 0.9,
-  },
+  primaryButtonText: sharedStyleValues.lightPrimaryButtonText,
+  disabled: sharedStyleValues.disabled,
+  cardPressed: sharedStyleValues.pressed,
 });
 
 export default CreateRecipeScreen;

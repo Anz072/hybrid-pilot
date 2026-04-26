@@ -47,9 +47,27 @@ const FoodNavigator = () => {
       <Stack.Screen
         name="CreateCustomFood"
         component={CreateCustomFoodScreen}
+        options={{
+          animation: "slide_from_bottom",
+          presentation: "fullScreenModal",
+        }}
       />
-      <Stack.Screen name="CreateRecipe" component={CreateRecipeScreen} />
-      <Stack.Screen name="QuickAddFood" component={QuickAddFoodScreen} />
+      <Stack.Screen
+        name="CreateRecipe"
+        component={CreateRecipeScreen}
+        options={{
+          animation: "slide_from_bottom",
+          presentation: "fullScreenModal",
+        }}
+      />
+      <Stack.Screen
+        name="QuickAddFood"
+        component={QuickAddFoodScreen}
+        options={{
+          animation: "slide_from_bottom",
+          presentation: "fullScreenModal",
+        }}
+      />
     </Stack.Navigator>
   );
 };

@@ -895,19 +895,9 @@ const WeightScreen = ({
     })();
 
   const listHeader = (
-    <View style={[styles.content, { paddingTop: insets.top + 16 }]}>
+    <View style={[styles.content, { paddingTop: insets.top + 24 }]}>
       <View style={styles.header}>
         <Text style={styles.title}>Weight Diary</Text>
-        <Pressable
-          onPress={handleDataStatusPress}
-          style={({ pressed }) => [
-            styles.heroStatusButton,
-            pressed && styles.cardPressed,
-          ]}
-          accessibilityLabel="Open weight data status"
-        >
-          <ArrowsClockwiseIcon size={18} color={appColors.textSecondary} weight="bold" />
-        </Pressable>
       </View>
       <View style={styles.heroCard}>
         <View style={styles.heroStatRow}>

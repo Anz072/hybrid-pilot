@@ -416,7 +416,7 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
         <View
           style={[
             styles.footer,
-            { paddingBottom: Math.max(insets.bottom, 12) },
+            { paddingBottom: Math.max(insets.bottom, 16) },
           ]}
         >
           <Pressable

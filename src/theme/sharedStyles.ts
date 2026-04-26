@@ -42,7 +42,7 @@ export const sharedStyleValues = {
     color: appColors.textPrimary,
     fontSize: 14,
     fontWeight: "900",
-    marginBottom: 2,
+    marginBottom: 8,
   },
   sectionSubtitle: {
     color: appColors.textSecondary,
@@ -77,7 +77,7 @@ export const sharedStyleValues = {
     lineHeight: 17,
   },
   fieldLabel: {
-    color: appColors.slate300,
+    color: appColors.slate600,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -234,7 +234,7 @@ export const sharedStyleValues = {
   },
   nutritionValue: {
     color: appColors.textPrimary,
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "900",
   },
   footer: {
@@ -277,7 +277,7 @@ export const sharedStyleValues = {
     fontWeight: "800",
   },
   lightPrimaryButton: {
-    backgroundColor: appColors.slate50,
+    backgroundColor: appColors.success500,
     paddingVertical: 14,
   },
   lightPrimaryButtonText: {

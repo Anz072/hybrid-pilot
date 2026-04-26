@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   value: {
-    color: appColors.slate200,
+    color: appColors.slate500,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "700",

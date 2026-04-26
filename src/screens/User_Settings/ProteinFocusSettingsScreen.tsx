@@ -19,7 +19,10 @@ import { formatProteinFocusSummary } from "../../engine/proteinFocus";
 import { saveProteinFocusForUser } from "./userSettingsActions";
 import { PROTEIN_FOCUS_OPTIONS } from "../../engine/proteinFocus";
 
-type Props = NativeStackScreenProps<MoreParamList, "ProteinFocusSettingsScreen">;
+type Props = NativeStackScreenProps<
+  MoreParamList,
+  "ProteinFocusSettingsScreen"
+>;
 
 const ProteinFocusSettingsScreen = ({ navigation }: Props) => {
   const insets = useSafeAreaInsets();
@@ -124,10 +127,12 @@ const ProteinFocusSettingsScreen = ({ navigation }: Props) => {
                     ]}
                   >
                     <View style={styles.optionCopy}>
-                      <Text style={styles.optionTitle}>
+                      <Text style={[styles.optionTitle, selected&&styles.optionTitleSelected]}>
                         {option.label} ({option.gramsPerKg} g/kg)
                       </Text>
-                      <Text style={styles.optionText}>{option.description}</Text>
+                      <Text style={[styles.optionText, selected&&styles.optionTitleSelected]}>
+                        {option.description}
+                      </Text>
                     </View>
                     <View
                       style={[
@@ -136,7 +141,11 @@ const ProteinFocusSettingsScreen = ({ navigation }: Props) => {
                       ]}
                     >
                       {selected ? (
-                        <CheckIcon size={14} color={appColors.white} weight="bold" />
+                        <CheckIcon
+                          size={14}
+                          color={appColors.white}
+                          weight="bold"
+                        />
                       ) : null}
                     </View>
                   </Pressable>
@@ -205,13 +214,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cardTitle: {
-    color: appColors.white,
+    color: appColors.slate800,
     fontSize: 17,
     fontWeight: "800",
     marginBottom: 4,
   },
   cardText: {
-    color: appColors.white,
+    color: appColors.slate800,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -226,7 +235,7 @@ const styles = StyleSheet.create({
     maxWidth: 190,
   },
   metricPillText: {
-    color: appColors.white,
+    color: appColors.slate800,
     fontSize: 12,
     fontWeight: "800",
   },
@@ -254,13 +263,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   optionTitle: {
-    color: appColors.white,
+    color: appColors.slate800,
     fontSize: 16,
     fontWeight: "800",
     marginBottom: 4,
   },
+  optionTitleSelected: {
+    color: appColors.white,
+  },
   optionText: {
-    color: appColors.slate200,
+    color: appColors.slate600,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -295,4 +307,3 @@ const styles = StyleSheet.create({
 });
 
 export default ProteinFocusSettingsScreen;
-

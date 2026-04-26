@@ -256,15 +256,6 @@ const AccountScreen = ({ navigation, route }: Props) => {
         />
 
         <View style={styles.card}>
-          <Text style={styles.label}>Display name</Text>
-          <TextInput
-            value={displayName}
-            onChangeText={setDisplayName}
-            placeholder="Your display name"
-            autoCapitalize="words"
-            style={styles.input}
-          />
-
           <Pressable
             disabled={isSaving}
             onPress={() => {
@@ -282,14 +273,9 @@ const AccountScreen = ({ navigation, route }: Props) => {
             <Text style={styles.googleButtonText}>
               {submissionMode === "google"
                 ? "Connecting Google..."
-                : "Create synced Google account"}
+                : "Sign Up With Google"}
             </Text>
           </Pressable>
-
-          <Text style={styles.googleHint}>
-            Google sign-up creates your online account in Supabase and is the
-            only supported way to sign in again later.
-          </Text>
         </View>
       </KeyboardAwareScrollView>
     </KeyboardAvoidingView>
@@ -348,9 +334,9 @@ const styles = StyleSheet.create({
     borderColor: appColors.borderStrong,
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 14,
-    backgroundColor: appColors.white,
-    color: appColors.slate900,
+    paddingVertical: 12,
+    backgroundColor: appColors.slate100,
+    color: appColors.slate800,
     fontSize: 16,
     letterSpacing: 0.2,
     fontWeight: "600",
@@ -366,10 +352,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
-    borderRadius: 9999,
-    backgroundColor: appColors.brand700,
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+    borderRadius: 8,
+    backgroundColor: appColors.brand600,
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+    marginTop:12,
+    marginBottom: 64
   },
   googleButtonDisabled: {
     opacity: 0.6,

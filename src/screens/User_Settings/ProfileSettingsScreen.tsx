@@ -248,9 +248,6 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
               <View style={styles.card}>
                 <Text style={styles.cardTitle}>Synced account</Text>
                 <Text style={styles.accountValue}>{user.email ?? "No email"}</Text>
-                <Text style={styles.cardText}>
-                  Signed in with {formatProviderLabel(user.provider)}.
-                </Text>
               </View>
 
               <View style={styles.card}>
@@ -428,7 +425,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   cardTitle: {
-    color: appColors.white,
+    color: appColors.slate800,
     fontSize: 17,
     fontWeight: "800",
     marginBottom: 6,
@@ -446,19 +443,19 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sectionTitle: {
-    color: appColors.white,
+    color: appColors.slate800,
     fontSize: 18,
     fontWeight: "800",
     marginBottom: 6,
   },
   sectionText: {
-    color: appColors.slate200,
+    color: appColors.slate600,
     fontSize: 13,
     lineHeight: 19,
     marginBottom: 14,
   },
   fieldLabel: {
-    color: appColors.slate200,
+    color: appColors.slate800,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -475,7 +472,7 @@ const styles = StyleSheet.create({
     borderColor: appColors.slate100,
     paddingHorizontal: 14,
     paddingVertical: 13,
-    color: appColors.white,
+    color: appColors.slate600,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -516,7 +513,7 @@ const styles = StyleSheet.create({
     borderColor: appColors.brand500,
   },
   optionChipText: {
-    color: appColors.white,
+    color: appColors.slate800,
     fontSize: 12,
     fontWeight: "800",
   },

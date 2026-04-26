@@ -152,6 +152,7 @@ const FoodDiaryScreen = () => {
     [weekDays],
   );
   const weekEnd = weekDateKeys[weekDateKeys.length - 1] ?? dateKey;
+  const currentClockHour = new Date().getHours();
 
   const loadData = useCallback(async () => {
     const currentUser = await DB.getUser();
@@ -283,10 +284,13 @@ const FoodDiaryScreen = () => {
   }, [snackbar]);
 
   React.useEffect(() => {
-    setSelectedHour((current) =>
-      Math.min(visibleEndHour, Math.max(visibleStartHour, current)),
+    setSelectedHour(
+      Math.min(
+        visibleEndHour,
+        Math.max(visibleStartHour, currentClockHour),
+      ),
     );
-  }, [visibleEndHour, visibleStartHour]);
+  }, [currentClockHour, selectedDate, visibleEndHour, visibleStartHour]);
 
   const entries = useMemo(
     () => weekEntries.filter((entry) => entry.date === dateKey),

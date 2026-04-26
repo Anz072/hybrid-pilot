@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: appColors.brand800,
+    color: appColors.brand500,
     backgroundColor: appColors.brand800,
     paddingHorizontal: 10,
     paddingVertical: 6,

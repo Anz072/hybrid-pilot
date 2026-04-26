@@ -41,7 +41,8 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: appColors.brand500,
     borderRadius: 8,
-    paddingVertical: 15,
+    paddingVertical: 12,
+    marginHorizontal: 12,
     alignItems: "center",
   },
   buttonDisabled: {

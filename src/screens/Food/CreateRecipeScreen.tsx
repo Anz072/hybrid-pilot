@@ -1303,7 +1303,7 @@ const CreateRecipeScreen = () => {
           <View
             style={[
               styles.footer,
-              { paddingBottom: Math.max(insets.bottom, 16) },
+              { paddingBottom: Math.max(insets.bottom + 8, 16) },
             ]}
           >
             {isEditing ? (

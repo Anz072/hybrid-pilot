@@ -97,7 +97,7 @@ const surface = {
   cardRaised: palette.white,
   field: palette.creamSoft,
   fieldAlt: palette.sand,
-  overlay: "rgba(255, 248, 240, 0.94)",
+  overlay: "rgba(0, 0, 0, 0.4)",
   ghost: "rgba(61, 64, 91, 0.05)",
   ghostStrong: "rgba(61, 64, 91, 0.10)",
 } as const;

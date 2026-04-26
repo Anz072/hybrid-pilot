@@ -289,9 +289,7 @@ const HomeScreen = () => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.heroCard}>
-          <Text style={styles.eyebrow}>Today</Text>
-          <Text style={styles.title}>Your day at a glance.</Text>
-          <Text style={styles.subtitle}>{formatHeroDate(new Date())}</Text>
+          <Text style={styles.eyebrow}>Home</Text>
 
           {isLoading ? (
             <View style={styles.loadingState}>
@@ -306,23 +304,6 @@ const HomeScreen = () => {
                 remaining={caloriesRemaining}
                 target={calorieTarget}
               />
-
-              <View style={styles.heroMetricRow}>
-                <View style={styles.metricPill}>
-                  <Text style={styles.metricPillLabel}>Consumed</Text>
-                  <Text style={styles.metricPillText}>
-                    {Math.round(todayTotals.calories)} kcal
-                  </Text>
-                </View>
-                <View style={styles.metricPill}>
-                  <Text style={styles.metricPillLabel}>Target</Text>
-                  <Text style={styles.metricPillText}>
-                    {calorieTarget != null
-                      ? `${Math.round(calorieTarget)} kcal`
-                      : "Set in onboarding"}
-                  </Text>
-                </View>
-              </View>
 
               <View style={styles.macroStack}>
                 <MacroBar
@@ -391,7 +372,7 @@ const HomeScreen = () => {
           </View>
         </Pressable>
 
-        <View style={styles.sectionCard}>
+        <View style={styles.invisibleSectionCard}>
           <View style={styles.sectionHeader}>
             <View>
               <Text style={styles.sectionEyebrow}>Progress</Text>
@@ -460,7 +441,7 @@ const HomeScreen = () => {
         <Pressable
           onPress={() => navigation.navigate("MicrosOverview")}
           style={({ pressed }) => [
-            styles.sectionCard,
+            styles.invisibleSectionCard,
             styles.microsCard,
             pressed && styles.cardPressed,
           ]}
@@ -556,10 +537,6 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.success700,
   },
   heroCard: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
     padding: 20,
     marginBottom: 16,
   },
@@ -571,7 +548,7 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
     paddingHorizontal: 12,
     paddingVertical: 7,
-    marginBottom: 14,
+    marginBottom: 24,
   },
   title: {
     ...appTypography.displayHero,
@@ -585,17 +562,13 @@ const styles = StyleSheet.create({
   },
   heroMetricRow: {
     flexDirection: "row",
-    gap: 10,
     marginBottom: 18,
   },
   metricPill: {
     flex: 1,
-    borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 14,
     backgroundColor: appColors.surfaceGhost,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
   },
   metricPillLabel: {
     ...appTypography.label,
@@ -631,6 +604,7 @@ const styles = StyleSheet.create({
     color: appColors.textSecondary,
   },
   macroStack: {
+    marginTop: 12,
     gap: 10,
   },
   loadingState: {
@@ -653,6 +627,10 @@ const styles = StyleSheet.create({
     ...appTypography.label,
     color: appColors.textSecondary,
     marginBottom: 4,
+  },
+    invisibleSectionCard: {
+    padding: 16,
+    marginBottom: 16,
   },
   sectionCard: {
     backgroundColor: appColors.surfaceCard,

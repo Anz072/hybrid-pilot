@@ -328,13 +328,13 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   cardTitle: {
-    color: appColors.white,
+    color: appColors.slate800,
     fontSize: 17,
     fontWeight: "800",
     marginBottom: 6,
   },
   cardText: {
-    color: appColors.slate200,
+    color: appColors.slate600,
     fontSize: 13,
     lineHeight: 19,
   },
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   rangeValue: {
-    color: appColors.white,
+    color: appColors.slate800,
     fontSize: 16,
     fontWeight: "800",
   },
@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   helperText: {
-    color: appColors.slate200,
+    color: appColors.slate600,
     fontSize: 13,
     lineHeight: 19,
   },

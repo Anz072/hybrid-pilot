@@ -70,19 +70,19 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
       {
         label: "Protein",
         value: Math.max(1, fuelPlan.protein * 4),
-        color: appColors.brand700,
+        color: appColors.slate800,
         grams: fuelPlan.protein,
       },
       {
         label: "Carbs",
         value: Math.max(1, fuelPlan.carbs * 4),
-        color: appColors.brand500,
+        color: appColors.success700,
         grams: fuelPlan.carbs,
       },
       {
         label: "Fats",
         value: Math.max(1, fuelPlan.fats * 9),
-        color: appColors.brand400,
+        color: appColors.brand500,
         grams: fuelPlan.fats,
       },
     ],
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: appColors.success700,
+    color: appColors.slate100,
     backgroundColor: appColors.success700,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
   },
   metricValue: {
     fontSize: 15,
-    color: appColors.slate100,
+    color: appColors.slate600,
     fontWeight: "800",
   },
   chartCard: {

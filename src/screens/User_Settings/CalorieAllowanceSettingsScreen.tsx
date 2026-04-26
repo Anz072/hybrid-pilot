@@ -349,13 +349,13 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   cardTitle: {
-    color: appColors.white,
+    color: appColors.slate800,
     fontSize: 17,
     fontWeight: "800",
     marginBottom: 6,
   },
   cardText: {
-    color: appColors.slate200,
+    color: appColors.slate600,
     fontSize: 13,
     lineHeight: 19,
   },
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   input: {
-    color: appColors.white,
+    color: appColors.slate800,
     fontSize: 34,
     lineHeight: 38,
     fontWeight: "800",
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   statValue: {
-    color: appColors.white,
+    color: appColors.slate800,
     fontSize: 18,
     fontWeight: "800",
   },

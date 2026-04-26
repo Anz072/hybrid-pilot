@@ -131,8 +131,8 @@ const TrainingTypesSettingsScreen = ({ navigation }: Props) => {
                       ]}
                     >
                       <View style={styles.optionCopy}>
-                        <Text style={styles.optionTitle}>{option.label}</Text>
-                        <Text style={styles.optionText}>{option.description}</Text>
+                        <Text style={[styles.optionTitle, selected && styles.optionTitleSelected]}>{option.label}</Text>
+                        <Text style={[styles.optionText, selected && styles.optionTitleSelected]}>{option.description}</Text>
                       </View>
                       <View
                         style={[
@@ -211,13 +211,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cardTitle: {
-    color: appColors.white,
+    color: appColors.slate800,
     fontSize: 17,
     fontWeight: "800",
     marginBottom: 4,
   },
   cardText: {
-    color: appColors.white,
+    color: appColors.slate800,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   metricPillText: {
-    color: appColors.white,
+    color: appColors.slate800,
     fontSize: 12,
     fontWeight: "800",
   },
@@ -259,15 +259,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   optionTitle: {
-    color: appColors.white,
+    color: appColors.slate800,
     fontSize: 16,
     fontWeight: "800",
     marginBottom: 4,
   },
   optionText: {
-    color: appColors.slate200,
+    color: appColors.slate600,
     fontSize: 13,
     lineHeight: 18,
+  },
+  optionTitleSelected: {
+    color: appColors.white,
   },
   checkBadge: {
     width: 24,

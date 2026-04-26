@@ -170,7 +170,6 @@ const FoodEntryForm = ({
           </View>
         ) : null}
         <Text style={styles.sectionTitle}>{detailsTitle}</Text>
-        <Text style={styles.sectionSubtitle}>{detailsSubtitle}</Text>
 
         <Text style={styles.fieldLabel}>{amountLabel}</Text>
         <View style={styles.inputRow}>
@@ -204,13 +203,10 @@ const FoodEntryForm = ({
         ) : (
           <View style={styles.slotRow}>{renderSlotContent()}</View>
         )}
-
-   
       </View>
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>{previewTitle}</Text>
-        <Text style={styles.sectionSubtitle}>{previewSubtitle}</Text>
         <View style={styles.nutritionGrid}>
           {nutritionItems.map((item) => (
             <View key={item.label} style={styles.nutritionCell}>
@@ -376,12 +372,12 @@ const styles = StyleSheet.create({
   nutritionGrid: sharedStyleValues.nutritionGrid,
   nutritionCell: sharedStyleValues.nutritionCell,
   nutritionLabel: {
-    color: appColors.slate300,
-    fontSize: 11,
+    color: appColors.slate600,
+    fontSize: 8,
     fontWeight: "800",
     textTransform: "uppercase",
     letterSpacing: 0.6,
-    marginBottom: 6,
+    marginBottom: 2,
   },
   nutritionValue: sharedStyleValues.nutritionValue,
   primaryButton: {

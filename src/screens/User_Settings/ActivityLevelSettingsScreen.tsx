@@ -19,10 +19,7 @@ import {
   formatGoalStrategyMeta,
   resolveGoalStrategy,
 } from "../../engine/goalStrategy";
-import type {
-  ActivityLevel,
-  GoalType,
-} from "../../navigation/onboardingTypes";
+import type { ActivityLevel, GoalType } from "../../navigation/onboardingTypes";
 import type { MoreParamList } from "../../navigation/MoreNavigator";
 import { DB } from "../../store/DB";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
@@ -65,7 +62,9 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
   const [selectedGoal, setSelectedGoal] = React.useState<GoalType | null>(
     (user?.goal as GoalType | null) ?? null,
   );
-  const [latestWeightKg, setLatestWeightKg] = React.useState<number | null>(null);
+  const [latestWeightKg, setLatestWeightKg] = React.useState<number | null>(
+    null,
+  );
   const [settings, setSettings] = React.useState<Awaited<
     ReturnType<typeof DB.getUserSettings>
   > | null>(null);
@@ -212,7 +211,8 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
                     weight="fill"
                   />
                   <Text style={styles.metricPillText}>
-                    {previewPlan?.calories ?? user.calorieAllowance ?? "--"} kcal
+                    {previewPlan?.calories ?? user.calorieAllowance ?? "--"}{" "}
+                    kcal
                   </Text>
                 </View>
               </View>
@@ -269,8 +269,17 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
                       ]}
                     >
                       <View style={styles.optionCopy}>
-                        <Text style={styles.optionTitle}>{option.label}</Text>
-                        <Text style={styles.optionText}>{option.description}</Text>
+                        <Text
+                          style={[
+                            styles.optionTitle,
+                            selected && styles.optionTitleSelected,
+                          ]}
+                        >
+                          {option.label}
+                        </Text>
+                        <Text style={styles.optionText}>
+                          {option.description}
+                        </Text>
                       </View>
                       <View style={styles.optionMeta}>
                         <Text style={styles.optionCalories}>
@@ -285,7 +294,7 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
                           {selected ? (
                             <CheckIcon
                               size={14}
-                              color={appColors.white}
+                              color={appColors.slate800}
                               weight="bold"
                             />
                           ) : null}
@@ -299,11 +308,7 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
 
             <View style={styles.card}>
               <View style={styles.sectionHeader}>
-                <GaugeIcon
-                  size={18}
-                  color={appColors.brand700}
-                  weight="fill"
-                />
+                <GaugeIcon size={18} color={appColors.brand700} weight="fill" />
                 <Text style={styles.sectionTitle}>Activity baseline</Text>
               </View>
 
@@ -334,7 +339,9 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
                     >
                       <View style={styles.optionCopy}>
                         <Text style={styles.optionTitle}>{option.label}</Text>
-                        <Text style={styles.optionText}>{option.description}</Text>
+                        <Text style={styles.optionText}>
+                          {option.description}
+                        </Text>
                       </View>
                       <View style={styles.optionMeta}>
                         <Text style={styles.optionCalories}>
@@ -436,7 +443,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cardTitle: {
-    color: appColors.white,
+    color: appColors.slate800,
     fontSize: 17,
     fontWeight: "800",
     marginBottom: 4,
@@ -471,7 +478,7 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   previewLabel: {
-    color: appColors.slate200,
+    color: appColors.slate600,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -479,7 +486,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   previewValue: {
-    color: appColors.white,
+    color: appColors.slate800,
     fontSize: 15,
     lineHeight: 20,
     fontWeight: "800",
@@ -491,7 +498,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    color: appColors.white,
+    color: appColors.slate800,
     fontSize: 18,
     fontWeight: "800",
   },
@@ -519,13 +526,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   optionTitle: {
-    color: appColors.white,
+    color: appColors.slate800,
     fontSize: 16,
     fontWeight: "800",
     marginBottom: 4,
   },
+  optionTitleSelected: {
+    color: appColors.white,
+  },
   optionText: {
-    color: appColors.slate200,
+    color: appColors.slate600,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -569,4 +579,3 @@ const styles = StyleSheet.create({
 });
 
 export default ActivityLevelSettingsScreen;
-

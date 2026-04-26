@@ -66,7 +66,7 @@ export type MainTabParamList = {
 
 const FOCUSED_COLOR = appColors.textPrimary;
 const UNFOCUSED_COLOR = appColors.textMuted;
-const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.56);
+const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.4);
 const Tab = createBottomTabNavigator<MainTabParamList>();
 type RootNavigation = NativeStackNavigationProp<RootStackParamList>;
 type Shortcut =
@@ -507,15 +507,12 @@ const MainTabNavigator = () => {
               styles.sheet,
               {
                 height: SHEET_HEIGHT,
-
                 transform: [{ translateY: sheetTranslateY }],
               },
             ]}
           >
-            <View style={styles.sheetHandle} />
             <View style={styles.sheetHeader}>
               <View style={styles.headerSpacer} />
-
               <Text style={styles.sheetTitle}>SHORTCUTS</Text>
 
               <Pressable
@@ -537,25 +534,12 @@ const MainTabNavigator = () => {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.shortcutScrollContent}
             >
-              {recentShortcuts.length > 0 ? (
-                <>
-                  <Text style={styles.shortcutSectionLabel}>Recent</Text>
-                  <View style={styles.recentShortcutGrid}>
-                    {recentShortcuts.map((shortcut) =>
-                      renderShortcutButton(shortcut, "primary"),
-                    )}
-                  </View>
-                </>
-              ) : null}
-
-              <Text style={styles.shortcutSectionLabel}>Log now</Text>
               <View style={styles.shortcutsGrid}>
                 {PRIMARY_SHORTCUTS.map((shortcut) =>
                   renderShortcutButton(shortcut, "primary"),
                 )}
               </View>
 
-              <Text style={styles.shortcutSectionLabel}>Build</Text>
               <View style={styles.shortcutsGrid}>
                 {SECONDARY_SHORTCUTS.map((shortcut) =>
                   renderShortcutButton(shortcut),
@@ -604,7 +588,7 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 999,
-    backgroundColor: appColors.slate50,
+    backgroundColor: appColors.warning600,
     borderWidth: 3,
     borderColor: appColors.surfaceBase,
     alignItems: "center",
@@ -661,9 +645,10 @@ const styles = StyleSheet.create({
   },
   sheetDivider: {
     height: 1,
-    backgroundColor: appColors.borderSoft,
-    marginTop: 2,
-    marginBottom: 14,
+    backgroundColor: appColors.slate100,
+    marginTop: 6,
+    marginBottom: 24,
+    marginHorizontal:24
   },
   shortcutSectionLabel: {
     ...appTypography.label,

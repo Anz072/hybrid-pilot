@@ -31,7 +31,7 @@ const PublicVisibilityCheckbox = ({
       </View>
 
       <View style={styles.copy}>
-        <Text style={styles.title}>Make this public</Text>
+        <Text style={[styles.title, checked && styles.titleChecked]}>Make this public</Text>
       </View>
     </Pressable>
   );
@@ -78,6 +78,9 @@ const styles = StyleSheet.create({
     color: appColors.textPrimary,
     fontSize: 15,
     fontWeight: "800",
+  },
+  titleChecked:{
+    color: appColors.slate100
   },
   description: {
     color: appColors.textSecondary,

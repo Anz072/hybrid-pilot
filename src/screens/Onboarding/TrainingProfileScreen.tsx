@@ -150,7 +150,7 @@ const TrainingProfileScreen = ({ navigation, route }: Props) => {
             >
               <View style={styles.optionRow}>
                 <View style={styles.optionTextWrap}>
-                  <Text style={styles.optionText}>{option.label}</Text>
+                  <Text style={[styles.optionText,isSelected && styles.optionTextSelected]}>{option.label}</Text>
                   <Text style={styles.optionNote}>{option.note}</Text>
                 </View>
                 <View style={styles.optionMeta}>
@@ -260,6 +260,9 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     fontSize: 17,
     marginBottom: 4,
+  },
+   optionTextSelected: {
+    color: appColors.slate100,
   },
   optionNote: {
     color: appColors.slate500,

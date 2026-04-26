@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     letterSpacing: 0.8,
     fontWeight: "800",
-    color: appColors.slate100,
+    color: appColors.textPrimary,
     marginBottom: 3,
     marginTop: 4,
   },

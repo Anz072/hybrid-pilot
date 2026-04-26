@@ -509,7 +509,7 @@ const ScannedFoodLogScreen = () => {
       <View
         style={[
           styles.stickyFooter,
-          { paddingBottom: Math.max(insets.bottom, 12) },
+          { paddingBottom: Math.min(insets.bottom, 16) },
         ]}
       >
         <Pressable
@@ -576,7 +576,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     ...sharedStyleValues.buttonBase,
     ...sharedStyleValues.lightPrimaryButton,
-    marginBottom: 12,
+    marginBottom: 6,
   },
   primaryButtonText: sharedStyleValues.lightPrimaryButtonText,
   disabled: sharedStyleValues.disabled,

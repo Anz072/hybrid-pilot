@@ -148,9 +148,7 @@ const FoodDiaryTimelineItem = ({
       ? "1 food"
       : `${bucket.entries.length} foods`;
   const collapsedSummary = bucket.entries.length
-    ? `${formatFoodHourLabel(bucket.hour)} · ${entryCountLabel} · ${Math.round(
-        bucket.totals.calories,
-      )} kcal`
+    ? `${entryCountLabel}`
     : `${formatFoodHourLabel(bucket.hour)} · Empty`;
   const runWithoutToggling = (
     event: GestureResponderEvent,

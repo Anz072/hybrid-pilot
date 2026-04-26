@@ -35,16 +35,16 @@ import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { appColors } from "../../theme/colors";
 import CalorieBudgetChart from "./CalorieBudgetChart";
 import SettingsStackHeader from "./SettingsStackHeader";
-import {
-  formatGoalLabel,
-  formatGoalStrategyLabel,
-} from "./userProfileOptions";
+import { formatGoalLabel, formatGoalStrategyLabel } from "./userProfileOptions";
 import {
   getLatestUserWeightKg,
   saveAutomaticFuelPlanForUser,
 } from "./userSettingsActions";
 
-type Props = NativeStackScreenProps<MoreParamList, "GoalStrategySettingsScreen">;
+type Props = NativeStackScreenProps<
+  MoreParamList,
+  "GoalStrategySettingsScreen"
+>;
 
 const buildCurrentWeekDates = (reference: Date): Date[] => {
   const weekStart = new Date(reference);
@@ -95,7 +95,9 @@ const GoalStrategySettingsScreen = ({ navigation }: Props) => {
   const user = useAppSelector((state) => state.user.currentUser);
   const [selectedStrategy, setSelectedStrategy] =
     React.useState<GoalStrategy>("maintain");
-  const [latestWeightKg, setLatestWeightKg] = React.useState<number | null>(null);
+  const [latestWeightKg, setLatestWeightKg] = React.useState<number | null>(
+    null,
+  );
   const [settings, setSettings] = React.useState<Awaited<
     ReturnType<typeof DB.getUserSettings>
   > | null>(null);
@@ -245,7 +247,8 @@ const GoalStrategySettingsScreen = ({ navigation }: Props) => {
                 </View>
                 <View style={styles.metricPill}>
                   <Text style={styles.metricPillText}>
-                    {previewPlan?.calories ?? user.calorieAllowance ?? "--"} kcal
+                    {previewPlan?.calories ?? user.calorieAllowance ?? "--"}{" "}
+                    kcal
                   </Text>
                 </View>
               </View>
@@ -299,8 +302,15 @@ const GoalStrategySettingsScreen = ({ navigation }: Props) => {
                           ]}
                         >
                           <View style={styles.optionCopy}>
-                            <Text style={styles.optionTitle}>{option.label}</Text>
-                            <Text style={styles.optionText}>
+                            <Text
+                              style={[
+                                styles.optionTitle,
+                                selected && styles.optionTitleSelected,
+                              ]}
+                            >
+                              {option.label}
+                            </Text>
+                            <Text style={[styles.optionText, selected && styles.optionRateSelected]}>
                               {option.description}
                             </Text>
                           </View>
@@ -308,7 +318,7 @@ const GoalStrategySettingsScreen = ({ navigation }: Props) => {
                             <Text style={styles.optionCalories}>
                               {formatSignedCalories(option.dailyCalorieDelta)}
                             </Text>
-                            <Text style={styles.optionRate}>
+                            <Text style={[styles.optionRate, selected && styles.optionRateSelected]}>
                               {option.approxWeeklyRateKg != null
                                 ? `${option.goal === "lose_fat" ? "Lose" : "Gain"} ${option.approxWeeklyRateKg.toFixed(2)} kg/week`
                                 : "Hold body weight"}
@@ -322,7 +332,7 @@ const GoalStrategySettingsScreen = ({ navigation }: Props) => {
                               {selected ? (
                                 <CheckIcon
                                   size={14}
-                                  color={appColors.white}
+                                  color={appColors.slate800}
                                   weight="bold"
                                 />
                               ) : null}
@@ -413,13 +423,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cardTitle: {
-    color: appColors.white,
+    color: appColors.slate800,
     fontSize: 17,
     fontWeight: "800",
     marginBottom: 4,
   },
   cardText: {
-    color: appColors.slate200,
+    color: appColors.slate600,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -453,7 +463,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   previewValue: {
-    color: appColors.white,
+    color: appColors.slate800,
     fontSize: 15,
     lineHeight: 20,
     fontWeight: "800",
@@ -465,7 +475,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    color: appColors.white,
+    color: appColors.slate800,
     fontSize: 18,
     fontWeight: "800",
   },
@@ -493,13 +503,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   optionTitle: {
-    color: appColors.white,
+    color: appColors.slate800,
     fontSize: 16,
     fontWeight: "800",
     marginBottom: 4,
   },
+  optionTitleSelected: {
+    color: appColors.white,
+  },
   optionText: {
-    color: appColors.slate200,
+    color: appColors.slate600,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -512,8 +525,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
   },
-  optionRate: {
+  optionRateSelected: {
     color: appColors.slate200,
+  },
+  optionRate: {
+    color: appColors.slate600,
     fontSize: 11,
     fontWeight: "700",
   },
@@ -547,4 +563,3 @@ const styles = StyleSheet.create({
 });
 
 export default GoalStrategySettingsScreen;
-

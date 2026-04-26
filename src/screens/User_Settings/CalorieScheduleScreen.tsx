@@ -318,13 +318,13 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   cardTitle: {
-    color: appColors.slate200,
+    color: appColors.slate800,
     fontSize: 17,
     fontWeight: "800",
     marginBottom: 6,
   },
   cardText: {
-    color: appColors.slate200,
+    color: appColors.slate600,
     fontSize: 13,
     lineHeight: 19,
   },
@@ -368,12 +368,12 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   dayTitle: {
-    color: appColors.white,
+    color: appColors.slate800,
     fontSize: 15,
     fontWeight: "800",
   },
   daySubtitle: {
-    color: appColors.slate200,
+    color: appColors.slate600,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -403,13 +403,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   dayValue: {
-    color: appColors.white,
+    color: appColors.slate800,
     fontSize: 22,
     lineHeight: 26,
     fontWeight: "800",
   },
   dayUnit: {
-    color: appColors.slate200,
+    color: appColors.slate600,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",

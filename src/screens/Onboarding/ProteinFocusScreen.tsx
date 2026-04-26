@@ -110,10 +110,10 @@ const ProteinFocusScreen = ({ navigation, route }: Props) => {
             >
               <View style={styles.optionRow}>
                 <View style={styles.optionCopy}>
-                  <Text style={styles.optionTitle}>
+                  <Text style={[styles.optionTitle,isSelected && styles.optionTextSelected]}>
                     {option.label} ({option.gramsPerKg} g/kg)
                   </Text>
-                  <Text style={styles.optionText}>{option.description}</Text>
+                  <Text style={[styles.optionText]}>{option.description}</Text>
                 </View>
                 <View style={styles.optionMeta}>
                   <View style={styles.iconBadge}>
@@ -231,6 +231,9 @@ const styles = StyleSheet.create({
     color: appColors.slate500,
     fontSize: 13,
     lineHeight: 18,
+  },
+   optionTextSelected: {
+    color: appColors.slate100,
   },
   optionMeta: {
     alignItems: "center",

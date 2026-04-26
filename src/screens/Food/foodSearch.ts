@@ -32,6 +32,7 @@ type SearchFoodResultsInput = {
   filterLocalRow?: (food: DBFoodItem) => boolean;
   includeLocalFood?: boolean;
   includeRemote?: boolean;
+  onRemoteSearchError?: () => void;
   rankOptions?: RankFoodSearchOptions;
   remoteMinQueryLength?: number;
   remotePageSize?: number;
@@ -256,12 +257,46 @@ export const scoreSearchFoodResult = (
   return score;
 };
 
+const isExactLocalSearchMatch = (food: FoodSearchResult, query: string) => {
+  if (food.localId == null) {
+    return false;
+  }
+
+  const queryVariants = getSearchVariants(query);
+  const compactQueryVariants = queryVariants.map(compactSearchText);
+  const normalizedName = normalizeSearchText(food.name);
+  const normalizedCombined = normalizeSearchText(
+    `${food.brand ?? ""} ${food.name}`,
+  );
+  const compactName = compactSearchText(food.name);
+  const compactCombined = compactSearchText(`${food.brand ?? ""} ${food.name}`);
+
+  return (
+    queryVariants.some(
+      (variant) => normalizedName === variant || normalizedCombined === variant,
+    ) ||
+    compactQueryVariants.some(
+      (variant) =>
+        variant.length > 0 &&
+        (compactName === variant || compactCombined === variant),
+    )
+  );
+};
+
 export const rankSearchResults = (
   query: string,
   results: FoodSearchResult[],
   options: RankFoodSearchOptions = {},
 ) => {
   const sorted = [...results].sort((left, right) => {
+    const exactLocalDifference =
+      Number(isExactLocalSearchMatch(right, query)) -
+      Number(isExactLocalSearchMatch(left, query));
+
+    if (exactLocalDifference !== 0) {
+      return exactLocalDifference;
+    }
+
     if (options.categoryPriority) {
       const categoryDifference =
         options.categoryPriority(left) - options.categoryPriority(right);
@@ -314,16 +349,24 @@ export const searchFoodResults = async ({
   filterLocalRow,
   includeLocalFood = false,
   includeRemote = true,
+  onRemoteSearchError,
   rankOptions,
   remoteMinQueryLength = DEFAULT_REMOTE_SEARCH_MIN_QUERY_LENGTH,
   remotePageSize = DEFAULT_REMOTE_PAGE_SIZE,
 }: SearchFoodResultsInput) => {
   const trimmedQuery = query.trim();
+  const shouldFetchRemote =
+    includeRemote && shouldSearchRemotely(trimmedQuery, remoteMinQueryLength);
 
   const [localRows, remoteRows] = await Promise.all([
     getLocalRows(trimmedQuery),
-    includeRemote && shouldSearchRemotely(trimmedQuery, remoteMinQueryLength)
-      ? API.usdaAPI.getFood(trimmedQuery, { pageSize: remotePageSize })
+    shouldFetchRemote
+      ? API.usdaAPI
+          .getFood(trimmedQuery, { pageSize: remotePageSize })
+          .catch(() => {
+            onRemoteSearchError?.();
+            return [];
+          })
       : Promise.resolve([]),
   ]);
 

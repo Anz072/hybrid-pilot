@@ -1,4 +1,4 @@
-# HybridPilot
+# Dribsnis
 
 Expo SDK 54 app for personal iPhone and Android installs.
 
@@ -17,7 +17,7 @@ Open Xcode once after installing it so the iOS tools finish setting themselves u
 
 ```bash
 git clone <your-repo-url>
-cd hybrid-pilot
+cd dribsnis
 cp .env.example .env
 npm install
 ```
@@ -74,7 +74,7 @@ npm run android
 
 ## Notes
 
-- The app uses the custom URL scheme `hybridpilot`
-- Google auth redirect is `hybridpilot://auth/callback`
+- The app uses the custom URL scheme `dribsnis`
+- Google auth redirect is `dribsnis://auth/callback`
 - If you reuse the current Supabase project, make sure that redirect is allowed there
 - `app.json` already includes matching Android package and iOS bundle identifier values for local native generation

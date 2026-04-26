@@ -5,6 +5,7 @@ import {
   Dimensions,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -25,7 +26,6 @@ import {
   BowlFoodIcon,
   CookingPotIcon,
   DotsThreeCircleIcon,
-  FireIcon,
   ForkKnifeIcon,
   HouseSimpleIcon,
   LightningIcon,
@@ -46,6 +46,10 @@ import {
   formatFoodDateKey,
   formatFoodLoggedTime,
 } from "../screens/Food/foodUtils";
+import {
+  getShortcutRecents,
+  saveShortcutRecents,
+} from "../storage/localStore";
 import { refreshAdaptiveRecommendationForUser } from "../screens/User_Settings/adaptiveCaloriesActions";
 import { appColors } from "../theme/colors";
 import { appTypography } from "../theme/typography";
@@ -62,9 +66,37 @@ export type MainTabParamList = {
 
 const FOCUSED_COLOR = appColors.textPrimary;
 const UNFOCUSED_COLOR = appColors.textMuted;
-const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.41);
+const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.56);
 const Tab = createBottomTabNavigator<MainTabParamList>();
 type RootNavigation = NativeStackNavigationProp<RootStackParamList>;
+type Shortcut =
+  | "search"
+  | "barcode"
+  | "weight"
+  | "quick_add"
+  | "recipe"
+  | "custom_meal";
+
+const PRIMARY_SHORTCUTS: Shortcut[] = ["barcode", "quick_add", "weight"];
+const SECONDARY_SHORTCUTS: Shortcut[] = ["search", "recipe", "custom_meal"];
+const SHORTCUT_LABELS: Record<Shortcut, string> = {
+  barcode: "Scan",
+  quick_add: "Quick Add",
+  weight: "Weight",
+  search: "Search",
+  recipe: "Recipe",
+  custom_meal: "Custom Meal",
+};
+
+const isShortcut = (value: string): value is Shortcut =>
+  [
+    "search",
+    "barcode",
+    "weight",
+    "quick_add",
+    "recipe",
+    "custom_meal",
+  ].includes(value);
 
 const ShortcutPlaceholderScreen = () => (
   <View style={styles.placeholderScreen} />
@@ -78,8 +110,38 @@ const MainTabNavigator = () => {
   const [weightRefreshToken, setWeightRefreshToken] = React.useState(0);
   const [barcodeModalScannerVisible, setBarcodeModalScannerVisible] =
     React.useState(false);
+  const [recentShortcuts, setRecentShortcuts] = React.useState<Shortcut[]>([]);
   const sheetProgress = React.useRef(new Animated.Value(0)).current;
   const afterCloseActionRef = React.useRef<null | (() => void)>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const loadRecentShortcuts = async () => {
+      const stored = await getShortcutRecents();
+      if (!cancelled) {
+        setRecentShortcuts(stored.filter(isShortcut));
+      }
+    };
+
+    void loadRecentShortcuts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const rememberShortcut = React.useCallback((shortcut: Shortcut) => {
+    setRecentShortcuts((current) => {
+      const next = [
+        shortcut,
+        ...current.filter((item) => item !== shortcut),
+      ].slice(0, 2);
+
+      void saveShortcutRecents(next);
+      return next;
+    });
+  }, []);
 
   const openShortcuts = React.useCallback(() => {
     sheetProgress.setValue(0);
@@ -117,16 +179,9 @@ const MainTabNavigator = () => {
     closeShortcuts();
   }, [closeShortcuts]);
 
-  type Shortcut =
-    | "search"
-    | "barcode"
-    | "weight"
-    | "quick_add"
-    | "recipe"
-    | "custom_meal";
-
   const handleShortcutPress = React.useCallback(
     (shortcut: Shortcut) => {
+      rememberShortcut(shortcut);
       
       const openFoodScreen = (screen: any) => {
         const now = new Date();
@@ -173,7 +228,7 @@ const MainTabNavigator = () => {
           return;
       }
     },
-    [closeShortcuts, rootNavigation],
+    [closeShortcuts, rememberShortcut, rootNavigation],
   );
 
   const handleShortcutWeightSave = React.useCallback(
@@ -206,7 +261,6 @@ const MainTabNavigator = () => {
         try {
           await refreshAdaptiveRecommendationForUser({
             userExternalId: resolvedUserId,
-            force: true,
           });
         } catch {
           // Saving the weight entry should not fail because adaptive refresh did.
@@ -247,6 +301,62 @@ const MainTabNavigator = () => {
       );
     },
     [rootNavigation],
+  );
+
+  const renderShortcutIcon = (shortcut: Shortcut, size = 26) => {
+    switch (shortcut) {
+      case "barcode":
+        return <BarcodeIcon size={size} color={appColors.textPrimary} />;
+      case "quick_add":
+        return (
+          <LightningIcon
+            size={size}
+            color={appColors.textPrimary}
+            weight="fill"
+          />
+        );
+      case "weight":
+        return <ScalesIcon size={size} color={appColors.textPrimary} />;
+      case "recipe":
+        return <CookingPotIcon size={size} color={appColors.textPrimary} />;
+      case "custom_meal":
+        return <BowlFoodIcon size={size} color={appColors.textPrimary} />;
+      case "search":
+      default:
+        return (
+          <MagnifyingGlassIcon
+            size={size}
+            color={appColors.textPrimary}
+            weight="bold"
+          />
+        );
+    }
+  };
+
+  const renderShortcutButton = (
+    shortcut: Shortcut,
+    variant: "primary" | "secondary" = "secondary",
+  ) => (
+    <Pressable
+      key={shortcut}
+      onPress={() => handleShortcutPress(shortcut)}
+      accessibilityLabel={SHORTCUT_LABELS[shortcut]}
+      style={({ pressed }) => [
+        styles.shortcutCard,
+        variant === "primary" && styles.shortcutCardPrimary,
+        pressed && styles.pressed,
+      ]}
+    >
+      <View
+        style={[
+          styles.shortcutIconWrap,
+          variant === "primary" && styles.shortcutIconWrapPrimary,
+        ]}
+      >
+        {renderShortcutIcon(shortcut, variant === "primary" ? 28 : 25)}
+      </View>
+      <Text style={styles.shortcutLabel}>{SHORTCUT_LABELS[shortcut]}</Text>
+    </Pressable>
   );
 
   const backdropOpacity = sheetProgress.interpolate({
@@ -338,7 +448,7 @@ const MainTabNavigator = () => {
           name="Weight"
           options={{
             tabBarIcon: ({ focused }) => (
-              <FireIcon
+              <ScalesIcon
                 size={24}
                 color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
                 weight={focused ? "bold" : "light"}
@@ -423,89 +533,35 @@ const MainTabNavigator = () => {
 
             <View style={styles.sheetDivider} />
 
-            <View style={styles.shortcutsGrid}>
-              <Pressable
-                onPress={() => handleShortcutPress("quick_add")}
-                style={({ pressed }) => [
-                  styles.shortcutCard,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <View style={styles.shortcutIconWrap}>
-                  <LightningIcon size={26} color={appColors.textPrimary} />
-                </View>
-                <Text style={styles.shortcutLabel}>Quick Add</Text>
-              </Pressable>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.shortcutScrollContent}
+            >
+              {recentShortcuts.length > 0 ? (
+                <>
+                  <Text style={styles.shortcutSectionLabel}>Recent</Text>
+                  <View style={styles.recentShortcutGrid}>
+                    {recentShortcuts.map((shortcut) =>
+                      renderShortcutButton(shortcut, "primary"),
+                    )}
+                  </View>
+                </>
+              ) : null}
 
-              <Pressable
-                onPress={() => handleShortcutPress("search")}
-                style={({ pressed }) => [
-                  styles.shortcutCard,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <View style={styles.shortcutIconWrap}>
-                  <MagnifyingGlassIcon
-                    size={26}
-                    color={appColors.textPrimary}
-                    weight="bold"
-                  />
-                </View>
-                <Text style={styles.shortcutLabel}>Search</Text>
-              </Pressable>
+              <Text style={styles.shortcutSectionLabel}>Log now</Text>
+              <View style={styles.shortcutsGrid}>
+                {PRIMARY_SHORTCUTS.map((shortcut) =>
+                  renderShortcutButton(shortcut, "primary"),
+                )}
+              </View>
 
-              <Pressable
-                onPress={() => handleShortcutPress("barcode")}
-                style={({ pressed }) => [
-                  styles.shortcutCard,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <View style={styles.shortcutIconWrap}>
-                  <BarcodeIcon size={26} color={appColors.textPrimary} />
-                </View>
-                <Text style={styles.shortcutLabel}>Barcode</Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => handleShortcutPress("weight")}
-                style={({ pressed }) => [
-                  styles.shortcutCard,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <View style={styles.shortcutIconWrap}>
-                  <ScalesIcon size={26} color={appColors.textPrimary} />
-                </View>
-                <Text style={styles.shortcutLabel}>Weight</Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => handleShortcutPress("recipe")}
-                style={({ pressed }) => [
-                  styles.shortcutCard,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <View style={styles.shortcutIconWrap}>
-                  <CookingPotIcon size={26} color={appColors.textPrimary} />
-                </View>
-                <Text style={styles.shortcutLabel}>Recipe</Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => handleShortcutPress("custom_meal")}
-                style={({ pressed }) => [
-                  styles.shortcutCard,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <View style={styles.shortcutIconWrap}>
-                  <BowlFoodIcon size={26} color={appColors.textPrimary} />
-                </View>
-                <Text style={styles.shortcutLabel}>Custom Meal</Text>
-              </Pressable>
-            </View>
+              <Text style={styles.shortcutSectionLabel}>Build</Text>
+              <View style={styles.shortcutsGrid}>
+                {SECONDARY_SHORTCUTS.map((shortcut) =>
+                  renderShortcutButton(shortcut),
+                )}
+              </View>
+            </ScrollView>
           </Animated.View>
         </View>
       </Modal>
@@ -607,18 +663,38 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: appColors.borderSoft,
     marginTop: 2,
-    marginBottom: 18,
+    marginBottom: 14,
+  },
+  shortcutSectionLabel: {
+    ...appTypography.label,
+    color: appColors.textSecondary,
+    marginBottom: 10,
+    marginTop: 8,
+  },
+  shortcutScrollContent: {
+    paddingBottom: 18,
+  },
+  recentShortcutGrid: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 10,
   },
   shortcutsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    gap: 14,
+    gap: 12,
+    marginBottom: 8,
   },
   shortcutCard: {
     width: "30%",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
+    minHeight: 98,
+  },
+  shortcutCardPrimary: {
+    flex: 1,
+    width: undefined,
   },
   shortcutIconWrap: {
     width: 64,
@@ -629,6 +705,11 @@ const styles = StyleSheet.create({
     borderColor: appColors.borderStrong,
     alignItems: "center",
     justifyContent: "center",
+  },
+  shortcutIconWrapPrimary: {
+    width: 70,
+    height: 70,
+    backgroundColor: appColors.surfaceGhost,
   },
   shortcutLabel: {
     ...appTypography.bodySmall,

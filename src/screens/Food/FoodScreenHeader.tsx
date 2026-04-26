@@ -26,13 +26,13 @@ const FoodScreenHeader = ({
         {onBack ? (
           <Pressable
             onPress={onBack}
+            accessibilityLabel="Go back"
             style={({ pressed }) => [
               styles.backButton,
               pressed && styles.backButtonPressed,
             ]}
           >
-            <ArrowLeftIcon size={16} color={appColors.textPrimary} weight="bold" />
-            <Text style={styles.backText}>Back</Text>
+            <ArrowLeftIcon size={18} color={appColors.textPrimary} weight="bold" />
           </Pressable>
         ) : (
           <View />
@@ -55,21 +55,17 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   backButton: {
-    flexDirection: "row",
+    width: 42,
+    height: 42,
     alignItems: "center",
+    justifyContent: "center",
     gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 999,
     backgroundColor: appColors.surfaceGhost,
     borderColor: appColors.surfaceGhostStrong,
   },
   backButtonPressed: {
     opacity: 0.85,
-  },
-  backText: {
-    ...appTypography.bodySmall,
-    color: appColors.textPrimary,
   },
   eyebrow: {
     alignSelf: "flex-start",

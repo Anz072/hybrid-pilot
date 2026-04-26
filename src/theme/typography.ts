@@ -5,19 +5,19 @@ export const appTypography = {
     fontSize: 44,
     lineHeight: 46,
     fontWeight: "500",
-    letterSpacing: -1.2,
+    letterSpacing: 0,
   } satisfies TextStyle,
   displaySection: {
     fontSize: 32,
     lineHeight: 36,
     fontWeight: "500",
-    letterSpacing: -0.48,
+    letterSpacing: 0,
   } satisfies TextStyle,
   displayCard: {
     fontSize: 24,
     lineHeight: 28,
     fontWeight: "500",
-    letterSpacing: -0.24,
+    letterSpacing: 0,
   } satisfies TextStyle,
   title: {
     fontSize: 20,

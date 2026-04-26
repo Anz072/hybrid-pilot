@@ -75,7 +75,7 @@ const LoginScreen = ({ onAuthenticated }: LoginScreenProps) => {
       <View style={styles.card}>
         <Text style={styles.title}>Sign in with Google</Text>
         <Text style={styles.body}>
-          Use your existing Google-backed HybridPilot account to restore your
+          Use your existing Google-backed Dribsnis account to restore your
           synced data.
         </Text>
 

@@ -43,7 +43,7 @@ export const saveUserProfileChanges = async ({
     displayName:
       resolvedUser.displayName ??
       localAccount?.displayName ??
-      "HybridPilot User",
+      "Dribsnis User",
     email: resolvedUser.email ?? localAccount?.email ?? null,
     birthdate: resolvedUser.birthdate ?? localAccount?.birthdate ?? null,
     createdAt: localAccount?.createdAt ?? resolvedUser.createdAt,

@@ -62,6 +62,8 @@ const formatNumberInput = (value: number | null | undefined): string => {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
 };
 
+const ENERGY_PRESETS = [100, 250, 500];
+
 const QuickAddFoodScreen = () => {
   const route = useRoute<QuickAddRoute>();
   const navigation = useNavigation<QuickAddNav>();
@@ -394,12 +396,46 @@ const QuickAddFoodScreen = () => {
                 keyboardType="decimal-pad"
                 placeholder="0"
                 placeholderTextColor={appColors.textMuted}
+                autoFocus={!route.params.entryId}
               />
               <View style={styles.unitPill}>
                 <Text style={styles.unitText}>kcal</Text>
               </View>
             </View>
+            <View style={styles.presetRow}>
+              {ENERGY_PRESETS.map((preset) => (
+                <Pressable
+                  key={preset}
+                  onPress={() => {
+                    setEnergyValue(String(preset));
+                    setIsEnergyManuallySet(true);
+                  }}
+                  style={({ pressed }) => [
+                    styles.presetChip,
+                    pressed && styles.cardPressed,
+                  ]}
+                >
+                  <Text style={styles.presetChipText}>{preset}</Text>
+                </Pressable>
+              ))}
+            </View>
             <Text style={styles.helperText}>{helperText}</Text>
+            {isEnergyManuallySet && macroCalculatedCalories > 0 ? (
+              <Pressable
+                onPress={() => {
+                  setEnergyValue("");
+                  setIsEnergyManuallySet(false);
+                }}
+                style={({ pressed }) => [
+                  styles.inlineQuietButton,
+                  pressed && styles.cardPressed,
+                ]}
+              >
+                <Text style={styles.inlineQuietButtonText}>
+                  Use macro calories
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
 
           <View style={styles.card}>
@@ -451,14 +487,18 @@ const QuickAddFoodScreen = () => {
               </View>
             </View>
 
-            <Text style={[styles.fieldLabel, styles.fieldSpacing]}>Name</Text>
-            <TextInput
-              style={styles.textInput}
-              value={nameValue}
-              onChangeText={setNameValue}
-              placeholder="Quick Add"
-              placeholderTextColor={appColors.textMuted}
-            />
+            <View style={styles.optionalPanel}>
+              <Text style={[styles.fieldLabel, styles.optionalFieldLabel]}>
+                Name (optional)
+              </Text>
+              <TextInput
+                style={[styles.textInput, styles.optionalInput]}
+                value={nameValue}
+                onChangeText={setNameValue}
+                placeholder="Quick add"
+                placeholderTextColor={appColors.textMuted}
+              />
+            </View>
           </View>
 
           {showTimePicker ? (
@@ -514,6 +554,7 @@ const styles = StyleSheet.create({
     height: 250,
     borderRadius: 999,
     backgroundColor: appColors.brand800,
+    opacity: 0.38,
   },
   bgOrbBottom: {
     position: "absolute",
@@ -523,6 +564,7 @@ const styles = StyleSheet.create({
     height: 280,
     borderRadius: 999,
     backgroundColor: appColors.success700,
+    opacity: 0.34,
   },
   heroCard: sharedStyleValues.card,
   heroHeaderRow: {
@@ -629,6 +671,39 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     marginTop: 8,
   },
+  inlineQuietButton: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: appColors.borderStrong,
+    backgroundColor: appColors.surfaceField,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    marginTop: 10,
+  },
+  inlineQuietButtonText: {
+    color: appColors.brand500,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  presetRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 10,
+  },
+  presetChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: appColors.borderStrong,
+    backgroundColor: appColors.surfaceGhost,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+  },
+  presetChipText: {
+    color: appColors.brand500,
+    fontSize: 12,
+    fontWeight: "800",
+  },
   macroGrid: {
     flexDirection: "row",
     gap: 8,
@@ -671,6 +746,20 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   textInput: sharedStyleValues.input,
+  optionalPanel: {
+    borderRadius: 8,
+    backgroundColor: appColors.surfaceField,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
+    padding: 12,
+    marginTop: 16,
+  },
+  optionalFieldLabel: {
+    color: appColors.textMuted,
+  },
+  optionalInput: {
+    backgroundColor: appColors.surfaceCard,
+  },
   footer: sharedStyleValues.footer,
   primaryButton: {
     ...sharedStyleValues.buttonBase,

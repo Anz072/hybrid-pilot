@@ -15,6 +15,8 @@ const KEY_ONBOARDING_PROFILE = "onboardingProfile";
 const KEY_FOOD_SEARCH_SECTION_STATE = "foodSearchSectionState";
 const KEY_FOOD_TRACKING_PREFERENCES = "foodTrackingPreferences";
 const KEY_ADAPTIVE_RECOMMENDATION_SEEN = "adaptiveRecommendationSeen";
+const KEY_SHORTCUT_RECENTS = "shortcutRecents";
+const KEY_FOOD_RECENT_SEARCHES = "foodRecentSearches";
 
 export type AuthProvider = "local" | "google";
 
@@ -160,6 +162,39 @@ export const getFoodTrackingPreferences = async (): Promise<FoodTrackingPreferen
     ...DEFAULT_FOOD_TRACKING_PREFERENCES,
     ...(parsed ?? {}),
   };
+};
+
+export const saveShortcutRecents = async (
+  shortcuts: string[],
+): Promise<void> => {
+  await setKv(KEY_SHORTCUT_RECENTS, JSON.stringify(shortcuts.slice(0, 2)));
+};
+
+export const getShortcutRecents = async (): Promise<string[]> => {
+  const value = await getKv(KEY_SHORTCUT_RECENTS);
+  const parsed = safeParse<string[]>(value);
+
+  return Array.isArray(parsed) ? parsed.slice(0, 2) : [];
+};
+
+export const saveFoodRecentSearches = async (
+  searches: string[],
+): Promise<void> => {
+  const normalized = searches
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 6);
+
+  await setKv(KEY_FOOD_RECENT_SEARCHES, JSON.stringify(normalized));
+};
+
+export const getFoodRecentSearches = async (): Promise<string[]> => {
+  const value = await getKv(KEY_FOOD_RECENT_SEARCHES);
+  const parsed = safeParse<string[]>(value);
+
+  return Array.isArray(parsed)
+    ? parsed.map((item) => item.trim()).filter(Boolean).slice(0, 6)
+    : [];
 };
 
 export const markAdaptiveRecommendationSeen = async (

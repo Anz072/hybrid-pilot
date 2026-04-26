@@ -82,11 +82,16 @@ const confirmAsync = (
   title: string,
   message: string,
   confirmText = "Confirm",
+  confirmStyle: "default" | "destructive" = "default",
 ): Promise<boolean> =>
   new Promise((resolve) => {
     Alert.alert(title, message, [
       { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
-      { text: confirmText, onPress: () => resolve(true) },
+      {
+        text: confirmText,
+        style: confirmStyle,
+        onPress: () => resolve(true),
+      },
     ]);
   });
 
@@ -404,6 +409,14 @@ const WeightScreen = ({
           chartNewestEntry.measuredAt,
         )}`
       : "Log your first entry to build a trend";
+  const trendConfidenceText =
+    chartEntries.length >= 8
+      ? `High confidence from ${chartEntries.length} check-ins`
+      : chartEntries.length >= 4
+        ? `Building confidence from ${chartEntries.length} check-ins`
+        : chartEntries.length > 0
+          ? `Early signal from ${chartEntries.length} check-ins`
+          : "No trend confidence yet";
 
   const openEditModal = (entry: DBWeightEntry) => {
     setEditingEntry(entry);
@@ -541,10 +554,10 @@ const WeightScreen = ({
     setSnackbar({
       message:
         sameDayEntries.length > 0
-          ? "Daily entry updated"
+          ? "Daily entry updated - same-day save replaced the earlier entry"
           : baseEntry
-            ? "Entry updated"
-            : "Saved",
+            ? "Entry updated locally"
+            : "Saved locally",
     });
 
     try {
@@ -564,10 +577,17 @@ const WeightScreen = ({
       });
       replaceLocalEntries([saved, ...optimisticDeletedEntries]);
       setSelectedEntryId(saved.id);
+      setSnackbar({
+        message:
+          saved.syncStatus === "synced"
+            ? "Synced"
+            : sameDayEntries.length > 0
+              ? "Saved locally - same-day entry replaced"
+              : "Saved locally",
+      });
       try {
         await refreshAdaptiveRecommendationForUser({
           userExternalId: userId,
-          force: true,
         });
       } catch {
         // Keep the weight save successful even if adaptive refresh fails.
@@ -580,6 +600,17 @@ const WeightScreen = ({
   };
 
   const handleDeleteEntry = async (entry: DBWeightEntry) => {
+    const confirmed = await confirmAsync(
+      "Delete weight entry?",
+      "This removes the check-in from your trend. You can undo it right after deleting.",
+      "Delete",
+      "destructive",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
     const optimisticDeleted: DBWeightEntry = {
       ...entry,
       deletedAt: new Date().toISOString(),
@@ -603,7 +634,6 @@ const WeightScreen = ({
         try {
           await refreshAdaptiveRecommendationForUser({
             userExternalId: entry.userExternalId,
-            force: true,
           });
         } catch {
           // Undo should still succeed even if adaptive refresh fails.
@@ -626,7 +656,6 @@ const WeightScreen = ({
       try {
         await refreshAdaptiveRecommendationForUser({
           userExternalId: entry.userExternalId,
-          force: true,
         });
       } catch {
         // Keep the delete successful even if adaptive refresh fails.
@@ -690,31 +719,33 @@ const WeightScreen = ({
     }
   };
 
-  const handleClearGoal = () => {
+  const handleClearGoal = async () => {
     if (!goal || !userId) {
       return;
     }
 
-    Alert.alert("Clear goal?", "This removes the target and goal band.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Clear",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await DB.clearWeightGoal(userId);
-            setGoal(null);
-            setTargetWeightValue("");
-            setTargetDate(null);
-            setShowGoalDatePicker(false);
-            setGoalModalVisible(false);
-            setSnackbar({ message: "Goal cleared" });
-          } catch {
-            Alert.alert("Could not clear goal", "Please try again.");
-          }
-        },
-      },
-    ]);
+    const confirmed = await confirmAsync(
+      "Clear goal?",
+      "This removes the target and goal band from your chart.",
+      "Clear",
+      "destructive",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await DB.clearWeightGoal(userId);
+      setGoal(null);
+      setTargetWeightValue("");
+      setTargetDate(null);
+      setShowGoalDatePicker(false);
+      setGoalModalVisible(false);
+      setSnackbar({ message: "Goal cleared" });
+    } catch {
+      Alert.alert("Could not clear goal", "Please try again.");
+    }
   };
 
   const handleGoalDateChange = (
@@ -737,7 +768,7 @@ const WeightScreen = ({
   const handleDataStatusPress = () => {
     Alert.alert(
       "Weight data",
-      "Weight entries and goals are saved to your signed-in account.",
+      "Weight entries are saved locally first, then marked Synced when they are stored in your signed-in account.",
     );
   };
 
@@ -750,10 +781,10 @@ const WeightScreen = ({
           : "Need more data",
       detail:
         monthlyAverage != null
-          ? `30d avg ${formatWeightKg(monthlyAverage)} kg`
+          ? `30d avg ${formatWeightKg(monthlyAverage)} kg · ${trendConfidenceText}`
           : "We need more recent check-ins to compare your pace.",
       explanation:
-        "The trend compares your latest weigh-in against your recent 7-day average so day-to-day fluctuations feel less noisy.",
+        `The trend compares your latest weigh-in against your recent 7-day average so day-to-day fluctuations feel less noisy. ${trendConfidenceText}.`,
     },
     {
       title: "Consistency",
@@ -1088,8 +1119,8 @@ const WeightScreen = ({
             item.syncStatus === "error"
               ? "Needs review"
               : item.syncStatus === "pending"
-                ? "Saving"
-                : null;
+                ? "Saved locally"
+                : "Synced";
           const sourceLabel = toTitleCase(item.source);
           const hasSecondaryRow = Boolean(item.notes || item.syncError);
 
@@ -1141,29 +1172,25 @@ const WeightScreen = ({
                     <Text style={styles.historySourceText} numberOfLines={1}>
                       {sourceLabel}
                     </Text>
-                    {statusLabel ? (
-                      <View
+                    <View
+                      style={[
+                        styles.statusChip,
+                        item.syncStatus === "error" && styles.statusChipWarning,
+                        item.syncStatus === "synced" && styles.statusChipSynced,
+                      ]}
+                    >
+                      <Text
                         style={[
-                          styles.statusChip,
+                          styles.statusChipText,
                           item.syncStatus === "error" &&
-                            styles.statusChipWarning,
+                            styles.statusChipTextWarning,
+                          item.syncStatus === "synced" &&
+                            styles.statusChipTextSynced,
                         ]}
                       >
-                        <Text
-                          style={[
-                            styles.statusChipText,
-                            item.syncStatus === "error" &&
-                              styles.statusChipTextWarning,
-                          ]}
-                        >
-                          {statusLabel}
-                        </Text>
-                      </View>
-                    ) : (
-                      <Text style={styles.historyTimeText} numberOfLines={1}>
-                        Saved
+                        {statusLabel}
                       </Text>
-                    )}
+                    </View>
                   </View>
 
                   <View style={styles.historyActionColumn}>
@@ -1341,7 +1368,7 @@ const WeightScreen = ({
               />
               {goal ? (
                 <Pressable
-                  onPress={handleClearGoal}
+                  onPress={() => void handleClearGoal()}
                   style={({ pressed }) => [
                     styles.textButton,
                     pressed && styles.cardPressed,
@@ -1990,6 +2017,11 @@ const styles = StyleSheet.create({
   statusChipWarning: {
     backgroundColor: appColors.warningSurfaceStrong,
   },
+  statusChipSynced: {
+    backgroundColor: appColors.surfaceField,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
+  },
   statusChipText: {
     color: appColors.textSecondary,
     fontSize: 11,
@@ -1997,6 +2029,9 @@ const styles = StyleSheet.create({
   },
   statusChipTextWarning: {
     color: appColors.warning700,
+  },
+  statusChipTextSynced: {
+    color: appColors.success700,
   },
   historyInlineWarning: {
     flexDirection: "row",

@@ -24,7 +24,7 @@ const WelcomeScreen = ({ navigation }: Props) => {
       </View>
 
       <Text style={styles.eyebrow}>Nutrition + Training</Text>
-      <Text style={styles.title}>HybridPilot</Text>
+      <Text style={styles.title}>Dribsnis</Text>
       <Text style={styles.subtitle}>
         Build your plan in under a minute and get tailored calories, macros, and
         progress tracking.

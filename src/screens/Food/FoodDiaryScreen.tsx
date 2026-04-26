@@ -41,6 +41,7 @@ import {
   formatFoodDateKey,
   formatFoodHourLabel,
   formatFoodLoggedTime,
+  getFoodDefaultLogAmount,
   formatFoodShortDate,
   getFoodLoggedHour,
   getFoodResolvedServing,
@@ -57,6 +58,7 @@ import {
   getLastSeenAdaptiveRecommendationId,
   markAdaptiveRecommendationSeen,
 } from "../../storage/localStore";
+import { prefetchAddFoodStaticLists } from "./addFoodStaticListsCache";
 
 type FoodDiaryNav = NativeStackNavigationProp<FoodStackParamList, "Diary">;
 
@@ -332,6 +334,14 @@ const FoodDiaryScreen = () => {
   const isToday = dateKey === formatFoodDateKey(new Date());
   const isSelectedDayComplete = Boolean(dayCompletionByDate[dateKey]);
 
+  React.useEffect(() => {
+    if (!user?.externalId) {
+      return;
+    }
+
+    prefetchAddFoodStaticLists();
+  }, [user?.externalId]);
+
   const hourBuckets = useMemo(() => {
     const rows: FoodDiaryHourBucket[] = [];
 
@@ -353,6 +363,7 @@ const FoodDiaryScreen = () => {
 
   const openAddFoodAtHour = useCallback(
     (hour: number) => {
+      prefetchAddFoodStaticLists();
       navigation.navigate("AddFood", {
         contextLabel: formatFoodHourLabel(hour),
         date: dateKey,
@@ -389,6 +400,41 @@ const FoodDiaryScreen = () => {
       });
     },
     [dateKey, isToday, navigation],
+  );
+
+  const quickLogFavoriteAtHour = useCallback(
+    async (food: FoodDiaryFavoriteFood, hour: number) => {
+      if (!user) {
+        Alert.alert(
+          "No account found",
+          "Create or restore a user before adding food.",
+        );
+        return;
+      }
+
+      const minute =
+        isToday && new Date().getHours() === hour ? new Date().getMinutes() : 0;
+
+      try {
+        await DB.addUserFoodLog({
+          userExternalId: user.externalId,
+          foodId: food.id,
+          date: dateKey,
+          loggedAt: buildFoodLoggedAt(dateKey, hour, minute),
+          quantityG: getFoodDefaultLogAmount(food),
+          mealType: null,
+        });
+        await loadData();
+        setSnackbar({
+          message: `${food.name} logged`,
+          actionLabel: "Edit",
+          onAction: () => openFavoriteEditorAtHour(food, hour),
+        });
+      } catch {
+        Alert.alert("Could not log food", "Please review the food and try again.");
+      }
+    },
+    [dateKey, isToday, loadData, openFavoriteEditorAtHour, user],
   );
 
   const restoreDeletedEntry = useCallback(
@@ -431,38 +477,54 @@ const FoodDiaryScreen = () => {
     (entry: DBUserFoodLogEntry) => {
       const entrySnapshot = { ...entry };
 
-      setWeekEntries((current) =>
-        current.filter((item) => item.id !== entrySnapshot.id),
-      );
-      setSnackbar({
-        message: "Food deleted",
-        actionLabel: "Undo",
-        onAction: () => {
-          setSnackbar(null);
-          void (async () => {
-            try {
-              await restoreDeletedEntry(entrySnapshot);
-              await loadData();
-            } catch {
-              Alert.alert(
-                "Undo failed",
-                "Please add the food entry again.",
+      Alert.alert(
+        "Delete food entry?",
+        "This removes the item from this diary day. You can undo it right after deleting.",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: () => {
+              setWeekEntries((current) =>
+                current.filter((item) => item.id !== entrySnapshot.id),
               );
-            }
-          })();
-        },
-      });
+              setSnackbar({
+                message: "Food deleted",
+                actionLabel: "Undo",
+                onAction: () => {
+                  setSnackbar(null);
+                  void (async () => {
+                    try {
+                      await restoreDeletedEntry(entrySnapshot);
+                      await loadData();
+                    } catch {
+                      Alert.alert(
+                        "Undo failed",
+                        "Please add the food entry again.",
+                      );
+                    }
+                  })();
+                },
+              });
 
-      void (async () => {
-        try {
-          await DB.deleteUserFoodLog(entrySnapshot.id);
-          await loadData();
-        } catch {
-          setSnackbar(null);
-          await loadData();
-          Alert.alert("Could not delete food", "Please try again.");
-        }
-      })();
+              void (async () => {
+                try {
+                  await DB.deleteUserFoodLog(entrySnapshot.id);
+                  await loadData();
+                } catch {
+                  setSnackbar(null);
+                  await loadData();
+                  Alert.alert("Could not delete food", "Please try again.");
+                }
+              })();
+            },
+          },
+        ],
+      );
     },
     [loadData, restoreDeletedEntry],
   );
@@ -678,6 +740,9 @@ const FoodDiaryScreen = () => {
           selectedHour={selectedHour}
           onAddFavorite={(food, hour) => {
             openFavoriteEditorAtHour(food, hour);
+          }}
+          onQuickLogFavorite={(food, hour) => {
+            void quickLogFavoriteAtHour(food, hour);
           }}
         />
 

@@ -79,6 +79,8 @@ const parseMealPayload = (rawPayload: string | null) => {
 
 type CustomMealSaveMode = "save" | "save_and_add";
 
+const SERVING_PRESETS = [50, 100, 150];
+
 const CreateCustomFoodScreen = () => {
   const [name, setName] = React.useState("");
   const [description, setDescription] = React.useState("");
@@ -473,19 +475,7 @@ const CreateCustomFoodScreen = () => {
           placeholderTextColor={appColors.textMuted}
           value={name}
           onChangeText={setName}
-        />
-
-        <Text style={[styles.fieldLabel, styles.fieldLabelSpacing]}>
-          Description
-        </Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Optional notes, ingredients, or prep details"
-          placeholderTextColor={appColors.textMuted}
-          value={description}
-          onChangeText={setDescription}
-          multiline
-          textAlignVertical="top"
+          autoFocus={!isEditing}
         />
 
         <Text style={[styles.fieldLabel, styles.fieldLabelSpacing]}>
@@ -505,8 +495,34 @@ const CreateCustomFoodScreen = () => {
             <Text style={styles.unitText}>g</Text>
           </View>
         </View>
+        <View style={styles.presetRow}>
+          {SERVING_PRESETS.map((preset) => (
+            <Pressable
+              key={preset}
+              onPress={() => setServingSize(String(preset))}
+              style={({ pressed }) => [
+                styles.presetChip,
+                pressed && styles.cardPressed,
+              ]}
+            >
+              <Text style={styles.presetChipText}>{preset}g</Text>
+            </Pressable>
+          ))}
+        </View>
 
-        <View style={styles.fieldLabelSpacing}>
+        <View style={styles.optionalPanel}>
+          <Text style={[styles.fieldLabel, styles.optionalFieldLabel]}>
+            Description (optional)
+          </Text>
+          <TextInput
+            style={[styles.input, styles.textArea, styles.optionalInput]}
+            placeholder="Optional notes, ingredients, or prep details"
+            placeholderTextColor={appColors.textMuted}
+            value={description}
+            onChangeText={setDescription}
+            multiline
+            textAlignVertical="top"
+          />
           <PublicVisibilityCheckbox checked={isPublic} onChange={setIsPublic} />
         </View>
       </View>
@@ -533,6 +549,22 @@ const CreateCustomFoodScreen = () => {
               keyboardType="decimal-pad"
             />
             <Text style={styles.helperText}>{caloriesHelperText}</Text>
+            {isCaloriesManuallySet && macroCalculatedCalories > 0 ? (
+              <Pressable
+                onPress={() => {
+                  setCalories("");
+                  setIsCaloriesManuallySet(false);
+                }}
+                style={({ pressed }) => [
+                  styles.inlineQuietButton,
+                  pressed && styles.cardPressed,
+                ]}
+              >
+                <Text style={styles.inlineQuietButtonText}>
+                  Use macro calories
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
           <View style={styles.gridCell}>
             <Text style={styles.fieldLabel}>Protein (g)</Text>
@@ -722,6 +754,7 @@ const styles = StyleSheet.create({
     height: 250,
     borderRadius: 999,
     backgroundColor: appColors.brand800,
+    opacity: 0.38,
   },
   bgOrbBottom: {
     position: "absolute",
@@ -731,6 +764,7 @@ const styles = StyleSheet.create({
     height: 280,
     borderRadius: 999,
     backgroundColor: appColors.success700,
+    opacity: 0.34,
   },
   heroCard: sharedStyleValues.card,
   heroHeaderCopy: {
@@ -780,6 +814,54 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
     marginTop: 8,
+  },
+  inlineQuietButton: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: appColors.borderStrong,
+    backgroundColor: appColors.surfaceField,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    marginTop: 10,
+  },
+  inlineQuietButtonText: {
+    color: appColors.brand500,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  optionalPanel: {
+    borderRadius: 8,
+    backgroundColor: appColors.surfaceField,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
+    padding: 12,
+    marginTop: 16,
+    gap: 10,
+  },
+  optionalFieldLabel: {
+    color: appColors.textMuted,
+  },
+  optionalInput: {
+    backgroundColor: appColors.surfaceCard,
+  },
+  presetRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 10,
+  },
+  presetChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: appColors.borderStrong,
+    backgroundColor: appColors.surfaceGhost,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+  },
+  presetChipText: {
+    color: appColors.brand500,
+    fontSize: 12,
+    fontWeight: "800",
   },
   unitPill: {
     ...sharedStyleValues.unitPillRound,

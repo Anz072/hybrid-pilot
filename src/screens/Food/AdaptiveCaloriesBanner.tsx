@@ -1,7 +1,9 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { CaretRightIcon, XIcon } from "phosphor-react-native";
 import type { DBAdaptiveCalorieRecommendation } from "../../store/DB_TYPES";
 import { appColors } from "../../theme/colors";
+import { ADAPTIVE_RECALCULATION_INTERVAL_MS } from "../User_Settings/adaptiveCaloriesActions";
 
 type AdaptiveCaloriesBannerProps = {
   recommendation: DBAdaptiveCalorieRecommendation;
@@ -11,6 +13,22 @@ type AdaptiveCaloriesBannerProps = {
 
 const formatDelta = (value: number) =>
   `${value > 0 ? "+" : ""}${value} kcal`;
+
+const formatNextReviewLabel = (createdAt: string) => {
+  const nextReviewAt = new Date(
+    new Date(createdAt).getTime() + ADAPTIVE_RECALCULATION_INTERVAL_MS,
+  );
+
+  if (Number.isNaN(nextReviewAt.getTime())) {
+    return "Next review follows the weekly cadence.";
+  }
+
+  return `Next review ${nextReviewAt.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  })}`;
+};
 
 const AdaptiveCaloriesBanner = ({
   recommendation,
@@ -40,26 +58,32 @@ const AdaptiveCaloriesBanner = ({
             )}).`
           : `Suggested base target ${recommendation.recommendedBaseCalories} kcal/day based on your recent complete diary days and weight trend.`}
       </Text>
+      <Text style={styles.reviewDate}>
+        {formatNextReviewLabel(recommendation.createdAt)}
+      </Text>
 
       <View style={styles.actionRow}>
         <Pressable
           onPress={onReview}
+          accessibilityLabel="Review adaptive calorie recommendation"
           style={({ pressed }) => [
             styles.reviewButton,
             pressed && styles.reviewButtonPressed,
           ]}
         >
-          <Text style={styles.reviewButtonText}>Review recommendation</Text>
+          <Text style={styles.reviewButtonText}>Review</Text>
+          <CaretRightIcon size={15} color={appColors.white} weight="bold" />
         </Pressable>
         {onDismiss ? (
           <Pressable
             onPress={onDismiss}
+            accessibilityLabel="Close adaptive calorie recommendation"
             style={({ pressed }) => [
               styles.dismissButton,
               pressed && styles.reviewButtonPressed,
             ]}
           >
-            <Text style={styles.dismissButtonText}>Close</Text>
+            <XIcon size={16} color={appColors.textPrimary} weight="bold" />
           </Pressable>
         ) : null}
       </View>
@@ -110,6 +134,12 @@ const styles = StyleSheet.create({
     color: appColors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
+    marginBottom: 8,
+  },
+  reviewDate: {
+    color: appColors.brand700,
+    fontSize: 12,
+    fontWeight: "800",
     marginBottom: 14,
   },
   actionRow: {
@@ -118,6 +148,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   reviewButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
     alignSelf: "flex-start",
     borderRadius: 9999,
     backgroundColor: appColors.brand700,
@@ -133,18 +166,15 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   dismissButton: {
+    width: 42,
+    height: 42,
+    alignItems: "center",
+    justifyContent: "center",
     alignSelf: "flex-start",
     borderRadius: 9999,
     borderWidth: 1,
     borderColor: appColors.borderStrong,
     backgroundColor: appColors.surfaceGhost,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  dismissButtonText: {
-    color: appColors.textPrimary,
-    fontSize: 13,
-    fontWeight: "800",
   },
 });
 

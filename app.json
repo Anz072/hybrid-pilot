@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "HybridPilot",
-    "slug": "HybridPilot",
+    "name": "Dribsnis",
+    "slug": "dribsnis",
     "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/icon1.png",
-    "scheme": "hybridpilot",
+    "scheme": "dribsnis",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -14,11 +14,11 @@
       "backgroundColor": "#191c1f"
     },
     "ios": {
-      "bundleIdentifier": "com.hybridpilot.app",
+      "bundleIdentifier": "com.dribsnis.app",
       "supportsTablet": true
     },
     "android": {
-      "package": "com.hybridpilot.app",
+      "package": "com.dribsnis.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon1.png",
         "backgroundColor": "#F6EFDf"

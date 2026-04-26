@@ -3,6 +3,7 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   BarbellIcon,
+  CaretRightIcon,
   ChartLineUpIcon,
   CookingPotIcon,
   ForkKnifeIcon,
@@ -50,7 +51,7 @@ const buildCurrentWeekDates = (reference: Date): Date[] => {
 };
 
 type MoreActionRowProps = {
-  description: string;
+  description?: string;
   icon: React.ReactNode;
   onPress: () => void;
   title: string;
@@ -58,7 +59,6 @@ type MoreActionRowProps = {
 };
 
 const MoreActionRow = ({
-  description,
   icon,
   onPress,
   title,
@@ -75,11 +75,14 @@ const MoreActionRow = ({
       <View style={styles.actionIcon}>{icon}</View>
       <View style={styles.actionCopy}>
         <Text style={styles.actionTitle}>{title}</Text>
-        <Text style={styles.actionDescription}>{description}</Text>
       </View>
       <View style={styles.actionMeta}>
         <Text style={styles.actionValue}>{value}</Text>
-        <Text style={styles.actionArrow}>{">"}</Text>
+        <CaretRightIcon
+          size={18}
+          color={appColors.textMuted}
+          weight="bold"
+        />
       </View>
     </Pressable>
   );
@@ -483,7 +486,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: appColors.borderSoft,
   },
@@ -505,29 +508,20 @@ const styles = StyleSheet.create({
     color: appColors.textPrimary,
     fontSize: 15,
     fontWeight: "600",
-    marginBottom: 4,
-  },
-  actionDescription: {
-    color: appColors.textSecondary,
-    fontSize: 12,
-    lineHeight: 17,
   },
   actionMeta: {
     alignItems: "flex-end",
-    gap: 4,
+    flexDirection: "row",
+    gap: 6,
     marginLeft: 8,
+    maxWidth: "45%",
   },
   actionValue: {
     color: appColors.brand700,
     fontSize: 12,
     fontWeight: "800",
     textAlign: "right",
-  },
-  actionArrow: {
-    color: appColors.textMuted,
-    fontSize: 22,
-    lineHeight: 22,
-    fontWeight: "400",
+    flexShrink: 1,
   },
 });
 

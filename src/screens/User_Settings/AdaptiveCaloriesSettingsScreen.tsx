@@ -24,6 +24,7 @@ import { markAdaptiveRecommendationSeen } from "../../storage/localStore";
 import SettingsStackHeader from "./SettingsStackHeader";
 import {
   applyAdaptiveRecommendationForUser,
+  getNextAdaptiveReviewDate,
   refreshAdaptiveRecommendationForUser,
   rejectAdaptiveRecommendationForUser,
 } from "./adaptiveCaloriesActions";
@@ -48,6 +49,27 @@ const formatWindowLabel = (startDate: string, endDate: string) =>
     month: "short",
     day: "numeric",
   })}`;
+
+const formatSignedWeightChange = (value: number | null) =>
+  value == null ? "Not enough weigh-ins" : `${value > 0 ? "+" : ""}${value.toFixed(2)} kg/week`;
+
+const formatNextReviewValue = (settings: DBUserSettings | null) => {
+  const nextReviewDate = getNextAdaptiveReviewDate(settings);
+
+  if (!settings?.adaptiveCaloriesEnabled) {
+    return "Turn on adaptive calories";
+  }
+
+  if (!nextReviewDate) {
+    return "Ready when enough data is available";
+  }
+
+  return nextReviewDate.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+};
 
 const AdaptiveCaloriesSettingsScreen = ({ navigation }: Props) => {
   const insets = useSafeAreaInsets();
@@ -305,6 +327,12 @@ const AdaptiveCaloriesSettingsScreen = ({ navigation }: Props) => {
                     : "Not calculated yet"}
                 </Text>
               </View>
+              <View style={styles.metaRow}>
+                <Text style={styles.metaLabel}>Next review</Text>
+                <Text style={styles.metaValue}>
+                  {formatNextReviewValue(settings)}
+                </Text>
+              </View>
 
               <Pressable
                 onPress={() => void handleRefreshNow()}
@@ -356,6 +384,27 @@ const AdaptiveCaloriesSettingsScreen = ({ navigation }: Props) => {
                       )}
                     </Text>
                   </View>
+                </View>
+
+                <View style={styles.whyPanel}>
+                  <Text style={styles.whyTitle}>Why this changed</Text>
+                  <Text style={styles.whyText}>
+                    Logged intake averaged{" "}
+                    {Math.round(latestRecommendation.avgLoggedCalories)} kcal/day
+                    across {latestRecommendation.completeDaysUsed} complete days.
+                  </Text>
+                  <Text style={styles.whyText}>
+                    Your smoothed weight trend moved{" "}
+                    {formatSignedWeightChange(
+                      latestRecommendation.observedWeeklyChangeKg,
+                    )}, based on {latestRecommendation.weighInsUsed} weigh-ins.
+                  </Text>
+                  <Text style={styles.whyText}>
+                    Estimated maintenance is{" "}
+                    {Math.round(latestRecommendation.estimatedTdee)} kcal/day;
+                    the proposed base target is{" "}
+                    {latestRecommendation.recommendedBaseCalories} kcal/day.
+                  </Text>
                 </View>
 
                 <View style={styles.actionRow}>
@@ -602,6 +651,26 @@ const styles = StyleSheet.create({
     color: appColors.textPrimary,
     fontSize: 14,
     fontWeight: "800",
+  },
+  whyPanel: {
+    borderRadius: 8,
+    backgroundColor: appColors.surfaceField,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
+    padding: 12,
+    marginBottom: 14,
+  },
+  whyTitle: {
+    color: appColors.textPrimary,
+    fontSize: 14,
+    fontWeight: "900",
+    marginBottom: 6,
+  },
+  whyText: {
+    color: appColors.textSecondary,
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 4,
   },
   actionRow: {
     flexDirection: "row",

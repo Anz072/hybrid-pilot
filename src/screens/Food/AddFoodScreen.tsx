@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  LayoutAnimation,
   Pressable,
   StyleSheet,
   Text,
@@ -17,24 +16,17 @@ import type {
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   BarcodeIcon,
-  CaretDownIcon,
-  CaretUpIcon,
   CookingPotIcon,
   ForkKnifeIcon,
   LightningIcon,
   MagnifyingGlassIcon,
+  PencilSimpleIcon,
+  StarIcon,
 } from "phosphor-react-native";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
 import { DB } from "../../store/DB";
 import type { DBFoodItem, DBUser } from "../../store/DB_TYPES";
-import {
-  getFoodSearchSectionState,
-  getFoodTrackingPreferences,
-  saveFoodSearchSectionState,
-  saveFoodTrackingPreferences,
-  type FoodSearchSectionState,
-} from "../../storage/localStore";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import FoodBarcodeScannerModal from "./FoodBarcodeScannerModal";
 import type { ScannedFoodLookupResult } from "./FoodBarcodeScannerShared";
@@ -48,12 +40,21 @@ import {
   getFoodDefaultLogAmount,
 } from "./foodUtils";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  getFoodRecentSearches,
+  saveFoodRecentSearches,
+} from "../../storage/localStore";
 import { appColors } from "../../theme/colors";
 import {
   fromDbFoodItem,
   searchFoodResults,
   type FoodSearchResult,
 } from "./foodSearch";
+import {
+  getCachedAddFoodStaticLists,
+  refreshAddFoodStaticLists,
+  type AddFoodStaticListsSnapshot,
+} from "./addFoodStaticListsCache";
 
 type AddFoodRoute = RouteProp<FoodStackParamList, "AddFood">;
 type AddFoodNav = CompositeNavigationProp<
@@ -63,7 +64,6 @@ type AddFoodNav = CompositeNavigationProp<
 
 type SearchFoodResult = FoodSearchResult;
 
-type FoodSearchSectionKey = "favorites" | "recent";
 type FoodSearchMode = "all" | "recipes" | "custom_meals";
 type SearchResultCategory =
   | "custom_foods"
@@ -84,20 +84,13 @@ type LibraryResultSection = {
   items: SearchFoodResult[];
 };
 type RenderSectionOptions = {
-  collapsible?: boolean;
-  expanded?: boolean;
-  onToggle?: () => void;
   emptyCta?: {
     onPress: () => void;
     pillText: string;
     text: string;
     title: string;
   };
-};
-
-const DEFAULT_SECTION_STATE: FoodSearchSectionState = {
-  favoritesExpanded: true,
-  recentExpanded: true,
+  loading?: boolean;
 };
 
 const SEARCH_DEBOUNCE_MS = 240;
@@ -324,77 +317,93 @@ const buildCategorizedSearchSections = (
     items: items.filter((item) => getSearchResultCategory(item) === category),
   })).filter((section) => section.items.length > 0);
 
+const SKELETON_ROWS = [0, 1, 2];
+
 const AddFoodScreen = () => {
   const route = useRoute<AddFoodRoute>();
   const navigation = useNavigation<AddFoodNav>();
   const insets = useSafeAreaInsets();
+  const initialStaticListsRef = React.useRef(getCachedAddFoodStaticLists());
 
   const { contextLabel, date, loggedAt, mealType } = route.params;
 
-  const [user, setUser] = useState<DBUser | null>(null);
+  const [user, setUser] = useState<DBUser | null>(
+    () => initialStaticListsRef.current?.user ?? null,
+  );
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchFoodResult[]>([]);
-  const [recent, setRecent] = useState<DBFoodItem[]>([]);
-  const [favorites, setFavorites] = useState<DBFoodItem[]>([]);
-  const [recipes, setRecipes] = useState<DBFoodItem[]>([]);
-  const [customMeals, setCustomMeals] = useState<DBFoodItem[]>([]);
+  const [recent, setRecent] = useState<DBFoodItem[]>(
+    () => initialStaticListsRef.current?.recent ?? [],
+  );
+  const [favorites, setFavorites] = useState<DBFoodItem[]>(
+    () => initialStaticListsRef.current?.favorites ?? [],
+  );
+  const [recipes, setRecipes] = useState<DBFoodItem[]>(
+    () => initialStaticListsRef.current?.recipes ?? [],
+  );
+  const [customMeals, setCustomMeals] = useState<DBFoodItem[]>(
+    () => initialStaticListsRef.current?.customMeals ?? [],
+  );
   const [scannerVisible, setScannerVisible] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const [searchMode, setSearchMode] = useState<FoodSearchMode>("all");
-  const [sectionState, setSectionState] = useState<FoodSearchSectionState>(
-    DEFAULT_SECTION_STATE,
+  const [isStaticListsLoading, setIsStaticListsLoading] = useState(
+    () => !initialStaticListsRef.current,
   );
-  const [fastLogEnabled, setFastLogEnabled] = useState(false);
+  const [isUsingLocalSearchOnly, setIsUsingLocalSearchOnly] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [searchMode, setSearchMode] = useState<FoodSearchMode>("all");
   const [quickLoggingKey, setQuickLoggingKey] = useState<string | null>(null);
   const searchCacheRef = React.useRef(new Map<string, SearchFoodResult[]>());
+  const localOnlySearchCacheRef = React.useRef(new Set<string>());
+  const lastSavedSearchRef = React.useRef<string | null>(null);
 
-  const loadStaticLists = useCallback(async () => {
-    const currentUser = await DB.getUser();
-    setUser(currentUser);
+  const applyStaticListsSnapshot = useCallback(
+    (snapshot: AddFoodStaticListsSnapshot) => {
+      setUser(snapshot.user);
+      setRecent(snapshot.recent);
+      setFavorites(snapshot.favorites);
+      setRecipes(snapshot.recipes);
+      setCustomMeals(snapshot.customMeals);
+    },
+    [],
+  );
 
-    const recipeFoodsPromise = DB.listFoodItems({
-      source: "recipe",
-      limit: 60,
-    });
-    const customMealFoodsPromise = DB.listFoodItems({
-      source: "custom_meal",
-      limit: 60,
-    });
+  const loadStaticLists = useCallback(async ({
+    force = false,
+    silent = false,
+  }: {
+    force?: boolean;
+    silent?: boolean;
+  } = {}) => {
+    const cachedSnapshot = getCachedAddFoodStaticLists();
 
-    if (!currentUser) {
-      const [recipeFoods, customMealFoods] = await Promise.all([
-        recipeFoodsPromise,
-        customMealFoodsPromise,
-      ]);
-      setRecipes(recipeFoods);
-      setCustomMeals(customMealFoods);
-      setRecent([]);
-      setFavorites([]);
-      return;
+    if (cachedSnapshot) {
+      applyStaticListsSnapshot(cachedSnapshot);
+      setIsStaticListsLoading(false);
+    } else if (!silent) {
+      setIsStaticListsLoading(true);
     }
 
-    const [recentFoods, favoriteFoods, recipeFoods, customMealFoods] =
-      await Promise.all([
-      DB.getRecentFoodItems(currentUser.externalId, 10),
-      DB.getFavoriteFoodItems(currentUser.externalId, 10),
-      recipeFoodsPromise,
-      customMealFoodsPromise,
-    ]);
-
-    setRecent(recentFoods);
-    setFavorites(favoriteFoods);
-    setRecipes(recipeFoods);
-    setCustomMeals(customMealFoods);
-  }, []);
+    try {
+      const nextSnapshot = await refreshAddFoodStaticLists({ force });
+      applyStaticListsSnapshot(nextSnapshot);
+      return nextSnapshot;
+    } finally {
+      setIsStaticListsLoading(false);
+    }
+  }, [applyStaticListsSnapshot]);
 
   const searchFoods = useCallback(
     async (normalizedQuery: string, mode: FoodSearchMode) => {
       const cacheKey = getSearchCacheKey(mode, normalizedQuery);
       const cachedResults = searchCacheRef.current.get(cacheKey);
       if (cachedResults) {
+        setIsUsingLocalSearchOnly(localOnlySearchCacheRef.current.has(cacheKey));
         return cachedResults;
       }
 
+      let remoteSearchFailed = false;
+      setIsUsingLocalSearchOnly(false);
       const rankedResults = await searchFoodResults({
         query: normalizedQuery,
         getLocalRows: (queryText) =>
@@ -418,8 +427,17 @@ const AddFoodScreen = () => {
               ? isCustomMealResult(food)
               : !isRecipeResult(food) && !isCustomMealResult(food),
         includeRemote: mode === "all",
+        onRemoteSearchError: () => {
+          remoteSearchFailed = true;
+        },
         rankOptions: ADD_FOOD_SEARCH_RANK_OPTIONS,
       });
+      if (remoteSearchFailed) {
+        localOnlySearchCacheRef.current.add(cacheKey);
+      } else {
+        localOnlySearchCacheRef.current.delete(cacheKey);
+      }
+      setIsUsingLocalSearchOnly(remoteSearchFailed);
       searchCacheRef.current.set(cacheKey, rankedResults);
 
       return rankedResults;
@@ -446,36 +464,91 @@ const AddFoodScreen = () => {
       ),
     );
     searchCacheRef.current.clear();
+    localOnlySearchCacheRef.current.clear();
 
     return savedId;
   }, []);
 
   useEffect(() => {
-    void loadStaticLists();
-  }, [loadStaticLists]);
+    let cancelled = false;
+
+    const loadRecentSearches = async () => {
+      const stored = await getFoodRecentSearches();
+      if (!cancelled) {
+        setRecentSearches(stored);
+      }
+    };
+
+    void loadRecentSearches();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const rememberSearch = useCallback((value: string) => {
+    const normalized = value.trim();
+
+    if (normalized.length < 3 || normalized === lastSavedSearchRef.current) {
+      return;
+    }
+
+    lastSavedSearchRef.current = normalized;
+    setRecentSearches((current) => {
+      const next = [
+        normalized,
+        ...current.filter(
+          (item) => item.toLowerCase() !== normalized.toLowerCase(),
+        ),
+      ].slice(0, 6);
+
+      void saveFoodRecentSearches(next);
+      return next;
+    });
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
 
       const refresh = async () => {
+        const hasCachedLists = Boolean(getCachedAddFoodStaticLists());
         searchCacheRef.current.clear();
-        await loadStaticLists();
-
+        localOnlySearchCacheRef.current.clear();
         const normalized = query.trim();
-        if (!normalized) {
-          return;
+        const staticListsPromise = loadStaticLists({
+          force: true,
+          silent: hasCachedLists,
+        });
+        const searchPromise = normalized
+          ? searchFoods(normalized, searchMode)
+          : Promise.resolve<SearchFoodResult[] | null>(null);
+
+        if (normalized) {
+          setIsSearching(true);
         }
 
-        setIsSearching(true);
-        const refreshedResults = await searchFoods(normalized, searchMode);
+        try {
+          const [, refreshedResults] = await Promise.all([
+            staticListsPromise,
+            searchPromise,
+          ]);
 
-        if (!active) {
-          return;
+          if (!active) {
+            return;
+          }
+
+          if (refreshedResults) {
+            setResults(refreshedResults);
+          }
+        } catch {
+          // Keep cached rows visible if a background refresh fails.
+        } finally {
+          if (active && normalized) {
+            setIsSearching(false);
+          }
         }
 
-        setResults(refreshedResults);
-        setIsSearching(false);
       };
 
       void refresh();
@@ -489,45 +562,12 @@ const AddFoodScreen = () => {
   useEffect(() => {
     let cancelled = false;
 
-    const loadSectionState = async () => {
-      const nextState = await getFoodSearchSectionState();
-      if (!cancelled) {
-        setSectionState(nextState);
-      }
-    };
-
-    void loadSectionState();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadTrackingPreferences = async () => {
-      const preferences = await getFoodTrackingPreferences();
-      if (!cancelled) {
-        setFastLogEnabled(preferences.fastLogEnabled);
-      }
-    };
-
-    void loadTrackingPreferences();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
     const run = async () => {
       const normalized = query.trim();
       if (!normalized) {
         setResults([]);
         setIsSearching(false);
+        setIsUsingLocalSearchOnly(false);
         return;
       }
 
@@ -544,6 +584,9 @@ const AddFoodScreen = () => {
       const rows = await searchFoods(normalized, searchMode);
       if (!cancelled) {
         setResults(rows);
+        if (rows.length > 0 && searchMode === "all") {
+          rememberSearch(normalized);
+        }
         setIsSearching(false);
       }
     };
@@ -556,7 +599,7 @@ const AddFoodScreen = () => {
       cancelled = true;
       clearTimeout(timeout);
     };
-  }, [query, searchFoods, searchMode]);
+  }, [query, rememberSearch, searchFoods, searchMode]);
 
   const favoriteIds = useMemo(
     () => new Set(favorites.map((food) => food.id)),
@@ -572,6 +615,21 @@ const AddFoodScreen = () => {
     () => recent.map((food) => fromDbFoodItem(food)),
     [recent],
   );
+  const frequentResults = useMemo(() => {
+    const seen = new Set<string>();
+
+    return [...favoriteResults, ...recentResults].filter((food) => {
+      const key =
+        food.localId != null ? `local:${food.localId}` : `remote:${food.key}`;
+
+      if (seen.has(key)) {
+        return false;
+      }
+
+      seen.add(key);
+      return true;
+    });
+  }, [favoriteResults, recentResults]);
   const recipeResults = useMemo(
     () => recipes.map((food) => fromDbFoodItem(food)),
     [recipes],
@@ -722,21 +780,14 @@ const AddFoodScreen = () => {
     const foodId = await persistFoodIfNeeded(food);
     await DB.setFoodItemFavorite(user.externalId, foodId, !isFavorite);
     searchCacheRef.current.clear();
+    localOnlySearchCacheRef.current.clear();
     await Promise.all([
-      loadStaticLists(),
+      loadStaticLists({ force: true }),
       query.trim()
         ? searchFoods(query.trim(), searchMode).then(setResults)
         : Promise.resolve(),
     ]);
   };
-
-  const toggleFastLog = useCallback(() => {
-    setFastLogEnabled((current) => {
-      const nextValue = !current;
-      void saveFoodTrackingPreferences({ fastLogEnabled: nextValue });
-      return nextValue;
-    });
-  }, []);
 
   const quickLogFood = async (food: SearchFoodResult) => {
     if (!user) {
@@ -783,8 +834,8 @@ const AddFoodScreen = () => {
       return customMealResults;
     }
 
-    return [];
-  }, [customMealResults, query, recipeResults, results, searchMode]);
+    return frequentResults;
+  }, [customMealResults, frequentResults, query, recipeResults, results, searchMode]);
   const categorizedQueryResults = useMemo(
     () =>
       query.trim() && searchMode === "all"
@@ -812,25 +863,6 @@ const AddFoodScreen = () => {
         : "Search foods";
   const shouldShowScanner = searchMode === "all";
 
-  const toggleSection = useCallback((section: FoodSearchSectionKey) => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setSectionState((current) => {
-      const nextState =
-        section === "favorites"
-          ? {
-              ...current,
-              favoritesExpanded: !current.favoritesExpanded,
-            }
-          : {
-              ...current,
-              recentExpanded: !current.recentExpanded,
-            };
-
-      void saveFoodSearchSectionState(nextState);
-      return nextState;
-    });
-  }, []);
-
   const renderFoodCard = (food: SearchFoodResult, isFavorite: boolean) => {
     const isRecipe = isRecipeResult(food);
     const isCustomMeal = isCustomMealResult(food);
@@ -838,20 +870,8 @@ const AddFoodScreen = () => {
     const isOwnedLibraryItem =
       isLibraryItem && isOwnedLibraryResult(food, user?.externalId);
     const isQuickLogging = quickLoggingKey === food.key;
-    const primaryLabel = fastLogEnabled
-      ? isQuickLogging
-        ? "Logging"
-        : "Log"
-      : isLibraryItem
-        ? "Add"
-        : "Open";
-    const secondaryLabel = isRecipe
-      ? "Edit"
-      : isCustomMeal
-        ? "Edit"
-        : isFavorite
-          ? "Saved"
-          : "Save";
+    const defaultAmount = formatFoodItemServing(food);
+    const sourceLabel = getLibraryBadgeLabel(food);
 
     return (
       <View key={food.key} style={styles.foodCard}>
@@ -862,9 +882,7 @@ const AddFoodScreen = () => {
           <View style={styles.foodTopRow}>
             <View style={styles.foodBadgeRow}>
               <View style={styles.foodBadge}>
-                <Text style={styles.foodBadgeText}>
-                  {getLibraryBadgeLabel(food)}
-                </Text>
+                <Text style={styles.foodBadgeText}>{sourceLabel}</Text>
               </View>
             </View>
             <Text style={styles.foodCalories}>
@@ -876,7 +894,7 @@ const AddFoodScreen = () => {
           </Text>
           <Text style={styles.slate300} numberOfLines={1}>
             {food.brand ? `${food.brand} | ` : ""}
-            {formatFoodItemServing(food)} serving
+            {defaultAmount} default
           </Text>
           <Text style={styles.foodMacroText}>
             {formatFoodMacro(food.proteinG, "P")} |{" "}
@@ -893,17 +911,22 @@ const AddFoodScreen = () => {
                     ? openRecipeEditor(food)
                     : openCustomMealEditor(food)
                 }
+                accessibilityLabel={`Edit ${food.name}`}
                 style={({ pressed }) => [
-                  styles.secondaryAction,
+                  styles.iconAction,
                   pressed && styles.cardPressed,
                 ]}
               >
-                <Text style={styles.secondaryActionText}>{secondaryLabel}</Text>
+                <PencilSimpleIcon
+                  size={18}
+                  color={appColors.brand500}
+                  weight="bold"
+                />
               </Pressable>
             ) : (
-              <View style={[styles.secondaryAction, styles.secondaryActionMuted]}>
+              <View style={styles.publicPill}>
                 <Text
-                  style={[styles.secondaryActionText, styles.secondaryActionTextMuted]}
+                  style={styles.publicPillText}
                 >
                   Public
                 </Text>
@@ -912,42 +935,57 @@ const AddFoodScreen = () => {
           ) : (
             <Pressable
               onPress={() => void toggleFavorite(food, isFavorite)}
+              accessibilityLabel={
+                isFavorite ? `Remove ${food.name} favorite` : `Save ${food.name}`
+              }
               style={({ pressed }) => [
-                styles.secondaryAction,
+                styles.iconAction,
                 isFavorite && styles.secondaryActionActive,
                 pressed && styles.cardPressed,
               ]}
             >
-              <Text
-                style={[
-                  styles.secondaryActionText,
-                  isFavorite && styles.secondaryActionTextActive,
-                ]}
-              >
-                {secondaryLabel}
-              </Text>
+              <StarIcon
+                size={18}
+                color={isFavorite ? appColors.white : appColors.brand500}
+                weight={isFavorite ? "fill" : "bold"}
+              />
             </Pressable>
           )}
           <Pressable
             disabled={isQuickLogging}
-            onPress={() =>
-              fastLogEnabled ? void quickLogFood(food) : void openFoodEditor(food)
-            }
+            onPress={() => void quickLogFood(food)}
+            accessibilityLabel={`Quick log ${food.name}`}
             style={({ pressed }) => [
-              styles.primaryAction,
+              styles.quickLogAction,
               isQuickLogging && styles.primaryActionLoading,
               pressed && styles.cardPressed,
             ]}
           >
             {isQuickLogging ? (
               <ActivityIndicator color={appColors.white} size="small" />
-            ) : null}
-            <Text style={styles.primaryActionText}>{primaryLabel}</Text>
+            ) : (
+              <LightningIcon size={18} color={appColors.white} weight="fill" />
+            )}
           </Pressable>
         </View>
       </View>
     );
   };
+
+  const renderSkeletonRows = () => (
+    <View style={styles.skeletonStack}>
+      {SKELETON_ROWS.map((row) => (
+        <View key={row} style={styles.skeletonCard}>
+          <View style={styles.skeletonBody}>
+            <View style={[styles.skeletonLine, styles.skeletonLineShort]} />
+            <View style={[styles.skeletonLine, styles.skeletonLineLong]} />
+            <View style={[styles.skeletonLine, styles.skeletonLineMedium]} />
+          </View>
+          <View style={styles.skeletonAction} />
+        </View>
+      ))}
+    </View>
+  );
 
   const renderSection = (
     title: string,
@@ -956,12 +994,6 @@ const AddFoodScreen = () => {
     emptyText: string,
     options?: RenderSectionOptions,
   ) => {
-    const collapsible = options?.collapsible ?? false;
-    const expanded = options?.expanded ?? true;
-    const toggleLabel = expanded ? "Hide" : "Open";
-    const toggleColor = expanded
-      ? appColors.brand300
-      : appColors.brand500;
     const shouldShowEmptyCta = Boolean(options?.emptyCta) && items.length === 0;
 
     const headerContent = (
@@ -976,87 +1008,54 @@ const AddFoodScreen = () => {
               <Text style={styles.countPillText}>{items.length}</Text>
             </View>
           ) : null}
-          {collapsible ? (
-            <View
-              style={[styles.togglePill, expanded && styles.togglePillExpanded]}
-            >
-              <Text
-                style={[
-                  styles.togglePillText,
-                  expanded && styles.togglePillTextExpanded,
-                ]}
-              >
-                {toggleLabel}
-              </Text>
-              {expanded ? (
-                <CaretUpIcon size={14} color={toggleColor} weight="bold" />
-              ) : (
-                <CaretDownIcon size={14} color={toggleColor} weight="bold" />
-              )}
-            </View>
-          ) : null}
         </View>
       </View>
     );
 
     return (
       <View style={styles.sectionCard}>
-        {collapsible ? (
-          <Pressable
-            onPress={options?.onToggle}
-            accessibilityRole="button"
-            accessibilityState={{ expanded }}
-            style={({ pressed }) => [
-              styles.sectionHeaderButton,
-              pressed && styles.cardPressed,
-            ]}
-          >
-            {headerContent}
-          </Pressable>
-        ) : (
-          headerContent
-        )}
-        {expanded ? (
-          <View style={styles.sectionStack}>
-            {items.length === 0 ? (
-              <>
-                <Text style={styles.emptyText}>{emptyText}</Text>
-                {shouldShowEmptyCta ? (
-                  <View>
-                    <Pressable
-                      onPress={options?.emptyCta?.onPress}
-                      style={({ pressed }) => [
-                        styles.moreRow,
-                        pressed && styles.cardPressed,
-                      ]}
-                    >
-                      <View style={styles.moreCopy}>
-                        <Text style={styles.moreTitle}>
-                          {options?.emptyCta?.title}
-                        </Text>
-                        <Text style={styles.moreText}>
-                          {options?.emptyCta?.text}
-                        </Text>
-                      </View>
-                      <View style={styles.morePill}>
-                        <Text style={styles.morePillText}>
-                          {options?.emptyCta?.pillText}
-                        </Text>
-                      </View>
-                    </Pressable>
-                  </View>
-                ) : null}
-              </>
-            ) : (
-              items.map((item) =>
-                renderFoodCard(
-                  item,
-                  item.localId != null && favoriteIds.has(item.localId),
-                ),
-              )
-            )}
-          </View>
-        ) : null}
+        {headerContent}
+        <View style={styles.sectionStack}>
+          {options?.loading ? (
+            renderSkeletonRows()
+          ) : items.length === 0 ? (
+            <>
+              <Text style={styles.emptyText}>{emptyText}</Text>
+              {shouldShowEmptyCta ? (
+                <View>
+                  <Pressable
+                    onPress={options?.emptyCta?.onPress}
+                    style={({ pressed }) => [
+                      styles.moreRow,
+                      pressed && styles.cardPressed,
+                    ]}
+                  >
+                    <View style={styles.moreCopy}>
+                      <Text style={styles.moreTitle}>
+                        {options?.emptyCta?.title}
+                      </Text>
+                      <Text style={styles.moreText}>
+                        {options?.emptyCta?.text}
+                      </Text>
+                    </View>
+                    <View style={styles.morePill}>
+                      <Text style={styles.morePillText}>
+                        {options?.emptyCta?.pillText}
+                      </Text>
+                    </View>
+                  </Pressable>
+                </View>
+              ) : null}
+            </>
+          ) : (
+            items.map((item) =>
+              renderFoodCard(
+                item,
+                item.localId != null && favoriteIds.has(item.localId),
+              ),
+            )
+          )}
+        </View>
       </View>
     );
   };
@@ -1071,23 +1070,30 @@ const AddFoodScreen = () => {
           <View style={styles.searchModeRow}>
             <Pressable
               onPress={() => setSearchMode("all")}
+              accessibilityLabel="Search all foods"
               style={({ pressed }) => [
                 styles.searchModePill,
                 searchMode === "all" && styles.searchModePillActive,
                 pressed && styles.cardPressed,
               ]}
             >
+              <MagnifyingGlassIcon
+                size={15}
+                color={searchMode === "all" ? appColors.white : appColors.brand500}
+                weight="bold"
+              />
               <Text
                 style={[
                   styles.searchModeText,
                   searchMode === "all" && styles.searchModeTextActive,
                 ]}
               >
-                All foods
+                Foods
               </Text>
             </Pressable>
             <Pressable
               onPress={() => setSearchMode("recipes")}
+              accessibilityLabel="Search recipes"
               style={({ pressed }) => [
                 styles.searchModePill,
                 searchMode === "recipes" && styles.searchModePillActive,
@@ -1105,7 +1111,7 @@ const AddFoodScreen = () => {
               />
               <Text
                 style={[
-                  styles.searchModeText,
+                styles.searchModeText,
                   searchMode === "recipes" && styles.searchModeTextActive,
                 ]}
               >
@@ -1114,6 +1120,7 @@ const AddFoodScreen = () => {
             </Pressable>
             <Pressable
               onPress={() => setSearchMode("custom_meals")}
+              accessibilityLabel="Search custom meals"
               style={({ pressed }) => [
                 styles.searchModePill,
                 searchMode === "custom_meals" && styles.searchModePillActive,
@@ -1135,7 +1142,7 @@ const AddFoodScreen = () => {
                   searchMode === "custom_meals" && styles.searchModeTextActive,
                 ]}
               >
-                Custom Meals
+                Meals
               </Text>
             </Pressable>
           </View>
@@ -1150,38 +1157,6 @@ const AddFoodScreen = () => {
                 <Text style={styles.contextPillText}>{mealType}</Text>
               </View>
             ) : null}
-            <Pressable
-              onPress={toggleFastLog}
-              accessibilityRole="switch"
-              accessibilityState={{ checked: fastLogEnabled }}
-              style={({ pressed }) => [
-                styles.fastLogToggle,
-                fastLogEnabled && styles.fastLogToggleActive,
-                pressed && styles.cardPressed,
-              ]}
-            >
-              <LightningIcon
-                size={14}
-                color={fastLogEnabled ? appColors.white : appColors.brand500}
-                weight="fill"
-              />
-              <Text
-                style={[
-                  styles.fastLogText,
-                  fastLogEnabled && styles.fastLogTextActive,
-                ]}
-              >
-                Fast log
-              </Text>
-              <Text
-                style={[
-                  styles.fastLogState,
-                  fastLogEnabled && styles.fastLogStateActive,
-                ]}
-              >
-                {fastLogEnabled ? "On" : "Off"}
-              </Text>
-            </Pressable>
           </View>
           <View style={styles.searchRow}>
             <View style={styles.searchInputWrap}>
@@ -1217,26 +1192,60 @@ const AddFoodScreen = () => {
                 ? isSearching
                   ? "Searching your recipes and public recipes..."
                   : `${activeResults.length} recipes match this search.`
-                : ""
+                : "Browse saved recipes, then tap the lightning button to log one serving."
               : searchMode === "custom_meals"
                 ? query.trim()
                   ? isSearching
                     ? "Searching your custom meals and public custom meals..."
                     : `${activeResults.length} custom meals match this search.`
-                  : ""
+                  : "Browse saved custom meals, then tap the lightning button to log the default serving."
               : query.trim()
                 ? isSearching
                   ? "Searching your foods and USDA branded + generic foods..."
                   : activeResults.length > 0
                     ? `${activeResults.length} matches grouped into custom foods, common foods, and branded foods.`
                     : "No foods matched yet. Try a broader name or create a custom meal."
-                : ""}
+                : "Frequent foods are ready for one-tap logging. Tap a row to edit amount."}
           </Text>
+          {query.trim() && isUsingLocalSearchOnly && searchMode === "all" ? (
+            <View style={styles.searchNotice}>
+              <Text style={styles.searchNoticeText}>
+                Showing saved foods only. Remote search is unavailable.
+              </Text>
+            </View>
+          ) : null}
+          {!query.trim() &&
+          searchMode === "all" &&
+          recentSearches.length > 0 ? (
+            <View style={styles.recentSearchRow}>
+              <Text style={styles.recentSearchLabel}>Recent</Text>
+              {recentSearches.map((search) => (
+                <Pressable
+                  key={search}
+                  onPress={() => setQuery(search)}
+                  style={({ pressed }) => [
+                    styles.recentSearchChip,
+                    pressed && styles.cardPressed,
+                  ]}
+                >
+                  <Text style={styles.recentSearchChipText}>{search}</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
         </View>
 
         {query.trim() ? (
           searchMode === "recipes" || searchMode === "custom_meals" ? (
-            activeResults.length === 0 ? (
+            isSearching && activeResults.length === 0 ? (
+              renderSection(
+                searchMode === "recipes" ? "Recipes" : "Custom Meals",
+                "Searching saved and public items.",
+                activeResults,
+                "",
+                { loading: true },
+              )
+            ) : activeResults.length === 0 ? (
               renderSection(
                 searchMode === "recipes" ? "Recipes" : "Custom Meals",
                 searchMode === "recipes"
@@ -1271,6 +1280,14 @@ const AddFoodScreen = () => {
                 ))}
               </>
             )
+          ) : isSearching && activeResults.length === 0 ? (
+            renderSection(
+              "Results",
+              "Searching foods and nutrition databases.",
+              activeResults,
+              "",
+              { loading: true },
+            )
           ) : activeResults.length === 0 ? (
             renderSection(
               "Results",
@@ -1301,6 +1318,15 @@ const AddFoodScreen = () => {
             </>
           )
         ) : searchMode === "recipes" || searchMode === "custom_meals" ? (
+          isStaticListsLoading && activeResults.length === 0 ? (
+            renderSection(
+              searchMode === "recipes" ? "Recipes" : "Custom Meals",
+              "Loading saved and public items.",
+              activeResults,
+              "",
+              { loading: true },
+            )
+          ) : (
           <>
             {librarySections.map((section) => (
               <React.Fragment key={section.key}>
@@ -1331,31 +1357,23 @@ const AddFoodScreen = () => {
               </React.Fragment>
             ))}
           </>
+          )
         ) : (
-          <>
-            {renderSection(
-              "Favorites",
-              "Fast repeat picks for this diary slot.",
-              favoriteResults,
-              "No favorite foods yet.",
-              {
-                collapsible: true,
-                expanded: sectionState.favoritesExpanded,
-                onToggle: () => toggleSection("favorites"),
+          renderSection(
+            "Frequent",
+            "Favorites and recent foods, ready to log.",
+            frequentResults,
+            "No frequent foods yet. Search or scan once and your repeat picks will appear here.",
+            {
+              emptyCta: {
+                onPress: openQuickAddFood,
+                pillText: "Quick",
+                title: "Quick add",
+                text: `Log calories and macros for ${resolvedContextLabel}.`,
               },
-            )}
-            {renderSection(
-              "Recent",
-              "Foods you logged recently.",
-              recentResults,
-              "No recent foods yet.",
-              {
-                collapsible: true,
-                expanded: sectionState.recentExpanded,
-                onToggle: () => toggleSection("recent"),
-              },
-            )}
-          </>
+              loading: isStaticListsLoading && frequentResults.length === 0,
+            },
+          )
         )}
       </KeyboardAwareScrollView>
 
@@ -1429,7 +1447,7 @@ const styles = StyleSheet.create({
   searchModeRow: {
     width: "100%",
     flexDirection: "row",
-    gap: 8,
+    gap: 6,
     marginBottom: 12,
   },
   searchModePill: {
@@ -1441,8 +1459,9 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceField,
     borderWidth: 1,
     borderColor: appColors.borderStrong,
-    borderRadius: 8,
-    paddingVertical: 12,
+    borderRadius: 999,
+    minHeight: 38,
+    paddingVertical: 9,
   },
   searchModePillActive: {
     backgroundColor: appColors.brand700,
@@ -1487,37 +1506,6 @@ const styles = StyleSheet.create({
     color: appColors.brand500,
     fontSize: 12,
     fontWeight: "800",
-  },
-  fastLogToggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceField,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-  fastLogToggleActive: {
-    backgroundColor: appColors.brand700,
-    borderColor: appColors.brand700,
-  },
-  fastLogText: {
-    color: appColors.brand500,
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  fastLogTextActive: {
-    color: appColors.white,
-  },
-  fastLogState: {
-    color: appColors.textSecondary,
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  fastLogStateActive: {
-    color: appColors.brand300,
   },
   heroTitle: {
     color: appColors.textPrimary,
@@ -1619,12 +1607,53 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     marginTop: 8,
   },
+  searchNotice: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    backgroundColor: appColors.warningSurface,
+    borderWidth: 1,
+    borderColor: appColors.warning600,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    marginTop: 10,
+  },
+  searchNoticeText: {
+    color: appColors.warning700,
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  recentSearchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 12,
+  },
+  recentSearchLabel: {
+    color: appColors.textMuted,
+    fontSize: 11,
+    fontWeight: "800",
+    textTransform: "uppercase",
+  },
+  recentSearchChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: appColors.borderStrong,
+    backgroundColor: appColors.surfaceField,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  recentSearchChipText: {
+    color: appColors.textPrimary,
+    fontSize: 12,
+    fontWeight: "800",
+  },
   sectionCard: {
     backgroundColor: appColors.surfaceCard,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
-    padding: 16,
+    padding: 14,
     marginBottom: 16,
   },
   sectionHeaderRow: {
@@ -1703,6 +1732,7 @@ const styles = StyleSheet.create({
   },
   foodCard: {
     flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     borderRadius: 8,
     backgroundColor: appColors.surfaceCardAlt,
@@ -1763,8 +1793,18 @@ const styles = StyleSheet.create({
   },
   foodActionColumn: {
     justifyContent: "center",
-    alignItems: "stretch",
+    alignItems: "center",
     gap: 6,
+  },
+  iconAction: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: appColors.borderStrong,
+    backgroundColor: appColors.surfaceGhost,
   },
   secondaryAction: {
     minWidth: 62,
@@ -1783,6 +1823,22 @@ const styles = StyleSheet.create({
   secondaryActionMuted: {
     backgroundColor: appColors.surfaceField,
     borderColor: appColors.borderSoft,
+  },
+  publicPill: {
+    minWidth: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
+    backgroundColor: appColors.surfaceField,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  publicPillText: {
+    color: appColors.textSecondary,
+    fontSize: 10,
+    fontWeight: "800",
   },
   secondaryActionText: {
     color: appColors.brand500,
@@ -1806,6 +1862,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
+  quickLogAction: {
+    width: 44,
+    height: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 999,
+    backgroundColor: appColors.brand700,
+  },
   primaryActionLoading: {
     opacity: 0.8,
   },
@@ -1816,6 +1881,44 @@ const styles = StyleSheet.create({
   },
   cardPressed: {
     opacity: 0.9,
+  },
+  skeletonStack: {
+    gap: 8,
+  },
+  skeletonCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 8,
+    backgroundColor: appColors.surfaceCardAlt,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  skeletonBody: {
+    flex: 1,
+    gap: 8,
+  },
+  skeletonLine: {
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: appColors.surfaceGhostStrong,
+  },
+  skeletonLineShort: {
+    width: "28%",
+  },
+  skeletonLineMedium: {
+    width: "54%",
+  },
+  skeletonLineLong: {
+    width: "82%",
+  },
+  skeletonAction: {
+    width: 44,
+    height: 44,
+    borderRadius: 999,
+    backgroundColor: appColors.surfaceGhostStrong,
   },
 });
 

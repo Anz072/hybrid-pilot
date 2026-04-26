@@ -185,7 +185,7 @@ const AccountScreen = ({ navigation, route }: Props) => {
         <Text style={styles.eyebrow}>Final Step</Text>
         <Text style={styles.title}>Create your account</Text>
         <Text style={styles.subtitle}>
-          Finish by connecting your Google account. HybridPilot now requires a
+          Finish by connecting your Google account. Dribsnis now requires a
           Supabase-backed Google sign-in for registration and future logins.
         </Text>
 

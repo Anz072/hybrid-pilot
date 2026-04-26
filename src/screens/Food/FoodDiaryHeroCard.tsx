@@ -37,8 +37,13 @@ export const MacroBar = ({
   const safeRatio = Number.isFinite(rawRatio) ? rawRatio : 0;
   const ratio = clampFoodRatio(safeRatio);
   const isOver = hasTarget && safeRatio > 1;
-  // const remaining = hasTarget ? safeTarget - safeConsumed : null;
-  const remaining = hasTarget ? (safeConsumed / safeTarget) * 100 : null;
+  const remaining = hasTarget ? safeTarget - safeConsumed : null;
+  const progressLabel =
+    remaining == null
+      ? ""
+      : remaining >= 0
+        ? `${remaining.toFixed(places)} ${unit} left`
+        : `${Math.abs(remaining).toFixed(places)} ${unit} over`;
 
   return (
     <View style={styles.macroCard}>
@@ -54,8 +59,7 @@ export const MacroBar = ({
         <Text
           style={[styles.progressPercent, isOver && styles.progressPercentOver]}
         >
-          {/* {remaining != null ? `${remaining.toFixed(places)} ${unit}` : ""} */}
-          {remaining != null ? `${remaining.toFixed(places)} %` : ""}
+          {progressLabel}
         </Text>
       </View>
       <View style={styles.progressTrack}>

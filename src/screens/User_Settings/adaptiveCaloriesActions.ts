@@ -20,6 +20,9 @@ import type {
 import { setCurrentUser } from "../../store/userSlice";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+export const ADAPTIVE_RECALCULATION_DAYS = 7;
+export const ADAPTIVE_RECALCULATION_INTERVAL_MS =
+  ADAPTIVE_RECALCULATION_DAYS * DAY_MS;
 
 export type AdaptiveRecommendationRefreshResult = {
   settings: DBUserSettings | null;
@@ -38,7 +41,28 @@ const isAdaptiveCalculationStale = (
     return true;
   }
 
-  return now.getTime() - new Date(lastCalculatedAt).getTime() >= DAY_MS;
+  return (
+    now.getTime() - new Date(lastCalculatedAt).getTime() >=
+    ADAPTIVE_RECALCULATION_INTERVAL_MS
+  );
+};
+
+export const getNextAdaptiveReviewDate = (
+  settings: Pick<DBUserSettings, "adaptiveLastCalculatedAt"> | null,
+): Date | null => {
+  const lastCalculatedAt = settings?.adaptiveLastCalculatedAt;
+
+  if (!lastCalculatedAt) {
+    return null;
+  }
+
+  const parsed = new Date(lastCalculatedAt);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return new Date(parsed.getTime() + ADAPTIVE_RECALCULATION_INTERVAL_MS);
 };
 
 const areRecommendationShapesEquivalent = (
@@ -348,7 +372,6 @@ export const setDiaryDayCompletionAndRefresh = async ({
 
   return refreshAdaptiveRecommendationForUser({
     userExternalId,
-    force: true,
   });
 };
 

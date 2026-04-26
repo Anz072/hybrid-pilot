@@ -926,7 +926,7 @@ const trackedTables = [
 
 export const getDb = async (): Promise<SQLite.SQLiteDatabase> => {
   if (!dbPromise) {
-    dbPromise = SQLite.openDatabaseAsync("hybridpilot.db");
+    dbPromise = SQLite.openDatabaseAsync("dribsnis.db");
   }
 
   return dbPromise;

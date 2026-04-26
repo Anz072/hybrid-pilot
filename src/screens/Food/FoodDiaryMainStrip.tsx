@@ -3,6 +3,7 @@ import {
   type GestureResponderEvent,
   LayoutAnimation,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -66,6 +67,7 @@ type FoodDiaryTimelineItemProps = {
   onEditEntry: (entry: DBUserFoodLogEntry) => void;
   bucket: FoodDiaryHourBucket;
   collapsed: boolean;
+  isCurrentHour: boolean;
   selected: boolean;
   onToggle: () => void;
 };
@@ -137,9 +139,19 @@ const FoodDiaryTimelineItem = ({
   onEditEntry,
   bucket,
   collapsed,
+  isCurrentHour,
   selected,
   onToggle,
 }: FoodDiaryTimelineItemProps) => {
+  const entryCountLabel =
+    bucket.entries.length === 1
+      ? "1 food"
+      : `${bucket.entries.length} foods`;
+  const collapsedSummary = bucket.entries.length
+    ? `${formatFoodHourLabel(bucket.hour)} · ${entryCountLabel} · ${Math.round(
+        bucket.totals.calories,
+      )} kcal`
+    : `${formatFoodHourLabel(bucket.hour)} · Empty`;
   const runWithoutToggling = (
     event: GestureResponderEvent,
     action: () => void,
@@ -159,6 +171,7 @@ const FoodDiaryTimelineItem = ({
       <View style={[styles.hourCard, selected && styles.hourCardActive]}>
         <View style={styles.hourHeader}>
           <View style={styles.hourHeaderCopy}>
+            <View style={styles.hourTitleRow}>
             <Text
               style={[
                 styles.hourTitle,
@@ -167,12 +180,20 @@ const FoodDiaryTimelineItem = ({
                 },
               ]}
             >
-              {bucket.entries.length
+              {collapsed
+                ? collapsedSummary
+                : bucket.entries.length
                 ? `${bucket.entries.length} ${
                     bucket.entries.length === 1 ? "entry" : "entries"
                   }`
                 : "No entries yet"}
             </Text>
+              {isCurrentHour ? (
+                <View style={styles.nowPill}>
+                  <Text style={styles.nowPillText}>Now</Text>
+                </View>
+              ) : null}
+            </View>
           </View>
           {bucket.entries.length ? (
             <View
@@ -365,6 +386,25 @@ const FoodDiaryMainStrip = ({
       : "";
   const fallbackMaxCalories = Math.max(1, ...days.map((day) => day.calories));
   const todayKey = formatFoodDateKey(new Date());
+  const currentHour = new Date().getHours();
+  const visibleHourBuckets = React.useMemo(
+    () =>
+      hourBuckets.filter(
+        (bucket) => bucket.entries.length > 0 || bucket.hour === selectedHour,
+      ),
+    [hourBuckets, selectedHour],
+  );
+  const emptyHourBuckets = React.useMemo(
+    () =>
+      hourBuckets.filter(
+        (bucket) => bucket.entries.length === 0 && bucket.hour !== selectedHour,
+      ),
+    [hourBuckets, selectedHour],
+  );
+
+  React.useEffect(() => {
+    setExpandedHours(new Set([selectedHour]));
+  }, [selectedDateKey, selectedHour]);
 
   const toggleHour = React.useCallback(
     (hour: number) => {
@@ -373,7 +413,7 @@ const FoodDiaryMainStrip = ({
       setExpandedHours((current) => {
         const next = new Set(current);
 
-        if (next.has(hour)) {
+        if (next.has(hour) && hour !== selectedHour) {
           next.delete(hour);
         } else {
           next.add(hour);
@@ -382,7 +422,7 @@ const FoodDiaryMainStrip = ({
         return next;
       });
     },
-    [onSelectHour],
+    [onSelectHour, selectedHour],
   );
 
   return (
@@ -503,10 +543,47 @@ const FoodDiaryMainStrip = ({
       ) : null}
 
       <View style={styles.timelineSection}>
+        {emptyHourBuckets.length > 0 ? (
+          <View style={styles.addRail}>
+            <Text style={styles.addRailLabel}>Add at</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.addRailContent}
+            >
+              {emptyHourBuckets.map((bucket) => (
+                <Pressable
+                  key={bucket.hour}
+                  onPress={() => {
+                    onSelectHour(bucket.hour);
+                    onAddFood(bucket.hour);
+                  }}
+                  accessibilityLabel={`Add food at ${formatFoodHourLabel(bucket.hour)}`}
+                  style={({ pressed }) => [
+                    styles.addRailChip,
+                    pressed && styles.cardPressed,
+                  ]}
+                >
+                  <PlusIcon
+                    size={13}
+                    color={appColors.brand500}
+                    weight="bold"
+                  />
+                  <Text style={styles.addRailChipText}>
+                    {formatFoodHourLabel(bucket.hour)}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        ) : null}
+
         <View style={styles.timeline}>
-          {hourBuckets.map((bucket, index) => {
+          {visibleHourBuckets.map((bucket, index) => {
             const selected = bucket.hour === selectedHour;
-            const isLast = index === hourBuckets.length - 1;
+            const isCurrentHour =
+              selectedDateKey === todayKey && bucket.hour === currentHour;
+            const isLast = index === visibleHourBuckets.length - 1;
 
             return (
               <View key={bucket.hour} style={styles.timelineRow}>
@@ -532,6 +609,7 @@ const FoodDiaryMainStrip = ({
                   onEditEntry={onEditEntry}
                   bucket={bucket}
                   collapsed={!expandedHours.has(bucket.hour)}
+                  isCurrentHour={isCurrentHour}
                   selected={selected}
                   onToggle={() => toggleHour(bucket.hour)}
                 />
@@ -688,6 +766,37 @@ const styles = StyleSheet.create({
   timelineSection: {
     marginTop: 24,
   },
+  addRail: {
+    marginBottom: 14,
+  },
+  addRailLabel: {
+    color: appColors.textSecondary,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    marginBottom: 8,
+  },
+  addRailContent: {
+    gap: 8,
+    paddingRight: 8,
+  },
+  addRailChip: {
+    minHeight: 36,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: appColors.borderStrong,
+    backgroundColor: appColors.surfaceField,
+    paddingHorizontal: 11,
+  },
+  addRailChipText: {
+    color: appColors.brand500,
+    fontSize: 12,
+    fontWeight: "800",
+  },
   sectionTitle: {
     color: appColors.textPrimary,
     fontSize: 22,
@@ -761,6 +870,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+  },
+  hourTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  nowPill: {
+    borderRadius: 999,
+    backgroundColor: appColors.brand700,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  nowPillText: {
+    color: appColors.white,
+    fontSize: 10,
+    fontWeight: "900",
+    textTransform: "uppercase",
   },
   hourAddButton: {
     width: 28,

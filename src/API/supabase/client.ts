@@ -7,7 +7,7 @@ import {
 import { getDb, initDb } from "../../storage/sqlite";
 
 const SUPABASE_APP_KV_PREFIX = "supabase:";
-const SUPABASE_STORAGE_KEY = "hybridpilot-auth";
+const SUPABASE_STORAGE_KEY = "dribsnis-auth";
 export const SUPABASE_SESSION_REQUIRED_MESSAGE =
   "Your session is no longer valid. Please sign in with Google again.";
 
@@ -62,7 +62,7 @@ export const isSupabaseConfigured = () => {
 };
 
 export const getSupabaseConfigError = () =>
-  "Missing Supabase config. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in hybrid-pilot/.env.";
+  "Missing Supabase config. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in dribsnis/.env.";
 
 export const getSupabaseClient = () => {
   const { anonKey, url } = readConfig();

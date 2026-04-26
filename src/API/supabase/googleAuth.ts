@@ -11,7 +11,7 @@ import {
 } from "../../storage/localStore";
 import { getSupabaseClient } from "./client";
 
-export const GOOGLE_AUTH_SCHEME = "hybridpilot";
+export const GOOGLE_AUTH_SCHEME = "dribsnis";
 export const GOOGLE_AUTH_PATH = "auth/callback";
 
 export const getGoogleAuthRedirectUrl = () =>

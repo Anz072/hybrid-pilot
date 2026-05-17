@@ -24,6 +24,7 @@ import {
   isSupabaseConfigured,
 } from "../API/supabase/client";
 import { getOnboardingComplete } from "../storage/localStore";
+import { shouldUseExpoGoDevLocalStore } from "../dev/expoGoDevAuth";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { clearCurrentUser, hydrateUserFromDb } from "../store/userSlice";
 import type { FoodStackParamList } from "./foodTypes";
@@ -60,6 +61,18 @@ const AppNavigator = () => {
     try {
       const onboardingDone = await getOnboardingComplete();
       setHasCompletedOnboarding(onboardingDone);
+
+      if (await shouldUseExpoGoDevLocalStore()) {
+        const result = await dispatch(hydrateUserFromDb());
+
+        if (hydrateUserFromDb.rejected.match(result)) {
+          setBootstrapError(
+            result.error.message ?? "Could not load your dev profile.",
+          );
+        }
+
+        return;
+      }
 
       const sessionUser = await getValidatedSupabaseSessionUser();
       if (!sessionUser) {
@@ -104,7 +117,13 @@ const AppNavigator = () => {
         return;
       }
 
-      dispatch(clearCurrentUser());
+      void (async () => {
+        if (await shouldUseExpoGoDevLocalStore()) {
+          return;
+        }
+
+        dispatch(clearCurrentUser());
+      })();
     });
 
     return () => subscription.unsubscribe();
@@ -147,7 +166,19 @@ const AppNavigator = () => {
 
   return (
     <NavigationContainer theme={appNavigationTheme}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator
+        initialRouteName={
+          isLoggedIn ? "Main" : hasCompletedOnboarding ? "Login" : "Onboarding"
+        }
+        key={
+          isLoggedIn
+            ? "app"
+            : hasCompletedOnboarding
+              ? "auth-login"
+              : "auth-onboarding"
+        }
+        screenOptions={{ headerShown: false }}
+      >
         {isLoggedIn ? (
           <>
             <Stack.Screen name="Main" component={MainTabNavigator} />
@@ -208,16 +239,24 @@ const AppNavigator = () => {
               }}
             />
           </>
-        ) : !hasCompletedOnboarding ? (
-          <Stack.Screen name="Onboarding">
-            {() => (
-              <OnboardingNavigator
-                onFinish={() => void hydrateAuthenticatedSession()}
-              />
-            )}
-          </Stack.Screen>
         ) : (
-          <Stack.Screen name="Login" component={LoginScreen} />
+          <>
+            <Stack.Screen name="Onboarding">
+              {() => (
+                <OnboardingNavigator
+                  onFinish={() => void hydrateAuthenticatedSession()}
+                />
+              )}
+            </Stack.Screen>
+            <Stack.Screen name="Login">
+              {({ navigation }) => (
+                <LoginScreen
+                  onAuthenticated={() => void hydrateAuthenticatedSession()}
+                  onBackToOnboarding={() => navigation.navigate("Onboarding")}
+                />
+              )}
+            </Stack.Screen>
+          </>
         )}
       </Stack.Navigator>
     </NavigationContainer>

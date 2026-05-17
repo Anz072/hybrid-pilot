@@ -23,8 +23,6 @@ import { Swipeable } from "react-native-gesture-handler";
 import {
   BarcodeIcon,
   CaretRightIcon,
-  CalendarIcon,
-  ClockIcon,
   CookingPotIcon,
   LinkSimpleIcon,
   MagnifyingGlassIcon,
@@ -47,20 +45,19 @@ import { useAppSelector } from "../../store/hooks";
 import { appColors } from "../../theme/colors";
 import { sharedStyleValues } from "../../theme/sharedStyles";
 import FoodBarcodeScannerModal from "./FoodBarcodeScannerModal";
+import FoodLogContextBar from "./FoodLogContextBar";
 import FoodScreenHeader from "./FoodScreenHeader";
 import PublicVisibilityCheckbox from "./PublicVisibilityCheckbox";
 import type { ScannedFoodLookupResult } from "./FoodBarcodeScannerShared";
 import {
-  buildFoodLoggedAt,
   formatFoodItemServing,
-  formatFoodLoggedTime,
   formatFoodMacro,
   formatFoodNumber,
-  formatFoodShortDate,
   formatFoodSourceLabel,
   getFoodResolvedServing,
   normalizePositiveFoodInput,
 } from "./foodUtils";
+import { resolveFoodLogContext } from "./foodLogContext";
 import {
   searchFoodResults,
   type FoodSearchResult,
@@ -164,6 +161,48 @@ const calculateIngredientFactor = (ingredient: RecipeIngredientDraft) => {
 
 type RecipeSaveMode = "save" | "save_and_add";
 
+const getRecipeDraftSignature = ({
+  cookTimeValue,
+  descriptionValue,
+  ingredients,
+  isPublic,
+  linkValue,
+  method,
+  name,
+  preparedWeightValue,
+  prepTimeValue,
+  servingsValue,
+  steps,
+}: {
+  cookTimeValue: string;
+  descriptionValue: string;
+  ingredients: RecipeIngredientDraft[];
+  isPublic: boolean;
+  linkValue: string;
+  method: RecipeBuildMethod;
+  name: string;
+  preparedWeightValue: string;
+  prepTimeValue: string;
+  servingsValue: string;
+  steps: string[];
+}) =>
+  JSON.stringify({
+    cookTimeValue: cookTimeValue.trim(),
+    descriptionValue: descriptionValue.trim(),
+    ingredients: ingredients.map((ingredient) => ({
+      amountValue: ingredient.amountValue.trim(),
+      foodId: ingredient.foodId,
+    })),
+    isPublic,
+    linkValue: linkValue.trim(),
+    method,
+    name: name.trim(),
+    preparedWeightValue: preparedWeightValue.trim(),
+    prepTimeValue: prepTimeValue.trim(),
+    servingsValue: servingsValue.trim(),
+    steps: steps.map((step) => step.trim()),
+  });
+
 const CreateRecipeScreen = () => {
   const route = useRoute<CreateRecipeRoute>();
   const navigation = useNavigation<CreateRecipeNav>();
@@ -201,29 +240,17 @@ const CreateRecipeScreen = () => {
   );
   const [saveMode, setSaveMode] = React.useState<RecipeSaveMode | null>(null);
   const [deleting, setDeleting] = React.useState(false);
+  const [formError, setFormError] = React.useState<string | null>(null);
+  const bypassUnsavedGuardRef = React.useRef(false);
+  const initialDraftSignatureRef = React.useRef<string | null>(null);
   const saving = saveMode != null;
 
-  const resolvedLoggedAt = React.useMemo(() => {
-    if (route.params.loggedAt) {
-      return route.params.loggedAt;
-    }
-
-    const now = new Date();
-    return buildFoodLoggedAt(
-      route.params.date,
-      now.getHours(),
-      now.getMinutes(),
-    );
-  }, [route.params.date, route.params.loggedAt]);
-
-  const resolvedContextLabel = React.useMemo(() => {
-    const trimmed = route.params.contextLabel?.trim();
-    if (trimmed) {
-      return trimmed;
-    }
-
-    return formatFoodLoggedTime(resolvedLoggedAt);
-  }, [resolvedLoggedAt, route.params.contextLabel]);
+  const foodLogContext = React.useMemo(
+    () => resolveFoodLogContext(route.params),
+    [route.params],
+  );
+  const resolvedLoggedAt = foodLogContext.loggedAt;
+  const resolvedContextLabel = foodLogContext.contextLabel;
 
   const parsedServings = React.useMemo(
     () => toSafeNumber(servingsValue),
@@ -281,6 +308,74 @@ const CreateRecipeScreen = () => {
     }),
     [recipeTotals, resolvedServings],
   );
+  const currentDraftSignature = React.useMemo(
+    () =>
+      getRecipeDraftSignature({
+        cookTimeValue,
+        descriptionValue,
+        ingredients,
+        isPublic,
+        linkValue,
+        method,
+        name,
+        preparedWeightValue,
+        prepTimeValue,
+        servingsValue,
+        steps,
+      }),
+    [
+      cookTimeValue,
+      descriptionValue,
+      ingredients,
+      isPublic,
+      linkValue,
+      method,
+      name,
+      preparedWeightValue,
+      prepTimeValue,
+      servingsValue,
+      steps,
+    ],
+  );
+
+  React.useEffect(() => {
+    if (isEditing || initialDraftSignatureRef.current) {
+      return;
+    }
+
+    initialDraftSignatureRef.current = currentDraftSignature;
+  }, [currentDraftSignature, isEditing]);
+
+  const isDirty =
+    initialDraftSignatureRef.current != null &&
+    initialDraftSignatureRef.current !== currentDraftSignature;
+
+  React.useEffect(
+    () =>
+      navigation.addListener("beforeRemove", (event) => {
+        if (bypassUnsavedGuardRef.current || saving || deleting || !isDirty) {
+          return;
+        }
+
+        event.preventDefault();
+        Alert.alert(
+          "Discard recipe changes?",
+          "Unsaved recipe changes will be lost.",
+          [
+            { text: "Keep editing", style: "cancel" },
+            {
+              text: "Discard",
+              style: "destructive",
+              onPress: () => {
+                bypassUnsavedGuardRef.current = true;
+                navigation.dispatch(event.data.action);
+              },
+            },
+          ],
+        );
+      }),
+    [deleting, isDirty, navigation, saving],
+  );
 
   React.useEffect(() => {
     let cancelled = false;
@@ -310,29 +405,49 @@ const CreateRecipeScreen = () => {
           return;
         }
 
-        setRecipeDetails(loadedRecipe);
-        setMethod(loadedRecipe.buildMethod);
-        setName(loadedRecipe.name);
-        setServingsValue(formatNumberInput(loadedRecipe.servings));
-        setPreparedWeightValue(
-          formatNumberInput(loadedRecipe.preparedFoodWeightG),
+        const loadedServingsValue = formatNumberInput(loadedRecipe.servings);
+        const loadedPreparedWeightValue = formatNumberInput(
+          loadedRecipe.preparedFoodWeightG,
         );
-        setIsPublic(loadedRecipe.isPublic);
-        setPrepTimeValue(formatNumberInput(loadedRecipe.prepTimeMin));
-        setCookTimeValue(formatNumberInput(loadedRecipe.cookTimeMin));
-        setLinkValue(loadedRecipe.linkUrl ?? "");
-        setDescriptionValue(loadedRecipe.description ?? "");
-        setIngredients(
-          loadedRecipe.ingredients.map((ingredient) => ({
+        const loadedPrepTimeValue = formatNumberInput(loadedRecipe.prepTimeMin);
+        const loadedCookTimeValue = formatNumberInput(loadedRecipe.cookTimeMin);
+        const loadedLinkValue = loadedRecipe.linkUrl ?? "";
+        const loadedDescriptionValue = loadedRecipe.description ?? "";
+        const loadedIngredients = loadedRecipe.ingredients.map((ingredient) => ({
             key: `${ingredient.id}-${ingredient.foodId}`,
             foodId: ingredient.foodId,
             food: ingredient.food,
             amountValue: formatNumberInput(ingredient.amount),
-          })),
-        );
+          }));
+        const loadedSteps = loadedRecipe.steps;
+
+        setRecipeDetails(loadedRecipe);
+        setMethod(loadedRecipe.buildMethod);
+        setName(loadedRecipe.name);
+        setServingsValue(loadedServingsValue);
+        setPreparedWeightValue(loadedPreparedWeightValue);
+        setIsPublic(loadedRecipe.isPublic);
+        setPrepTimeValue(loadedPrepTimeValue);
+        setCookTimeValue(loadedCookTimeValue);
+        setLinkValue(loadedLinkValue);
+        setDescriptionValue(loadedDescriptionValue);
+        setIngredients(loadedIngredients);
         setSteps(loadedRecipe.steps);
         setIngredientQuery("");
         setIngredientResults([]);
+        initialDraftSignatureRef.current = getRecipeDraftSignature({
+          cookTimeValue: loadedCookTimeValue,
+          descriptionValue: loadedDescriptionValue,
+          ingredients: loadedIngredients,
+          isPublic: loadedRecipe.isPublic,
+          linkValue: loadedLinkValue,
+          method: loadedRecipe.buildMethod,
+          name: loadedRecipe.name,
+          preparedWeightValue: loadedPreparedWeightValue,
+          prepTimeValue: loadedPrepTimeValue,
+          servingsValue: loadedServingsValue,
+          steps: loadedSteps,
+        });
       } catch (error) {
         if (!cancelled) {
           setRecipeLoadError(
@@ -481,6 +596,7 @@ const CreateRecipeScreen = () => {
         ];
       });
 
+      setFormError(null);
       setIngredientQuery("");
       setIngredientResults([]);
     },
@@ -533,6 +649,7 @@ const CreateRecipeScreen = () => {
 
   const updateIngredientAmount = React.useCallback(
     (key: string, amountValue: string) => {
+      setFormError(null);
       setIngredients((current) =>
         current.map((ingredient) =>
           ingredient.key === key ? { ...ingredient, amountValue } : ingredient,
@@ -543,6 +660,7 @@ const CreateRecipeScreen = () => {
   );
 
   const normalizeIngredientAmount = React.useCallback((key: string) => {
+    setFormError(null);
     setIngredients((current) =>
       current.map((ingredient) => {
         if (ingredient.key !== key) {
@@ -562,6 +680,7 @@ const CreateRecipeScreen = () => {
   }, []);
 
   const removeIngredient = React.useCallback((key: string) => {
+    setFormError(null);
     setIngredients((current) =>
       current.filter((ingredient) => ingredient.key !== key),
     );
@@ -586,16 +705,19 @@ const CreateRecipeScreen = () => {
   );
 
   const addStep = React.useCallback(() => {
+    setFormError(null);
     setSteps((current) => [...current, ""]);
   }, []);
 
   const updateStep = React.useCallback((index: number, value: string) => {
+    setFormError(null);
     setSteps((current) =>
       current.map((step, stepIndex) => (stepIndex === index ? value : step)),
     );
   }, []);
 
   const removeStep = React.useCallback((index: number) => {
+    setFormError(null);
     setSteps((current) =>
       current.filter((_, stepIndex) => stepIndex !== index),
     );
@@ -636,21 +758,19 @@ const CreateRecipeScreen = () => {
         return;
       }
 
+      setFormError(null);
       if (!recipeName) {
-        Alert.alert("Missing name", "Enter a recipe name first.");
+        setFormError("Enter a recipe name first.");
         return;
       }
 
       if (!Number.isFinite(parsedServings) || parsedServings <= 0) {
-        Alert.alert("Invalid servings", "Servings must be more than zero.");
+        setFormError("Servings must be more than zero.");
         return;
       }
 
       if (ingredients.length === 0) {
-        Alert.alert(
-          "Add ingredients",
-          "Add at least one ingredient before saving the recipe.",
-        );
+        setFormError("Add at least one ingredient before saving the recipe.");
         return;
       }
 
@@ -661,10 +781,7 @@ const CreateRecipeScreen = () => {
       }));
 
       if (ingredientInputs.some((ingredient) => ingredient.amount <= 0)) {
-        Alert.alert(
-          "Invalid ingredient amount",
-          "Each ingredient amount must be greater than zero.",
-        );
+        setFormError("Each ingredient amount must be greater than zero.");
         return;
       }
 
@@ -672,10 +789,7 @@ const CreateRecipeScreen = () => {
       const cookTime = toSafeNumber(cookTimeValue);
 
       if (prepTime < 0 || cookTime < 0) {
-        Alert.alert(
-          "Invalid preparation time",
-          "Prep and cook time must be zero or higher.",
-        );
+        setFormError("Prep and cook time must be zero or higher.");
         return;
       }
 
@@ -716,10 +830,11 @@ const CreateRecipeScreen = () => {
             date: route.params.date,
             loggedAt: resolvedLoggedAt,
             quantityG: 1,
-            mealType: route.params.mealType ?? null,
+            mealType: foodLogContext.mealType,
           });
         }
 
+        bypassUnsavedGuardRef.current = true;
         closeAfterSave(mode);
       } catch (error) {
         Alert.alert(
@@ -747,7 +862,7 @@ const CreateRecipeScreen = () => {
       recipeName,
       prepTimeValue,
       route.params.date,
-      route.params.mealType,
+      foodLogContext.mealType,
       steps,
       user,
     ],
@@ -774,6 +889,7 @@ const CreateRecipeScreen = () => {
               try {
                 setDeleting(true);
                 await DB.deleteUserRecipe(editingRecipeId);
+                bypassUnsavedGuardRef.current = true;
                 navigation.goBack();
               } catch (error) {
                 Alert.alert(
@@ -792,9 +908,6 @@ const CreateRecipeScreen = () => {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.bgOrbTop} />
-      <View style={styles.bgOrbBottom} />
-
       <KeyboardAvoidingView
         style={styles.screen}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -809,9 +922,12 @@ const CreateRecipeScreen = () => {
           focusedInputBottomOffset={148}
         >
           <FoodScreenHeader
+            eyebrow="Recipe"
             title={isEditing ? "Edit recipe" : "Create recipe"}
+            subtitle={isEditing ? "Library item" : foodLogContext.subtitle}
             onBack={() => navigation.goBack()}
           />
+          {!isEditing ? <FoodLogContextBar context={foodLogContext} /> : null}
 
           {loadingRecipe ? (
             <View style={styles.card}>
@@ -841,7 +957,7 @@ const CreateRecipeScreen = () => {
                 <Text style={styles.heroMeta}>
                   {isEditing
                     ? "Update ingredients, servings, and preparation details. Saved changes show anywhere this recipe is used."
-                    : `Build a saved recipe for ${resolvedContextLabel}, then save it for later or Save and Add one serving right away.`}
+                    : `Build a saved recipe for ${resolvedContextLabel}, then save it for later or save and add one serving right away.`}
                 </Text>
               </View>
               {isEditing ? (
@@ -849,27 +965,6 @@ const CreateRecipeScreen = () => {
                   <Text style={styles.contextPillText}>Edit</Text>
                 </View>
               ) : null}
-            </View>
-
-            <View style={styles.heroPillsRow}>
-              <View style={styles.contextPill}>
-                <CalendarIcon
-                  size={14}
-                  color={appColors.brand500}
-                  weight="bold"
-                />
-                <Text style={styles.contextPillText}>
-                  {formatFoodShortDate(route.params.date)}
-                </Text>
-              </View>
-              <View style={styles.contextPill}>
-                <ClockIcon
-                  size={14}
-                  color={appColors.brand500}
-                  weight="bold"
-                />
-                <Text style={styles.contextPillText}>{resolvedContextLabel}</Text>
-              </View>
             </View>
 
             <Text style={styles.sectionTitle}>Details</Text>
@@ -880,7 +975,10 @@ const CreateRecipeScreen = () => {
               placeholder="Banana bread"
               placeholderTextColor={appColors.textMuted}
               value={name}
-              onChangeText={setName}
+              onChangeText={(value) => {
+                setName(value);
+                setFormError(null);
+              }}
             />
 
             <View style={[styles.twoUpGrid, styles.fieldSpacing]}>
@@ -892,12 +990,16 @@ const CreateRecipeScreen = () => {
                     placeholder="1"
                     placeholderTextColor={appColors.textMuted}
                     value={servingsValue}
-                    onChangeText={setServingsValue}
-                    onBlur={() =>
+                    onChangeText={(value) => {
+                      setServingsValue(value);
+                      setFormError(null);
+                    }}
+                    onBlur={() => {
+                      setFormError(null);
                       setServingsValue((current) =>
                         normalizePositiveFoodInput(current, 1, 1),
-                      )
-                    }
+                      );
+                    }}
                     keyboardType="decimal-pad"
                   />
                   <View style={styles.unitPill}>
@@ -914,13 +1016,17 @@ const CreateRecipeScreen = () => {
                     placeholder="Optional"
                     placeholderTextColor={appColors.textMuted}
                     value={preparedWeightValue}
-                    onChangeText={setPreparedWeightValue}
-                    onBlur={() =>
+                    onChangeText={(value) => {
+                      setPreparedWeightValue(value);
+                      setFormError(null);
+                    }}
+                    onBlur={() => {
+                      setFormError(null);
                       setPreparedWeightValue((current) => {
                         const next = toSafeNumber(current);
                         return next > 0 ? formatNumberInput(next) : "";
-                      })
-                    }
+                      });
+                    }}
                     keyboardType="decimal-pad"
                   />
                   <View style={styles.unitPill}>
@@ -933,7 +1039,10 @@ const CreateRecipeScreen = () => {
             <View style={styles.fieldSpacing}>
               <PublicVisibilityCheckbox
                 checked={isPublic}
-                onChange={setIsPublic}
+                onChange={(value) => {
+                  setIsPublic(value);
+                  setFormError(null);
+                }}
               />
             </View>
 
@@ -1016,6 +1125,7 @@ const CreateRecipeScreen = () => {
                   <Pressable
                     key={result.key}
                     onPress={() => {
+                      setFormError(null);
                       void handleAddIngredient(result);
                     }}
                     style={({ pressed }) => [
@@ -1145,9 +1255,9 @@ const CreateRecipeScreen = () => {
                                 styles.ingredientAmountInput,
                               ]}
                               value={ingredient.amountValue}
-                              onChangeText={(value) =>
-                                updateIngredientAmount(ingredient.key, value)
-                              }
+                              onChangeText={(value) => {
+                                updateIngredientAmount(ingredient.key, value);
+                              }}
                               onBlur={() =>
                                 normalizeIngredientAmount(ingredient.key)
                               }
@@ -1184,7 +1294,10 @@ const CreateRecipeScreen = () => {
                     placeholder="Optional"
                     placeholderTextColor={appColors.textMuted}
                     value={prepTimeValue}
-                    onChangeText={setPrepTimeValue}
+                    onChangeText={(value) => {
+                      setPrepTimeValue(value);
+                      setFormError(null);
+                    }}
                     keyboardType="decimal-pad"
                   />
                   <View style={styles.unitPill}>
@@ -1201,7 +1314,10 @@ const CreateRecipeScreen = () => {
                     placeholder="Optional"
                     placeholderTextColor={appColors.textMuted}
                     value={cookTimeValue}
-                    onChangeText={setCookTimeValue}
+                    onChangeText={(value) => {
+                      setCookTimeValue(value);
+                      setFormError(null);
+                    }}
                     keyboardType="decimal-pad"
                   />
                   <View style={styles.unitPill}>
@@ -1217,7 +1333,10 @@ const CreateRecipeScreen = () => {
               placeholder="https://..."
               placeholderTextColor={appColors.textMuted}
               value={linkValue}
-              onChangeText={setLinkValue}
+              onChangeText={(value) => {
+                setLinkValue(value);
+                setFormError(null);
+              }}
               autoCapitalize="none"
               autoCorrect={false}
             />
@@ -1230,7 +1349,10 @@ const CreateRecipeScreen = () => {
               placeholder="Describe the recipe, notes, or serving details."
               placeholderTextColor={appColors.textMuted}
               value={descriptionValue}
-              onChangeText={setDescriptionValue}
+              onChangeText={(value) => {
+                setDescriptionValue(value);
+                setFormError(null);
+              }}
               multiline
               textAlignVertical="top"
               maxLength={1500}
@@ -1295,6 +1417,7 @@ const CreateRecipeScreen = () => {
               </View>
             )}
           </View>
+          {formError ? <Text style={styles.formError}>{formError}</Text> : null}
             </>
           )}
         </KeyboardAwareScrollView>
@@ -1360,7 +1483,7 @@ const CreateRecipeScreen = () => {
                       : "Saving..."
                     : isEditing
                       ? "Save changes"
-                      : "Save"}
+                      : "Save only"}
                 </Text>
               </Pressable>
             </View>
@@ -1379,7 +1502,7 @@ const CreateRecipeScreen = () => {
                 <Text style={styles.primaryButtonText}>
                   {saving && saveMode === "save_and_add"
                     ? "Saving and adding..."
-                    : "Save & Add"}
+                    : "Save and add"}
                 </Text>
               </Pressable>
             ) : null}
@@ -1827,6 +1950,14 @@ const styles = StyleSheet.create({
     color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
+  },
+  formError: {
+    color: appColors.danger700,
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 17,
+    marginTop: 2,
+    paddingHorizontal: 2,
   },
   iconButton: {
     width: 34,

@@ -13,37 +13,81 @@ import {
   CalendarCheckIcon,
   CookingPotIcon,
   LightningIcon,
-  ShieldCheckIcon,
-  ShieldIcon,
 } from "phosphor-react-native";
 
 type FoodDiaryMoreSectionProps = {
-  isDayComplete: boolean;
-  isDayCompleteLoading: boolean;
   isCopyingYesterday: boolean;
+  isRepeatingYesterdayHour: boolean;
   selectedHour: number;
-  onToggleDayComplete: () => void;
   onCopyYesterday: () => void;
+  onRepeatYesterdayHour: () => void;
   onQuickAddFood: () => void;
   onCreateRecipe: () => void;
   onCreateCustomFood: () => void;
 };
 
 const FoodDiaryMoreSection = ({
-  isDayComplete,
-  isDayCompleteLoading,
   isCopyingYesterday,
+  isRepeatingYesterdayHour,
   selectedHour,
-  onToggleDayComplete,
   onCopyYesterday,
+  onRepeatYesterdayHour,
   onQuickAddFood,
   onCreateRecipe,
   onCreateCustomFood,
 }: FoodDiaryMoreSectionProps) => {
+  const selectedHourLabel = formatFoodHourLabel(selectedHour);
+
   return (
     <View style={styles.card}>
-      <Text style={styles.sectionTitle}>Actions</Text>
+      <Text style={styles.sectionTitle}>
+        Fast actions for {selectedHourLabel}
+      </Text>
       <View style={styles.quickActionGrid}>
+        <Pressable
+          disabled={isRepeatingYesterdayHour}
+          onPress={onRepeatYesterdayHour}
+          accessibilityLabel={`Repeat yesterday at ${selectedHourLabel}`}
+          style={({ pressed }) => [
+            styles.actionTile,
+            styles.actionTilePrimary,
+            isRepeatingYesterdayHour && styles.moreRowDisabled,
+            pressed && styles.cardPressed,
+          ]}
+        >
+          <View style={styles.actionIcon}>
+            {isRepeatingYesterdayHour ? (
+              <ActivityIndicator color={appColors.textPrimary} size="small" />
+            ) : (
+              <CalendarCheckIcon
+                size={22}
+                color={appColors.textPrimary}
+                weight="bold"
+              />
+            )}
+          </View>
+          <Text style={styles.actionTileText}>
+            {isRepeatingYesterdayHour ? "Repeating" : "Repeat hour"}
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={onQuickAddFood}
+          accessibilityLabel={`Quick add at ${selectedHourLabel}`}
+          style={({ pressed }) => [
+            styles.actionTile,
+            styles.actionTilePrimary,
+            pressed && styles.cardPressed,
+          ]}
+        >
+          <View style={styles.actionIcon}>
+            <LightningIcon
+              size={22}
+              color={appColors.textPrimary}
+              weight="fill"
+            />
+          </View>
+          <Text style={styles.actionTileText}>Quick add</Text>
+        </Pressable>
         <Pressable
           disabled={isCopyingYesterday}
           onPress={onCopyYesterday}
@@ -61,30 +105,13 @@ const FoodDiaryMoreSection = ({
               <CalendarCheckIcon
                 size={22}
                 color={appColors.textPrimary}
-                weight="bold"
+                weight="regular"
               />
             )}
           </View>
           <Text style={styles.actionTileText}>
-            {isCopyingYesterday ? "Copying" : "Copy"}
+            {isCopyingYesterday ? "Copying" : "Copy day"}
           </Text>
-        </Pressable>
-        <Pressable
-          onPress={onQuickAddFood}
-          accessibilityLabel={`Quick add at ${formatFoodHourLabel(selectedHour)}`}
-          style={({ pressed }) => [
-            styles.actionTile,
-            pressed && styles.cardPressed,
-          ]}
-        >
-          <View style={styles.actionIcon}>
-            <LightningIcon
-              size={22}
-              color={appColors.textPrimary}
-              weight="fill"
-            />
-          </View>
-          <Text style={styles.actionTileText}>Quick</Text>
         </Pressable>
         <Pressable
           onPress={onCreateCustomFood}
@@ -101,7 +128,7 @@ const FoodDiaryMoreSection = ({
               weight="bold"
             />
           </View>
-          <Text style={styles.actionTileText}>Meal</Text>
+          <Text style={styles.actionTileText}>Custom meal</Text>
         </Pressable>
         <Pressable
           onPress={onCreateRecipe}
@@ -121,68 +148,25 @@ const FoodDiaryMoreSection = ({
           <Text style={styles.actionTileText}>Recipe</Text>
         </Pressable>
       </View>
-
-      <View style={styles.stack}>
-        <Pressable
-          disabled={isDayCompleteLoading}
-          onPress={onToggleDayComplete}
-          style={({ pressed }) => [
-            styles.moreRow,
-            isDayComplete && styles.moreRowAccent,
-            isDayCompleteLoading && styles.moreRowDisabled,
-            pressed && styles.cardPressed,
-          ]}
-        >
-          <View style={styles.moreCopy}>
-            <Text style={styles.moreTitle}>
-              {isDayCompleteLoading
-                ? isDayComplete
-                  ? "Updating completion"
-                  : "Marking day complete"
-                : isDayComplete
-                  ? "Day complete"
-                  : "Mark day complete"}
-            </Text>
-            <Text style={styles.moreText}>
-              {isDayCompleteLoading
-                ? "Please wait while the diary day status is being saved."
-                : isDayComplete
-                  ? "This day is counted toward adaptive calorie analysis until the diary changes again."
-                  : "Confirm this day is fully logged so adaptive calories can use it."}
-            </Text>
-          </View>
-          <View
-            style={[
-              styles.morePill,
-              isDayComplete && styles.morePillAccent,
-              isDayCompleteLoading && styles.morePillLoading,
-            ]}
-          >
-            {!isDayComplete ? (
-              <ShieldIcon size={32} />
-            ) : (
-              <ShieldCheckIcon size={32} />
-            )}
-          </View>
-        </Pressable>
-      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: appColors.surfaceCard,
+    backgroundColor: appColors.surfaceCanvas,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
-    padding: 16,
+    padding: 12,
     marginBottom: 16,
   },
   sectionTitle: {
-    color: appColors.textPrimary,
-    fontSize: 18,
-    fontWeight: "500",
+    color: appColors.textSecondary,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.7,
+    textTransform: "uppercase",
     marginBottom: 12,
   },
   sectionText: {
@@ -193,11 +177,11 @@ const styles = StyleSheet.create({
   },
   quickActionGrid: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
-    marginBottom: 10,
   },
   actionTile: {
-    flex: 1,
+    width: "31.5%",
     minHeight: 82,
     alignItems: "center",
     justifyContent: "center",
@@ -209,9 +193,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 10,
   },
+  actionTilePrimary: {
+    width: "48.6%",
+    backgroundColor: appColors.surfaceCard,
+    borderColor: appColors.borderStrong,
+  },
   actionIcon: {
-    width: 38,
-    height: 38,
+    width: 44,
+    height: 44,
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",

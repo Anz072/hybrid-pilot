@@ -316,7 +316,13 @@ const WeightEntryModal = ({
           >
             <PencilSimpleIcon size={16} color={appColors.white} weight="bold" />
             <Text style={styles.primaryButtonText}>
-              Log Weight
+              {saving
+                ? mode === "edit"
+                  ? "Saving..."
+                  : "Logging..."
+                : mode === "edit"
+                  ? "Save changes"
+                  : "Log weight"}
             </Text>
           </Pressable>
           {mode === "edit" && onDelete ? (
@@ -356,13 +362,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     borderRadius: 9999,
-    backgroundColor: appColors.slate50,
+    backgroundColor: appColors.brand700,
+    minHeight: 48,
     paddingVertical: 14,
   },
   primaryButtonText: {
-    color: appColors.slate900,
+    color: appColors.white,
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "800",
   },
   disabled: {
     opacity: 0.58,

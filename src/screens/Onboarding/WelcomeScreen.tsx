@@ -11,9 +11,6 @@ type Props = NativeStackScreenProps<OnboardingParamList, "Welcome">;
 const WelcomeScreen = ({ navigation }: Props) => {
   return (
     <View style={styles.container}>
-      <View style={styles.bgOrbTop} />
-      <View style={styles.bgOrbBottom} />
-
       <View style={styles.heroRow}>
         <View style={styles.heroIconBadge}>
           <RocketLaunchIcon size={24} color={appColors.brand500} weight="fill" />

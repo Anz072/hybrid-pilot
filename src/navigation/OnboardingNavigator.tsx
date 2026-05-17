@@ -28,7 +28,12 @@ const OnboardingNavigator = ({ onFinish }: OnboardingNavigatorProps) => {
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
       <Stack.Screen name="Goal" component={GoalScreen} />
       <Stack.Screen name="Login">
-        {() => <LoginScreen onAuthenticated={onFinish} />}
+        {({ navigation }) => (
+          <LoginScreen
+            onAuthenticated={onFinish}
+            onBackToOnboarding={() => navigation.navigate("Welcome")}
+          />
+        )}
       </Stack.Screen>
       <Stack.Screen name="GoalRate" component={GoalRateScreen} />
       <Stack.Screen name="BodyData" component={BodyDataScreen} />

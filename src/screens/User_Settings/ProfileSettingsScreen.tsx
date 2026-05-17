@@ -20,6 +20,7 @@ import {
 import type { MoreParamList } from "../../navigation/MoreNavigator";
 import type { DBUserGender } from "../../store/DB_TYPES";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
+import { clearCurrentUser } from "../../store/userSlice";
 import { appColors } from "../../theme/colors";
 import SettingsStackHeader from "./SettingsStackHeader";
 import { saveUserProfileChanges } from "./userSettingsActions";
@@ -193,6 +194,7 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
               try {
                 setSigningOut(true);
                 await signOutSupabaseSession();
+                dispatch(clearCurrentUser());
               } catch (error) {
                 Alert.alert(
                   "Could not sign out",
@@ -206,13 +208,10 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
         },
       ],
     );
-  }, [signingOut]);
+  }, [dispatch, signingOut]);
 
   return (
     <View style={styles.screen}>
-      <View style={styles.orbTop} />
-      <View style={styles.orbBottom} />
-
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.screen}
@@ -566,4 +565,3 @@ const styles = StyleSheet.create({
 });
 
 export default ProfileSettingsScreen;
-

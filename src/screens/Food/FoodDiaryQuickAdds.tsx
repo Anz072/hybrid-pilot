@@ -25,7 +25,7 @@ const FoodDiaryQuickAdds = ({
   return (
     <View style={styles.card}>
       <Text style={styles.sectionTitle}>
-        Frequent at {formatFoodHourLabel(selectedHour)}
+        Quick picks for {formatFoodHourLabel(selectedHour)}
       </Text>
       <ScrollView
         horizontal
@@ -87,17 +87,19 @@ const FoodDiaryQuickAdds = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: appColors.surfaceCard,
+    backgroundColor: appColors.surfaceField,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
-    padding: 16,
-    marginBottom: 16,
+    padding: 12,
+    marginBottom: 18,
   },
   sectionTitle: {
-    color: appColors.textPrimary,
-    fontSize: 16,
-    fontWeight: "500",
+    color: appColors.textSecondary,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.7,
+    textTransform: "uppercase",
     marginBottom: 12,
   },
   favoriteRow: {
@@ -105,9 +107,9 @@ const styles = StyleSheet.create({
     paddingRight: 12,
   },
   favoriteCard: {
-    width: 214,
+    width: 202,
     borderRadius: 8,
-    backgroundColor: appColors.surfaceField,
+    backgroundColor: appColors.surfaceCard,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
     padding: 14,
@@ -134,7 +136,7 @@ const styles = StyleSheet.create({
   },
   favoriteButton: {
     flex: 1,
-    height: 42,
+    height: 44,
     borderRadius: 999,
     backgroundColor: appColors.brand700,
     alignItems: "center",
@@ -146,8 +148,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   favoriteIconButton: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: appColors.borderStrong,

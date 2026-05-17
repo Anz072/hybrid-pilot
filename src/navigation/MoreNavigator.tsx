@@ -13,6 +13,8 @@ import TrainingTypesSettingsScreen from "../screens/User_Settings/TrainingTypesS
 import ProteinFocusSettingsScreen from "../screens/User_Settings/ProteinFocusSettingsScreen";
 import SettingsScreen from "../screens/Settings/SettingsScreen";
 import WeeklyReviewScreen from "../screens/User_Settings/WeeklyReviewScreen";
+import { isDeveloperAccountEmail } from "../dev/developerAccount";
+import { useAppSelector } from "../store/hooks";
 import {
   UserCreatedCustomMealsScreen,
   UserCreatedRecipesScreen,
@@ -39,20 +41,27 @@ export type MoreParamList = {
 const Stack = createNativeStackNavigator<MoreParamList>();
 
 const MoreNavigator = () => {
+  const userEmail = useAppSelector((state) => state.user.currentUser?.email);
+  const isDeveloperAccount = isDeveloperAccountEmail(userEmail);
+
   return (
     <Stack.Navigator
       screenOptions={{ headerShown: false }}
       initialRouteName="MoreMainScreen"
     >
       <Stack.Screen name="MoreMainScreen" component={MoreScreen} />
-      <Stack.Screen name="FoodLibrary" component={FoodLibraryScreen} />
+      {isDeveloperAccount ? (
+        <Stack.Screen name="FoodLibrary" component={FoodLibraryScreen} />
+      ) : null}
       <Stack.Screen name="WeeklyReviewScreen" component={WeeklyReviewScreen} />
       <Stack.Screen
         name="ProfileSettingsScreen"
         component={ProfileSettingsScreen}
       />
       <Stack.Screen name="PreferencesScreen" component={PreferencesScreen} />
-      <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
+      {isDeveloperAccount ? (
+        <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
+      ) : null}
       <Stack.Screen
         name="CalorieAllowanceSettingsScreen"
         component={CalorieAllowanceSettingsScreen}

@@ -11,7 +11,11 @@ import {
   View,
 } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { StackActions, useNavigation } from "@react-navigation/native";
+import {
+  getFocusedRouteNameFromRoute,
+  StackActions,
+  useNavigation,
+} from "@react-navigation/native";
 import type { NavigatorScreenParams } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -25,7 +29,7 @@ import {
   BarcodeIcon,
   BowlFoodIcon,
   CookingPotIcon,
-  DotsThreeCircleIcon,
+  DotsThreeIcon,
   ForkKnifeIcon,
   HouseSimpleIcon,
   LightningIcon,
@@ -41,11 +45,11 @@ import WeightEntryModal, {
 import { generateUuid } from "../screens/Weight/weightUtils";
 import FoodBarcodeScannerModal from "../screens/Food/FoodBarcodeScannerModal";
 import type { ScannedFoodLookupResult } from "../screens/Food/FoodBarcodeScannerShared";
+import { formatFoodDateKey } from "../screens/Food/foodUtils";
 import {
-  buildFoodLoggedAt,
-  formatFoodDateKey,
-  formatFoodLoggedTime,
-} from "../screens/Food/foodUtils";
+  resolveFoodLogContext,
+  toFoodLogRouteParams,
+} from "../screens/Food/foodLogContext";
 import {
   getShortcutRecents,
   saveShortcutRecents,
@@ -60,12 +64,12 @@ export type MainTabParamList = {
   Shortcuts: undefined;
   Weight: undefined;
   More: NavigatorScreenParams<MoreParamList> | undefined;
-  Debug: NavigatorScreenParams<MoreParamList> | undefined;
-  Library: undefined;
 };
 
-const FOCUSED_COLOR = appColors.textPrimary;
-const UNFOCUSED_COLOR = appColors.textMuted;
+const FOCUSED_COLOR = "#070707";
+const UNFOCUSED_COLOR = "rgba(7, 7, 7, 0.64)";
+const TAB_BAR_BACKGROUND = "#FBF6EA";
+const TAB_BAR_BORDER = "rgba(216, 207, 190, 0.78)";
 const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.4);
 const Tab = createBottomTabNavigator<MainTabParamList>();
 type RootNavigation = NativeStackNavigationProp<RootStackParamList>;
@@ -186,18 +190,11 @@ const MainTabNavigator = () => {
       const openFoodScreen = (screen: any) => {
         const now = new Date();
         const date = formatFoodDateKey(now);
-        const loggedAt = buildFoodLoggedAt(
-          date,
-          now.getHours(),
-          now.getMinutes(),
-        );
+        const foodLogContext = resolveFoodLogContext({ date });
 
         closeShortcuts(() =>
           rootNavigation.navigate(screen, {
-            contextLabel: formatFoodLoggedTime(loggedAt),
-            date,
-            loggedAt,
-            mealType: null,
+            ...toFoodLogRouteParams(foodLogContext),
           }),
         );
       };
@@ -279,20 +276,13 @@ const MainTabNavigator = () => {
     (result: ScannedFoodLookupResult) => {
       const now = new Date();
       const date = formatFoodDateKey(now);
-      const loggedAt = buildFoodLoggedAt(
-        date,
-        now.getHours(),
-        now.getMinutes(),
-      );
+      const foodLogContext = resolveFoodLogContext({ date });
 
       const scannedFoodParams: RootStackParamList["ScannedFood"] = {
+        ...toFoodLogRouteParams(foodLogContext),
         foodId: result.foodId,
         barcode: result.barcode,
         scanStatus: result.status,
-        contextLabel: formatFoodLoggedTime(loggedAt),
-        date,
-        loggedAt,
-        mealType: null,
       };
 
       setBarcodeModalScannerVisible(false);
@@ -368,22 +358,28 @@ const MainTabNavigator = () => {
     inputRange: [0, 1],
     outputRange: [SHEET_HEIGHT + 48, 0],
   });
+  const visibleTabBarStyle = React.useMemo(
+    () => [
+      styles.tabBar,
+      {
+        height: 78 + insets.bottom,
+        paddingBottom: Math.max(insets.bottom, 10),
+      },
+    ],
+    [insets.bottom],
+  );
 
   return (
     <View style={styles.container}>
       <Tab.Navigator
-        initialRouteName="Food"
+        initialRouteName="Home"
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: FOCUSED_COLOR,
           tabBarInactiveTintColor: UNFOCUSED_COLOR,
-          tabBarStyle: [
-            styles.tabBar,
-            {
-              height: 70 + insets.bottom,
-              paddingBottom: Math.max(insets.bottom, 10),
-            },
-          ],
+          tabBarLabelStyle: styles.tabBarLabel,
+          tabBarItemStyle: styles.tabBarItem,
+          tabBarStyle: visibleTabBarStyle,
         }}
       >
         <Tab.Screen
@@ -392,9 +388,9 @@ const MainTabNavigator = () => {
           options={{
             tabBarIcon: ({ focused }) => (
               <HouseSimpleIcon
-                size={24}
+                size={28}
                 color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
-                weight={focused ? "bold" : "light"}
+                weight={focused ? "bold" : "regular"}
               />
             ),
           }}
@@ -410,14 +406,23 @@ const MainTabNavigator = () => {
               });
             },
           })}
-          options={{
-            tabBarIcon: ({ focused }) => (
-              <ForkKnifeIcon
-                size={24}
-                color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
-                weight={focused ? "bold" : "light"}
-              />
-            ),
+          options={({ route }) => {
+            const focusedRouteName =
+              getFocusedRouteNameFromRoute(route) ?? "Diary";
+
+            return {
+              tabBarStyle:
+                focusedRouteName === "Diary"
+                  ? visibleTabBarStyle
+                  : styles.tabBarHidden,
+              tabBarIcon: ({ focused }) => (
+                <ForkKnifeIcon
+                  size={28}
+                  color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
+                  weight={focused ? "bold" : "regular"}
+                />
+              ),
+            };
           }}
         />
         <Tab.Screen
@@ -433,13 +438,8 @@ const MainTabNavigator = () => {
                   pressed && styles.pressed,
                 ]}
               >
-                <View style={styles.shortcutTabButton}>
-                  <PlusIcon
-                    size={26}
-                    color={appColors.slate900}
-                    weight="bold"
-                  />
-                </View>
+                <PlusIcon size={34} color={FOCUSED_COLOR} weight="regular" />
+                <Text style={styles.shortcutTabLabel}>Add</Text>
               </Pressable>
             ),
           }}
@@ -449,9 +449,9 @@ const MainTabNavigator = () => {
           options={{
             tabBarIcon: ({ focused }) => (
               <ScalesIcon
-                size={24}
+                size={28}
                 color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
-                weight={focused ? "bold" : "light"}
+                weight={focused ? "bold" : "regular"}
               />
             ),
           }}
@@ -471,10 +471,10 @@ const MainTabNavigator = () => {
           })}
           options={{
             tabBarIcon: ({ focused }) => (
-              <DotsThreeCircleIcon
-                size={24}
+              <DotsThreeIcon
+                size={28}
                 color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
-                weight={focused ? "bold" : "light"}
+                weight={focused ? "bold" : "regular"}
               />
             ),
           }}
@@ -574,25 +574,42 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   tabBar: {
-    backgroundColor: appColors.surfaceBase,
+    backgroundColor: TAB_BAR_BACKGROUND,
     borderTopWidth: 1,
-    borderTopColor: appColors.borderSoft,
-    paddingTop: 8,
+    borderTopColor: TAB_BAR_BORDER,
+    paddingTop: 9,
+    shadowColor: "#C8BCA8",
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 18,
+    elevation: 10,
+  },
+  tabBarHidden: {
+    display: "none",
+  },
+  tabBarItem: {
+    paddingTop: 2,
+  },
+  tabBarLabel: {
+    color: appColors.textPrimary,
+    fontSize: 15,
+    lineHeight: 18,
+    fontWeight: "400",
+    letterSpacing: 0,
   },
   shortcutTabSlot: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    paddingTop: 2,
+    gap: 2,
   },
-  shortcutTabButton: {
-    width: 54,
-    height: 54,
-    borderRadius: 999,
-    backgroundColor: appColors.warning600,
-    borderWidth: 3,
-    borderColor: appColors.surfaceBase,
-    alignItems: "center",
-    justifyContent: "center",
+  shortcutTabLabel: {
+    color: FOCUSED_COLOR,
+    fontSize: 15,
+    lineHeight: 18,
+    fontWeight: "400",
+    letterSpacing: 0,
   },
   modalRoot: {
     flex: 1,
@@ -707,4 +724,3 @@ const styles = StyleSheet.create({
 });
 
 export default MainTabNavigator;
-

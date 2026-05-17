@@ -300,9 +300,6 @@ const UserCreatedFoodLibraryScreen = ({ kind }: { kind: LibraryKind }) => {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.orbTop} />
-      <View style={styles.orbBottom} />
-
       <FlatList
         data={items}
         keyExtractor={(item) => String(item.id)}

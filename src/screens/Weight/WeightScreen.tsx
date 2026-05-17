@@ -26,6 +26,7 @@ import {
   CaretUpIcon,
   ChartLineIcon,
   PencilSimpleIcon,
+  PlusIcon,
   TargetIcon,
   TrashIcon,
   WarningCircleIcon,
@@ -383,15 +384,6 @@ const WeightScreen = ({
   const goalLauncherLabel = goal ? "Edit goal" : "Set goal";
   const chartOldestEntry = chartEntries[chartEntries.length - 1] ?? null;
   const chartNewestEntry = chartEntries[0] ?? null;
-  const averageWeightText =
-    chartEntries.length > 0
-      ? formatWeightKg(
-          roundWeightKg(
-            chartEntries.reduce((sum, entry) => sum + entry.valueKg, 0) /
-              chartEntries.length,
-          ),
-        )
-      : "--";
   const visibleDifference = React.useMemo(() => {
     if (!chartOldestEntry || !chartNewestEntry) {
       return null;
@@ -422,6 +414,13 @@ const WeightScreen = ({
     setEditingEntry(entry);
     setModalMode("edit");
     setSelectedEntryId(entry.id);
+    setModalVisible(true);
+  };
+
+  const openCreateModal = () => {
+    setEditingEntry(null);
+    setModalMode("create");
+    setSelectedEntryId(null);
     setModalVisible(true);
   };
 
@@ -897,30 +896,47 @@ const WeightScreen = ({
   const listHeader = (
     <View style={[styles.content, { paddingTop: insets.top + 24 }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Weight Diary</Text>
+        <View style={styles.headerCopy}>
+          <Text style={styles.title}>Weight</Text>
+          <Text style={styles.headerSubtitle}>
+            {currentEntry
+              ? `Latest ${formatHeaderDateLabel(currentEntry.measuredAt)}`
+              : "Log your first check-in"}
+          </Text>
+        </View>
+        <Pressable
+          onPress={openCreateModal}
+          style={({ pressed }) => [
+            styles.logWeightButton,
+            pressed && styles.cardPressed,
+          ]}
+        >
+          <PlusIcon size={17} color={appColors.white} weight="bold" />
+          <Text style={styles.logWeightButtonText}>Log</Text>
+        </Pressable>
       </View>
       <View style={styles.heroCard}>
         <View style={styles.heroStatRow}>
           <View style={styles.heroStatBlock}>
-            <Text style={styles.heroStatLabel}>Average</Text>
+            <Text style={styles.heroStatLabel}>Current</Text>
             <Text style={styles.heroStatValue}>
-              {averageWeightText}
-              <Text style={styles.heroStatUnit}> kg</Text>
-            </Text>
-            <Text style={styles.heroStatCaption}>{chartPeriodText}</Text>
-          </View>
-          <View style={styles.heroStatDivider} />
-          <View style={styles.heroStatBlock}>
-            <Text style={styles.heroStatLabel}>Difference</Text>
-            <Text style={styles.heroStatValue}>
-              {visibleDifferenceText}
+              {currentWeightText}
               <Text style={styles.heroStatUnit}> kg</Text>
             </Text>
             <Text style={styles.heroStatCaption}>
               {currentEntry
-                ? `Latest ${formatHeaderDateLabel(currentEntry.measuredAt)}`
+                ? formatHeaderDateLabel(currentEntry.measuredAt)
                 : "Need at least one entry"}
             </Text>
+          </View>
+          <View style={styles.heroStatDivider} />
+          <View style={styles.heroStatBlock}>
+            <Text style={styles.heroStatLabel}>Trend</Text>
+            <Text style={styles.heroStatValue}>
+              {visibleDifferenceText}
+              <Text style={styles.heroStatUnit}> kg</Text>
+            </Text>
+            <Text style={styles.heroStatCaption}>{chartPeriodText}</Text>
           </View>
         </View>
 
@@ -995,7 +1011,7 @@ const WeightScreen = ({
             <View style={styles.flexOne}>
               <Text style={styles.dashboardSectionTitle}>Insights & Data</Text>
               <Text style={styles.sectionCaption}>
-                Trend and logging quality, in a calmer summary layout.
+                Trend, consistency, and volatility. Tap to expand.
               </Text>
             </View>
             <View style={styles.sectionToggle}>
@@ -1647,15 +1663,43 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   header: {
+    minHeight: 52,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    gap: 14,
     marginBottom: 18,
+  },
+  headerCopy: {
+    flex: 1,
   },
   title: {
     color: appColors.textPrimary,
-    fontSize: 32,
-    lineHeight: 38,
+    fontSize: 28,
+    lineHeight: 34,
     fontWeight: "900",
-    marginBottom: 6,
+    marginBottom: 2,
+  },
+  headerSubtitle: {
+    color: appColors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: "600",
+  },
+  logWeightButton: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    borderRadius: 999,
+    backgroundColor: appColors.brand700,
+    paddingHorizontal: 16,
+  },
+  logWeightButtonText: {
+    color: appColors.white,
+    fontSize: 14,
+    fontWeight: "900",
   },
   metricUnit: {
     fontSize: 20,

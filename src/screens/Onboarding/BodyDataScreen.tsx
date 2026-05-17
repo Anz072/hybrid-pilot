@@ -128,9 +128,6 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
     >
-      <View style={styles.bgOrbTop} />
-      <View style={styles.bgOrbBottom} />
-
       <KeyboardAwareScrollView
         contentContainerStyle={[
           styles.scrollContent,
@@ -415,4 +412,3 @@ const styles = StyleSheet.create({
 });
 
 export default BodyDataScreen;
-

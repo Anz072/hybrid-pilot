@@ -2,12 +2,14 @@ import React from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
-import { ShieldCheckIcon } from "phosphor-react-native";
 import { useAppDispatch } from "../../store/hooks";
 import { setCurrentUser } from "../../store/userSlice";
 import { appColors } from "../../theme/colors";
@@ -17,25 +19,98 @@ import {
   isSupabaseConfigured,
 } from "../../API/supabase/client";
 import {
+  signInWithEmailPassword,
   signInWithGoogleViaSupabase,
   upsertGoogleUserAccount,
+  upsertSupabaseAuthUserAccount,
 } from "../../API/supabase/googleAuth";
 
 type LoginScreenProps = {
   onAuthenticated?: () => void | Promise<void>;
+  onBackToOnboarding?: () => void;
 };
 
-const LoginScreen = ({ onAuthenticated }: LoginScreenProps) => {
-  const dispatch = useAppDispatch();
-  const [signingIn, setSigningIn] = React.useState(false);
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+type SubmissionMode = "email" | "google" | null;
 
-  const handleGoogleSignIn = React.useCallback(async () => {
-    if (signingIn) {
+const normalizeEmail = (value: string) => value.trim().toLowerCase();
+
+const validateEmailPassword = (email: string, password: string) => {
+  if (!email.includes("@")) {
+    throw new Error("Enter a valid email address.");
+  }
+
+  if (password.length < 6) {
+    throw new Error("Password must be at least 6 characters.");
+  }
+};
+
+const LoginScreen = ({
+  onAuthenticated,
+  onBackToOnboarding,
+}: LoginScreenProps) => {
+  const dispatch = useAppDispatch();
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [signingIn, setSigningIn] = React.useState<SubmissionMode>(null);
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const isSigningIn = signingIn !== null;
+
+  const finishWithUser = React.useCallback(
+    async (user: Awaited<ReturnType<typeof upsertSupabaseAuthUserAccount>>) => {
+      dispatch(setCurrentUser(user));
+      await onAuthenticated?.();
+    },
+    [dispatch, onAuthenticated],
+  );
+
+  const handleEmailAuth = React.useCallback(async () => {
+    if (isSigningIn) {
       return;
     }
 
-    setSigningIn(true);
+    setSigningIn("email");
+    setErrorMessage(null);
+
+    try {
+      if (!isSupabaseConfigured()) {
+        throw new Error(getSupabaseConfigError());
+      }
+
+      const normalizedEmail = normalizeEmail(email);
+      validateEmailPassword(normalizedEmail, password);
+
+      const session = await signInWithEmailPassword({
+        email: normalizedEmail,
+        password,
+      });
+
+      if (!session?.user) {
+        const message = "Supabase did not return an active session.";
+        setErrorMessage(message);
+        throw new Error(message);
+      }
+
+      const user = await upsertSupabaseAuthUserAccount(session.user, {
+        allowCreate: false,
+      });
+      await finishWithUser(user);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Could not sign in.";
+
+      setErrorMessage(message);
+      Alert.alert("Sign-in failed", message);
+    } finally {
+      setSigningIn(null);
+    }
+  }, [email, finishWithUser, isSigningIn, password]);
+
+  const handleGoogleSignIn = React.useCallback(async () => {
+    if (isSigningIn) {
+      return;
+    }
+
+    setSigningIn("google");
     setErrorMessage(null);
 
     try {
@@ -52,8 +127,7 @@ const LoginScreen = ({ onAuthenticated }: LoginScreenProps) => {
       const user = await upsertGoogleUserAccount(session.user, {
         allowCreate: false,
       });
-      dispatch(setCurrentUser(user));
-      await onAuthenticated?.();
+      await finishWithUser(user);
     } catch (error) {
       const message =
         error instanceof Error
@@ -63,46 +137,116 @@ const LoginScreen = ({ onAuthenticated }: LoginScreenProps) => {
       setErrorMessage(message);
       Alert.alert("Google sign-in failed", message);
     } finally {
-      setSigningIn(false);
+      setSigningIn(null);
     }
-  }, [dispatch, onAuthenticated, signingIn]);
+  }, [finishWithUser, isSigningIn]);
 
   return (
-    <View style={styles.screen}>
-      <View style={styles.orbTop} />
-      <View style={styles.orbBottom} />
-
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={styles.screen}
+    >
       <View style={styles.card}>
-        <Text style={styles.title}>Sign in with Google</Text>
+        <Text style={styles.title}>Sign in</Text>
         <Text style={styles.body}>
-          Use your existing Google-backed Dribsnis account to restore your
-          synced data.
+          Use your existing Supabase email account, or continue with your
+          Google-backed account in a build.
         </Text>
+
+        <Text style={styles.inputLabel}>Email</Text>
+        <TextInput
+          value={email}
+          onChangeText={setEmail}
+          editable={!isSigningIn}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="email-address"
+          placeholder="you@example.com"
+          placeholderTextColor={appColors.textMuted}
+          style={styles.input}
+          textContentType="emailAddress"
+          returnKeyType="next"
+        />
+
+        <Text style={styles.inputLabel}>Password</Text>
+        <TextInput
+          value={password}
+          onChangeText={setPassword}
+          editable={!isSigningIn}
+          autoCapitalize="none"
+          autoCorrect={false}
+          secureTextEntry
+          placeholder="Minimum 6 characters"
+          placeholderTextColor={appColors.textMuted}
+          style={styles.input}
+          textContentType="password"
+          returnKeyType="done"
+          onSubmitEditing={() => {
+            void handleEmailAuth();
+          }}
+        />
+
+        <Pressable
+          onPress={() => {
+            void handleEmailAuth();
+          }}
+          disabled={isSigningIn}
+          style={({ pressed }) => [
+            styles.button,
+            isSigningIn && styles.buttonDisabled,
+            pressed && !isSigningIn && styles.pressed,
+          ]}
+        >
+          {signingIn === "email" ? (
+            <ActivityIndicator color={appColors.slate900} />
+          ) : null}
+          <Text style={styles.buttonText}>
+            {signingIn === "email" ? "Signing in..." : "Sign in"}
+          </Text>
+        </Pressable>
 
         <Pressable
           onPress={() => {
             void handleGoogleSignIn();
           }}
-          disabled={signingIn}
+          disabled={isSigningIn}
           style={({ pressed }) => [
-            styles.button,
-            signingIn && styles.buttonDisabled,
-            pressed && !signingIn && styles.pressed,
+            styles.googleButton,
+            isSigningIn && styles.buttonDisabled,
+            pressed && !isSigningIn && styles.pressed,
           ]}
         >
-          {signingIn ? (
-            <ActivityIndicator color={appColors.slate900} />
+          {signingIn === "google" ? (
+            <ActivityIndicator color={appColors.textPrimary} />
           ) : null}
-          <Text style={styles.buttonText}>
-            {signingIn ? "Signing in..." : "Continue with Google"}
+          <Text style={styles.googleButtonText}>
+            {signingIn === "google" ? "Signing in..." : "Continue with Google"}
           </Text>
         </Pressable>
+
+        {onBackToOnboarding ? (
+          <Pressable
+            onPress={() => {
+              onBackToOnboarding();
+            }}
+            disabled={isSigningIn}
+            style={({ pressed }) => [
+              styles.createAccountButton,
+              isSigningIn && styles.buttonDisabled,
+              pressed && !isSigningIn && styles.pressed,
+            ]}
+          >
+            <Text style={styles.createAccountButtonText}>
+              Back to onboarding
+            </Text>
+          </Pressable>
+        ) : null}
 
         {errorMessage ? (
           <Text style={styles.errorText}>{errorMessage}</Text>
         ) : null}
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -133,36 +277,40 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: appColors.surfaceCard,
-    borderRadius: 32,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
-    padding: 24,
-  },
-  badge: {
-    width: 48,
-    height: 48,
-    borderRadius: 9999,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: appColors.slate50,
-    marginBottom: 16,
-  },
-  eyebrow: {
-    ...appTypography.label,
-    color: appColors.textSecondary,
-    marginBottom: 10,
+    padding: 22,
   },
   title: {
     ...appTypography.displaySection,
     color: appColors.textPrimary,
-    fontSize: 18,
-    textAlign: 'center',
-    marginBottom: 48,
+    fontSize: 24,
+    textAlign: "center",
+    marginBottom: 10,
   },
   body: {
-    ...appTypography.body,
+    ...appTypography.bodySmall,
     color: appColors.textSecondary,
-    marginBottom: 22,
+    textAlign: "center",
+    marginBottom: 18,
+  },
+  inputLabel: {
+    ...appTypography.label,
+    color: appColors.textSecondary,
+    marginBottom: 6,
+    marginTop: 10,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: appColors.borderStrong,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: appColors.surfaceField,
+    color: appColors.textPrimary,
+    fontSize: 15,
+    fontWeight: "600",
   },
   button: {
     flexDirection: "row",
@@ -172,7 +320,20 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
     backgroundColor: appColors.slate50,
     paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingVertical: 15,
+    marginTop: 18,
+  },
+  googleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    borderRadius: 9999,
+    borderWidth: 1,
+    borderColor: appColors.borderStrong,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    marginTop: 10,
   },
   buttonDisabled: {
     opacity: 0.7,
@@ -180,6 +341,26 @@ const styles = StyleSheet.create({
   buttonText: {
     ...appTypography.button,
     color: appColors.slate900,
+  },
+  googleButtonText: {
+    ...appTypography.button,
+    color: appColors.textPrimary,
+  },
+  createAccountButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    borderRadius: 9999,
+    borderWidth: 1,
+    borderColor: appColors.borderStrong,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    marginTop: 10,
+  },
+  createAccountButtonText: {
+    ...appTypography.button,
+    color: appColors.textPrimary,
   },
   errorText: {
     ...appTypography.bodySmall,
@@ -192,4 +373,3 @@ const styles = StyleSheet.create({
 });
 
 export default LoginScreen;
-

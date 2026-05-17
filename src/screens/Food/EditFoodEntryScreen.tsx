@@ -74,6 +74,19 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
   const [showTimePicker, setShowTimePicker] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
+  const [formError, setFormError] = React.useState<string | null>(null);
+  const bypassUnsavedGuardRef = React.useRef(false);
+  const initialDraftSignatureRef = React.useRef<string | null>(null);
+
+  const buildDraftSignature = React.useCallback(
+    (quantityInput: string, mealInput: string, loggedAtInput: string) =>
+      JSON.stringify({
+        loggedAt: loggedAtInput,
+        mealType: mealInput.trim() || null,
+        quantity: quantityInput.trim(),
+      }),
+    [],
+  );
 
   const microTargets = React.useMemo(
     () =>
@@ -117,10 +130,15 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
       setQuantityValue(String(nextEntry.quantityG));
       setMealTypeValue(nextEntry.mealType ?? "");
       setLoggedAtDate(new Date(nextEntry.loggedAt));
+      initialDraftSignatureRef.current = buildDraftSignature(
+        String(nextEntry.quantityG),
+        nextEntry.mealType ?? "",
+        nextEntry.loggedAt,
+      );
     } finally {
       setLoading(false);
     }
-  }, [navigation, route.params.entryId]);
+  }, [buildDraftSignature, navigation, route.params.entryId]);
 
   React.useEffect(() => {
     void loadEntry();
@@ -146,10 +164,51 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
       return;
     }
 
+    setFormError(null);
     setQuantityValue((current) =>
       normalizePositiveFoodInput(current, entry.quantityG),
     );
   }, [entry]);
+
+  const currentDraftSignature = React.useMemo(
+    () =>
+      buildDraftSignature(
+        quantityValue,
+        mealTypeValue,
+        loggedAtDate.toISOString(),
+      ),
+    [buildDraftSignature, loggedAtDate, mealTypeValue, quantityValue],
+  );
+  const isDirty =
+    initialDraftSignatureRef.current != null &&
+    initialDraftSignatureRef.current !== currentDraftSignature;
+
+  React.useEffect(
+    () =>
+      navigation.addListener("beforeRemove", (event) => {
+        if (bypassUnsavedGuardRef.current || saving || !isDirty) {
+          return;
+        }
+
+        event.preventDefault();
+        Alert.alert(
+          "Discard food changes?",
+          "Unsaved changes to this diary entry will be lost.",
+          [
+            { text: "Keep editing", style: "cancel" },
+            {
+              text: "Discard",
+              style: "destructive",
+              onPress: () => {
+                bypassUnsavedGuardRef.current = true;
+                navigation.dispatch(event.data.action);
+              },
+            },
+          ],
+        );
+      }),
+    [isDirty, navigation, saving],
+  );
 
   const handleTimeChange = React.useCallback(
     (event: DateTimePickerEvent, nextDate?: Date) => {
@@ -163,6 +222,7 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
 
       const merged = new Date(loggedAtDate);
       merged.setHours(nextDate.getHours(), nextDate.getMinutes(), 0, 0);
+      setFormError(null);
       setLoggedAtDate(merged);
     },
     [loggedAtDate],
@@ -174,11 +234,12 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
     }
 
     if (!Number.isFinite(quantity) || quantity <= 0) {
-      Alert.alert("Invalid amount", "Enter a positive amount before saving.");
+      setFormError("Enter a positive amount before saving.");
       return;
     }
 
     try {
+      setFormError(null);
       setSaving(true);
       await DB.updateUserFoodLog({
         id: entry.id,
@@ -186,6 +247,7 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
         quantityG: quantity,
         mealType: mealTypeValue.trim() || null,
       });
+      bypassUnsavedGuardRef.current = true;
       navigation.goBack();
     } finally {
       setSaving(false);
@@ -205,6 +267,7 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
         onPress: () => {
           void (async () => {
             await DB.deleteUserFoodLog(entry.id);
+            bypassUnsavedGuardRef.current = true;
             navigation.goBack();
           })();
         },
@@ -225,7 +288,6 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
   if (loading) {
     return (
       <View style={styles.screen}>
-        <View style={styles.bgOrbTop} />
         <View style={styles.content}>
           <FoodScreenHeader
             eyebrow="Food Entry"
@@ -245,7 +307,6 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
   if (!entry) {
     return (
       <View style={styles.screen}>
-        <View style={styles.bgOrbTop} />
         <View style={styles.content}>
           <FoodScreenHeader
             eyebrow="Food Entry"
@@ -269,9 +330,6 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.bgOrbTop} />
-      <View style={styles.bgOrbBottom} />
-
       <KeyboardAvoidingView
         style={styles.screen}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -337,7 +395,10 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
             amountUnit={entry.servingUnit?.trim() || "g"}
             amountValue={quantityValue}
             detailsSubtitle="Adjust the amount, logged time, or label for this entry."
-            onChangeAmount={setQuantityValue}
+            onChangeAmount={(value) => {
+              setQuantityValue(value);
+              setFormError(null);
+            }}
             onAmountBlur={handleQuantityBlur}
             slot={{
               icon: <ClockIcon size={18} color={appColors.brand500} weight="bold" />,
@@ -347,7 +408,10 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
               onPress: () => setShowTimePicker((current) => !current),
             }}
             labelValue={mealTypeValue}
-            onChangeLabel={setMealTypeValue}
+            onChangeLabel={(value) => {
+              setMealTypeValue(value);
+              setFormError(null);
+            }}
             labelPlaceholder="Post-workout, cafe, office..."
             nutritionItems={[
               {
@@ -375,6 +439,7 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
               <PencilSimpleIcon size={16} color={appColors.white} weight="bold" />
             }
             primaryActionLabel={saving ? "Saving..." : "Save changes"}
+            formError={formError}
             showPrimaryAction={false}
           />
 
@@ -382,7 +447,7 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
             <>
               <Text style={styles.title}>Micronutrients</Text>
               {(
-                Object.entries(microTargets) as [
+                Object.entries(microTargets ?? MICRONUTRIENT_TARGETS.generic) as [
                   OpenFoodMapMicronutrientKey,
                   number,
                 ][]
@@ -507,4 +572,3 @@ const styles = StyleSheet.create({
 });
 
 export default EditFoodEntryScreen;
-

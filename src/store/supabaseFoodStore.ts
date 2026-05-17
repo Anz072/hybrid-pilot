@@ -2,6 +2,7 @@ import {
   getSupabaseClient,
   requireSupabaseSessionUser,
 } from "../API/supabase/client";
+import { shouldUseExpoGoDevLocalStore } from "../dev/expoGoDevAuth";
 import type {
   AddFoodItemInput,
   AddQuickAddFoodLogInput,
@@ -689,7 +690,11 @@ const buildRecipeWeightMetrics = (
 
 const resolveSupabaseUserId = async (
   userExternalId?: string | null,
-) => {
+): Promise<string | null> => {
+  if (await shouldUseExpoGoDevLocalStore(userExternalId)) {
+    return null;
+  }
+
   const authUser = await requireSupabaseSessionUser(userExternalId);
   return authUser.id;
 };
@@ -1651,6 +1656,18 @@ export const listFoodItems = async ({
   const authUserId = await resolveSupabaseUserId();
 
   if (!authUserId) {
+    if (source === "custom_meal") {
+      const rows = await listFoodItemsLocal({
+        query,
+        limit: Math.max(limit * 4, 200),
+        source: "recipe",
+      });
+
+      return rows
+        .filter((food) => parseJsonObject(food.rawPayload)?.entityType === "custom_meal")
+        .slice(0, Math.max(limit, 1));
+    }
+
     return listFoodItemsLocal({ query, limit, source });
   }
 
@@ -2070,6 +2087,10 @@ export const getUserCustomMealFoodById = async (
   mealId: number,
 ): Promise<DBFoodItem | null> => {
   const authUserId = await resolveSupabaseUserId();
+  if (!authUserId) {
+    return getFoodItemByIdLocal(mealId);
+  }
+
   return fetchSyntheticMealFoodById(mealId, authUserId);
 };
 
@@ -2099,6 +2120,45 @@ export const createUserCustomMeal = async (
     [proteinG, carbsG, fatG].some((value) => !Number.isFinite(value) || value < 0)
   ) {
     throw new Error("Calories must be positive and macros cannot be negative.");
+  }
+
+  if (!authUserId) {
+    const foodId = await saveFoodItemLocal({
+      source: "recipe",
+      sourceId: null,
+      barcode: null,
+      name: trimmedName,
+      brand: null,
+      imageUrl: null,
+      quantityValue: servingSizeG,
+      quantityUnit: "g",
+      servingSizeValue: servingSizeG,
+      servingSizeUnit: "g",
+      nutritionBasis: "serving",
+      calories,
+      proteinG,
+      carbsG,
+      fatG,
+      ingredientsText: normalizeOptionalText(input.description),
+      rawPayload: JSON.stringify({
+        entityType: "custom_meal",
+        userExternalId: input.userExternalId,
+        createdByUserExternalId: input.createdByUserExternalId,
+        description: normalizeOptionalText(input.description),
+        servings: 1,
+        totalWeightG: servingSizeG,
+        gramsPerServing: servingSizeG,
+      }),
+      verified: false,
+      isComplete: true,
+      isPublic,
+    });
+    const food = await getFoodItemByIdLocal(foodId);
+    if (!food) {
+      throw new Error("Custom meal could not be saved.");
+    }
+
+    return food;
   }
 
   const supabase = getSupabaseClient();
@@ -2131,6 +2191,76 @@ export const updateUserCustomMeal = async (
   input: UpdateUserCustomMealInput,
 ): Promise<DBFoodItem> => {
   const authUserId = await resolveSupabaseUserId(input.userExternalId);
+
+  if (!authUserId) {
+    const trimmedName = input.name.trim();
+    const servingSizeG = roundTo(input.servingSizeG, 2);
+    const calories = roundTo(input.calories, 2);
+    const proteinG = roundTo(input.proteinG ?? 0, 3);
+    const carbsG = roundTo(input.carbsG ?? 0, 3);
+    const fatG = roundTo(input.fatG ?? 0, 3);
+
+    if (!trimmedName) {
+      throw new Error("Custom meal name is required.");
+    }
+
+    if (!Number.isFinite(servingSizeG) || servingSizeG <= 0) {
+      throw new Error("Serving size must be a positive number.");
+    }
+
+    if (
+      !Number.isFinite(calories) ||
+      calories <= 0 ||
+      [proteinG, carbsG, fatG].some((value) => !Number.isFinite(value) || value < 0)
+    ) {
+      throw new Error("Calories must be positive and macros cannot be negative.");
+    }
+
+    const existing = await getFoodItemByIdLocal(input.mealId);
+    const existingPayload = parseJsonObject(existing?.rawPayload);
+    const isPublic = input.isPublic ?? existing?.isPublic ?? true;
+
+    await saveFoodItemLocal({
+      id: input.mealId,
+      source: "recipe",
+      sourceId: null,
+      barcode: null,
+      name: trimmedName,
+      brand: null,
+      imageUrl: null,
+      quantityValue: servingSizeG,
+      quantityUnit: "g",
+      servingSizeValue: servingSizeG,
+      servingSizeUnit: "g",
+      nutritionBasis: "serving",
+      calories,
+      proteinG,
+      carbsG,
+      fatG,
+      ingredientsText: normalizeOptionalText(input.description),
+      rawPayload: JSON.stringify({
+        ...existingPayload,
+        entityType: "custom_meal",
+        userExternalId: input.userExternalId,
+        createdByUserExternalId: input.createdByUserExternalId,
+        description: normalizeOptionalText(input.description),
+        servings: 1,
+        totalWeightG: servingSizeG,
+        gramsPerServing: servingSizeG,
+      }),
+      verified: false,
+      isComplete: true,
+      isPublic,
+    });
+
+    const food = await getFoodItemByIdLocal(input.mealId);
+    if (!food) {
+      throw new Error("Custom meal could not be found.");
+    }
+
+    return food;
+  }
+
   const existingRow = await fetchCustomMealRowById(input.mealId);
 
   if (!existingRow) {
@@ -2194,6 +2324,10 @@ export const updateUserCustomMeal = async (
 
 export const deleteUserCustomMeal = async (mealId: number): Promise<void> => {
   const authUserId = await resolveSupabaseUserId();
+  if (!authUserId) {
+    return deleteFoodItemLocal(mealId);
+  }
+
   const existingRow = await fetchCustomMealRowById(mealId);
 
   if (!existingRow) {
@@ -2488,11 +2622,14 @@ export const getDiaryDayStatus = async (
   userExternalId: string,
   date: string,
 ): Promise<DBDiaryDayStatus | null> => {
-  let authUserId: string;
+  let authUserId: string | null;
 
   try {
     authUserId = await resolveSupabaseUserId(userExternalId);
   } catch {
+    return null;
+  }
+  if (!authUserId) {
     return null;
   }
 
@@ -2505,11 +2642,14 @@ export const listDiaryDayStatusesBetween = async (
   startDate: string,
   endDate: string,
 ): Promise<DBDiaryDayStatus[]> => {
-  let authUserId: string;
+  let authUserId: string | null;
 
   try {
     authUserId = await resolveSupabaseUserId(userExternalId);
   } catch {
+    return [];
+  }
+  if (!authUserId) {
     return [];
   }
 
@@ -2520,11 +2660,22 @@ export const listDiaryDayStatusesBetween = async (
 export const saveDiaryDayStatus = async (
   input: SaveDiaryDayStatusInput,
 ): Promise<DBDiaryDayStatus> => {
-  let authUserId: string;
+  let authUserId: string | null;
 
   try {
     authUserId = await resolveSupabaseUserId(input.userExternalId);
   } catch {
+    const now = new Date().toISOString();
+    return {
+      userExternalId: input.userExternalId,
+      date: input.date,
+      isComplete: input.isComplete,
+      completedAt: input.isComplete ? now : null,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+  if (!authUserId) {
     const now = new Date().toISOString();
     return {
       userExternalId: input.userExternalId,

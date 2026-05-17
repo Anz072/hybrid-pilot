@@ -18,7 +18,7 @@ const KEY_ADAPTIVE_RECOMMENDATION_SEEN = "adaptiveRecommendationSeen";
 const KEY_SHORTCUT_RECENTS = "shortcutRecents";
 const KEY_FOOD_RECENT_SEARCHES = "foodRecentSearches";
 
-export type AuthProvider = "local" | "google";
+export type AuthProvider = "local" | "google" | "email";
 
 export type OnboardingProfile = {
   goal: GoalType;
@@ -105,6 +105,13 @@ const getKv = async (key: string): Promise<string | null> => {
   return row?.value ?? null;
 };
 
+const removeKv = async (key: string): Promise<void> => {
+  await initDb();
+  const db = await getDb();
+
+  await db.runAsync(`DELETE FROM app_kv WHERE key = ?`, key);
+};
+
 export const setOnboardingComplete = async (value: boolean): Promise<void> => {
   await setKv(KEY_ONBOARDING_COMPLETE, JSON.stringify(value));
 };
@@ -121,6 +128,10 @@ export const saveLocalAccount = async (account: LocalAccount): Promise<void> => 
 export const getLocalAccount = async (): Promise<LocalAccount | null> => {
   const value = await getKv(KEY_LOCAL_ACCOUNT);
   return safeParse<LocalAccount>(value);
+};
+
+export const clearLocalAccount = async (): Promise<void> => {
+  await removeKv(KEY_LOCAL_ACCOUNT);
 };
 
 export const saveOnboardingProfile = async (profile: OnboardingProfile): Promise<void> => {

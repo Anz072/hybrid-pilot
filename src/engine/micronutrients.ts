@@ -302,7 +302,10 @@ export function getMicronutrientTargets(
   profile: UserMicronutrientProfile,
 ): MicronutrientTargetMap {
   const ageGroup = getMicronutrientAgeGroup(profile.age);
-  return MICRONUTRIENT_TARGETS.data[profile.sex][ageGroup];
+  return (
+    MICRONUTRIENT_TARGETS.data[profile.sex]?.[ageGroup] ??
+    MICRONUTRIENT_TARGETS.generic
+  );
 }
 
 export function getMicronutrientTarget(

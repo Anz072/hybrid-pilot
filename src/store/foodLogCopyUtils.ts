@@ -115,29 +115,41 @@ export const countFoodLogsByDuplicateKey = (
   return counts;
 };
 
-export const getFoodLogCopyPreview = (
+export const getFoodLogEntriesToCopy = (
   sourceEntries: DBUserFoodLogEntry[],
   destinationEntries: DBUserFoodLogEntry[],
-): FoodLogCopyResult => {
+): DBUserFoodLogEntry[] => {
   const remainingDestinationMatches = countFoodLogsByDuplicateKey(
     destinationEntries.map(toFoodLogDuplicateShape),
   );
-  let skippedDuplicates = 0;
 
-  for (const entry of sourceEntries) {
+  return sourceEntries.filter((entry) => {
     const key = buildFoodLogDuplicateKey(toFoodLogDuplicateShape(entry));
     const availableMatches = remainingDestinationMatches.get(key) ?? 0;
 
     if (availableMatches > 0) {
       remainingDestinationMatches.set(key, availableMatches - 1);
-      skippedDuplicates += 1;
+      return false;
     }
-  }
+
+    return true;
+  });
+};
+
+export const getFoodLogCopyPreview = (
+  sourceEntries: DBUserFoodLogEntry[],
+  destinationEntries: DBUserFoodLogEntry[],
+): FoodLogCopyResult => {
+  const entriesToCopy = getFoodLogEntriesToCopy(
+    sourceEntries,
+    destinationEntries,
+  );
+  const skippedDuplicates = sourceEntries.length - entriesToCopy.length;
 
   return {
     sourceCount: sourceEntries.length,
     destinationCount: destinationEntries.length,
-    copiedCount: Math.max(0, sourceEntries.length - skippedDuplicates),
+    copiedCount: entriesToCopy.length,
     skippedDuplicates,
   };
 };

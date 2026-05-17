@@ -19,23 +19,21 @@ import type {
   RouteProp,
 } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { CalendarIcon, ForkKnifeIcon } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import { DB } from "../../store/DB";
 import { useAppSelector } from "../../store/hooks";
+import FoodLogContextBar from "./FoodLogContextBar";
 import FoodScreenHeader from "./FoodScreenHeader";
 import PublicVisibilityCheckbox from "./PublicVisibilityCheckbox";
 import {
-  buildFoodLoggedAt,
   calculateQuickAddCaloriesFromMacros,
-  formatFoodLoggedTime,
   formatFoodMacro,
-  formatFoodShortDate,
   normalizePositiveFoodInput,
 } from "./foodUtils";
+import { resolveFoodLogContext } from "./foodLogContext";
 import { appColors } from "../../theme/colors";
 import { sharedStyleValues } from "../../theme/sharedStyles";
 
@@ -78,6 +76,39 @@ type CustomMealSaveMode = "save" | "save_and_add";
 
 const SERVING_PRESETS = [50, 100, 150];
 
+const getCustomMealDraftSignature = ({
+  calories,
+  carbs,
+  description,
+  fat,
+  isCaloriesManuallySet,
+  isPublic,
+  name,
+  protein,
+  servingSize,
+}: {
+  calories: string;
+  carbs: string;
+  description: string;
+  fat: string;
+  isCaloriesManuallySet: boolean;
+  isPublic: boolean;
+  name: string;
+  protein: string;
+  servingSize: string;
+}) =>
+  JSON.stringify({
+    calories: calories.trim(),
+    carbs: carbs.trim(),
+    description: description.trim(),
+    fat: fat.trim(),
+    isCaloriesManuallySet,
+    isPublic,
+    name: name.trim(),
+    protein: protein.trim(),
+    servingSize: servingSize.trim(),
+  });
+
 const CreateCustomFoodScreen = () => {
   const [name, setName] = React.useState("");
   const [description, setDescription] = React.useState("");
@@ -98,6 +129,9 @@ const CreateCustomFoodScreen = () => {
     null,
   );
   const [deleting, setDeleting] = React.useState(false);
+  const [formError, setFormError] = React.useState<string | null>(null);
+  const bypassUnsavedGuardRef = React.useRef(false);
+  const initialDraftSignatureRef = React.useRef<string | null>(null);
   const saving = saveMode != null;
 
   const user = useAppSelector((state) => state.user.currentUser);
@@ -106,24 +140,17 @@ const CreateCustomFoodScreen = () => {
   const insets = useSafeAreaInsets();
   const { contextLabel, date, loggedAt, mealType, mealId } = route.params;
   const isEditing = mealId != null;
-
-  const resolvedLoggedAt = React.useMemo(() => {
-    if (loggedAt) {
-      return loggedAt;
-    }
-
-    const now = new Date();
-    return buildFoodLoggedAt(date, now.getHours(), now.getMinutes());
-  }, [date, loggedAt]);
-
-  const resolvedContextLabel = React.useMemo(() => {
-    const trimmed = contextLabel?.trim();
-    if (trimmed) {
-      return trimmed;
-    }
-
-    return formatFoodLoggedTime(resolvedLoggedAt);
-  }, [contextLabel, resolvedLoggedAt]);
+  const foodLogContext = React.useMemo(
+    () =>
+      resolveFoodLogContext({
+        contextLabel,
+        date,
+        loggedAt,
+        mealType,
+      }),
+    [contextLabel, date, loggedAt, mealType],
+  );
+  const resolvedLoggedAt = foodLogContext.loggedAt;
 
   const trimmedName = name.trim();
   const trimmedDescription = description.trim();
@@ -179,6 +206,70 @@ const CreateCustomFoodScreen = () => {
     (user?.externalId != null &&
       loadedMealOwnerUserId != null &&
       loadedMealOwnerUserId === user.externalId);
+  const currentDraftSignature = React.useMemo(
+    () =>
+      getCustomMealDraftSignature({
+        calories,
+        carbs,
+        description,
+        fat,
+        isCaloriesManuallySet,
+        isPublic,
+        name,
+        protein,
+        servingSize,
+      }),
+    [
+      calories,
+      carbs,
+      description,
+      fat,
+      isCaloriesManuallySet,
+      isPublic,
+      name,
+      protein,
+      servingSize,
+    ],
+  );
+
+  React.useEffect(() => {
+    if (isEditing || initialDraftSignatureRef.current) {
+      return;
+    }
+
+    initialDraftSignatureRef.current = currentDraftSignature;
+  }, [currentDraftSignature, isEditing]);
+
+  const isDirty =
+    initialDraftSignatureRef.current != null &&
+    initialDraftSignatureRef.current !== currentDraftSignature;
+
+  React.useEffect(
+    () =>
+      navigation.addListener("beforeRemove", (event) => {
+        if (bypassUnsavedGuardRef.current || saving || deleting || !isDirty) {
+          return;
+        }
+
+        event.preventDefault();
+        Alert.alert(
+          "Discard custom meal changes?",
+          "Unsaved custom meal changes will be lost.",
+          [
+            { text: "Keep editing", style: "cancel" },
+            {
+              text: "Discard",
+              style: "destructive",
+              onPress: () => {
+                bypassUnsavedGuardRef.current = true;
+                navigation.dispatch(event.data.action);
+              },
+            },
+          ],
+        );
+      }),
+    [deleting, isDirty, navigation, saving],
+  );
 
   React.useEffect(() => {
     let cancelled = false;
@@ -222,37 +313,51 @@ const CreateCustomFoodScreen = () => {
           return;
         }
 
-        setLoadedMealOwnerUserId(ownerUserId);
-        setName(meal.name);
-        setDescription(
-          typeof payload?.description === "string" ? payload.description : "",
-        );
-        setServingSize(
+        const loadedDescription =
+          typeof payload?.description === "string" ? payload.description : "";
+        const loadedServingSize =
           Number.isFinite(meal.servingSizeValue ?? NaN)
             ? String(meal.servingSizeValue)
-            : "100",
-        );
-        setCalories(
-          Number.isFinite(meal.calories ?? NaN) ? String(meal.calories) : "0",
-        );
-        setProtein(
-          Number.isFinite(meal.proteinG ?? NaN) ? String(meal.proteinG) : "0",
-        );
-        setCarbs(
-          Number.isFinite(meal.carbsG ?? NaN) ? String(meal.carbsG) : "0",
-        );
-        setFat(Number.isFinite(meal.fatG ?? NaN) ? String(meal.fatG) : "0");
+            : "100";
+        const loadedCalories =
+          Number.isFinite(meal.calories ?? NaN) ? String(meal.calories) : "0";
+        const loadedProtein =
+          Number.isFinite(meal.proteinG ?? NaN) ? String(meal.proteinG) : "0";
+        const loadedCarbs =
+          Number.isFinite(meal.carbsG ?? NaN) ? String(meal.carbsG) : "0";
+        const loadedFat =
+          Number.isFinite(meal.fatG ?? NaN) ? String(meal.fatG) : "0";
         const loadedCalculatedCalories = calculateQuickAddCaloriesFromMacros({
           proteinG: meal.proteinG ?? 0,
           carbsG: meal.carbsG ?? 0,
           fatG: meal.fatG ?? 0,
         });
-        setIsCaloriesManuallySet(
+        const loadedIsCaloriesManuallySet =
           Number.isFinite(meal.calories ?? NaN) &&
-            (meal.calories ?? 0) > 0 &&
-            Math.abs((meal.calories ?? 0) - loadedCalculatedCalories) > 0.5,
-        );
+          (meal.calories ?? 0) > 0 &&
+          Math.abs((meal.calories ?? 0) - loadedCalculatedCalories) > 0.5;
+
+        setLoadedMealOwnerUserId(ownerUserId);
+        setName(meal.name);
+        setDescription(loadedDescription);
+        setServingSize(loadedServingSize);
+        setCalories(loadedCalories);
+        setProtein(loadedProtein);
+        setCarbs(loadedCarbs);
+        setFat(loadedFat);
+        setIsCaloriesManuallySet(loadedIsCaloriesManuallySet);
         setIsPublic(meal.isPublic);
+        initialDraftSignatureRef.current = getCustomMealDraftSignature({
+          calories: loadedCalories,
+          carbs: loadedCarbs,
+          description: loadedDescription,
+          fat: loadedFat,
+          isCaloriesManuallySet: loadedIsCaloriesManuallySet,
+          isPublic: meal.isPublic,
+          name: meal.name,
+          protein: loadedProtein,
+          servingSize: loadedServingSize,
+        });
       } catch (error) {
         if (!cancelled) {
           setMealLoadError(
@@ -274,10 +379,12 @@ const CreateCustomFoodScreen = () => {
   }, [isEditing, mealId, user?.externalId]);
 
   const handleServingBlur = React.useCallback(() => {
+    setFormError(null);
     setServingSize((current) => normalizePositiveFoodInput(current, 100));
   }, []);
 
   const handleCaloriesBlur = React.useCallback(() => {
+    setFormError(null);
     if (isCaloriesManuallySet) {
       setCalories((current) =>
         normalizePositiveFoodInput(current, requiredCaloriesFallback, 0),
@@ -333,8 +440,9 @@ const CreateCustomFoodScreen = () => {
         return;
       }
 
+      setFormError(null);
       if (!trimmedName) {
-        Alert.alert("Missing name", "Enter a custom meal name first.");
+        setFormError("Enter a custom meal name first.");
         return;
       }
 
@@ -346,8 +454,7 @@ const CreateCustomFoodScreen = () => {
           (value) => Number.isNaN(value) || value < 0,
         )
       ) {
-        Alert.alert(
-          "Invalid numbers",
+        setFormError(
           "Use a positive serving size and calories value. Macros can be zero, but they cannot be negative.",
         );
         return;
@@ -394,10 +501,11 @@ const CreateCustomFoodScreen = () => {
             date,
             loggedAt: resolvedLoggedAt,
             quantityG: parsedServing,
-            mealType: mealType ?? null,
+            mealType: foodLogContext.mealType,
           });
         }
 
+        bypassUnsavedGuardRef.current = true;
         closeAfterSave(mode);
       } catch (error) {
         Alert.alert(
@@ -418,7 +526,7 @@ const CreateCustomFoodScreen = () => {
       isPublic,
       loadedMealOwnerUserId,
       mealId,
-      mealType,
+      foodLogContext.mealType,
       parsedCarbs,
       parsedFat,
       parsedProtein,
@@ -452,6 +560,7 @@ const CreateCustomFoodScreen = () => {
               try {
                 setDeleting(true);
                 await DB.deleteUserCustomMeal(mealId);
+                bypassUnsavedGuardRef.current = true;
                 navigation.goBack();
               } catch (error) {
                 Alert.alert(
@@ -483,7 +592,10 @@ const CreateCustomFoodScreen = () => {
           placeholder="Chicken rice bowl"
           placeholderTextColor={appColors.textMuted}
           value={name}
-          onChangeText={setName}
+          onChangeText={(value) => {
+            setName(value);
+            setFormError(null);
+          }}
           autoFocus={!isEditing}
         />
 
@@ -496,7 +608,10 @@ const CreateCustomFoodScreen = () => {
             placeholder="100"
             placeholderTextColor={appColors.textMuted}
             value={servingSize}
-            onChangeText={setServingSize}
+            onChangeText={(value) => {
+              setServingSize(value);
+              setFormError(null);
+            }}
             onBlur={handleServingBlur}
             keyboardType="decimal-pad"
           />
@@ -508,7 +623,10 @@ const CreateCustomFoodScreen = () => {
           {SERVING_PRESETS.map((preset) => (
             <Pressable
               key={preset}
-              onPress={() => setServingSize(String(preset))}
+              onPress={() => {
+                setServingSize(String(preset));
+                setFormError(null);
+              }}
               style={({ pressed }) => [
                 styles.presetChip,
                 pressed && styles.cardPressed,
@@ -528,11 +646,20 @@ const CreateCustomFoodScreen = () => {
             placeholder="Optional notes, ingredients, or prep details"
             placeholderTextColor={appColors.textMuted}
             value={description}
-            onChangeText={setDescription}
+            onChangeText={(value) => {
+              setDescription(value);
+              setFormError(null);
+            }}
             multiline
             textAlignVertical="top"
           />
-          <PublicVisibilityCheckbox checked={isPublic} onChange={setIsPublic} />
+          <PublicVisibilityCheckbox
+            checked={isPublic}
+            onChange={(value) => {
+              setIsPublic(value);
+              setFormError(null);
+            }}
+          />
         </View>
       </View>
 
@@ -551,6 +678,7 @@ const CreateCustomFoodScreen = () => {
             onChangeText={(value) => {
               setCalories(value);
               setIsCaloriesManuallySet(value.trim().length > 0);
+              setFormError(null);
             }}
             onBlur={handleCaloriesBlur}
             keyboardType="decimal-pad"
@@ -561,6 +689,7 @@ const CreateCustomFoodScreen = () => {
               onPress={() => {
                 setCalories("");
                 setIsCaloriesManuallySet(false);
+                setFormError(null);
               }}
               style={({ pressed }) => [
                 styles.inlineQuietButton,
@@ -581,7 +710,10 @@ const CreateCustomFoodScreen = () => {
               placeholder="0"
               placeholderTextColor={appColors.textMuted}
               value={protein}
-              onChangeText={setProtein}
+              onChangeText={(value) => {
+                setProtein(value);
+                setFormError(null);
+              }}
               keyboardType="decimal-pad"
             />
           </View>
@@ -592,7 +724,10 @@ const CreateCustomFoodScreen = () => {
               placeholder="0"
               placeholderTextColor={appColors.textMuted}
               value={carbs}
-              onChangeText={setCarbs}
+              onChangeText={(value) => {
+                setCarbs(value);
+                setFormError(null);
+              }}
               keyboardType="decimal-pad"
             />
           </View>
@@ -603,7 +738,10 @@ const CreateCustomFoodScreen = () => {
               placeholder="0"
               placeholderTextColor={appColors.textMuted}
               value={fat}
-              onChangeText={setFat}
+              onChangeText={(value) => {
+                setFat(value);
+                setFormError(null);
+              }}
               keyboardType="decimal-pad"
             />
           </View>
@@ -614,9 +752,6 @@ const CreateCustomFoodScreen = () => {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.bgOrbTop} />
-      <View style={styles.bgOrbBottom} />
-
       <KeyboardAvoidingView
         style={styles.screen}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -632,9 +767,10 @@ const CreateCustomFoodScreen = () => {
           <FoodScreenHeader
             eyebrow="Custom Meal"
             title={isEditing ? "Edit custom meal" : "Create custom meal"}
-            subtitle={`${formatFoodShortDate(date)} | ${resolvedContextLabel}`}
+            subtitle={isEditing ? "Library item" : foodLogContext.subtitle}
             onBack={() => navigation.goBack()}
           />
+          {!isEditing ? <FoodLogContextBar context={foodLogContext} /> : null}
 
           {loadingMeal ? (
             <View style={styles.card}>
@@ -649,7 +785,12 @@ const CreateCustomFoodScreen = () => {
               <Text style={styles.sectionSubtitle}>{mealLoadError}</Text>
             </View>
           ) : (
-            renderEditor()
+            <>
+              {renderEditor()}
+              {formError ? (
+                <Text style={styles.formError}>{formError}</Text>
+              ) : null}
+            </>
           )}
         </KeyboardAwareScrollView>
 
@@ -717,7 +858,7 @@ const CreateCustomFoodScreen = () => {
                       : "Saving..."
                     : isEditing
                       ? "Save changes"
-                      : "Save"}
+                      : "Save only"}
                 </Text>
               </Pressable>
             </View>
@@ -737,7 +878,7 @@ const CreateCustomFoodScreen = () => {
                 <Text style={styles.primaryButtonText}>
                   {saving && saveMode === "save_and_add"
                     ? "Saving and adding..."
-                    : "Save & Add"}
+                    : "Save and add"}
                 </Text>
               </Pressable>
             ) : null}
@@ -833,6 +974,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
     marginTop: 8,
+  },
+  formError: {
+    color: appColors.danger700,
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 17,
+    marginTop: 2,
+    paddingHorizontal: 2,
   },
   inlineQuietButton: {
     alignSelf: "flex-start",

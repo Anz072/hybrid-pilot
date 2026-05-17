@@ -29,16 +29,19 @@ import { DB } from "../../store/DB";
 import type { DBFoodItem, DBUser } from "../../store/DB_TYPES";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import FoodBarcodeScannerModal from "./FoodBarcodeScannerModal";
+import FoodLogContextBar from "./FoodLogContextBar";
 import type { ScannedFoodLookupResult } from "./FoodBarcodeScannerShared";
 import {
-  buildFoodLoggedAt,
   formatFoodItemServing,
-  formatFoodLoggedTime,
   formatFoodMacro,
   formatFoodNumber,
   formatFoodSourceLabel,
   getFoodDefaultLogAmount,
 } from "./foodUtils";
+import {
+  resolveFoodLogContext,
+  toFoodLogRouteParams,
+} from "./foodLogContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   getFoodRecentSearches,
@@ -111,15 +114,15 @@ const SEARCH_RESULT_CATEGORY_META: Record<
 > = {
   custom_foods: {
     title: "Custom Foods",
-    subtitle: "Saved custom foods and manual entries first.",
+    subtitle: "Saved by you.",
   },
   common_foods: {
     title: "Common Foods",
-    subtitle: "Generic foods without a brand.",
+    subtitle: "Generic matches.",
   },
   branded_foods: {
     title: "Branded Foods",
-    subtitle: "Packaged and brand-specific matches.",
+    subtitle: "Packaged matches.",
   },
 };
 
@@ -352,7 +355,10 @@ const AddFoodScreen = () => {
   const [isUsingLocalSearchOnly, setIsUsingLocalSearchOnly] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [searchMode, setSearchMode] = useState<FoodSearchMode>("all");
-  const [quickLoggingKey, setQuickLoggingKey] = useState<string | null>(null);
+  const [quickLoggingKeys, setQuickLoggingKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const quickLoggingKeysRef = React.useRef(new Set<string>());
   const searchCacheRef = React.useRef(new Map<string, SearchFoodResult[]>());
   const localOnlySearchCacheRef = React.useRef(new Set<string>());
   const lastSavedSearchRef = React.useRef<string | null>(null);
@@ -639,66 +645,52 @@ const AddFoodScreen = () => {
     [customMeals],
   );
 
-  const resolvedLoggedAt = useMemo(() => {
-    if (loggedAt) {
-      return loggedAt;
-    }
-
-    const now = new Date();
-    return buildFoodLoggedAt(date, now.getHours(), now.getMinutes());
-  }, [date, loggedAt]);
-
-  const resolvedContextLabel = useMemo(() => {
-    const trimmed = contextLabel?.trim();
-    if (trimmed) {
-      return trimmed;
-    }
-
-    return formatFoodLoggedTime(resolvedLoggedAt);
-  }, [contextLabel, resolvedLoggedAt]);
+  const foodLogContext = useMemo(
+    () =>
+      resolveFoodLogContext({
+        contextLabel,
+        date,
+        loggedAt,
+        mealType,
+      }),
+    [contextLabel, date, loggedAt, mealType],
+  );
+  const foodLogRouteParams = useMemo(
+    () => toFoodLogRouteParams(foodLogContext),
+    [foodLogContext],
+  );
+  const resolvedContextLabel = foodLogContext.contextLabel;
 
   const handleScannedFoodResolved = useCallback(
     (result: ScannedFoodLookupResult) => {
       setScannerVisible(false);
       navigation.navigate("ScannedFood", {
+        ...foodLogRouteParams,
         foodId: result.foodId,
         barcode: result.barcode,
         scanStatus: result.status,
-        contextLabel: resolvedContextLabel,
-        date,
-        loggedAt: resolvedLoggedAt,
-        mealType,
       });
     },
-    [date, mealType, navigation, resolvedContextLabel, resolvedLoggedAt],
+    [foodLogRouteParams, navigation],
   );
 
   const openCreateCustomMeal = useCallback(() => {
     navigation.navigate("CreateCustomFood", {
-      contextLabel: resolvedContextLabel,
-      date,
-      loggedAt: resolvedLoggedAt,
-      mealType,
+      ...foodLogRouteParams,
     });
-  }, [date, mealType, navigation, resolvedContextLabel, resolvedLoggedAt]);
+  }, [foodLogRouteParams, navigation]);
 
   const openQuickAddFood = useCallback(() => {
     navigation.navigate("QuickAddFood", {
-      contextLabel: resolvedContextLabel,
-      date,
-      loggedAt: resolvedLoggedAt,
-      mealType,
+      ...foodLogRouteParams,
     });
-  }, [date, mealType, navigation, resolvedContextLabel, resolvedLoggedAt]);
+  }, [foodLogRouteParams, navigation]);
 
   const openCreateRecipe = useCallback(() => {
     navigation.navigate("CreateRecipe", {
-      contextLabel: resolvedContextLabel,
-      date,
-      loggedAt: resolvedLoggedAt,
-      mealType,
+      ...foodLogRouteParams,
     });
-  }, [date, mealType, navigation, resolvedContextLabel, resolvedLoggedAt]);
+  }, [foodLogRouteParams, navigation]);
 
   const openRecipeEditor = useCallback(
     (food: SearchFoodResult) => {
@@ -713,14 +705,11 @@ const AddFoodScreen = () => {
       }
 
       navigation.navigate("CreateRecipe", {
-        contextLabel: resolvedContextLabel,
-        date,
-        loggedAt: resolvedLoggedAt,
-        mealType,
+        ...foodLogRouteParams,
         recipeId,
       });
     },
-    [date, mealType, navigation, resolvedContextLabel, resolvedLoggedAt],
+    [foodLogRouteParams, navigation],
   );
 
   const openCustomMealEditor = useCallback(
@@ -736,14 +725,11 @@ const AddFoodScreen = () => {
       }
 
       navigation.navigate("CreateCustomFood", {
-        contextLabel: resolvedContextLabel,
-        date,
-        loggedAt: resolvedLoggedAt,
-        mealType,
+        ...foodLogRouteParams,
         mealId,
       });
     },
-    [date, mealType, navigation, resolvedContextLabel, resolvedLoggedAt],
+    [foodLogRouteParams, navigation],
   );
 
   const openFoodEditor = async (food: SearchFoodResult) => {
@@ -757,11 +743,8 @@ const AddFoodScreen = () => {
 
     const foodId = await persistFoodIfNeeded(food);
     navigation.navigate("ScannedFood", {
+      ...foodLogRouteParams,
       foodId,
-      date,
-      loggedAt: resolvedLoggedAt,
-      mealType,
-      contextLabel: resolvedContextLabel,
     });
   };
 
@@ -798,26 +781,36 @@ const AddFoodScreen = () => {
       return;
     }
 
-    if (quickLoggingKey) {
+    if (quickLoggingKeysRef.current.has(food.key)) {
       return;
     }
 
     try {
-      setQuickLoggingKey(food.key);
+      quickLoggingKeysRef.current.add(food.key);
+      setQuickLoggingKeys((current) => {
+        const next = new Set(current);
+        next.add(food.key);
+        return next;
+      });
       const foodId = await persistFoodIfNeeded(food);
       await DB.addUserFoodLog({
         userExternalId: user.externalId,
         foodId,
-        date,
-        loggedAt: resolvedLoggedAt,
+        date: foodLogContext.date,
+        loggedAt: foodLogContext.loggedAt,
         quantityG: getFoodDefaultLogAmount(food),
-        mealType,
+        mealType: foodLogContext.mealType,
       });
       navigation.goBack();
     } catch {
       Alert.alert("Could not log food", "Please review the food and try again.");
     } finally {
-      setQuickLoggingKey(null);
+      quickLoggingKeysRef.current.delete(food.key);
+      setQuickLoggingKeys((current) => {
+        const next = new Set(current);
+        next.delete(food.key);
+        return next;
+      });
     }
   };
 
@@ -869,7 +862,7 @@ const AddFoodScreen = () => {
     const isLibraryItem = isRecipe || isCustomMeal;
     const isOwnedLibraryItem =
       isLibraryItem && isOwnedLibraryResult(food, user?.externalId);
-    const isQuickLogging = quickLoggingKey === food.key;
+    const isQuickLogging = quickLoggingKeys.has(food.key);
     const defaultAmount = formatFoodItemServing(food);
     const sourceLabel = getLibraryBadgeLabel(food);
 
@@ -880,22 +873,22 @@ const AddFoodScreen = () => {
           onPress={() => void openFoodEditor(food)}
         >
           <View style={styles.foodTopRow}>
-            <View style={styles.foodBadgeRow}>
-              <View style={styles.foodBadge}>
-                <Text style={styles.foodBadgeText}>{sourceLabel}</Text>
-              </View>
-            </View>
+            <Text style={styles.foodName} numberOfLines={2}>
+              {food.name}
+            </Text>
             <Text style={styles.foodCalories}>
               {formatFoodNumber(food.calories, " kcal")}
             </Text>
           </View>
-          <Text style={styles.foodName} numberOfLines={2}>
-            {food.name}
-          </Text>
-          <Text style={styles.slate300} numberOfLines={1}>
-            {food.brand ? `${food.brand} | ` : ""}
-            {defaultAmount} default
-          </Text>
+          <View style={styles.foodMetaRow}>
+            <View style={styles.foodBadge}>
+              <Text style={styles.foodBadgeText}>{sourceLabel}</Text>
+            </View>
+            <Text style={styles.slate300} numberOfLines={1}>
+              {food.brand ? `${food.brand} | ` : ""}
+              {defaultAmount}
+            </Text>
+          </View>
           <Text style={styles.foodMacroText}>
             {formatFoodMacro(food.proteinG, "P")} |{" "}
             {formatFoodMacro(food.carbsG, "C")} |{" "}
@@ -964,7 +957,10 @@ const AddFoodScreen = () => {
             {isQuickLogging ? (
               <ActivityIndicator color={appColors.white} size="small" />
             ) : (
-              <LightningIcon size={18} color={appColors.white} weight="fill" />
+              <>
+                <LightningIcon size={16} color={appColors.white} weight="fill" />
+                <Text style={styles.quickLogText}>Log</Text>
+              </>
             )}
           </Pressable>
         </View>
@@ -1146,18 +1142,7 @@ const AddFoodScreen = () => {
               </Text>
             </Pressable>
           </View>
-          <View style={styles.contextRow}>
-            <View style={styles.contextPill}>
-              <Text style={styles.contextPillText}>
-                For {resolvedContextLabel}
-              </Text>
-            </View>
-            {mealType ? (
-              <View style={styles.contextPill}>
-                <Text style={styles.contextPillText}>{mealType}</Text>
-              </View>
-            ) : null}
-          </View>
+          <FoodLogContextBar context={foodLogContext} />
           <View style={styles.searchRow}>
             <View style={styles.searchInputWrap}>
               <MagnifyingGlassIcon
@@ -1190,22 +1175,22 @@ const AddFoodScreen = () => {
             {searchMode === "recipes"
               ? query.trim()
                 ? isSearching
-                  ? "Searching your recipes and public recipes..."
-                  : `${activeResults.length} recipes match this search.`
-                : "Browse saved recipes, then tap the lightning button to log one serving."
+                  ? "Searching recipes..."
+                  : `${activeResults.length} recipes`
+                : "Saved and public recipes."
               : searchMode === "custom_meals"
                 ? query.trim()
                   ? isSearching
-                    ? "Searching your custom meals and public custom meals..."
-                    : `${activeResults.length} custom meals match this search.`
-                  : "Browse saved custom meals, then tap the lightning button to log the default serving."
+                    ? "Searching meals..."
+                    : `${activeResults.length} meals`
+                  : "Saved and public meals."
               : query.trim()
                 ? isSearching
-                  ? "Searching your foods and USDA branded + generic foods..."
+                  ? "Searching foods..."
                   : activeResults.length > 0
-                    ? `${activeResults.length} matches grouped into custom foods, common foods, and branded foods.`
-                    : "No foods matched yet. Try a broader name or create a custom meal."
-                : "Frequent foods are ready for one-tap logging. Tap a row to edit amount."}
+                    ? `${activeResults.length} results`
+                    : "No matches yet."
+                : "Frequent foods ready to log."}
           </Text>
           {query.trim() && isUsingLocalSearchOnly && searchMode === "all" ? (
             <View style={styles.searchNotice}>
@@ -1460,7 +1445,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: appColors.borderStrong,
     borderRadius: 999,
-    minHeight: 38,
+    minHeight: 44,
     paddingVertical: 9,
   },
   searchModePillActive: {
@@ -1733,7 +1718,7 @@ const styles = StyleSheet.create({
   foodCard: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
     borderRadius: 8,
     backgroundColor: appColors.surfaceCardAlt,
     borderWidth: 1,
@@ -1746,10 +1731,16 @@ const styles = StyleSheet.create({
   },
   foodTopRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     gap: 8,
-    marginBottom: 6,
+    marginBottom: 7,
+  },
+  foodMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    marginBottom: 5,
   },
   foodBadgeRow: {
     flexDirection: "row",
@@ -1771,14 +1762,18 @@ const styles = StyleSheet.create({
   },
   foodCalories: {
     color: appColors.textPrimary,
-    fontSize: 12,
-    fontWeight: "800",
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: "900",
+    minWidth: 76,
+    textAlign: "right",
   },
   foodName: {
+    flex: 1,
     color: appColors.textPrimary,
-    fontSize: 14,
-    fontWeight: "800",
-    marginBottom: 3,
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: "900",
   },
   slate300: {
     color: appColors.textSecondary,
@@ -1794,11 +1789,11 @@ const styles = StyleSheet.create({
   foodActionColumn: {
     justifyContent: "center",
     alignItems: "center",
-    gap: 6,
+    gap: 8,
   },
   iconAction: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 999,
@@ -1863,13 +1858,20 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   quickLogAction: {
-    width: 44,
+    minWidth: 70,
     height: 44,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 999,
     backgroundColor: appColors.brand700,
+    gap: 5,
+    paddingHorizontal: 12,
+  },
+  quickLogText: {
+    color: appColors.white,
+    fontSize: 12,
+    fontWeight: "900",
   },
   primaryActionLoading: {
     opacity: 0.8,

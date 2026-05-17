@@ -34,9 +34,6 @@ const SuccessScreen = ({ onFinish, route }: Props) => {
       contentInsetAdjustmentBehavior="automatic"
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.bgOrbTop} />
-      <View style={styles.bgOrbBottom} />
-
       <View style={styles.badge}>
         <CheckCircleIcon size={34} color={appColors.success600} weight="fill" />
       </View>

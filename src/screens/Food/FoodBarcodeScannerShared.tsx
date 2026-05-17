@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { XIcon } from "phosphor-react-native";
+import { BarcodeIcon, KeyboardIcon, XIcon } from "phosphor-react-native";
 import { DB } from "../../store/DB";
 import { API } from "../../API/apiCaller";
 import { appColors } from "../../theme/colors";
@@ -344,6 +344,9 @@ export const FoodBarcodeScannerScaffold = ({
   scannedCode,
 }: FoodBarcodeScannerScaffoldProps) => {
   const insets = useSafeAreaInsets();
+  const [scannerMode, setScannerMode] = React.useState<"camera" | "manual">(
+    "camera",
+  );
   const [manualBarcode, setManualBarcode] = React.useState("");
   const [manualBarcodeError, setManualBarcodeError] = React.useState<
     string | null
@@ -379,6 +382,7 @@ export const FoodBarcodeScannerScaffold = ({
 
     setManualBarcode("");
     setManualBarcodeError(null);
+    setScannerMode("camera");
   }, [visible]);
 
   const handleManualBarcodeSubmit = React.useCallback(async () => {
@@ -402,6 +406,8 @@ export const FoodBarcodeScannerScaffold = ({
     }
   }, [manualBarcode, onManualBarcodeSubmit]);
 
+  const isManualMode = scannerMode === "manual";
+
   return (
     <Modal
       visible={visible}
@@ -415,7 +421,15 @@ export const FoodBarcodeScannerScaffold = ({
         style={styles.screen}
         onLayout={() => reportFinderLayout()}
       >
-        {hasPermission ? (
+        {isManualMode ? (
+          <View style={styles.manualModeCanvas}>
+            <KeyboardIcon size={34} color={appColors.brand300} weight="bold" />
+            <Text style={styles.manualModeTitle}>Manual barcode entry</Text>
+            <Text style={styles.manualModeText}>
+              Camera is off. Enter the digits from the package label below.
+            </Text>
+          </View>
+        ) : hasPermission ? (
           isPreparing ? (
             <View style={styles.cameraFallback}>
               <ActivityIndicator size="small" color={appColors.white} />
@@ -466,7 +480,54 @@ export const FoodBarcodeScannerScaffold = ({
             pointerEvents="box-none"
           >
             <View style={styles.headerRow}>
-              <View style={styles.headerGroup} />
+              <View style={styles.headerGroup}>
+                <View style={styles.modeSwitch}>
+                  <Pressable
+                    onPress={() => setScannerMode("camera")}
+                    style={({ pressed }) => [
+                      styles.modeButton,
+                      !isManualMode && styles.modeButtonActive,
+                      pressed && styles.buttonPressed,
+                    ]}
+                  >
+                    <BarcodeIcon
+                      size={14}
+                      color={isManualMode ? appColors.slate300 : appColors.white}
+                      weight="bold"
+                    />
+                    <Text
+                      style={[
+                        styles.modeButtonText,
+                        !isManualMode && styles.modeButtonTextActive,
+                      ]}
+                    >
+                      Camera
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setScannerMode("manual")}
+                    style={({ pressed }) => [
+                      styles.modeButton,
+                      isManualMode && styles.modeButtonActive,
+                      pressed && styles.buttonPressed,
+                    ]}
+                  >
+                    <KeyboardIcon
+                      size={14}
+                      color={isManualMode ? appColors.white : appColors.slate300}
+                      weight="bold"
+                    />
+                    <Text
+                      style={[
+                        styles.modeButtonText,
+                        isManualMode && styles.modeButtonTextActive,
+                      ]}
+                    >
+                      Manual
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
               <Pressable
                 onPress={onClose}
                 style={({ pressed }) => [
@@ -479,20 +540,31 @@ export const FoodBarcodeScannerScaffold = ({
               </Pressable>
             </View>
 
-            <View style={styles.finderWrap} pointerEvents="none">
-              <View
-                ref={finderRef}
-                style={styles.finderFrame}
-                onLayout={() => reportFinderLayout()}
-              >
-                <View style={styles.scanLine} />
+            {!isManualMode ? (
+              <View style={styles.finderWrap} pointerEvents="none">
+                <View
+                  ref={finderRef}
+                  style={styles.finderFrame}
+                  onLayout={() => reportFinderLayout()}
+                >
+                  <View style={styles.scanLine} />
+                </View>
               </View>
-            </View>
+            ) : null}
 
-            <View style={styles.manualCard}>
-              <Text style={styles.manualTitle}>Scan or enter barcode</Text>
+            <View
+              style={[
+                styles.manualCard,
+                isManualMode && styles.manualCardFocused,
+              ]}
+            >
+              <Text style={styles.manualTitle}>
+                {isManualMode ? "Enter barcode" : "Scan or enter barcode"}
+              </Text>
               <Text style={styles.manualText}>
-                Type the EAN, UPC, or GTIN digits if the camera cannot catch the label.
+                {isManualMode
+                  ? "Type the EAN, UPC, or GTIN digits from the package."
+                  : "Switch to manual if the camera cannot catch the label."}
               </Text>
               <View style={styles.manualRow}>
                 <TextInput
@@ -593,6 +665,26 @@ export const styles = StyleSheet.create({
     gap: 10,
     backgroundColor: appColors.slate900,
   },
+  manualModeCanvas: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 28,
+    gap: 10,
+    backgroundColor: appColors.slate950,
+  },
+  manualModeTitle: {
+    color: appColors.slate50,
+    fontSize: 22,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  manualModeText: {
+    color: appColors.slate300,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
+  },
   fallbackTitle: {
     color: appColors.slate50,
     fontSize: 22,
@@ -656,6 +748,36 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     flexWrap: "wrap",
+  },
+  modeSwitch: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 999,
+    backgroundColor: appColors.surfaceOverlay,
+    borderWidth: 1,
+    borderColor: appColors.surfaceGhostStrong,
+    padding: 4,
+    gap: 4,
+  },
+  modeButton: {
+    minHeight: 36,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: 999,
+    paddingHorizontal: 11,
+  },
+  modeButtonActive: {
+    backgroundColor: appColors.brand700,
+  },
+  modeButtonText: {
+    color: appColors.slate300,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  modeButtonTextActive: {
+    color: appColors.white,
   },
   headerBadge: {
     borderRadius: 999,
@@ -753,6 +875,10 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: appColors.surfaceGhostStrong,
     padding: 16,
+  },
+  manualCardFocused: {
+    backgroundColor: "rgba(254, 249, 243, 0.08)",
+    borderColor: appColors.brand500,
   },
   manualTitle: {
     color: appColors.slate50,

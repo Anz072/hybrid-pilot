@@ -155,7 +155,6 @@ const FoodReadOnlyScreen = () => {
   if (loading) {
     return (
       <View style={styles.screen}>
-        <View style={styles.bgOrbTop} />
         <View style={styles.content}>
           <FoodScreenHeader
             eyebrow="Ingredient"
@@ -175,7 +174,6 @@ const FoodReadOnlyScreen = () => {
   if (!food || !serving) {
     return (
       <View style={styles.screen}>
-        <View style={styles.bgOrbTop} />
         <View style={styles.content}>
           <FoodScreenHeader
             eyebrow="Ingredient"
@@ -199,9 +197,6 @@ const FoodReadOnlyScreen = () => {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.bgOrbTop} />
-      <View style={styles.bgOrbBottom} />
-
       <ScrollView
         style={styles.screen}
         contentContainerStyle={[
@@ -319,7 +314,7 @@ const FoodReadOnlyScreen = () => {
 
         <Text style={styles.title}>Micronutrients</Text>
         {(
-          Object.entries(microTargets) as [
+          Object.entries(microTargets ?? MICRONUTRIENT_TARGETS.generic) as [
             OpenFoodMapMicronutrientKey,
             number,
           ][]

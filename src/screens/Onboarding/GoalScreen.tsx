@@ -47,8 +47,6 @@ const GoalScreen = ({ navigation }: Props) => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.bgOrbTop} />
-      <View style={styles.bgOrbBottom} />
       <OnboardingTopBar onBack={() => navigation.goBack()} stepLabel="Goal" />
       <View style={styles.headerWrap}>
         <Text style={styles.eyebrow}>Setup</Text>

@@ -18,7 +18,10 @@ import type {
   DBUserSettings,
   DBUserFoodLogEntry,
 } from "../../store/DB_TYPES";
-import { getFoodLogCopyPreview } from "../../store/foodLogCopyUtils";
+import {
+  getFoodLogEntriesToCopy,
+  getFoodLogCopyPreview,
+} from "../../store/foodLogCopyUtils";
 import {
   buildEffectiveCalorieTargetsForDates,
   getEffectiveCalorieTargetForDate,
@@ -31,7 +34,6 @@ import FoodDiaryMainStrip, {
 } from "./FoodDiaryMainStrip";
 import AdaptiveCaloriesBanner from "./AdaptiveCaloriesBanner";
 import FoodDiaryMoreSection from "./FoodDiaryMoreSection";
-import FoodDiaryQuickAdds from "./FoodDiaryQuickAdds";
 import type {
   FoodDiaryFavoriteFood,
   FoodDiaryHourBucket,
@@ -49,6 +51,10 @@ import {
   shiftFoodDate,
   sumLoggedNutrition,
 } from "./foodUtils";
+import {
+  resolveFoodLogContext,
+  toFoodLogRouteParams,
+} from "./foodLogContext";
 import { appColors } from "../../theme/colors";
 import {
   refreshAdaptiveRecommendationForUser,
@@ -87,6 +93,22 @@ const normalizeVisibleHours = (startHour: number, endHour: number) => {
 const formatEntryCountLabel = (count: number) =>
   `${count} ${count === 1 ? "entry" : "entries"}`;
 
+const getEntryLoggedHour = (entry: DBUserFoodLogEntry) =>
+  getFoodLoggedHour(entry.loggedAt ?? entry.createdAt);
+
+const buildCopiedLoggedAt = (
+  targetDateKey: string,
+  entry: DBUserFoodLogEntry,
+  fallbackHour: number,
+) => {
+  const sourceTimestamp = entry.loggedAt ?? entry.createdAt;
+  const parsed = new Date(sourceTimestamp);
+  const hour = Number.isFinite(parsed.getTime()) ? parsed.getHours() : fallbackHour;
+  const minute = Number.isFinite(parsed.getTime()) ? parsed.getMinutes() : 0;
+
+  return buildFoodLoggedAt(targetDateKey, hour, minute);
+};
+
 const shouldShowAdaptiveRecommendationBanner = (
   recommendation: DBAdaptiveCalorieRecommendation | null,
   lastSeenRecommendationId: number | null,
@@ -122,6 +144,8 @@ const FoodDiaryScreen = () => {
   >({});
   const [isDayCompleteLoading, setIsDayCompleteLoading] = useState(false);
   const [isCopyingYesterday, setIsCopyingYesterday] = useState(false);
+  const [isRepeatingYesterdayHour, setIsRepeatingYesterdayHour] =
+    useState(false);
   const [snackbar, setSnackbar] = useState<SnackbarState | null>(null);
   const [adaptiveRecommendation, setAdaptiveRecommendation] =
     useState<DBAdaptiveCalorieRecommendation | null>(null);
@@ -347,47 +371,60 @@ const FoodDiaryScreen = () => {
   }, [user?.externalId]);
 
   const hourBuckets = useMemo(() => {
-    const rows: FoodDiaryHourBucket[] = [];
+    const bucketHours = new Set<number>();
 
     for (let hour = visibleStartHour; hour <= visibleEndHour; hour += 1) {
+      bucketHours.add(hour);
+    }
+
+    if (isToday) {
+      bucketHours.add(currentClockHour);
+    }
+
+    return [...bucketHours].sort((left, right) => left - right).map((hour) => {
       const hourEntries = entries.filter(
         (entry) =>
           getFoodLoggedHour(entry.loggedAt ?? entry.createdAt) === hour,
       );
 
-      rows.push({
+      return {
         hour,
         entries: hourEntries,
         totals: sumLoggedNutrition(hourEntries),
-      });
-    }
+      };
+    });
+  }, [currentClockHour, entries, isToday, visibleEndHour, visibleStartHour]);
 
-    return rows;
-  }, [entries, visibleEndHour, visibleStartHour]);
+  const buildHourFoodLogRouteParams = useCallback(
+    (hour: number, minute = 0) =>
+      toFoodLogRouteParams(
+        resolveFoodLogContext({
+          contextLabel: formatFoodHourLabel(hour),
+          date: dateKey,
+          loggedAt: buildFoodLoggedAt(dateKey, hour, minute),
+          mealType: null,
+        }),
+      ),
+    [dateKey],
+  );
 
   const openAddFoodAtHour = useCallback(
     (hour: number) => {
       prefetchAddFoodStaticLists();
       navigation.navigate("AddFood", {
-        contextLabel: formatFoodHourLabel(hour),
-        date: dateKey,
-        loggedAt: buildFoodLoggedAt(dateKey, hour),
-        mealType: null,
+        ...buildHourFoodLogRouteParams(hour),
       });
     },
-    [dateKey, navigation],
+    [buildHourFoodLogRouteParams, navigation],
   );
 
   const openQuickAddAtHour = useCallback(
     (hour: number) => {
       navigation.navigate("QuickAddFood", {
-        contextLabel: formatFoodHourLabel(hour),
-        date: dateKey,
-        loggedAt: buildFoodLoggedAt(dateKey, hour),
-        mealType: null,
+        ...buildHourFoodLogRouteParams(hour),
       });
     },
-    [dateKey, navigation],
+    [buildHourFoodLogRouteParams, navigation],
   );
 
   const openFavoriteEditorAtHour = useCallback(
@@ -396,14 +433,11 @@ const FoodDiaryScreen = () => {
         isToday && new Date().getHours() === hour ? new Date().getMinutes() : 0;
 
       navigation.navigate("ScannedFood", {
+        ...buildHourFoodLogRouteParams(hour, minute),
         foodId: food.id,
-        date: dateKey,
-        loggedAt: buildFoodLoggedAt(dateKey, hour, minute),
-        mealType: null,
-        contextLabel: formatFoodHourLabel(hour),
       });
     },
-    [dateKey, isToday, navigation],
+    [buildHourFoodLogRouteParams, isToday, navigation],
   );
 
   const quickLogFavoriteAtHour = useCallback(
@@ -454,7 +488,6 @@ const FoodDiaryScreen = () => {
           proteinG: entry.proteinG,
           carbsG: entry.carbsG,
           fatG: entry.fatG,
-          alcoholG: entry.alcoholG ?? 0,
           systemCalculatedCalories: entry.systemCalculatedCalories,
           isEnergyManuallySet: entry.isEnergyManuallySet,
         });
@@ -552,6 +585,144 @@ const FoodDiaryScreen = () => {
     },
     [navigation],
   );
+
+  const copyEntryToDate = useCallback(
+    async (entry: DBUserFoodLogEntry, targetHour: number) => {
+      const loggedAt = buildCopiedLoggedAt(dateKey, entry, targetHour);
+
+      if (entry.entrySource === "quick_add") {
+        await DB.addQuickAddFoodLog({
+          userExternalId: entry.userExternalId,
+          date: dateKey,
+          loggedAt,
+          mealType: entry.mealType ?? null,
+          name: entry.quickAddName,
+          calories: entry.calories,
+          proteinG: entry.proteinG,
+          carbsG: entry.carbsG,
+          fatG: entry.fatG,
+          systemCalculatedCalories: entry.systemCalculatedCalories,
+          isEnergyManuallySet: entry.isEnergyManuallySet,
+        });
+        return;
+      }
+
+      if (entry.foodId == null) {
+        throw new Error("That food entry cannot be copied.");
+      }
+
+      await DB.addUserFoodLog({
+        userExternalId: entry.userExternalId,
+        foodId: entry.foodId,
+        date: dateKey,
+        loggedAt,
+        quantityG: entry.quantityG,
+        mealType: entry.mealType ?? null,
+      });
+    },
+    [dateKey],
+  );
+
+  const repeatYesterdayHour = useCallback(async () => {
+    if (!user || isRepeatingYesterdayHour) {
+      return;
+    }
+
+    const sourceDate = formatFoodDateKey(shiftFoodDate(selectedDate, -1));
+    const sourceDateLabel = formatFoodShortDate(parseFoodDateKey(sourceDate));
+    const targetDateLabel = formatFoodShortDate(selectedDate);
+    const hourLabel = formatFoodHourLabel(selectedHour);
+
+    try {
+      const [sourceEntries, destinationEntries] = await Promise.all([
+        DB.getUserFoodLogEntriesByDate(user.externalId, sourceDate),
+        DB.getUserFoodLogEntriesByDate(user.externalId, dateKey),
+      ]);
+      const sourceHourEntries = sourceEntries.filter(
+        (entry) => getEntryLoggedHour(entry) === selectedHour,
+      );
+      const destinationHourEntries = destinationEntries.filter(
+        (entry) => getEntryLoggedHour(entry) === selectedHour,
+      );
+      const preview = getFoodLogCopyPreview(
+        sourceHourEntries,
+        destinationHourEntries,
+      );
+
+      if (preview.sourceCount === 0) {
+        Alert.alert(
+          "Nothing to repeat",
+          `No food entries were logged around ${hourLabel} on ${sourceDateLabel}.`,
+        );
+        return;
+      }
+
+      if (preview.copiedCount === 0) {
+        Alert.alert(
+          "Already repeated",
+          `${targetDateLabel} already has matching ${formatEntryCountLabel(preview.sourceCount)} around ${hourLabel}. Duplicate protection will keep the diary unchanged.`,
+        );
+        return;
+      }
+
+      const confirmationMessage =
+        preview.destinationCount > 0
+          ? `${sourceDateLabel} has ${formatEntryCountLabel(preview.sourceCount)} around ${hourLabel}. ${targetDateLabel} already has ${formatEntryCountLabel(preview.destinationCount)} in that slot, so duplicate protection will skip ${formatEntryCountLabel(preview.skippedDuplicates)} and copy ${formatEntryCountLabel(preview.copiedCount)}.`
+          : `Repeat ${formatEntryCountLabel(preview.sourceCount)} from ${sourceDateLabel} at ${hourLabel}?`;
+
+      Alert.alert("Repeat this hour?", confirmationMessage, [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: `Repeat ${preview.copiedCount}`,
+          onPress: () => {
+            void (async () => {
+              try {
+                setIsRepeatingYesterdayHour(true);
+
+                const entriesToCopy = getFoodLogEntriesToCopy(
+                  sourceHourEntries,
+                  destinationHourEntries,
+                );
+
+                for (const entry of entriesToCopy) {
+                  await copyEntryToDate(entry, selectedHour);
+                }
+
+                await loadData();
+
+                setSnackbar({
+                  message: `Repeated ${formatEntryCountLabel(entriesToCopy.length)} at ${hourLabel}`,
+                });
+              } catch {
+                Alert.alert(
+                  "Could not repeat this hour",
+                  "Please try again.",
+                );
+              } finally {
+                setIsRepeatingYesterdayHour(false);
+              }
+            })();
+          },
+        },
+      ]);
+    } catch {
+      Alert.alert(
+        "Could not review yesterday",
+        "Please try again.",
+      );
+    }
+  }, [
+    copyEntryToDate,
+    dateKey,
+    isRepeatingYesterdayHour,
+    loadData,
+    selectedDate,
+    selectedHour,
+    user,
+  ]);
 
   const copyYesterday = useCallback(async () => {
     if (!user || isCopyingYesterday) {
@@ -733,49 +904,43 @@ const FoodDiaryScreen = () => {
           user={user}
           hourBuckets={hourBuckets}
           selectedHour={selectedHour}
-          onAddFood={openAddFoodAtHour}
-          onDeleteEntry={deleteEntry}
-          onEditEntry={editEntry}
-          onSelectHour={setSelectedHour}
-        />
-
-        <FoodDiaryQuickAdds
           favoriteFoods={favoriteFoods}
-          selectedHour={selectedHour}
+          isDayComplete={isSelectedDayComplete}
+          isDayCompleteLoading={isDayCompleteLoading}
+          onAddFood={openAddFoodAtHour}
           onAddFavorite={(food, hour) => {
             openFavoriteEditorAtHour(food, hour);
           }}
+          onDeleteEntry={deleteEntry}
+          onEditEntry={editEntry}
           onQuickLogFavorite={(food, hour) => {
             void quickLogFavoriteAtHour(food, hour);
+          }}
+          onSelectHour={setSelectedHour}
+          onToggleDayComplete={() => {
+            void toggleDayComplete();
           }}
         />
 
         <FoodDiaryMoreSection
-          isDayComplete={isSelectedDayComplete}
-          isDayCompleteLoading={isDayCompleteLoading}
           isCopyingYesterday={isCopyingYesterday}
+          isRepeatingYesterdayHour={isRepeatingYesterdayHour}
           selectedHour={selectedHour}
-          onToggleDayComplete={() => {
-            void toggleDayComplete();
-          }}
           onCopyYesterday={() => {
             void copyYesterday();
+          }}
+          onRepeatYesterdayHour={() => {
+            void repeatYesterdayHour();
           }}
           onQuickAddFood={() => openQuickAddAtHour(selectedHour)}
           onCreateRecipe={() =>
             navigation.navigate("CreateRecipe", {
-              contextLabel: formatFoodHourLabel(selectedHour),
-              date: dateKey,
-              loggedAt: buildFoodLoggedAt(dateKey, selectedHour),
-              mealType: null,
+              ...buildHourFoodLogRouteParams(selectedHour),
             })
           }
           onCreateCustomFood={() =>
             navigation.navigate("CreateCustomFood", {
-              contextLabel: formatFoodHourLabel(selectedHour),
-              date: dateKey,
-              loggedAt: buildFoodLoggedAt(dateKey, selectedHour),
-              mealType: null,
+              ...buildHourFoodLogRouteParams(selectedHour),
             })
           }
         />

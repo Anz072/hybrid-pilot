@@ -177,9 +177,6 @@ const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.orbTop} />
-      <View style={styles.orbBottom} />
-
       <KeyboardAwareScrollView
         style={styles.screen}
         contentContainerStyle={[

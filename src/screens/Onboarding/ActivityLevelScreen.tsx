@@ -80,8 +80,6 @@ const ActivityLevelScreen = ({ navigation, route }: Props) => {
       contentInsetAdjustmentBehavior="automatic"
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.bgOrbTop} />
-      <View style={styles.bgOrbBottom} />
       <OnboardingTopBar
         onBack={() => navigation.goBack()}
         stepLabel="Activity"

@@ -26,6 +26,7 @@ import {
 import {
   getGoogleDisplayName,
   signInWithGoogleViaSupabase,
+  signUpWithEmailPassword,
 } from "../../API/supabase/googleAuth";
 import { DB } from "../../store/DB";
 import { useAppDispatch } from "../../store/hooks";
@@ -50,11 +51,27 @@ import { appTypography } from "../../theme/typography";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "Account">;
 
+const normalizeEmail = (value: string) => value.trim().toLowerCase();
+
+const validateEmailPassword = (email: string, password: string) => {
+  if (!email.includes("@")) {
+    throw new Error("Enter a valid email address.");
+  }
+
+  if (password.length < 6) {
+    throw new Error("Password must be at least 6 characters.");
+  }
+};
+
 const AccountScreen = ({ navigation, route }: Props) => {
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const [displayName, setDisplayName] = useState("");
-  const [submissionMode, setSubmissionMode] = useState<"google" | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [submissionMode, setSubmissionMode] = useState<
+    "email" | "google" | null
+  >(null);
   const isSaving = submissionMode !== null;
 
   const completeOnboardingAccount = async (account: LocalAccount) => {
@@ -168,6 +185,62 @@ const AccountScreen = ({ navigation, route }: Props) => {
     }
   };
 
+  const handleCreateEmailAccount = async () => {
+    if (isSaving) {
+      return;
+    }
+
+    setSubmissionMode("email");
+
+    try {
+      if (!isSupabaseConfigured()) {
+        throw new Error(getSupabaseConfigError());
+      }
+
+      const normalizedEmail = normalizeEmail(email);
+      validateEmailPassword(normalizedEmail, password);
+
+      const resolvedDisplayName =
+        displayName.trim() || normalizedEmail.split("@")[0] || "Dribsnis User";
+      const session = await signUpWithEmailPassword({
+        displayName: resolvedDisplayName,
+        email: normalizedEmail,
+        password,
+      });
+
+      if (!session?.user) {
+        throw new Error(
+          "Supabase did not return an active session. For this test flow, turn off email confirmation in Supabase Auth and try again.",
+        );
+      }
+
+      const account: LocalAccount = {
+        id: session.user.id,
+        provider: "email",
+        displayName: resolvedDisplayName,
+        email: session.user.email ?? normalizedEmail,
+        birthdate: route.params.onboarding.bodyData.birthdate,
+        createdAt:
+          typeof session.user.created_at === "string" &&
+          session.user.created_at.length > 0
+            ? session.user.created_at
+            : new Date().toISOString(),
+      };
+
+      setDisplayName(account.displayName);
+      await completeOnboardingAccount(account);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Could not create your email account.";
+
+      Alert.alert("Email account failed", message);
+    } finally {
+      setSubmissionMode(null);
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -185,8 +258,8 @@ const AccountScreen = ({ navigation, route }: Props) => {
         <Text style={styles.eyebrow}>Final Step</Text>
         <Text style={styles.title}>Create your account</Text>
         <Text style={styles.subtitle}>
-          Finish by connecting your Google account. Dribsnis now requires a
-          Supabase-backed Google sign-in for registration and future logins.
+          Finish with a Supabase-backed email account, or connect Google in a
+          build where the native redirect is available.
         </Text>
 
         <OnboardingReviewCard
@@ -256,6 +329,71 @@ const AccountScreen = ({ navigation, route }: Props) => {
         />
 
         <View style={styles.card}>
+          <Text style={styles.label}>Name</Text>
+          <TextInput
+            value={displayName}
+            onChangeText={setDisplayName}
+            editable={!isSaving}
+            placeholder="Your name"
+            placeholderTextColor={appColors.textMuted}
+            style={styles.input}
+            returnKeyType="next"
+          />
+
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            editable={!isSaving}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+            placeholder="you@example.com"
+            placeholderTextColor={appColors.textMuted}
+            style={styles.input}
+            textContentType="emailAddress"
+            returnKeyType="next"
+          />
+
+          <Text style={styles.label}>Password</Text>
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            editable={!isSaving}
+            autoCapitalize="none"
+            autoCorrect={false}
+            secureTextEntry
+            placeholder="Minimum 6 characters"
+            placeholderTextColor={appColors.textMuted}
+            style={styles.input}
+            textContentType="newPassword"
+            returnKeyType="done"
+            onSubmitEditing={() => {
+              void handleCreateEmailAccount();
+            }}
+          />
+
+          <Pressable
+            disabled={isSaving}
+            onPress={() => {
+              void handleCreateEmailAccount();
+            }}
+            style={({ pressed }) => [
+              styles.emailButton,
+              isSaving && styles.googleButtonDisabled,
+              pressed && !isSaving && styles.googleButtonPressed,
+            ]}
+          >
+            {submissionMode === "email" ? (
+              <ActivityIndicator color={appColors.slate900} />
+            ) : null}
+            <Text style={styles.emailButtonText}>
+              {submissionMode === "email"
+                ? "Creating account..."
+                : "Sign Up With Email"}
+            </Text>
+          </Pressable>
+
           <Pressable
             disabled={isSaving}
             onPress={() => {
@@ -341,6 +479,21 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
     fontWeight: "600",
   },
+  emailButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    borderRadius: 8,
+    backgroundColor: appColors.slate50,
+    paddingHorizontal: 16,
+    paddingVertical: 18,
+    marginTop: 18,
+  },
+  emailButtonText: {
+    ...appTypography.button,
+    color: appColors.slate900,
+  },
   googleHint: {
     ...appTypography.bodySmall,
     color: appColors.slate600,
@@ -356,8 +509,8 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.brand600,
     paddingHorizontal: 16,
     paddingVertical: 24,
-    marginTop:12,
-    marginBottom: 64
+    marginTop: 12,
+    marginBottom: 64,
   },
   googleButtonDisabled: {
     opacity: 0.6,
@@ -372,4 +525,3 @@ const styles = StyleSheet.create({
 });
 
 export default AccountScreen;
-

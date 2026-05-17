@@ -6,9 +6,11 @@ import * as Linking from "expo-linking";
 import { DB } from "../../store/DB";
 import type { DBUser } from "../../store/DB_TYPES";
 import {
+  clearLocalAccount,
   saveLocalAccount,
   setOnboardingComplete,
 } from "../../storage/localStore";
+import { shouldUseExpoGoDevLocalStore } from "../../dev/expoGoDevAuth";
 import { getSupabaseClient } from "./client";
 
 export const GOOGLE_AUTH_SCHEME = "dribsnis";
@@ -137,7 +139,63 @@ export const signInWithGoogleViaSupabase =
     return createSessionFromRedirectUrl(winner.url);
   };
 
+export const signInWithEmailPassword = async ({
+  email,
+  password,
+}: {
+  email: string;
+  password: string;
+}): Promise<Session | null> => {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email.trim(),
+    password,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return data.session ?? null;
+};
+
+export const signUpWithEmailPassword = async ({
+  displayName,
+  email,
+  password,
+}: {
+  displayName?: string | null;
+  email: string;
+  password: string;
+}): Promise<Session | null> => {
+  const supabase = getSupabaseClient();
+  const normalizedDisplayName = displayName?.trim();
+  const { data, error } = await supabase.auth.signUp({
+    email: email.trim(),
+    password,
+    options: {
+      data: normalizedDisplayName
+        ? {
+            full_name: normalizedDisplayName,
+            name: normalizedDisplayName,
+          }
+        : undefined,
+    },
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return data.session ?? null;
+};
+
 export const signOutSupabaseSession = async (): Promise<void> => {
+  if (await shouldUseExpoGoDevLocalStore()) {
+    await clearLocalAccount();
+    return;
+  }
+
   const { error } = await getSupabaseClient().auth.signOut();
 
   if (error) {
@@ -164,18 +222,28 @@ export const getGoogleDisplayName = (user: User, fallback?: string | null) => {
   return "Google User";
 };
 
+export const getSupabaseDisplayName = (
+  user: User,
+  fallback?: string | null,
+) => {
+  const displayName = getGoogleDisplayName(user, fallback);
+  return displayName === "Google User" ? "Dribsnis User" : displayName;
+};
+
 type UpsertGoogleUserAccountOptions = {
   allowCreate?: boolean;
   markOnboardingComplete?: boolean;
   persistLocalAccount?: boolean;
 };
 
-export const upsertGoogleUserAccount = async (
+export const upsertSupabaseAuthUserAccount = async (
   user: User,
   options: UpsertGoogleUserAccountOptions = {},
 ): Promise<DBUser> => {
   const existingUser = await DB.getUserByExternalId(user.id);
-  const displayName = getGoogleDisplayName(user, existingUser?.displayName);
+  const displayName = getSupabaseDisplayName(user, existingUser?.displayName);
+  const provider =
+    user.app_metadata?.provider === "email" ? "email" : "google";
 
   if (!existingUser && options.allowCreate === false) {
     await getSupabaseClient().auth.signOut();
@@ -192,14 +260,14 @@ export const upsertGoogleUserAccount = async (
   const nextUser: DBUser = existingUser
     ? {
         ...existingUser,
-        provider: "google",
+        provider,
         displayName,
         email: user.email ?? existingUser.email,
       }
     : {
         id: 0,
         externalId: user.id,
-        provider: "google",
+        provider,
         displayName,
         createdAt,
         email: user.email ?? null,
@@ -239,3 +307,5 @@ export const upsertGoogleUserAccount = async (
 
   return resolvedUser;
 };
+
+export const upsertGoogleUserAccount = upsertSupabaseAuthUserAccount;

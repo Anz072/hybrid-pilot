@@ -47,6 +47,7 @@ type FoodEntryFormProps = {
   amountValue: string;
   detailsSubtitle?: string;
   detailsTitle?: string;
+  formError?: string | null;
   headerEyebrow: string;
   headerSubtitle?: string;
   headerTitle: string;
@@ -84,6 +85,7 @@ const FoodEntryForm = ({
   amountValue,
   detailsSubtitle = "Set the amount and slot before saving this food.",
   detailsTitle = "Log Details",
+  formError,
   headerEyebrow,
   headerSubtitle,
   headerTitle,
@@ -203,6 +205,7 @@ const FoodEntryForm = ({
         ) : (
           <View style={styles.slotRow}>{renderSlotContent()}</View>
         )}
+        {formError ? <Text style={styles.formError}>{formError}</Text> : null}
       </View>
 
       <View style={styles.card}>
@@ -368,6 +371,13 @@ const styles = StyleSheet.create({
     color: appColors.brand500,
     fontSize: 12,
     fontWeight: "800",
+  },
+  formError: {
+    color: appColors.danger700,
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 17,
+    marginTop: 10,
   },
   nutritionGrid: sharedStyleValues.nutritionGrid,
   nutritionCell: sharedStyleValues.nutritionCell,

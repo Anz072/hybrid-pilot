@@ -99,9 +99,6 @@ const PreferencesScreen = ({ navigation }: Props) => {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.orbTop} />
-      <View style={styles.orbBottom} />
-
       <ScrollView
         style={styles.screen}
         contentContainerStyle={[
@@ -114,10 +111,10 @@ const PreferencesScreen = ({ navigation }: Props) => {
         showsVerticalScrollIndicator={false}
       >
         <SettingsStackHeader
-          eyebrow="Preferences"
+          eyebrow="Diary"
           onBack={() => navigation.goBack()}
           subtitle="Set the visible Food Diary timeline range. Changes save automatically and apply the next time you open the diary."
-          title="Diary Preferences"
+          title="Diary settings"
         />
 
         {loading ? (

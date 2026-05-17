@@ -35,16 +35,26 @@ import {
   clearWeightGoal as clearWeightGoalLocal,
   getWeightGoal as getWeightGoalLocal,
   listWeightEntries as listWeightEntriesLocal,
+  saveWeightEntry as saveWeightEntryLocal,
+  saveWeightGoal as saveWeightGoalLocal,
+  softDeleteWeightEntry as softDeleteWeightEntryLocal,
 } from "./weightRepository";
 import {
   DAILY_CALORIE_OVERRIDE_COUNT,
   DEFAULT_FOOD_DIARY_END_HOUR,
   DEFAULT_FOOD_DIARY_START_HOUR,
   getUserSettings as getUserSettingsLocal,
+  saveUserSettings as saveUserSettingsLocal,
 } from "./userSettingsRepository";
 import {
   getUserByExternalId as getUserByExternalIdLocal,
+  upsertUser as upsertUserLocal,
 } from "./userRepository";
+import {
+  EXPO_GO_DEV_USER_ID,
+  isExpoGoDevUserId,
+  shouldUseExpoGoDevLocalStore,
+} from "../dev/expoGoDevAuth";
 
 const SUPABASE_USER_SETTINGS_TABLE = "user_settings";
 const SUPABASE_WEIGHT_ENTRIES_TABLE = "weight_entries";
@@ -321,7 +331,11 @@ const isLocalOnlyAccount = (user: Pick<DBUser, "externalId" | "provider">) =>
 
 const resolveSupabaseUserId = async (
   userExternalId?: string | null,
-) => {
+): Promise<string | null> => {
+  if (await shouldUseExpoGoDevLocalStore(userExternalId)) {
+    return null;
+  }
+
   const sessionUser = await requireSupabaseSessionUser(userExternalId);
   return sessionUser.id;
 };
@@ -790,17 +804,31 @@ const migrateLegacyWeightsToSupabase = async (
 };
 
 export const upsertUser = async (input: DBUser): Promise<void> => {
+  if (isExpoGoDevUserId(input.externalId)) {
+    await upsertUserLocal(input);
+    return;
+  }
+
   if (isLocalOnlyAccount(input)) {
     throw new Error("Local-only accounts are no longer supported.");
   }
 
-  await resolveSupabaseUserId(input.externalId);
+  const authUserId = await resolveSupabaseUserId(input.externalId);
+  if (!authUserId) {
+    await upsertUserLocal(input);
+    return;
+  }
+
   await upsertSupabaseProfile(buildSupabaseProfileInputFromDbUser(input));
 };
 
 export const getUserByExternalId = async (
   externalId: string,
 ): Promise<DBUser | null> => {
+  if (isExpoGoDevUserId(externalId)) {
+    return getUserByExternalIdLocal(externalId);
+  }
+
   const [localAccount, legacyUser, sessionUser] = await Promise.all([
     getLocalAccount(),
     getUserByExternalIdLocal(externalId),
@@ -834,6 +862,10 @@ export const getUserByExternalId = async (
 };
 
 export const getFirstUser = async (): Promise<DBUser | null> => {
+  if (await shouldUseExpoGoDevLocalStore()) {
+    return getUserByExternalIdLocal(EXPO_GO_DEV_USER_ID);
+  }
+
   const sessionUser = await getSupabaseSessionUser();
 
   if (!sessionUser?.id) {
@@ -847,6 +879,10 @@ export const getUserSettings = async (
   userExternalId: string,
 ): Promise<DBUserSettings | null> => {
   const authUserId = await resolveSupabaseUserId(userExternalId);
+  if (!authUserId) {
+    return getUserSettingsLocal(userExternalId);
+  }
+
   const remoteRow = await fetchSupabaseUserSettingsRow(authUserId);
   if (remoteRow) {
     return toDbUserSettings(remoteRow);
@@ -868,6 +904,11 @@ export const saveUserSettings = async (
   input: SaveUserSettingsInput,
 ): Promise<void> => {
   const authUserId = await resolveSupabaseUserId(input.userExternalId);
+  if (!authUserId) {
+    await saveUserSettingsLocal(input);
+    return;
+  }
+
   const legacySettings = await getUserSettingsLocal(input.userExternalId);
   await upsertSupabaseUserSettings({
     createdAt: legacySettings?.createdAt,
@@ -883,11 +924,14 @@ export const listAdaptiveCalorieRecommendations = async ({
 }: ListAdaptiveCalorieRecommendationsInput): Promise<
   DBAdaptiveCalorieRecommendation[]
 > => {
-  let authUserId: string;
+  let authUserId: string | null;
 
   try {
     authUserId = await resolveSupabaseUserId(userExternalId);
   } catch {
+    return [];
+  }
+  if (!authUserId) {
     return [];
   }
 
@@ -933,6 +977,34 @@ export const createAdaptiveCalorieRecommendation = async (
   const authUserId = await resolveSupabaseUserId(input.userExternalId);
   const now = new Date().toISOString();
   const status = input.status ?? "proposed";
+  if (!authUserId) {
+    return {
+      id: Date.now(),
+      userExternalId: input.userExternalId,
+      status,
+      algorithmVersion: normalizeOptionalText(input.algorithmVersion) ?? "v1",
+      windowStart: input.windowStart,
+      windowEnd: input.windowEnd,
+      confidence: input.confidence,
+      currentBaseCalories: input.currentBaseCalories ?? null,
+      recommendedBaseCalories: input.recommendedBaseCalories,
+      estimatedTdee: input.estimatedTdee,
+      recommendedDelta: input.recommendedDelta,
+      avgLoggedCalories: input.avgLoggedCalories,
+      completeDaysUsed: input.completeDaysUsed,
+      weighInsUsed: input.weighInsUsed,
+      trendStartKg: input.trendStartKg,
+      trendEndKg: input.trendEndKg,
+      observedWeeklyChangeKg: input.observedWeeklyChangeKg ?? null,
+      reason: input.reason,
+      inputSummary: input.inputSummary ?? null,
+      respondedAt: input.respondedAt ?? null,
+      appliedAt: input.appliedAt ?? null,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
   const supabase = getSupabaseClient();
 
   if (status === "proposed") {
@@ -1001,6 +1073,10 @@ export const updateAdaptiveCalorieRecommendation = async (
   input: UpdateAdaptiveCalorieRecommendationInput,
 ): Promise<DBAdaptiveCalorieRecommendation | null> => {
   const authUserId = await resolveSupabaseUserId(input.userExternalId);
+  if (!authUserId) {
+    return null;
+  }
+
   const updatePayload: Record<string, string | null> = {};
   const now = new Date().toISOString();
 
@@ -1053,6 +1129,10 @@ export const listWeightEntries = async (
   options: ListWeightEntriesOptions = {},
 ): Promise<DBWeightEntry[]> => {
   const authUserId = await resolveSupabaseUserId(userExternalId);
+  if (!authUserId) {
+    return listWeightEntriesLocal(userExternalId, options);
+  }
+
   let remoteRows = await fetchSupabaseWeightEntryRows(authUserId, options);
 
   if (remoteRows.length === 0) {
@@ -1080,6 +1160,18 @@ export const listWeightEntriesBetween = async (
   endDate: string,
 ): Promise<DBWeightEntry[]> => {
   const authUserId = await resolveSupabaseUserId(userExternalId);
+  if (!authUserId) {
+    const localEntries = await listWeightEntriesLocal(userExternalId, {
+      includeDeleted: false,
+      limit: 2000,
+    });
+
+    return localEntries.filter((entry) => {
+      const localDate = entry.measuredAtLocalIso.slice(0, 10);
+      return localDate >= startDate && localDate <= endDate;
+    });
+  }
+
   let remoteRows = await fetchSupabaseWeightEntryRows(authUserId, {
     includeDeleted: false,
     limit: 2000,
@@ -1122,6 +1214,10 @@ export const saveWeightEntry = async (
   input: SaveWeightEntryInput,
 ): Promise<DBWeightEntry> => {
   const authUserId = await resolveSupabaseUserId(input.userExternalId);
+  if (!authUserId) {
+    return saveWeightEntryLocal(input);
+  }
+
   const supabase = getSupabaseClient();
   const now = new Date().toISOString();
   const localDateKey = input.measuredAtLocalIso.slice(0, 10);
@@ -1205,6 +1301,10 @@ export const softDeleteWeightEntry = async (
   input: SoftDeleteWeightEntryInput,
 ): Promise<DBWeightEntry | null> => {
   const authUserId = await resolveSupabaseUserId(input.userExternalId);
+  if (!authUserId) {
+    return softDeleteWeightEntryLocal(input);
+  }
+
   const existing = await fetchSupabaseWeightEntryRowById(authUserId, input.id);
   if (!existing) {
     return null;
@@ -1243,6 +1343,10 @@ export const getWeightGoal = async (
   userExternalId: string,
 ): Promise<WeightEntryGoal | null> => {
   const authUserId = await resolveSupabaseUserId(userExternalId);
+  if (!authUserId) {
+    return getWeightGoalLocal(userExternalId);
+  }
+
   const remoteRow = await fetchSupabaseWeightGoalRow(authUserId);
   if (remoteRow) {
     return toDbWeightGoal(remoteRow);
@@ -1273,6 +1377,10 @@ export const saveWeightGoal = async (
   input: SaveWeightGoalInput,
 ): Promise<WeightEntryGoal> => {
   const authUserId = await resolveSupabaseUserId(input.userExternalId);
+  if (!authUserId) {
+    return saveWeightGoalLocal(input);
+  }
+
   const legacyGoal = await getWeightGoalLocal(input.userExternalId);
   return upsertSupabaseWeightGoal({
     createdAt: legacyGoal?.createdAt,
@@ -1283,6 +1391,11 @@ export const saveWeightGoal = async (
 
 export const clearWeightGoal = async (userExternalId: string): Promise<void> => {
   const authUserId = await resolveSupabaseUserId(userExternalId);
+  if (!authUserId) {
+    await clearWeightGoalLocal(userExternalId);
+    return;
+  }
+
   const supabase = getSupabaseClient();
   const { error } = await supabase
     .from(SUPABASE_WEIGHT_GOALS_TABLE)
@@ -1300,6 +1413,11 @@ export const clearAllWeightData = async (
   userExternalId: string,
 ): Promise<void> => {
   const authUserId = await resolveSupabaseUserId(userExternalId);
+  if (!authUserId) {
+    await clearAllWeightDataLocal(userExternalId);
+    return;
+  }
+
   const supabase = getSupabaseClient();
   const { error: entriesError } = await supabase
     .from(SUPABASE_WEIGHT_ENTRIES_TABLE)

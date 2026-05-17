@@ -37,7 +37,6 @@ import type { DBFoodItem } from "../../store/DB_TYPES";
 import FoodEntryForm from "./FoodEntryForm";
 import FoodScreenHeader from "./FoodScreenHeader";
 import {
-  buildFoodLoggedAt,
   formatFoodMacro,
   formatFoodLoggedTime,
   formatFoodNumber,
@@ -48,6 +47,7 @@ import {
   normalizePositiveFoodInput,
   type FoodNutritionTotals,
 } from "./foodUtils";
+import { resolveFoodLogContext } from "./foodLogContext";
 import { appColors } from "../../theme/colors";
 import { MacroBar } from "./FoodDiaryHeroCard";
 import { useAppSelector } from "../../store/hooks";
@@ -97,17 +97,21 @@ const ScannedFoodLogScreen = () => {
   const route = useRoute<ScannedFoodRoute>();
   const navigation = useNavigation<ScannedFoodNav>();
   const insets = useSafeAreaInsets();
-  const { barcode, date, foodId, loggedAt, mealType, scanStatus } =
+  const { barcode, contextLabel, date, foodId, loggedAt, mealType, scanStatus } =
     route.params;
   const isScannedFlow = scanStatus != null;
   const user = useAppSelector((state) => state.user.currentUser);
 
-  const microTargets = user
-    ? getMicronutrientTargets({
-        sex: String(user.gender) as MicronutrientSex,
-        age: getAgeFromBirthdateValue(user.birthdate) ?? 29,
-      })
-    : MICRONUTRIENT_TARGETS.generic;
+  const microTargets = React.useMemo(
+    () =>
+      user
+        ? getMicronutrientTargets({
+            sex: String(user.gender) as MicronutrientSex,
+            age: getAgeFromBirthdateValue(user.birthdate) ?? 29,
+          })
+        : MICRONUTRIENT_TARGETS.generic,
+    [user],
+  );
 
   const [food, setFood] = React.useState<DBFoodItem | null>(null);
   const [quantityValue, setQuantityValue] = React.useState("");
@@ -116,14 +120,18 @@ const ScannedFoodLogScreen = () => {
   const [showTimePicker, setShowTimePicker] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
-  const initialLoggedAt = React.useMemo(() => {
-    if (loggedAt) {
-      return loggedAt;
-    }
-
-    const now = new Date();
-    return buildFoodLoggedAt(date, now.getHours(), now.getMinutes());
-  }, [date, loggedAt]);
+  const [formError, setFormError] = React.useState<string | null>(null);
+  const foodLogContext = React.useMemo(
+    () =>
+      resolveFoodLogContext({
+        contextLabel,
+        date,
+        loggedAt,
+        mealType,
+      }),
+    [contextLabel, date, loggedAt, mealType],
+  );
+  const initialLoggedAt = foodLogContext.loggedAt;
   const [loggedAtDate, setLoggedAtDate] = React.useState(
     () => new Date(initialLoggedAt),
   );
@@ -184,6 +192,7 @@ const ScannedFoodLogScreen = () => {
       return;
     }
 
+    setFormError(null);
     setQuantityValue((current) =>
       normalizePositiveFoodInput(current, getFoodDefaultLogAmount(food)),
     );
@@ -299,14 +308,12 @@ const ScannedFoodLogScreen = () => {
     }
 
     if (!Number.isFinite(quantity) || quantity <= 0) {
-      Alert.alert(
-        "Invalid quantity",
-        "Enter a positive quantity before logging.",
-      );
+      setFormError("Enter a positive amount before logging.");
       return;
     }
 
     try {
+      setFormError(null);
       setSaving(true);
       await DB.addUserFoodLog({
         userExternalId: user.externalId,
@@ -325,7 +332,6 @@ const ScannedFoodLogScreen = () => {
   if (loading) {
     return (
       <View style={styles.screen}>
-        <View style={styles.bgOrbTop} />
         <View style={styles.content}>
           <FoodScreenHeader
             eyebrow={screenEyebrow}
@@ -349,7 +355,6 @@ const ScannedFoodLogScreen = () => {
   if (!food || !serving) {
     return (
       <View style={styles.screen}>
-        <View style={styles.bgOrbTop} />
         <View style={styles.content}>
           <FoodScreenHeader
             eyebrow={screenEyebrow}
@@ -377,9 +382,6 @@ const ScannedFoodLogScreen = () => {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.bgOrbTop} />
-      <View style={styles.bgOrbBottom} />
-
       <KeyboardAwareScrollView
         style={styles.screen}
         contentContainerStyle={[
@@ -433,7 +435,10 @@ const ScannedFoodLogScreen = () => {
           amountUnit={serving.unit}
           amountValue={quantityValue}
           detailsSubtitle="Set the amount, logged time, and slot before adding this food."
-          onChangeAmount={setQuantityValue}
+          onChangeAmount={(value) => {
+            setQuantityValue(value);
+            setFormError(null);
+          }}
           onAmountBlur={handleQuantityBlur}
           slot={{
             icon: (
@@ -449,7 +454,10 @@ const ScannedFoodLogScreen = () => {
             onPress: () => setShowTimePicker((current) => !current),
           }}
           labelValue={labelValue}
-          onChangeLabel={setLabelValue}
+          onChangeLabel={(value) => {
+            setLabelValue(value);
+            setFormError(null);
+          }}
           labelPlaceholder="Optional label"
           nutritionItems={[
             {
@@ -474,11 +482,12 @@ const ScannedFoodLogScreen = () => {
           }}
           primaryActionDisabled={saving}
           primaryActionLabel={saving ? "Adding..." : "Add to diary"}
+          formError={formError}
           showPrimaryAction={false}
         />
         <Text style={styles.title}>Micronutrients</Text>
         {(
-          Object.entries(microTargets) as [
+          Object.entries(microTargets ?? MICRONUTRIENT_TARGETS.generic) as [
             OpenFoodMapMicronutrientKey,
             number,
           ][]
@@ -584,4 +593,3 @@ const styles = StyleSheet.create({
 });
 
 export default ScannedFoodLogScreen;
-

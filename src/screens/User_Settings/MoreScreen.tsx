@@ -18,6 +18,7 @@ import {
   buildEffectiveCalorieTargetsForDates,
   getWeeklyCalorieBudget,
 } from "../../engine/calorieTargets";
+import { isDeveloperAccountEmail } from "../../dev/developerAccount";
 import {
   resolveGoalStrategy,
 } from "../../engine/goalStrategy";
@@ -98,6 +99,7 @@ const MoreScreen = () => {
   const [adaptiveRecommendationReady, setAdaptiveRecommendationReady] =
     React.useState(false);
   const weekDates = React.useMemo(() => buildCurrentWeekDates(new Date()), []);
+  const isDeveloperAccount = isDeveloperAccountEmail(user?.email);
 
   const loadSettings = React.useCallback(async () => {
     if (!user) {
@@ -153,9 +155,6 @@ const MoreScreen = () => {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.orbTop} />
-      <View style={styles.orbBottom} />
-
       <ScrollView
         style={styles.screen}
         contentContainerStyle={[
@@ -201,10 +200,9 @@ const MoreScreen = () => {
           values={weeklyValues}
         />
 
-        <Text style={styles.sectionTitle}>Insights</Text>
+        <Text style={styles.sectionTitle}>Reviews / Automation</Text>
         <View style={styles.sectionCard}>
           <MoreActionRow
-            description="Review average calories vs target, completed diary days, weight movement, adaptive status, and repeated foods."
             icon={
               <ChartLineUpIcon
                 size={18}
@@ -216,12 +214,29 @@ const MoreScreen = () => {
             title="Weekly review"
             value="Open"
           />
+          <MoreActionRow
+            icon={
+              <LightningIcon
+                size={18}
+                color={appColors.brand700}
+                weight="fill"
+              />
+            }
+            onPress={() => navigation.navigate("AdaptiveCaloriesSettingsScreen")}
+            title="Adaptive calories"
+            value={
+              settings?.adaptiveCaloriesEnabled
+                ? adaptiveRecommendationReady
+                  ? "Review ready"
+                  : "On"
+                : "Off"
+            }
+          />
         </View>
 
         <Text style={styles.sectionTitle}>Account</Text>
         <View style={styles.sectionCard}>
           <MoreActionRow
-            description="Review your synced account, update profile details, and sign out when needed."
             icon={
               <UserCircleIcon
                 size={18}
@@ -231,27 +246,13 @@ const MoreScreen = () => {
             }
             onPress={() => navigation.navigate("ProfileSettingsScreen")}
             title="Profile & account"
-            value={user?.email ?? user?.displayName ?? "Manage"}
-          />
-          <MoreActionRow
-            description="Tune the Food Diary timeline and other app-level preferences."
-            icon={
-              <SlidersHorizontalIcon
-                size={18}
-                color={appColors.brand700}
-                weight="fill"
-              />
-            }
-            onPress={() => navigation.navigate("PreferencesScreen")}
-            title="Preferences"
-            value={diaryHoursLabel}
+            value={user?.displayName ?? "Manage"}
           />
         </View>
 
-        <Text style={styles.sectionTitle}>User Settings</Text>
+        <Text style={styles.sectionTitle}>Targets</Text>
         <View style={styles.sectionCard}>
           <MoreActionRow
-            description="Manually change the base daily energy target and reset it back to automatic when needed."
             icon={
               <ForkKnifeIcon
                 size={18}
@@ -268,7 +269,6 @@ const MoreScreen = () => {
             }
           />
           <MoreActionRow
-            description="Update weight loss, maintain, or gain together with your activity baseline and rebuild the automatic fuel plan."
             icon={
               <TargetIcon
                 size={18}
@@ -283,7 +283,6 @@ const MoreScreen = () => {
             )}`}
           />
           <MoreActionRow
-            description="Choose whether calories should run at a light, normal, or aggressive deficit or surplus, or stay at maintenance."
             icon={
               <TargetIcon
                 size={18}
@@ -298,7 +297,6 @@ const MoreScreen = () => {
             )}
           />
           <MoreActionRow
-            description="Set how strongly your macro targets should bias toward protein grams per kilogram."
             icon={
               <BarbellIcon
                 size={18}
@@ -311,7 +309,6 @@ const MoreScreen = () => {
             value={formatProteinFocusLabel(user?.proteinFocus)}
           />
           <MoreActionRow
-            description="Keep your training profile aligned with what you actually do week to week."
             icon={
               <BarbellIcon
                 size={18}
@@ -324,7 +321,42 @@ const MoreScreen = () => {
             value={formatTrainingSummary(user?.trainingTypes)}
           />
           <MoreActionRow
-            description="Review every recipe you created in one compact list and open any of them straight in the editor."
+            icon={
+              <ForkKnifeIcon
+                size={18}
+                color={appColors.brand700}
+                weight="fill"
+              />
+            }
+            onPress={() => navigation.navigate("CalorieScheduleScreen")}
+            title="Daily calorie schedule"
+            value={
+              settings?.dailyCalorieOverrides?.some((item) => item != null)
+                ? "Custom"
+                : "Base only"
+            }
+          />
+        </View>
+
+        <Text style={styles.sectionTitle}>Diary</Text>
+        <View style={styles.sectionCard}>
+          <MoreActionRow
+            icon={
+              <SlidersHorizontalIcon
+                size={18}
+                color={appColors.brand700}
+                weight="fill"
+              />
+            }
+            onPress={() => navigation.navigate("PreferencesScreen")}
+            title="Diary settings"
+            value={diaryHoursLabel}
+          />
+        </View>
+
+        <Text style={styles.sectionTitle}>Food Library</Text>
+        <View style={styles.sectionCard}>
+          <MoreActionRow
             icon={
               <CookingPotIcon
                 size={18}
@@ -337,7 +369,6 @@ const MoreScreen = () => {
             value="Manage"
           />
           <MoreActionRow
-            description="Review every custom meal you created and jump straight into editing macros, serving size, or visibility."
             icon={
               <ForkKnifeIcon
                 size={18}
@@ -349,43 +380,27 @@ const MoreScreen = () => {
             title="Your custom meals"
             value="Manage"
           />
-          <MoreActionRow
-            description="Let completed diary days and your recent weight trend generate quiet calorie-target recommendations that you can review manually."
-            icon={
-              <LightningIcon
-                size={18}
-                color={appColors.brand700}
-                weight="fill"
-              />
-            }
-            onPress={() => navigation.navigate("AdaptiveCaloriesSettingsScreen")}
-            title="Adaptive calories"
-            value={
-              settings?.adaptiveCaloriesEnabled
-                ? adaptiveRecommendationReady
-                  ? "On / Review ready"
-                  : "On"
-                : "Off"
-            }
-          />
-          <MoreActionRow
-            description="Set different calorie targets for different weekdays while keeping the weekly budget visible."
-            icon={
-              <ForkKnifeIcon
-                size={18}
-                color={appColors.brand700}
-                weight="fill"
-              />
-            }
-            onPress={() => navigation.navigate("CalorieScheduleScreen")}
-            title="Daily calorie schedule"
-            value={
-              settings?.dailyCalorieOverrides?.some((item) => item != null)
-                ? "Custom schedule"
-                : "Base target only"
-            }
-          />
         </View>
+
+        {isDeveloperAccount ? (
+          <>
+            <Text style={styles.sectionTitle}>Developer</Text>
+            <View style={styles.sectionCard}>
+              <MoreActionRow
+                icon={
+                  <SlidersHorizontalIcon
+                    size={18}
+                    color={appColors.brand700}
+                    weight="fill"
+                  />
+                }
+                onPress={() => navigation.navigate("SettingsScreen")}
+                title="Debug tools"
+                value="Dev only"
+              />
+            </View>
+          </>
+        ) : null}
       </ScrollView>
     </View>
   );
@@ -485,6 +500,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    minHeight: 64,
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
@@ -514,7 +530,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 6,
     marginLeft: 8,
-    maxWidth: "45%",
+    maxWidth: "38%",
   },
   actionValue: {
     color: appColors.brand700,

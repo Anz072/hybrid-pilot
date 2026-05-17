@@ -23,7 +23,7 @@ import type {
 } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
-import { ClockIcon, FireIcon, PencilSimpleIcon } from "phosphor-react-native";
+import { FireIcon, PencilSimpleIcon } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
@@ -32,13 +32,13 @@ import type { DBUserFoodLogEntry } from "../../store/DB_TYPES";
 import { useAppSelector } from "../../store/hooks";
 import { appColors } from "../../theme/colors";
 import { sharedStyleValues } from "../../theme/sharedStyles";
+import FoodLogContextBar from "./FoodLogContextBar";
 import FoodScreenHeader from "./FoodScreenHeader";
 import {
-  buildFoodLoggedAt,
   calculateQuickAddCaloriesFromMacros,
-  formatFoodLoggedTime,
   normalizePositiveFoodInput,
 } from "./foodUtils";
+import { resolveFoodLogContext } from "./foodLogContext";
 
 type QuickAddRoute = RouteProp<FoodStackParamList, "QuickAddFood">;
 type QuickAddNav = CompositeNavigationProp<
@@ -79,20 +79,46 @@ const QuickAddFoodScreen = () => {
   const [nameValue, setNameValue] = React.useState("");
   const [showTimePicker, setShowTimePicker] = React.useState(false);
   const [isEnergyManuallySet, setIsEnergyManuallySet] = React.useState(false);
-  const resolvedLoggedAt = React.useMemo(() => {
-    if (route.params.loggedAt) {
-      return route.params.loggedAt;
-    }
-
-    const now = new Date();
-    return buildFoodLoggedAt(
-      route.params.date,
-      now.getHours(),
-      now.getMinutes(),
-    );
-  }, [route.params.date, route.params.loggedAt]);
+  const [formError, setFormError] = React.useState<string | null>(null);
+  const bypassUnsavedGuardRef = React.useRef(false);
+  const initialDraftSignatureRef = React.useRef<string | null>(null);
+  const routeFoodLogContext = React.useMemo(
+    () => resolveFoodLogContext(route.params),
+    [route.params],
+  );
+  const resolvedLoggedAt = routeFoodLogContext.loggedAt;
   const [loggedAtDate, setLoggedAtDate] = React.useState(
     () => new Date(resolvedLoggedAt),
+  );
+
+  const buildDraftSignature = React.useCallback(
+    ({
+      carbs,
+      energy,
+      fat,
+      isManual,
+      loggedAtIso,
+      name,
+      protein,
+    }: {
+      carbs: string;
+      energy: string;
+      fat: string;
+      isManual: boolean;
+      loggedAtIso: string;
+      name: string;
+      protein: string;
+    }) =>
+      JSON.stringify({
+        carbs: carbs.trim(),
+        energy: energy.trim(),
+        fat: fat.trim(),
+        isManual,
+        loggedAt: loggedAtIso,
+        name: name.trim(),
+        protein: protein.trim(),
+      }),
+    [],
   );
 
   React.useEffect(() => {
@@ -126,9 +152,16 @@ const QuickAddFoodScreen = () => {
         setFatValue(formatNumberInput(nextEntry.fatG));
         setCarbsValue(formatNumberInput(nextEntry.carbsG));
         setNameValue(nextEntry.quickAddName ?? "");
-        setIsEnergyManuallySet(
-          nextEntry.isEnergyManuallySet || (nextEntry.alcoholG ?? 0) > 0,
-        );
+        setIsEnergyManuallySet(nextEntry.isEnergyManuallySet);
+        initialDraftSignatureRef.current = buildDraftSignature({
+          carbs: formatNumberInput(nextEntry.carbsG),
+          energy: formatNumberInput(nextEntry.calories),
+          fat: formatNumberInput(nextEntry.fatG),
+          isManual: nextEntry.isEnergyManuallySet,
+          loggedAtIso: nextEntry.loggedAt,
+          name: nextEntry.quickAddName ?? "",
+          protein: formatNumberInput(nextEntry.proteinG),
+        });
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -141,7 +174,7 @@ const QuickAddFoodScreen = () => {
     return () => {
       cancelled = true;
     };
-  }, [route.params.entryId]);
+  }, [buildDraftSignature, route.params.entryId]);
 
   const proteinG = React.useMemo(
     () => toSafeNumber(proteinValue),
@@ -181,6 +214,76 @@ const QuickAddFoodScreen = () => {
   const helperText = isEnergyManuallySet
     ? `System calculates ${macroCalculatedCalories.toFixed(0)} kcal from macros.`
     : `Macro sum is ${macroCalculatedCalories.toFixed(0)} kcal.`;
+  const activeFoodLogContext = React.useMemo(
+    () =>
+      resolveFoodLogContext({
+        date: route.params.date,
+        loggedAt: loggedAtDate.toISOString(),
+        mealType: route.params.mealType ?? entry?.mealType ?? null,
+      }),
+    [entry?.mealType, loggedAtDate, route.params.date, route.params.mealType],
+  );
+  const currentDraftSignature = React.useMemo(
+    () =>
+      buildDraftSignature({
+        carbs: carbsValue,
+        energy: energyValue,
+        fat: fatValue,
+        isManual: isEnergyManuallySet,
+        loggedAtIso: loggedAtDate.toISOString(),
+        name: nameValue,
+        protein: proteinValue,
+      }),
+    [
+      buildDraftSignature,
+      carbsValue,
+      energyValue,
+      fatValue,
+      isEnergyManuallySet,
+      loggedAtDate,
+      nameValue,
+      proteinValue,
+    ],
+  );
+
+  React.useEffect(() => {
+    if (route.params.entryId || initialDraftSignatureRef.current) {
+      return;
+    }
+
+    initialDraftSignatureRef.current = currentDraftSignature;
+  }, [currentDraftSignature, route.params.entryId]);
+
+  const isDirty =
+    initialDraftSignatureRef.current != null &&
+    initialDraftSignatureRef.current !== currentDraftSignature;
+
+  React.useEffect(
+    () =>
+      navigation.addListener("beforeRemove", (event) => {
+        if (bypassUnsavedGuardRef.current || saving || !isDirty) {
+          return;
+        }
+
+        event.preventDefault();
+        Alert.alert(
+          "Discard quick add?",
+          "Unsaved quick-add changes will be lost.",
+          [
+            { text: "Keep editing", style: "cancel" },
+            {
+              text: "Discard",
+              style: "destructive",
+              onPress: () => {
+                bypassUnsavedGuardRef.current = true;
+                navigation.dispatch(event.data.action);
+              },
+            },
+          ],
+        );
+      }),
+    [isDirty, navigation, saving],
+  );
 
   const closeAfterSave = React.useCallback(() => {
     if (route.params.entryId) {
@@ -211,6 +314,7 @@ const QuickAddFoodScreen = () => {
 
       const merged = new Date(loggedAtDate);
       merged.setHours(nextDate.getHours(), nextDate.getMinutes(), 0, 0);
+      setFormError(null);
       setLoggedAtDate(merged);
     },
     [loggedAtDate],
@@ -226,14 +330,12 @@ const QuickAddFoodScreen = () => {
     }
 
     if (!Number.isFinite(calories) || calories <= 0) {
-      Alert.alert(
-        "Energy required",
-        "Enter a valid energy value before saving.",
-      );
+      setFormError("Enter a valid energy value before saving.");
       return;
     }
 
     try {
+      setFormError(null);
       setSaving(true);
 
       if (route.params.entryId) {
@@ -265,6 +367,7 @@ const QuickAddFoodScreen = () => {
         });
       }
 
+      bypassUnsavedGuardRef.current = true;
       closeAfterSave();
     } catch {
       Alert.alert("Could not save quick add", "Please try again.");
@@ -305,7 +408,6 @@ const QuickAddFoodScreen = () => {
   if (loading) {
     return (
       <View style={styles.screen}>
-        <View style={styles.bgOrbTop} />
         <View style={styles.content}>
           <FoodScreenHeader
             eyebrow="Quick Add"
@@ -324,7 +426,6 @@ const QuickAddFoodScreen = () => {
   if (route.params.entryId && (!entry || entry.entrySource !== "quick_add")) {
     return (
       <View style={styles.screen}>
-        <View style={styles.bgOrbTop} />
         <View style={styles.content}>
           <FoodScreenHeader
             eyebrow="Quick Add"
@@ -342,9 +443,6 @@ const QuickAddFoodScreen = () => {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top + 14 }]}>
-      <View style={styles.bgOrbTop} />
-      <View style={styles.bgOrbBottom} />
-
       <KeyboardAvoidingView
         style={styles.screen}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -363,21 +461,10 @@ const QuickAddFoodScreen = () => {
               <Text style={styles.heroTitle}>Quick Add</Text>
             </View>
 
-            <View style={styles.heroPillsRow}>
-              <Pressable
-                onPress={() => setShowTimePicker((current) => !current)}
-                style={({ pressed }) => [
-                  styles.contextPill,
-                  pressed && styles.cardPressed,
-                ]}
-              >
-                <ClockIcon size={14} color={appColors.brand500} weight="bold" />
-                <Text style={styles.contextPillText}>
-                  {formatFoodLoggedTime(loggedAtDate.toISOString())}
-                </Text>
-                <PencilSimpleIcon size={16} color={appColors.slate900} />
-              </Pressable>
-            </View>
+            <FoodLogContextBar
+              context={activeFoodLogContext}
+              onTimePress={() => setShowTimePicker((current) => !current)}
+            />
             <View style={styles.energyLabelContainer}>
               <View style={{ marginBottom: 8 }}>
                 <FireIcon size={14} />
@@ -391,6 +478,7 @@ const QuickAddFoodScreen = () => {
                 onChangeText={(value) => {
                   setEnergyValue(value);
                   setIsEnergyManuallySet(value.trim().length > 0);
+                  setFormError(null);
                 }}
                 onBlur={handleEnergyBlur}
                 keyboardType="decimal-pad"
@@ -409,6 +497,7 @@ const QuickAddFoodScreen = () => {
                   onPress={() => {
                     setEnergyValue(String(preset));
                     setIsEnergyManuallySet(true);
+                    setFormError(null);
                   }}
                   style={({ pressed }) => [
                     styles.presetChip,
@@ -425,6 +514,7 @@ const QuickAddFoodScreen = () => {
                 onPress={() => {
                   setEnergyValue("");
                   setIsEnergyManuallySet(false);
+                  setFormError(null);
                 }}
                 style={({ pressed }) => [
                   styles.inlineQuietButton,
@@ -444,10 +534,13 @@ const QuickAddFoodScreen = () => {
               <View style={styles.macroField}>
                 <Text style={styles.fieldLabel}>Protein</Text>
                 <View style={styles.nutrientInputWrap}>
-                  <TextInput
-                    style={styles.nutrientInput}
-                    value={proteinValue}
-                    onChangeText={setProteinValue}
+              <TextInput
+                style={styles.nutrientInput}
+                value={proteinValue}
+                onChangeText={(value) => {
+                  setProteinValue(value);
+                  setFormError(null);
+                }}
                     keyboardType="decimal-pad"
                     placeholder="0"
                     placeholderTextColor={appColors.textMuted}
@@ -462,7 +555,10 @@ const QuickAddFoodScreen = () => {
                   <TextInput
                     style={styles.nutrientInput}
                     value={fatValue}
-                    onChangeText={setFatValue}
+                    onChangeText={(value) => {
+                      setFatValue(value);
+                      setFormError(null);
+                    }}
                     keyboardType="decimal-pad"
                     placeholder="0"
                     placeholderTextColor={appColors.textMuted}
@@ -477,7 +573,10 @@ const QuickAddFoodScreen = () => {
                   <TextInput
                     style={styles.nutrientInput}
                     value={carbsValue}
-                    onChangeText={setCarbsValue}
+                    onChangeText={(value) => {
+                      setCarbsValue(value);
+                      setFormError(null);
+                    }}
                     keyboardType="decimal-pad"
                     placeholder="0"
                     placeholderTextColor={appColors.textMuted}
@@ -494,11 +593,15 @@ const QuickAddFoodScreen = () => {
               <TextInput
                 style={[styles.textInput, styles.optionalInput]}
                 value={nameValue}
-                onChangeText={setNameValue}
+                onChangeText={(value) => {
+                  setNameValue(value);
+                  setFormError(null);
+                }}
                 placeholder="Quick add"
                 placeholderTextColor={appColors.textMuted}
               />
             </View>
+            {formError ? <Text style={styles.formError}>{formError}</Text> : null}
           </View>
 
           {showTimePicker ? (
@@ -759,6 +862,13 @@ const styles = StyleSheet.create({
   },
   optionalInput: {
     backgroundColor: appColors.surfaceCard,
+  },
+  formError: {
+    color: appColors.danger700,
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 17,
+    marginTop: 12,
   },
   footer: sharedStyleValues.footer,
   primaryButton: {

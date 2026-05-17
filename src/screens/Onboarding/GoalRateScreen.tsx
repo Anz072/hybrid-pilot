@@ -53,8 +53,6 @@ const GoalRateScreen = ({ navigation, route }: Props) => {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.bgOrbTop} />
-      <View style={styles.bgOrbBottom} />
       <OnboardingTopBar onBack={() => navigation.goBack()} stepLabel="Goal Pace" />
 
       <View style={styles.headerWrap}>

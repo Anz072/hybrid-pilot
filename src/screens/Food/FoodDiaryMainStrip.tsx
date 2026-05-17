@@ -1,5 +1,6 @@
 import React from "react";
 import {
+  ActivityIndicator,
   type GestureResponderEvent,
   LayoutAnimation,
   Pressable,
@@ -9,20 +10,28 @@ import {
   View,
 } from "react-native";
 import { Swipeable } from "react-native-gesture-handler";
-import Svg, { Path } from "react-native-svg";
+import Svg, { Circle } from "react-native-svg";
 import {
+  BowlFoodIcon,
   CaretDoubleLeftIcon,
   CaretDoubleRightIcon,
   CaretDownIcon,
   CaretUpIcon,
-  FireIcon,
+  CookingPotIcon,
+  ForkKnifeIcon,
   PlusCircleIcon,
   PlusIcon,
+  ShieldCheckIcon,
+  ShieldIcon,
   TrashIcon,
 } from "phosphor-react-native";
 import type { DBUser, DBUserFoodLogEntry } from "../../store/DB_TYPES";
-import type { FoodDiaryHourBucket } from "./foodDiaryTypes";
+import type {
+  FoodDiaryFavoriteFood,
+  FoodDiaryHourBucket,
+} from "./foodDiaryTypes";
 import FoodDiaryHeroCard from "./FoodDiaryHeroCard";
+import FoodDiaryQuickAdds from "./FoodDiaryQuickAdds";
 import {
   calculateLoggedNutrition,
   type FoodNutritionTotals,
@@ -31,7 +40,6 @@ import {
   formatFoodLoggedTime,
   formatFoodServing,
   formatFoodShortDate,
-  formatMacroLine,
 } from "./foodUtils";
 import { appColors } from "../../theme/colors";
 
@@ -55,10 +63,16 @@ type FoodDiaryMainStripProps = {
   user?: DBUser | null;
   hourBuckets: FoodDiaryHourBucket[];
   selectedHour: number;
+  favoriteFoods: FoodDiaryFavoriteFood[];
+  isDayComplete: boolean;
+  isDayCompleteLoading: boolean;
   onAddFood: (hour: number) => void;
+  onAddFavorite: (food: FoodDiaryFavoriteFood, hour: number) => void;
   onDeleteEntry: (entry: DBUserFoodLogEntry) => void;
   onEditEntry: (entry: DBUserFoodLogEntry) => void;
+  onQuickLogFavorite: (food: FoodDiaryFavoriteFood, hour: number) => void;
   onSelectHour: (hour: number) => void;
+  onToggleDayComplete: () => void;
 };
 
 type FoodDiaryTimelineItemProps = {
@@ -72,37 +86,11 @@ type FoodDiaryTimelineItemProps = {
   onToggle: () => void;
 };
 
-const PILL_WIDTH = 36;
-const PILL_HEIGHT = 52;
-const PILL_RADIUS = 12;
-const OUTLINE_INSET = 1;
-const OUTLINE_WIDTH = 2;
-const OUTLINE_RADIUS = PILL_RADIUS - OUTLINE_INSET;
-const OUTLINE_PATH_WIDTH = PILL_WIDTH - 2 * OUTLINE_INSET;
-const OUTLINE_PATH_HEIGHT = PILL_HEIGHT - 2 * OUTLINE_INSET;
-const OUTLINE_PERIMETER =
-  2 * (OUTLINE_PATH_WIDTH + OUTLINE_PATH_HEIGHT - 4 * OUTLINE_RADIUS) +
-  2 * Math.PI * OUTLINE_RADIUS;
-
-const buildRoundedPillPath = () => {
-  const left = OUTLINE_INSET;
-  const top = OUTLINE_INSET;
-  const right = PILL_WIDTH - OUTLINE_INSET;
-  const bottom = PILL_HEIGHT - OUTLINE_INSET;
-  const radius = OUTLINE_RADIUS;
-
-  return [
-    `M ${left + radius} ${top}`,
-    `H ${right - radius}`,
-    `A ${radius} ${radius} 0 0 1 ${right} ${top + radius}`,
-    `V ${bottom - radius}`,
-    `A ${radius} ${radius} 0 0 1 ${right - radius} ${bottom}`,
-    `H ${left + radius}`,
-    `A ${radius} ${radius} 0 0 1 ${left} ${bottom - radius}`,
-    `V ${top + radius}`,
-    `A ${radius} ${radius} 0 0 1 ${left + radius} ${top}`,
-  ].join(" ");
-};
+const DAY_TILE_WIDTH = 44;
+const DAY_RING_SIZE = 36;
+const DAY_RING_STROKE = 2;
+const DAY_RING_RADIUS = (DAY_RING_SIZE - DAY_RING_STROKE) / 2;
+const DAY_RING_CIRCUMFERENCE = 2 * Math.PI * DAY_RING_RADIUS;
 
 export const buildFoodDiaryWeekDays = (date: Date): Date[] => {
   const weekStart = new Date(date);
@@ -117,13 +105,15 @@ export const buildFoodDiaryWeekDays = (date: Date): Date[] => {
   });
 };
 
-const outlinePath = buildRoundedPillPath();
+const formatMonth = (date: Date): string =>
+  date.toLocaleDateString(undefined, { month: "short" });
 
-const formatWeekday = (date: Date): string =>
-  date
-    .toLocaleDateString(undefined, { weekday: "short" })
-    .slice(0, 1)
-    .toUpperCase();
+const formatSelectedDateHeading = (date: Date): string =>
+  date.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  });
 
 const withOpacity = (hex: string, opacity: number) => {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -131,6 +121,82 @@ const withOpacity = (hex: string, opacity: number) => {
   const b = parseInt(hex.slice(5, 7), 16);
 
   return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};
+
+type MealSlot = "breakfast" | "lunch" | "dinner" | "snacks";
+
+const formatMealLabel = (value: string): string =>
+  value
+    .trim()
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+
+const getDefaultMealSlot = (hour: number): MealSlot => {
+  if (hour < 11) {
+    return "breakfast";
+  }
+
+  if (hour < 16) {
+    return "lunch";
+  }
+
+  if (hour < 21) {
+    return "dinner";
+  }
+
+  return "snacks";
+};
+
+const getDefaultMealLabel = (slot: MealSlot): string => {
+  switch (slot) {
+    case "breakfast":
+      return "Breakfast";
+    case "lunch":
+      return "Lunch";
+    case "dinner":
+      return "Dinner";
+    case "snacks":
+      return "Snacks";
+  }
+};
+
+const getBucketMealLabel = (bucket: FoodDiaryHourBucket): string => {
+  const mealTypes = [
+    ...new Set(
+      bucket.entries
+        .map((entry) => entry.mealType?.trim())
+        .filter((mealType): mealType is string => Boolean(mealType)),
+    ),
+  ];
+
+  if (mealTypes.length === 1) {
+    return formatMealLabel(mealTypes[0]);
+  }
+
+  return getDefaultMealLabel(getDefaultMealSlot(bucket.hour));
+};
+
+const getMealSlotFromLabel = (label: string, hour: number): MealSlot => {
+  const normalized = label.toLowerCase();
+
+  if (normalized.includes("breakfast")) {
+    return "breakfast";
+  }
+
+  if (normalized.includes("lunch")) {
+    return "lunch";
+  }
+
+  if (normalized.includes("dinner")) {
+    return "dinner";
+  }
+
+  if (normalized.includes("snack")) {
+    return "snacks";
+  }
+
+  return getDefaultMealSlot(hour);
 };
 
 const FoodDiaryTimelineItem = ({
@@ -143,19 +209,44 @@ const FoodDiaryTimelineItem = ({
   selected,
   onToggle,
 }: FoodDiaryTimelineItemProps) => {
+  const mealLabel = getBucketMealLabel(bucket);
+  const mealSlot = getMealSlotFromLabel(mealLabel, bucket.hour);
   const entryCountLabel =
     bucket.entries.length === 1
       ? "1 food"
       : `${bucket.entries.length} foods`;
   const collapsedSummary = bucket.entries.length
-    ? `${entryCountLabel}`
-    : `${formatFoodHourLabel(bucket.hour)} · Empty`;
+    ? `${entryCountLabel} - ${Math.round(bucket.totals.calories)} kcal`
+    : "No entries yet";
+  const expandedMeta = bucket.entries.length
+    ? `${formatFoodHourLabel(bucket.hour)} - ${entryCountLabel}`
+    : `${formatFoodHourLabel(bucket.hour)} - Empty`;
   const runWithoutToggling = (
     event: GestureResponderEvent,
     action: () => void,
   ) => {
     event.stopPropagation();
     action();
+  };
+  const renderMealIcon = () => {
+    switch (mealSlot) {
+      case "breakfast":
+        return (
+          <BowlFoodIcon size={21} color={appColors.brand700} weight="fill" />
+        );
+      case "lunch":
+        return (
+          <ForkKnifeIcon size={21} color={appColors.brand700} weight="fill" />
+        );
+      case "dinner":
+        return (
+          <CookingPotIcon size={21} color={appColors.brand700} weight="fill" />
+        );
+      case "snacks":
+        return (
+          <BowlFoodIcon size={21} color={appColors.brand700} weight="regular" />
+        );
+    }
   };
 
   return (
@@ -166,44 +257,38 @@ const FoodDiaryTimelineItem = ({
         pressed && styles.cardPressed,
       ]}
     >
-      <View style={[styles.hourCard, selected && styles.hourCardActive]}>
-        <View style={styles.hourHeader}>
-          <View style={styles.hourHeaderCopy}>
-            <View style={styles.hourTitleRow}>
-            <Text
-              style={[
-                styles.hourTitle,
-                bucket.entries.length === 0 && {
-                  color: withOpacity(appColors.textPrimary, 0.6),
-                },
-              ]}
-            >
-              {collapsed
-                ? collapsedSummary
-                : bucket.entries.length
-                ? `${bucket.entries.length} ${
-                    bucket.entries.length === 1 ? "entry" : "entries"
-                  }`
-                : "No entries yet"}
-            </Text>
-              {isCurrentHour ? (
-                <View style={styles.nowPill}>
-                  <Text style={styles.nowPillText}>Now</Text>
-                </View>
-              ) : null}
-            </View>
-          </View>
-          {bucket.entries.length ? (
-            <View
-              style={{ flexDirection: "row", gap: 2, alignItems: "center" }}
-            >
-              <FireIcon size={13} />
-              <Text style={styles.hourText}>
-                {`${Math.round(bucket.totals.calories)} kcal `}
+      <View style={[styles.mealCard, selected && styles.mealCardActive]}>
+        <View style={styles.mealHeader}>
+          <View style={styles.mealTitleGroup}>
+            <View style={styles.mealIcon}>{renderMealIcon()}</View>
+            <View style={styles.mealHeaderCopy}>
+              <View style={styles.mealTitleRow}>
+                <Text
+                  style={[
+                    styles.mealTitle,
+                    bucket.entries.length === 0 && styles.mealTitleMuted,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {mealLabel}
+                </Text>
+                {isCurrentHour ? (
+                  <View style={styles.nowPill}>
+                    <Text style={styles.nowPillText}>Now</Text>
+                  </View>
+                ) : null}
+              </View>
+              <Text style={styles.mealMeta} numberOfLines={1}>
+                {collapsed ? collapsedSummary : expandedMeta}
               </Text>
             </View>
-          ) : null}
-          <View style={styles.hourHeaderActions}>
+          </View>
+          <View style={styles.mealHeaderActions}>
+            {bucket.entries.length ? (
+              <Text style={styles.mealKcal} numberOfLines={1}>
+                {Math.round(bucket.totals.calories)} kcal
+              </Text>
+            ) : null}
             <Pressable
               onPress={(event) =>
                 runWithoutToggling(event, () => onAddFood(bucket.hour))
@@ -218,9 +303,9 @@ const FoodDiaryTimelineItem = ({
               <PlusIcon size={15} color={appColors.white} weight="bold" />
             </Pressable>
             {collapsed ? (
-              <CaretDownIcon size={16} />
+              <CaretDownIcon size={16} color={appColors.textSecondary} />
             ) : (
-              <CaretUpIcon size={16} />
+              <CaretUpIcon size={16} color={appColors.textSecondary} />
             )}
           </View>
         </View>
@@ -268,7 +353,7 @@ const FoodDiaryTimelineItem = ({
                         }
                       >
                         <View style={styles.entryMain}>
-                          <View style={styles.rowBetween}>
+                          <View style={styles.entryTopRow}>
                             <View style={styles.entryCopy}>
                               <Text style={styles.entryTitle} numberOfLines={2}>
                                 {entry.foodName}
@@ -281,6 +366,9 @@ const FoodDiaryTimelineItem = ({
                                 </View>
                               ) : null}
                             </View>
+                            <Text style={styles.entryKcal} numberOfLines={1}>
+                              {nutrition.calories} kcal
+                            </Text>
                           </View>
 
                           <View style={styles.entryMetaRow}>
@@ -288,11 +376,11 @@ const FoodDiaryTimelineItem = ({
                             <Text style={styles.entryText}>|</Text>
                             <Text style={styles.entryText}>
                               {entry.entrySource === "quick_add"
-                                ? `${entry.mealType?.trim() || "One-time entry"} | ${nutrition.calories} kcal`
+                                ? entry.mealType?.trim() || "One-time entry"
                                 : `${formatFoodServing(
                                     entry.quantityG,
                                     entry.servingUnit,
-                                  )} | ${nutrition.calories} kcal`}
+                                  )}`}
                             </Text>
                           </View>
                         </View>
@@ -301,6 +389,12 @@ const FoodDiaryTimelineItem = ({
                   );
                 })}
 
+                <View style={styles.mealTotalRow}>
+                  <Text style={styles.mealTotalLabel}>Total</Text>
+                  <Text style={styles.mealTotalValue}>
+                    {Math.round(bucket.totals.calories)} kcal
+                  </Text>
+                </View>
                 <Pressable
                   onPress={(event) =>
                     runWithoutToggling(event, () => onAddFood(bucket.hour))
@@ -310,15 +404,9 @@ const FoodDiaryTimelineItem = ({
                     pressed && styles.cardPressed,
                   ]}
                 >
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      gap: 2,
-                      alignItems: "center",
-                    }}
-                  >
-                    <PlusCircleIcon size={14} color={appColors.brand500} />
-                    <Text style={styles.emptyStateAction}>Tap to add more</Text>
+                  <View style={styles.addMoreRow}>
+                    <PlusCircleIcon size={18} color={appColors.brand500} />
+                    <Text style={styles.emptyStateAction}>Add more</Text>
                   </View>
                 </Pressable>
               </View>
@@ -333,14 +421,8 @@ const FoodDiaryTimelineItem = ({
                 ]}
               >
                 <Text style={styles.emptyStateText}>No entries here.</Text>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    gap: 2,
-                    alignItems: "center",
-                  }}
-                >
-                  <PlusCircleIcon size={14} color={appColors.brand500} />
+                <View style={styles.addMoreRow}>
+                  <PlusCircleIcon size={18} color={appColors.brand500} />
                   <Text style={styles.emptyStateAction}>Tap to add food</Text>
                 </View>
               </Pressable>
@@ -366,10 +448,16 @@ const FoodDiaryMainStrip = ({
   user,
   hourBuckets,
   selectedHour,
+  favoriteFoods,
+  isDayComplete,
+  isDayCompleteLoading,
   onAddFood,
+  onAddFavorite,
   onDeleteEntry,
   onEditEntry,
+  onQuickLogFavorite,
   onSelectHour,
+  onToggleDayComplete,
 }: FoodDiaryMainStripProps) => {
   const [expandedHours, setExpandedHours] = React.useState<Set<number>>(
     () => new Set(),
@@ -382,22 +470,30 @@ const FoodDiaryMainStrip = ({
           days[days.length - 1].date,
         )}`
       : "";
+  const selectedDateHeading = formatSelectedDateHeading(selectedDate);
   const fallbackMaxCalories = Math.max(1, ...days.map((day) => day.calories));
   const todayKey = formatFoodDateKey(new Date());
   const currentHour = new Date().getHours();
+  const isViewingToday = selectedDateKey === todayKey;
   const visibleHourBuckets = React.useMemo(
     () =>
       hourBuckets.filter(
-        (bucket) => bucket.entries.length > 0 || bucket.hour === selectedHour,
+        (bucket) =>
+          bucket.entries.length > 0 ||
+          bucket.hour === selectedHour ||
+          (isViewingToday && bucket.hour === currentHour),
       ),
-    [hourBuckets, selectedHour],
+    [currentHour, hourBuckets, isViewingToday, selectedHour],
   );
   const emptyHourBuckets = React.useMemo(
     () =>
       hourBuckets.filter(
-        (bucket) => bucket.entries.length === 0 && bucket.hour !== selectedHour,
+        (bucket) =>
+          bucket.entries.length === 0 &&
+          bucket.hour !== selectedHour &&
+          !(isViewingToday && bucket.hour === currentHour),
       ),
-    [hourBuckets, selectedHour],
+    [currentHour, hourBuckets, isViewingToday, selectedHour],
   );
 
   React.useEffect(() => {
@@ -411,7 +507,7 @@ const FoodDiaryMainStrip = ({
       setExpandedHours((current) => {
         const next = new Set(current);
 
-        if (next.has(hour) && hour !== selectedHour) {
+        if (next.has(hour)) {
           next.delete(hour);
         } else {
           next.add(hour);
@@ -420,12 +516,12 @@ const FoodDiaryMainStrip = ({
         return next;
       });
     },
-    [onSelectHour, selectedHour],
+    [onSelectHour],
   );
 
   return (
     <View style={styles.card}>
-      <View style={styles.header}>
+      <View style={styles.weekNavRow}>
         <Pressable
           onPress={onPreviousWeek}
           style={({ pressed }) => [
@@ -433,12 +529,11 @@ const FoodDiaryMainStrip = ({
             pressed && styles.cardPressed,
           ]}
         >
-          <CaretDoubleLeftIcon size={18} color={appColors.brand400} />
+          <CaretDoubleLeftIcon size={17} color={appColors.brand500} />
         </Pressable>
-        <View style={styles.headerCopy}>
-          <Text style={styles.title}>Week view</Text>
-          <Text style={styles.subtitle}>{weekRange}</Text>
-        </View>
+        <Text style={styles.weekRange} numberOfLines={1}>
+          {weekRange}
+        </Text>
         <Pressable
           onPress={onNextWeek}
           style={({ pressed }) => [
@@ -446,7 +541,7 @@ const FoodDiaryMainStrip = ({
             pressed && styles.cardPressed,
           ]}
         >
-          <CaretDoubleRightIcon size={18} color={appColors.brand400} />
+          <CaretDoubleRightIcon size={17} color={appColors.brand500} />
         </Pressable>
       </View>
 
@@ -463,10 +558,10 @@ const FoodDiaryMainStrip = ({
           const progressColor = selected
             ? appColors.brand700
             : appColors.brand500;
-          const fillColor = withOpacity(
-            progressColor,
-            selected ? 0.28 : 0.18,
-          );
+          const ringTrackColor = selected
+            ? withOpacity(appColors.white, 0.38)
+            : appColors.borderSoft;
+          const ringProgressColor = selected ? appColors.white : progressColor;
 
           return (
             <Pressable
@@ -478,59 +573,60 @@ const FoodDiaryMainStrip = ({
                 pressed && styles.cardPressed,
               ]}
             >
-              <View
-                style={[
-                  styles.dayPillFill,
-                  {
-                    backgroundColor: fillColor,
-                  },
-                ]}
-              />
-              <Svg
-                width={PILL_WIDTH}
-                height={PILL_HEIGHT}
-                style={StyleSheet.absoluteFill}
-              >
-                <Path
-                  d={outlinePath}
-                  stroke={
-                    selected ? appColors.brand700 : appColors.borderSoft
-                  }
-                  strokeWidth={OUTLINE_WIDTH}
-                  fill="none"
-                  strokeLinecap="round"
-                />
-                <Path
-                  d={outlinePath}
-                  stroke={progressColor}
-                  strokeWidth={OUTLINE_WIDTH}
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeDasharray={`${OUTLINE_PERIMETER} ${OUTLINE_PERIMETER}`}
-                  strokeDashoffset={OUTLINE_PERIMETER * (1 - ratio)}
-                />
-              </Svg>
               <Text
                 style={[styles.weekday, selected && styles.weekdaySelected]}
               >
-                {formatWeekday(day.date)}
+                {formatMonth(day.date)}
               </Text>
-              <Text
-                style={[styles.dayNumber, selected && styles.dayNumberSelected]}
-              >
-                {day.date.getDate()}
-              </Text>
+              <View style={styles.dayRing}>
+                <Svg
+                  width={DAY_RING_SIZE}
+                  height={DAY_RING_SIZE}
+                  style={StyleSheet.absoluteFill}
+                >
+                  <Circle
+                    cx={DAY_RING_SIZE / 2}
+                    cy={DAY_RING_SIZE / 2}
+                    r={DAY_RING_RADIUS}
+                    stroke={ringTrackColor}
+                    strokeWidth={DAY_RING_STROKE}
+                    fill="none"
+                  />
+                  <Circle
+                    cx={DAY_RING_SIZE / 2}
+                    cy={DAY_RING_SIZE / 2}
+                    r={DAY_RING_RADIUS}
+                    stroke={ringProgressColor}
+                    strokeWidth={DAY_RING_STROKE}
+                    strokeLinecap="round"
+                    strokeDasharray={`${DAY_RING_CIRCUMFERENCE} ${DAY_RING_CIRCUMFERENCE}`}
+                    strokeDashoffset={DAY_RING_CIRCUMFERENCE * (1 - ratio)}
+                    fill="none"
+                    transform={`rotate(-90 ${DAY_RING_SIZE / 2} ${DAY_RING_SIZE / 2})`}
+                  />
+                </Svg>
+                <Text
+                  style={[
+                    styles.dayNumber,
+                    selected && styles.dayNumberSelected,
+                  ]}
+                >
+                  {day.date.getDate()}
+                </Text>
+              </View>
               <Text
                 style={[styles.kcalText, selected && styles.kcalTextSelected]}
+                numberOfLines={1}
               >
                 {day.calories > 0 ? `${Math.round(day.calories)}` : "--"}
               </Text>
               {isToday ? <View style={styles.todayDot} /> : null}
-              {isToday ? <View style={styles.todayDot2} /> : null}
             </Pressable>
           );
         })}
       </View>
+
+      <Text style={styles.selectedDateTitle}>{selectedDateHeading}</Text>
 
       {totals && user ? (
         <FoodDiaryHeroCard
@@ -540,7 +636,47 @@ const FoodDiaryMainStrip = ({
         />
       ) : null}
 
+      <Pressable
+        disabled={isDayCompleteLoading}
+        onPress={onToggleDayComplete}
+        accessibilityRole="button"
+        accessibilityState={{ selected: isDayComplete, busy: isDayCompleteLoading }}
+        style={({ pressed }) => [
+          styles.dayStatusRow,
+          isDayComplete && styles.dayStatusRowComplete,
+          isDayCompleteLoading && styles.dayStatusRowLoading,
+          pressed && !isDayCompleteLoading && styles.cardPressed,
+        ]}
+      >
+        <View style={styles.dayStatusIcon}>
+          {isDayCompleteLoading ? (
+            <ActivityIndicator color={appColors.brand700} size="small" />
+          ) : isDayComplete ? (
+            <ShieldCheckIcon size={22} color={appColors.brand700} weight="fill" />
+          ) : (
+            <ShieldIcon size={22} color={appColors.textSecondary} weight="bold" />
+          )}
+        </View>
+        <View style={styles.dayStatusCopy}>
+          <Text style={styles.dayStatusTitle}>
+            {isDayComplete ? "Day complete" : "Mark day complete"}
+          </Text>
+          <Text style={styles.dayStatusText}>
+            {isDayComplete
+              ? "Included in adaptive calorie review."
+              : "Use once the day is fully logged."}
+          </Text>
+        </View>
+      </Pressable>
+
       <View style={styles.timelineSection}>
+        <FoodDiaryQuickAdds
+          favoriteFoods={favoriteFoods}
+          selectedHour={selectedHour}
+          onAddFavorite={onAddFavorite}
+          onQuickLogFavorite={onQuickLogFavorite}
+        />
+
         {emptyHourBuckets.length > 0 ? (
           <View style={styles.addRail}>
             <Text style={styles.addRailLabel}>Add at</Text>
@@ -579,8 +715,7 @@ const FoodDiaryMainStrip = ({
         <View style={styles.timeline}>
           {visibleHourBuckets.map((bucket, index) => {
             const selected = bucket.hour === selectedHour;
-            const isCurrentHour =
-              selectedDateKey === todayKey && bucket.hour === currentHour;
+            const isCurrentHour = isViewingToday && bucket.hour === currentHour;
             const isLast = index === visibleHourBuckets.length - 1;
 
             return (
@@ -622,140 +757,94 @@ const FoodDiaryMainStrip = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 16,
     marginBottom: 16,
   },
-  header: {
+  weekNavRow: {
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 12,
+    gap: 10,
+    marginBottom: 10,
   },
-  headerCopy: {
-    alignItems: "center",
-  },
-  title: {
+  weekRange: {
+    flex: 1,
     color: appColors.textSecondary,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "700",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    marginBottom: 4,
-  },
-  subtitle: {
-    color: appColors.textPrimary,
-    fontSize: 20,
-    fontWeight: "500",
+    textAlign: "center",
   },
   navButton: {
     borderRadius: 9999,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-  },
-  dayRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 10,
-    paddingHorizontal: 2,
-    paddingVertical: 2,
-  },
-  weekBudgetCard: {
-    marginTop: 16,
-    marginBottom: 8,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceField,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  weekBudgetCopy: {
-    flex: 1,
-  },
-  weekBudgetEyebrow: {
-    color: appColors.textMuted,
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-    marginBottom: 4,
-  },
-  weekBudgetValue: {
-    color: appColors.textPrimary,
-    fontSize: 15,
-    fontWeight: "800",
-  },
-  weekBudgetMeta: {
-    borderRadius: 999,
-    backgroundColor: appColors.surfaceGhost,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  weekBudgetMetaLabel: {
-    color: appColors.brand700,
-    fontSize: 12,
-    fontWeight: "800",
+  dayRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 2,
+    paddingHorizontal: 0,
+    paddingVertical: 2,
   },
   dayPill: {
-    width: PILL_WIDTH,
-    height: PILL_HEIGHT,
-    borderRadius: PILL_RADIUS,
+    flex: 1,
+    minWidth: 0,
+    maxWidth: DAY_TILE_WIDTH,
+    minHeight: 76,
+    borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.surfaceFieldAlt,
+    backgroundColor: "transparent",
+    paddingVertical: 6,
+    gap: 2,
     overflow: "hidden",
   },
   dayPillSelected: {
-    backgroundColor: appColors.brand800,
+    backgroundColor: appColors.brand500,
+    shadowColor: appColors.slate500,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.24,
+    shadowRadius: 16,
+    elevation: 4,
   },
-  dayPillFill: {
-    position: "absolute",
-    right: 0,
-    bottom: 0,
-    left: 0,
+  dayRing: {
+    width: DAY_RING_SIZE,
+    height: DAY_RING_SIZE,
+    alignItems: "center",
+    justifyContent: "center",
   },
   weekday: {
-    color: appColors.textMuted,
-    fontSize: 12,
+    color: appColors.textPrimary,
+    fontSize: 14,
+    lineHeight: 17,
+    fontWeight: "500",
   },
   weekdaySelected: {
-    color: appColors.brand400,
+    color: appColors.white,
   },
   dayNumber: {
     color: appColors.textPrimary,
-    fontSize: 12,
-    fontWeight: "700",
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: "800",
   },
   dayNumberSelected: {
-    color: appColors.brand700,
+    color: appColors.white,
   },
   kcalText: {
     color: appColors.textMuted,
-    fontSize: 10,
-    marginBottom: 2,
+    fontSize: 9,
+    lineHeight: 11,
+    fontWeight: "700",
+    maxWidth: DAY_TILE_WIDTH - 6,
   },
   kcalTextSelected: {
-    color: appColors.brand500,
+    color: appColors.white,
   },
   todayDot: {
     position: "absolute",
-    right: 6,
-    width: 6,
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: appColors.brand800,
-  },
-  todayDot2: {
-    position: "absolute",
-    left: 5,
+    top: 5,
+    right: 5,
     width: 6,
     height: 6,
     borderRadius: 999,
@@ -764,8 +853,58 @@ const styles = StyleSheet.create({
   timelineSection: {
     marginTop: 24,
   },
+  selectedDateTitle: {
+    color: appColors.textPrimary,
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: "800",
+    textAlign: "center",
+    marginTop: 20,
+  },
+  dayStatusRow: {
+    minHeight: 58,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
+    backgroundColor: appColors.surfaceCard,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: 14,
+  },
+  dayStatusRowComplete: {
+    borderColor: appColors.borderStrong,
+    backgroundColor: appColors.surfaceField,
+  },
+  dayStatusRowLoading: {
+    opacity: 0.76,
+  },
+  dayStatusIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: appColors.surfaceGhost,
+  },
+  dayStatusCopy: {
+    flex: 1,
+  },
+  dayStatusTitle: {
+    color: appColors.textPrimary,
+    fontSize: 14,
+    fontWeight: "900",
+    marginBottom: 2,
+  },
+  dayStatusText: {
+    color: appColors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
+  },
   addRail: {
-    marginBottom: 14,
+    marginBottom: 18,
   },
   addRailLabel: {
     color: appColors.textSecondary,
@@ -780,14 +919,14 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   addRailChip: {
-    minHeight: 36,
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    borderRadius: 999,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    backgroundColor: appColors.surfaceField,
+    borderColor: appColors.borderSoft,
+    backgroundColor: appColors.surfaceCard,
     paddingHorizontal: 11,
   },
   addRailChipText: {
@@ -795,85 +934,123 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
   },
-  sectionTitle: {
-    color: appColors.textPrimary,
-    fontSize: 22,
-    fontWeight: "900",
-    marginBottom: 12,
-    marginTop: 18,
-  },
   timeline: {
-    gap: 8,
+    gap: 18,
   },
   timelineRow: {
     flexDirection: "row",
   },
   axis: {
-    width: 36,
-    marginRight: 6,
+    width: 58,
+    marginRight: 10,
     alignItems: "center",
   },
   axisLabel: {
-    color: appColors.textMuted,
-    fontSize: 12,
-    fontWeight: "800",
+    color: appColors.slate500,
+    fontSize: 18,
+    lineHeight: 23,
+    fontWeight: "500",
   },
   axisLabelActive: {
-    color: appColors.brand500,
+    color: appColors.brand700,
   },
   axisTrack: {
     flex: 1,
     alignItems: "center",
+    paddingTop: 10,
   },
   axisDot: {
-    width: 9,
-    height: 9,
+    width: 7,
+    height: 7,
     borderRadius: 999,
-    backgroundColor: appColors.brand400,
+    backgroundColor: appColors.borderStrong,
   },
   axisDotActive: {
-    backgroundColor: appColors.brand500,
+    backgroundColor: appColors.brand700,
   },
   axisLine: {
     width: 1,
     flex: 1,
-    backgroundColor: appColors.surfaceCardAlt,
-    marginBottom: -8,
+    backgroundColor: appColors.borderSoft,
+    marginTop: 5,
+    marginBottom: -18,
   },
   timelineContent: {
     flex: 1,
   },
-  hourCard: {
+  mealCard: {
     borderRadius: 8,
-    backgroundColor: appColors.surfaceCardAlt,
+    backgroundColor: appColors.surfaceCard,
     borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 10,
+    borderColor: withOpacity(appColors.borderSoft, 0.72),
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    shadowColor: appColors.slate500,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    elevation: 3,
   },
-  hourCardActive: {
-    borderWidth: 1,
-    borderColor: appColors.brand500,
+  mealCardActive: {
+    borderColor: appColors.brand400,
     backgroundColor: appColors.surfaceRaised,
   },
-  hourHeader: {
+  mealHeader: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     gap: 12,
   },
-  hourHeaderCopy: {
+  mealTitleGroup: {
     flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
   },
-  hourHeaderActions: {
+  mealIcon: {
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  mealHeaderCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  mealTitleRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
-  hourTitleRow: {
+  mealTitle: {
+    flexShrink: 1,
+    color: appColors.textPrimary,
+    fontSize: 24,
+    lineHeight: 29,
+    fontWeight: "800",
+  },
+  mealTitleMuted: {
+    color: appColors.textSecondary,
+  },
+  mealMeta: {
+    color: appColors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  mealHeaderActions: {
     flexDirection: "row",
     alignItems: "center",
-    flexWrap: "wrap",
     gap: 8,
+  },
+  mealKcal: {
+    color: appColors.textPrimary,
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: "800",
+    maxWidth: 82,
   },
   nowPill: {
     borderRadius: 999,
@@ -888,47 +1065,30 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   hourAddButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: 44,
+    height: 44,
+    borderRadius: 999,
     backgroundColor: appColors.brand700,
     alignItems: "center",
     justifyContent: "center",
   },
-  rowBetween: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  hourTitle: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: appColors.textPrimary,
-    letterSpacing: 0.5,
-  },
-  hourText: {
-    color: appColors.textSecondary,
-    fontSize: 12,
-    lineHeight: 17,
-    maxWidth: 210,
-  },
   stack: {
-    // gap: 10,
     marginTop: 12,
   },
   emptyState: {
     borderRadius: 8,
-    backgroundColor: appColors.surfaceCardAlt,
+    backgroundColor: withOpacity(appColors.brand300, 0.16),
     borderWidth: 1,
-    borderColor: appColors.borderSoft,
+    borderColor: withOpacity(appColors.brand300, 0.34),
     paddingHorizontal: 12,
     paddingVertical: 12,
   },
   nonEmptyState: {
-    backgroundColor: appColors.surfaceCardAlt,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "transparent",
+    paddingHorizontal: 0,
+    paddingTop: 10,
+    paddingBottom: 0,
   },
   emptyStateText: {
     color: appColors.textPrimary,
@@ -938,44 +1098,63 @@ const styles = StyleSheet.create({
   },
   emptyStateAction: {
     color: appColors.brand500,
-    fontSize: 12,
+    fontSize: 16,
+    lineHeight: 20,
     fontWeight: "700",
   },
-  entryCard: {
+  addMoreRow: {
     flexDirection: "row",
-    gap: 12,
-    backgroundColor: appColors.surfaceCardAlt,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    alignItems: "center",
+    gap: 8,
+  },
+  entryCard: {
+    backgroundColor: "transparent",
+    paddingVertical: 7,
   },
   entryCardWithDivider: {
     borderBottomWidth: 1,
-    borderBottomColor: appColors.borderSoft,
+    borderBottomColor: withOpacity(appColors.borderSoft, 0.62),
   },
   entryMain: {
     flex: 1,
+  },
+  entryTopRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
   },
   entryCopy: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     flexWrap: "wrap",
+    gap: 7,
   },
   entryTitle: {
     color: appColors.textPrimary,
-    fontSize: 14,
-    marginBottom: 4,
+    fontSize: 18,
+    lineHeight: 22,
     fontWeight: "500",
+  },
+  entryKcal: {
+    color: appColors.textPrimary,
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: "700",
+    minWidth: 78,
+    textAlign: "right",
   },
   entryMetaRow: {
     flexDirection: "row",
-    gap: 4,
+    gap: 5,
     flexWrap: "wrap",
+    marginTop: 2,
   },
   entryText: {
     color: appColors.textSecondary,
     fontSize: 12,
-    lineHeight: 17,
+    lineHeight: 16,
   },
   entryTag: {
     borderRadius: 999,
@@ -1005,6 +1184,27 @@ const styles = StyleSheet.create({
     color: appColors.white,
     fontSize: 12,
     fontWeight: "800",
+  },
+  mealTotalRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    gap: 10,
+    paddingTop: 8,
+  },
+  mealTotalLabel: {
+    color: appColors.textPrimary,
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: "700",
+  },
+  mealTotalValue: {
+    color: appColors.textPrimary,
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: "800",
+    minWidth: 90,
+    textAlign: "right",
   },
   cardPressed: {
     opacity: 0.9,

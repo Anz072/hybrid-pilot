@@ -63,9 +63,6 @@ const ProteinFocusSettingsScreen = ({ navigation }: Props) => {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.orbTop} />
-      <View style={styles.orbBottom} />
-
       <ScrollView
         style={styles.screen}
         contentContainerStyle={[

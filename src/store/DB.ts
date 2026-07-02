@@ -33,6 +33,7 @@ import {
   getFavoriteFoodItems,
   getFoodItemByBarcode,
   getFoodItemById,
+  getFoodItemsByIds,
   getRecentFoodItems,
   getUserCustomMealFoodById,
   getUserFoodLogEntriesBetween,
@@ -53,6 +54,13 @@ import {
   updateUserRecipe,
 } from "./supabaseFoodStore";
 import { notifyAppDataChanged } from "./dataChangeEvents";
+import {
+  clearPublicFoodCache,
+  clearUserCache,
+  getCachedBarcodeLookup,
+  getCacheHealth,
+  saveCachedBarcodeMiss,
+} from "./cacheRepository";
 
 type AddUserFoodLogInput = Parameters<typeof addUserFoodLogBase>[0];
 type AddQuickAddFoodLogInput = Parameters<typeof addQuickAddFoodLogBase>[0];
@@ -158,6 +166,17 @@ const clearAllWeightData = async (userExternalId: string) => {
   return result;
 };
 
+const refreshUserCache = async (userExternalId: string) => {
+  await Promise.allSettled([
+    getUserSettings(userExternalId),
+    listAdaptiveCalorieRecommendations({ userExternalId, limit: 20 }),
+    listWeightEntries(userExternalId),
+    getWeightGoal(userExternalId),
+    getFavoriteFoodItems(userExternalId, 30),
+    getRecentFoodItems(userExternalId, 30),
+  ]);
+};
+
 export const DB = {
   addUser: upsertUser,
   getUser: getFirstUser,
@@ -180,6 +199,7 @@ export const DB = {
   addFoodItem,
   listFoodItems,
   getFoodItemById,
+  getFoodItemsByIds,
   getFoodItemByBarcode,
   deleteFoodItem,
   searchFoodItems,
@@ -209,4 +229,10 @@ export const DB = {
   listDiaryDayStatusesBetween,
   saveDiaryDayStatus,
   copyFoodLogsFromDate: copyFoodLogsFromDateWithNotify,
+  refreshUserCache,
+  clearUserCache,
+  clearPublicFoodCache,
+  getCacheHealth,
+  getCachedBarcodeLookup,
+  saveCachedBarcodeMiss,
 };

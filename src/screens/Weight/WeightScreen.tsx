@@ -475,7 +475,7 @@ const WeightScreen = ({
 
   const finalizeSave = async (draft: WeightEntryDraft) => {
     if (!userId) {
-      Alert.alert("Session expired", "Please sign in with Google again.");
+      Alert.alert("Session expired", "Please sign in with email again.");
       return;
     }
 
@@ -668,7 +668,7 @@ const WeightScreen = ({
 
   const handleSaveGoal = async () => {
     if (!userId) {
-      Alert.alert("Session expired", "Please sign in with Google again.");
+      Alert.alert("Session expired", "Please sign in with email again.");
       return;
     }
 
@@ -2263,4 +2263,3 @@ const styles = StyleSheet.create({
 });
 
 export default WeightScreen;
-

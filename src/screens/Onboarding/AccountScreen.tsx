@@ -23,11 +23,7 @@ import {
   getSupabaseConfigError,
   isSupabaseConfigured,
 } from "../../API/supabase/client";
-import {
-  getGoogleDisplayName,
-  signInWithGoogleViaSupabase,
-  signUpWithEmailPassword,
-} from "../../API/supabase/googleAuth";
+import { signUpWithEmailPassword } from "../../API/supabase/auth";
 import { DB } from "../../store/DB";
 import { useAppDispatch } from "../../store/hooks";
 import { setCurrentUser } from "../../store/userSlice";
@@ -69,10 +65,9 @@ const AccountScreen = ({ navigation, route }: Props) => {
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [submissionMode, setSubmissionMode] = useState<
-    "email" | "google" | null
-  >(null);
-  const isSaving = submissionMode !== null;
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const isSaving = isSubmitting;
 
   const completeOnboardingAccount = async (account: LocalAccount) => {
     const onboarding = route.params.onboarding;
@@ -132,65 +127,13 @@ const AccountScreen = ({ navigation, route }: Props) => {
     navigation.push("Success", { onboarding });
   };
 
-  const handleCreateGoogleAccount = async () => {
-    if (isSaving) {
-      return;
-    }
-
-    setSubmissionMode("google");
-
-    try {
-      if (!isSupabaseConfigured()) {
-        throw new Error(getSupabaseConfigError());
-      }
-
-      const session = await signInWithGoogleViaSupabase();
-      if (!session?.user) {
-        return;
-      }
-
-      const googleEmail = session.user.email ?? null;
-      if (!googleEmail || !googleEmail.includes("@")) {
-        throw new Error("Google did not return a valid email address.");
-      }
-
-      const account: LocalAccount = {
-        id: session.user.id,
-        provider: "google",
-        displayName: getGoogleDisplayName(
-          session.user,
-          displayName.trim() || undefined,
-        ),
-        email: googleEmail,
-        birthdate: route.params.onboarding.bodyData.birthdate,
-        createdAt:
-          typeof session.user.created_at === "string" &&
-          session.user.created_at.length > 0
-            ? session.user.created_at
-            : new Date().toISOString(),
-      };
-
-      setDisplayName(account.displayName);
-
-      await completeOnboardingAccount(account);
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Could not create your Google account.";
-
-      Alert.alert("Google account failed", message);
-    } finally {
-      setSubmissionMode(null);
-    }
-  };
-
   const handleCreateEmailAccount = async () => {
     if (isSaving) {
       return;
     }
 
-    setSubmissionMode("email");
+    setIsSubmitting(true);
+    setStatusMessage(null);
 
     try {
       if (!isSupabaseConfigured()) {
@@ -202,28 +145,30 @@ const AccountScreen = ({ navigation, route }: Props) => {
 
       const resolvedDisplayName =
         displayName.trim() || normalizedEmail.split("@")[0] || "Dribsnis User";
-      const session = await signUpWithEmailPassword({
+      const result = await signUpWithEmailPassword({
         displayName: resolvedDisplayName,
         email: normalizedEmail,
         password,
       });
 
-      if (!session?.user) {
-        throw new Error(
-          "Supabase did not return an active session. For this test flow, turn off email confirmation in Supabase Auth and try again.",
-        );
+      if (result.needsEmailConfirmation || !result.session?.user) {
+        const message =
+          "Check your email to confirm the account, then return and sign in.";
+        setStatusMessage(message);
+        Alert.alert("Check your email", message);
+        return;
       }
 
       const account: LocalAccount = {
-        id: session.user.id,
+        id: result.session.user.id,
         provider: "email",
         displayName: resolvedDisplayName,
-        email: session.user.email ?? normalizedEmail,
+        email: result.session.user.email ?? normalizedEmail,
         birthdate: route.params.onboarding.bodyData.birthdate,
         createdAt:
-          typeof session.user.created_at === "string" &&
-          session.user.created_at.length > 0
-            ? session.user.created_at
+          typeof result.session.user.created_at === "string" &&
+          result.session.user.created_at.length > 0
+            ? result.session.user.created_at
             : new Date().toISOString(),
       };
 
@@ -237,7 +182,7 @@ const AccountScreen = ({ navigation, route }: Props) => {
 
       Alert.alert("Email account failed", message);
     } finally {
-      setSubmissionMode(null);
+      setIsSubmitting(false);
     }
   };
 
@@ -258,8 +203,8 @@ const AccountScreen = ({ navigation, route }: Props) => {
         <Text style={styles.eyebrow}>Final Step</Text>
         <Text style={styles.title}>Create your account</Text>
         <Text style={styles.subtitle}>
-          Finish with a Supabase-backed email account, or connect Google in a
-          build where the native redirect is available.
+          Finish with a Supabase-backed email account so your plan, logs, and
+          progress stay tied to one profile.
         </Text>
 
         <OnboardingReviewCard
@@ -332,7 +277,10 @@ const AccountScreen = ({ navigation, route }: Props) => {
           <Text style={styles.label}>Name</Text>
           <TextInput
             value={displayName}
-            onChangeText={setDisplayName}
+            onChangeText={(value) => {
+              setDisplayName(value);
+              setStatusMessage(null);
+            }}
             editable={!isSaving}
             placeholder="Your name"
             placeholderTextColor={appColors.textMuted}
@@ -343,7 +291,10 @@ const AccountScreen = ({ navigation, route }: Props) => {
           <Text style={styles.label}>Email</Text>
           <TextInput
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(value) => {
+              setEmail(value);
+              setStatusMessage(null);
+            }}
             editable={!isSaving}
             autoCapitalize="none"
             autoCorrect={false}
@@ -358,7 +309,10 @@ const AccountScreen = ({ navigation, route }: Props) => {
           <Text style={styles.label}>Password</Text>
           <TextInput
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(value) => {
+              setPassword(value);
+              setStatusMessage(null);
+            }}
             editable={!isSaving}
             autoCapitalize="none"
             autoCorrect={false}
@@ -380,40 +334,21 @@ const AccountScreen = ({ navigation, route }: Props) => {
             }}
             style={({ pressed }) => [
               styles.emailButton,
-              isSaving && styles.googleButtonDisabled,
-              pressed && !isSaving && styles.googleButtonPressed,
+              isSaving && styles.buttonDisabled,
+              pressed && !isSaving && styles.buttonPressed,
             ]}
           >
-            {submissionMode === "email" ? (
+            {isSaving ? (
               <ActivityIndicator color={appColors.slate900} />
             ) : null}
             <Text style={styles.emailButtonText}>
-              {submissionMode === "email"
-                ? "Creating account..."
-                : "Sign Up With Email"}
+              {isSaving ? "Creating account..." : "Create account"}
             </Text>
           </Pressable>
 
-          <Pressable
-            disabled={isSaving}
-            onPress={() => {
-              void handleCreateGoogleAccount();
-            }}
-            style={({ pressed }) => [
-              styles.googleButton,
-              isSaving && styles.googleButtonDisabled,
-              pressed && !isSaving && styles.googleButtonPressed,
-            ]}
-          >
-            {submissionMode === "google" ? (
-              <ActivityIndicator color={appColors.brand700} />
-            ) : null}
-            <Text style={styles.googleButtonText}>
-              {submissionMode === "google"
-                ? "Connecting Google..."
-                : "Sign Up With Google"}
-            </Text>
-          </Pressable>
+          {statusMessage ? (
+            <Text style={styles.statusText}>{statusMessage}</Text>
+          ) : null}
         </View>
       </KeyboardAwareScrollView>
     </KeyboardAvoidingView>
@@ -494,33 +429,16 @@ const styles = StyleSheet.create({
     ...appTypography.button,
     color: appColors.slate900,
   },
-  googleHint: {
-    ...appTypography.bodySmall,
-    color: appColors.slate600,
-    marginTop: 14,
-    marginBottom: 12,
-  },
-  googleButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    borderRadius: 8,
-    backgroundColor: appColors.brand600,
-    paddingHorizontal: 16,
-    paddingVertical: 24,
-    marginTop: 12,
-    marginBottom: 64,
-  },
-  googleButtonDisabled: {
+  buttonDisabled: {
     opacity: 0.6,
   },
-  googleButtonPressed: {
+  buttonPressed: {
     opacity: 0.9,
   },
-  googleButtonText: {
-    ...appTypography.button,
-    color: appColors.textPrimary,
+  statusText: {
+    ...appTypography.bodySmall,
+    color: appColors.slate600,
+    marginTop: 12,
   },
 });
 

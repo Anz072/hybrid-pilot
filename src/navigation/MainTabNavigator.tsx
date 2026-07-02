@@ -68,8 +68,8 @@ export type MainTabParamList = {
 
 const FOCUSED_COLOR = "#070707";
 const UNFOCUSED_COLOR = "rgba(7, 7, 7, 0.64)";
-const TAB_BAR_BACKGROUND = "#FBF6EA";
-const TAB_BAR_BORDER = "rgba(216, 207, 190, 0.78)";
+const TAB_BAR_BACKGROUND = appColors.surfaceCard;
+const TAB_BAR_BORDER = appColors.borderSoft;
 const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.4);
 const Tab = createBottomTabNavigator<MainTabParamList>();
 type RootNavigation = NativeStackNavigationProp<RootStackParamList>;
@@ -236,7 +236,7 @@ const MainTabNavigator = () => {
 
         if (!resolvedUserId) {
           setWeightModalVisible(false);
-          Alert.alert("Session expired", "Please sign in with Google again.");
+          Alert.alert("Session expired", "Please sign in with email again.");
           return;
         }
 
@@ -354,16 +354,18 @@ const MainTabNavigator = () => {
     outputRange: [0, 1],
   });
 
+  const sheetBottomInset = Math.max(insets.bottom, 0);
+  const sheetHeight = SHEET_HEIGHT + sheetBottomInset;
   const sheetTranslateY = sheetProgress.interpolate({
     inputRange: [0, 1],
-    outputRange: [SHEET_HEIGHT + 48, 0],
+    outputRange: [sheetHeight + 48, 0],
   });
   const visibleTabBarStyle = React.useMemo(
     () => [
       styles.tabBar,
       {
-        height: 78 + insets.bottom,
-        paddingBottom: Math.max(insets.bottom, 10),
+        height: 68 + insets.bottom,
+        paddingBottom: Math.max(insets.bottom, 8),
       },
     ],
     [insets.bottom],
@@ -388,7 +390,7 @@ const MainTabNavigator = () => {
           options={{
             tabBarIcon: ({ focused }) => (
               <HouseSimpleIcon
-                size={28}
+                size={26}
                 color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
                 weight={focused ? "bold" : "regular"}
               />
@@ -417,7 +419,7 @@ const MainTabNavigator = () => {
                   : styles.tabBarHidden,
               tabBarIcon: ({ focused }) => (
                 <ForkKnifeIcon
-                  size={28}
+                  size={26}
                   color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
                   weight={focused ? "bold" : "regular"}
                 />
@@ -438,7 +440,7 @@ const MainTabNavigator = () => {
                   pressed && styles.pressed,
                 ]}
               >
-                <PlusIcon size={34} color={FOCUSED_COLOR} weight="regular" />
+                <PlusIcon size={31} color={FOCUSED_COLOR} weight="regular" />
                 <Text style={styles.shortcutTabLabel}>Add</Text>
               </Pressable>
             ),
@@ -449,7 +451,7 @@ const MainTabNavigator = () => {
           options={{
             tabBarIcon: ({ focused }) => (
               <ScalesIcon
-                size={28}
+                size={26}
                 color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
                 weight={focused ? "bold" : "regular"}
               />
@@ -472,7 +474,7 @@ const MainTabNavigator = () => {
           options={{
             tabBarIcon: ({ focused }) => (
               <DotsThreeIcon
-                size={28}
+                size={26}
                 color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
                 weight={focused ? "bold" : "regular"}
               />
@@ -487,12 +489,7 @@ const MainTabNavigator = () => {
         animationType="none"
         onRequestClose={handleCloseShortcuts}
       >
-        <View
-          style={[
-            styles.modalRoot,
-            { paddingBottom: Math.max(insets.bottom, 24) },
-          ]}
-        >
+        <View style={styles.modalRoot}>
           <Animated.View
             style={[styles.backdrop, { opacity: backdropOpacity }]}
           >
@@ -506,7 +503,8 @@ const MainTabNavigator = () => {
             style={[
               styles.sheet,
               {
-                height: SHEET_HEIGHT,
+                height: sheetHeight,
+                paddingBottom: Math.max(sheetBottomInset, 16),
                 transform: [{ translateY: sheetTranslateY }],
               },
             ]}
@@ -577,8 +575,8 @@ const styles = StyleSheet.create({
     backgroundColor: TAB_BAR_BACKGROUND,
     borderTopWidth: 1,
     borderTopColor: TAB_BAR_BORDER,
-    paddingTop: 9,
-    shadowColor: "#C8BCA8",
+    paddingTop: 6,
+    shadowColor: appColors.borderStrong,
     shadowOffset: { width: 0, height: -8 },
     shadowOpacity: 0.1,
     shadowRadius: 18,
@@ -592,8 +590,8 @@ const styles = StyleSheet.create({
   },
   tabBarLabel: {
     color: appColors.textPrimary,
-    fontSize: 15,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 16,
     fontWeight: "400",
     letterSpacing: 0,
   },
@@ -602,12 +600,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingTop: 2,
-    gap: 2,
+    gap: 0,
   },
   shortcutTabLabel: {
     color: FOCUSED_COLOR,
-    fontSize: 15,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 16,
     fontWeight: "400",
     letterSpacing: 0,
   },

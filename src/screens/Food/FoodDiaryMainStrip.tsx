@@ -232,19 +232,19 @@ const FoodDiaryTimelineItem = ({
     switch (mealSlot) {
       case "breakfast":
         return (
-          <BowlFoodIcon size={21} color={appColors.brand700} weight="fill" />
+          <BowlFoodIcon size={18} color={appColors.brand700} weight="fill" />
         );
       case "lunch":
         return (
-          <ForkKnifeIcon size={21} color={appColors.brand700} weight="fill" />
+          <ForkKnifeIcon size={18} color={appColors.brand700} weight="fill" />
         );
       case "dinner":
         return (
-          <CookingPotIcon size={21} color={appColors.brand700} weight="fill" />
+          <CookingPotIcon size={18} color={appColors.brand700} weight="fill" />
         );
       case "snacks":
         return (
-          <BowlFoodIcon size={21} color={appColors.brand700} weight="regular" />
+          <BowlFoodIcon size={18} color={appColors.brand700} weight="regular" />
         );
     }
   };
@@ -300,7 +300,7 @@ const FoodDiaryTimelineItem = ({
               ]}
               accessibilityLabel={`Add food at ${formatFoodHourLabel(bucket.hour)}`}
             >
-              <PlusIcon size={15} color={appColors.white} weight="bold" />
+              <PlusIcon size={14} color={appColors.white} weight="bold" />
             </Pressable>
             {collapsed ? (
               <CaretDownIcon size={16} color={appColors.textSecondary} />
@@ -355,16 +355,9 @@ const FoodDiaryTimelineItem = ({
                         <View style={styles.entryMain}>
                           <View style={styles.entryTopRow}>
                             <View style={styles.entryCopy}>
-                              <Text style={styles.entryTitle} numberOfLines={2}>
+                              <Text style={styles.entryTitle} numberOfLines={1}>
                                 {entry.foodName}
                               </Text>
-                              {entry.entrySource === "quick_add" ? (
-                                <View style={styles.entryTag}>
-                                  <Text style={styles.entryTagText}>
-                                    Quick Add
-                                  </Text>
-                                </View>
-                              ) : null}
                             </View>
                             <Text style={styles.entryKcal} numberOfLines={1}>
                               {nutrition.calories} kcal
@@ -372,6 +365,13 @@ const FoodDiaryTimelineItem = ({
                           </View>
 
                           <View style={styles.entryMetaRow}>
+                            {entry.entrySource === "quick_add" ? (
+                              <View style={styles.entryTag}>
+                                <Text style={styles.entryTagText}>
+                                  Quick Add
+                                </Text>
+                              </View>
+                            ) : null}
                             <Text style={styles.entryText}>{time}</Text>
                             <Text style={styles.entryText}>|</Text>
                             <Text style={styles.entryText}>
@@ -659,12 +659,12 @@ const FoodDiaryMainStrip = ({
         </View>
         <View style={styles.dayStatusCopy}>
           <Text style={styles.dayStatusTitle}>
-            {isDayComplete ? "Day complete" : "Mark day complete"}
+            {isDayComplete ? "Saved for review" : "Ready for review"}
           </Text>
           <Text style={styles.dayStatusText}>
             {isDayComplete
-              ? "Included in adaptive calorie review."
-              : "Use once the day is fully logged."}
+              ? "Adaptive calories can use this logged day."
+              : "Mark when food logging is done."}
           </Text>
         </View>
       </Pressable>
@@ -851,15 +851,15 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.brand800,
   },
   timelineSection: {
-    marginTop: 24,
+    marginTop: 18,
   },
   selectedDateTitle: {
     color: appColors.textPrimary,
-    fontSize: 28,
-    lineHeight: 34,
+    fontSize: 22,
+    lineHeight: 28,
     fontWeight: "800",
     textAlign: "center",
-    marginTop: 20,
+    marginTop: 16,
   },
   dayStatusRow: {
     minHeight: 58,
@@ -904,7 +904,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   addRail: {
-    marginBottom: 18,
+    marginBottom: 12,
   },
   addRailLabel: {
     color: appColors.textSecondary,
@@ -919,7 +919,7 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   addRailChip: {
-    minHeight: 44,
+    minHeight: 38,
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
@@ -927,28 +927,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: appColors.borderSoft,
     backgroundColor: appColors.surfaceCard,
-    paddingHorizontal: 11,
+    paddingHorizontal: 10,
   },
   addRailChipText: {
     color: appColors.brand500,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "800",
   },
   timeline: {
-    gap: 18,
+    gap: 12,
   },
   timelineRow: {
     flexDirection: "row",
   },
   axis: {
-    width: 58,
-    marginRight: 10,
+    width: 48,
+    marginRight: 8,
     alignItems: "center",
   },
   axisLabel: {
     color: appColors.slate500,
-    fontSize: 18,
-    lineHeight: 23,
+    fontSize: 15,
+    lineHeight: 20,
     fontWeight: "500",
   },
   axisLabelActive: {
@@ -957,7 +957,7 @@ const styles = StyleSheet.create({
   axisTrack: {
     flex: 1,
     alignItems: "center",
-    paddingTop: 10,
+    paddingTop: 8,
   },
   axisDot: {
     width: 7,
@@ -972,8 +972,8 @@ const styles = StyleSheet.create({
     width: 1,
     flex: 1,
     backgroundColor: appColors.borderSoft,
-    marginTop: 5,
-    marginBottom: -18,
+    marginTop: 4,
+    marginBottom: -12,
   },
   timelineContent: {
     flex: 1,
@@ -983,12 +983,12 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCard,
     borderWidth: 1,
     borderColor: withOpacity(appColors.borderSoft, 0.72),
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
     shadowColor: appColors.slate500,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
     elevation: 3,
   },
   mealCardActive: {
@@ -997,20 +997,20 @@ const styles = StyleSheet.create({
   },
   mealHeader: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
+    gap: 8,
   },
   mealTitleGroup: {
     flex: 1,
     minWidth: 0,
     flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
+    alignItems: "center",
+    gap: 8,
   },
   mealIcon: {
-    width: 28,
-    height: 28,
+    width: 22,
+    height: 22,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1026,8 +1026,8 @@ const styles = StyleSheet.create({
   mealTitle: {
     flexShrink: 1,
     color: appColors.textPrimary,
-    fontSize: 24,
-    lineHeight: 29,
+    fontSize: 20,
+    lineHeight: 24,
     fontWeight: "800",
   },
   mealTitleMuted: {
@@ -1035,22 +1035,22 @@ const styles = StyleSheet.create({
   },
   mealMeta: {
     color: appColors.textSecondary,
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: "600",
     marginTop: 2,
   },
   mealHeaderActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 7,
   },
   mealKcal: {
     color: appColors.textPrimary,
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: 14,
+    lineHeight: 18,
     fontWeight: "800",
-    maxWidth: 82,
+    maxWidth: 72,
   },
   nowPill: {
     borderRadius: 999,
@@ -1065,15 +1065,15 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   hourAddButton: {
-    width: 44,
-    height: 44,
+    width: 38,
+    height: 38,
     borderRadius: 999,
     backgroundColor: appColors.brand700,
     alignItems: "center",
     justifyContent: "center",
   },
   stack: {
-    marginTop: 12,
+    marginTop: 8,
   },
   emptyState: {
     borderRadius: 8,
@@ -1087,7 +1087,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "transparent",
     paddingHorizontal: 0,
-    paddingTop: 10,
+    paddingTop: 7,
     paddingBottom: 0,
   },
   emptyStateText: {
@@ -1098,18 +1098,18 @@ const styles = StyleSheet.create({
   },
   emptyStateAction: {
     color: appColors.brand500,
-    fontSize: 16,
-    lineHeight: 20,
+    fontSize: 14,
+    lineHeight: 18,
     fontWeight: "700",
   },
   addMoreRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
   },
   entryCard: {
     backgroundColor: "transparent",
-    paddingVertical: 7,
+    paddingVertical: 6,
   },
   entryCardWithDivider: {
     borderBottomWidth: 1,
@@ -1122,54 +1122,52 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: 12,
+    gap: 8,
   },
   entryCopy: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 7,
+    minWidth: 0,
   },
   entryTitle: {
     color: appColors.textPrimary,
-    fontSize: 18,
-    lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 19,
     fontWeight: "500",
   },
   entryKcal: {
     color: appColors.textPrimary,
-    fontSize: 18,
-    lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 19,
     fontWeight: "700",
-    minWidth: 78,
+    minWidth: 66,
     textAlign: "right",
   },
   entryMetaRow: {
     flexDirection: "row",
-    gap: 5,
+    alignItems: "center",
+    gap: 4,
     flexWrap: "wrap",
     marginTop: 2,
   },
   entryText: {
     color: appColors.textSecondary,
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 11,
+    lineHeight: 14,
   },
   entryTag: {
     borderRadius: 999,
     backgroundColor: appColors.surfaceGhost,
     borderWidth: 1,
     borderColor: appColors.borderStrong,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
   entryTagText: {
     color: appColors.brand500,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "800",
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
   deleteSwipe: {
     width: 96,
@@ -1189,21 +1187,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-end",
     alignItems: "center",
-    gap: 10,
-    paddingTop: 8,
+    gap: 8,
+    paddingTop: 6,
   },
   mealTotalLabel: {
     color: appColors.textPrimary,
-    fontSize: 18,
-    lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 19,
     fontWeight: "700",
   },
   mealTotalValue: {
     color: appColors.textPrimary,
-    fontSize: 18,
-    lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 19,
     fontWeight: "800",
-    minWidth: 90,
+    minWidth: 78,
     textAlign: "right",
   },
   cardPressed: {
@@ -1212,4 +1210,3 @@ const styles = StyleSheet.create({
 });
 
 export default FoodDiaryMainStrip;
-

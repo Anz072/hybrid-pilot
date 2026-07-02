@@ -544,7 +544,7 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>No active user</Text>
             <Text style={styles.cardText}>
-              Sign in with Google to review your weekly food and weight signals.
+              Sign in to review your weekly food and weight signals.
             </Text>
           </View>
         ) : loading ? (
@@ -1278,4 +1278,3 @@ const styles = StyleSheet.create({
 });
 
 export default WeeklyReviewScreen;
-

@@ -56,6 +56,12 @@ const fetchAddFoodStaticLists =
 
 export const getCachedAddFoodStaticLists = () => cachedSnapshot;
 
+export const clearAddFoodStaticListsCache = () => {
+  cachedSnapshot = null;
+  inflightSnapshot = null;
+  fetchSequence += 1;
+};
+
 export const refreshAddFoodStaticLists = ({
   force = false,
 }: {

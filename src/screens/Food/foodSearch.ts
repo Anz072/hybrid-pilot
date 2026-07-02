@@ -32,6 +32,7 @@ type SearchFoodResultsInput = {
   filterLocalRow?: (food: DBFoodItem) => boolean;
   includeLocalFood?: boolean;
   includeRemote?: boolean;
+  onLocalResults?: (results: FoodSearchResult[]) => void;
   onRemoteSearchError?: () => void;
   rankOptions?: RankFoodSearchOptions;
   remoteMinQueryLength?: number;
@@ -349,6 +350,7 @@ export const searchFoodResults = async ({
   filterLocalRow,
   includeLocalFood = false,
   includeRemote = true,
+  onLocalResults,
   onRemoteSearchError,
   rankOptions,
   remoteMinQueryLength = DEFAULT_REMOTE_SEARCH_MIN_QUERY_LENGTH,
@@ -358,21 +360,22 @@ export const searchFoodResults = async ({
   const shouldFetchRemote =
     includeRemote && shouldSearchRemotely(trimmedQuery, remoteMinQueryLength);
 
-  const [localRows, remoteRows] = await Promise.all([
-    getLocalRows(trimmedQuery),
-    shouldFetchRemote
-      ? API.usdaAPI
-          .getFood(trimmedQuery, { pageSize: remotePageSize })
-          .catch(() => {
-            onRemoteSearchError?.();
-            return [];
-          })
-      : Promise.resolve([]),
-  ]);
+  const localRowsPromise = getLocalRows(trimmedQuery);
+  const remoteRowsPromise = shouldFetchRemote
+    ? API.usdaAPI
+        .getFood(trimmedQuery, { pageSize: remotePageSize })
+        .catch(() => {
+          onRemoteSearchError?.();
+          return [];
+        })
+    : Promise.resolve([]);
+  const localRows = await localRowsPromise;
 
   const localResults = localRows
     .filter((food) => filterLocalRow?.(food) ?? true)
     .map((food) => fromDbFoodItem(food, includeLocalFood));
+  onLocalResults?.(rankSearchResults(trimmedQuery, localResults, rankOptions));
+  const remoteRows = await remoteRowsPromise;
   const localKeys = new Set(
     localResults.flatMap((food) =>
       getSearchDedupeKeys(food, rankOptions?.dedupe),

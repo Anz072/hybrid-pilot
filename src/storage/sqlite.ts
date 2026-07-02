@@ -906,6 +906,198 @@ const migrations: Migration[] = [
     `);
     },
   },
+  {
+    version: 23,
+    name: "user_settings_adaptive_fields",
+    up: async (db) => {
+      await db.execAsync(`
+      ALTER TABLE user_settings ADD COLUMN adaptive_calories_enabled INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE user_settings ADD COLUMN adaptive_mode TEXT NOT NULL DEFAULT 'recommend';
+      ALTER TABLE user_settings ADD COLUMN adaptive_last_calculated_at TEXT;
+    `);
+    },
+  },
+  {
+    version: 24,
+    name: "local_first_cache_tables",
+    up: async (db) => {
+      await db.execAsync(`
+      ALTER TABLE users ADD COLUMN cached_at TEXT;
+      ALTER TABLE users ADD COLUMN last_synced_at TEXT;
+      ALTER TABLE users ADD COLUMN server_updated_at TEXT;
+      ALTER TABLE users ADD COLUMN sync_status TEXT NOT NULL DEFAULT 'synced';
+      ALTER TABLE users ADD COLUMN sync_error TEXT;
+
+      ALTER TABLE user_settings ADD COLUMN cached_at TEXT;
+      ALTER TABLE user_settings ADD COLUMN last_synced_at TEXT;
+      ALTER TABLE user_settings ADD COLUMN server_updated_at TEXT;
+      ALTER TABLE user_settings ADD COLUMN sync_status TEXT NOT NULL DEFAULT 'synced';
+      ALTER TABLE user_settings ADD COLUMN sync_error TEXT;
+
+      ALTER TABLE weight_entries ADD COLUMN cached_at TEXT;
+      ALTER TABLE weight_entries ADD COLUMN last_synced_at TEXT;
+      ALTER TABLE weight_entries ADD COLUMN server_updated_at TEXT;
+
+      ALTER TABLE weight_goals ADD COLUMN cached_at TEXT;
+      ALTER TABLE weight_goals ADD COLUMN last_synced_at TEXT;
+      ALTER TABLE weight_goals ADD COLUMN server_updated_at TEXT;
+      ALTER TABLE weight_goals ADD COLUMN sync_status TEXT NOT NULL DEFAULT 'synced';
+      ALTER TABLE weight_goals ADD COLUMN sync_error TEXT;
+
+      ALTER TABLE food_items ADD COLUMN cached_at TEXT;
+      ALTER TABLE food_items ADD COLUMN last_synced_at TEXT;
+      ALTER TABLE food_items ADD COLUMN server_updated_at TEXT;
+      ALTER TABLE food_items ADD COLUMN last_accessed_at TEXT;
+
+      ALTER TABLE user_food_favorites ADD COLUMN cached_at TEXT;
+      ALTER TABLE user_food_favorites ADD COLUMN last_synced_at TEXT;
+      ALTER TABLE user_food_favorites ADD COLUMN sync_status TEXT NOT NULL DEFAULT 'synced';
+      ALTER TABLE user_food_favorites ADD COLUMN sync_error TEXT;
+
+      ALTER TABLE user_recipes ADD COLUMN cached_at TEXT;
+      ALTER TABLE user_recipes ADD COLUMN last_synced_at TEXT;
+      ALTER TABLE user_recipes ADD COLUMN server_updated_at TEXT;
+      ALTER TABLE user_recipes ADD COLUMN sync_status TEXT NOT NULL DEFAULT 'synced';
+      ALTER TABLE user_recipes ADD COLUMN sync_error TEXT;
+
+      ALTER TABLE user_recipe_ingredients ADD COLUMN cached_at TEXT;
+      ALTER TABLE user_recipe_ingredients ADD COLUMN last_synced_at TEXT;
+      ALTER TABLE user_recipe_ingredients ADD COLUMN server_updated_at TEXT;
+      ALTER TABLE user_recipe_ingredients ADD COLUMN sync_status TEXT NOT NULL DEFAULT 'synced';
+      ALTER TABLE user_recipe_ingredients ADD COLUMN sync_error TEXT;
+
+      CREATE TABLE IF NOT EXISTS cached_food_entries (
+        id INTEGER PRIMARY KEY,
+        user_external_id TEXT NOT NULL,
+        food_id INTEGER,
+        date TEXT NOT NULL,
+        logged_at TEXT NOT NULL,
+        quantity_g REAL NOT NULL,
+        meal_type TEXT,
+        created_at TEXT NOT NULL,
+        entry_source TEXT NOT NULL,
+        food_name TEXT NOT NULL,
+        serving_size REAL NOT NULL DEFAULT 1,
+        serving_unit TEXT,
+        calories REAL NOT NULL DEFAULT 0,
+        protein_g REAL NOT NULL DEFAULT 0,
+        carbs_g REAL NOT NULL DEFAULT 0,
+        fat_g REAL NOT NULL DEFAULT 0,
+        alcohol_g REAL,
+        system_calculated_calories REAL,
+        is_energy_manually_set INTEGER NOT NULL DEFAULT 0,
+        quick_add_name TEXT,
+        cached_at TEXT NOT NULL,
+        last_synced_at TEXT,
+        server_updated_at TEXT,
+        sync_status TEXT NOT NULL DEFAULT 'synced',
+        sync_error TEXT,
+        deleted_at TEXT,
+        FOREIGN KEY(user_external_id) REFERENCES users(external_id),
+        FOREIGN KEY(food_id) REFERENCES food_items(id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_cached_food_entries_user_date
+      ON cached_food_entries(user_external_id, date DESC, logged_at ASC);
+
+      CREATE INDEX IF NOT EXISTS idx_cached_food_entries_user_sync
+      ON cached_food_entries(user_external_id, sync_status);
+
+      CREATE TABLE IF NOT EXISTS user_diary_days (
+        user_external_id TEXT NOT NULL,
+        date TEXT NOT NULL,
+        is_complete INTEGER NOT NULL DEFAULT 0,
+        completed_at TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        cached_at TEXT NOT NULL,
+        last_synced_at TEXT,
+        server_updated_at TEXT,
+        sync_status TEXT NOT NULL DEFAULT 'synced',
+        sync_error TEXT,
+        PRIMARY KEY(user_external_id, date),
+        FOREIGN KEY(user_external_id) REFERENCES users(external_id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_user_diary_days_user_date
+      ON user_diary_days(user_external_id, date DESC);
+
+      CREATE TABLE IF NOT EXISTS adaptive_calorie_recommendations (
+        id INTEGER PRIMARY KEY,
+        user_external_id TEXT NOT NULL,
+        status TEXT NOT NULL,
+        algorithm_version TEXT NOT NULL,
+        window_start TEXT NOT NULL,
+        window_end TEXT NOT NULL,
+        confidence TEXT NOT NULL,
+        current_base_calories REAL,
+        recommended_base_calories REAL NOT NULL,
+        estimated_tdee REAL NOT NULL,
+        recommended_delta REAL NOT NULL,
+        avg_logged_calories REAL NOT NULL,
+        complete_days_used INTEGER NOT NULL,
+        weigh_ins_used INTEGER NOT NULL,
+        trend_start_kg REAL NOT NULL,
+        trend_end_kg REAL NOT NULL,
+        observed_weekly_change_kg REAL,
+        reason TEXT NOT NULL,
+        input_summary TEXT,
+        responded_at TEXT,
+        applied_at TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        cached_at TEXT NOT NULL,
+        last_synced_at TEXT,
+        server_updated_at TEXT,
+        sync_status TEXT NOT NULL DEFAULT 'synced',
+        sync_error TEXT,
+        deleted_at TEXT,
+        FOREIGN KEY(user_external_id) REFERENCES users(external_id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_adaptive_recommendations_user_created
+      ON adaptive_calorie_recommendations(user_external_id, created_at DESC);
+
+      CREATE INDEX IF NOT EXISTS idx_adaptive_recommendations_user_status
+      ON adaptive_calorie_recommendations(user_external_id, status);
+
+      CREATE TABLE IF NOT EXISTS cached_search_results (
+        query_key TEXT PRIMARY KEY,
+        query TEXT NOT NULL,
+        result_food_ids TEXT NOT NULL DEFAULT '[]',
+        result_payloads TEXT,
+        source TEXT NOT NULL DEFAULT 'usda',
+        cached_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        hit_count INTEGER NOT NULL DEFAULT 0
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_cached_search_results_expires
+      ON cached_search_results(expires_at);
+
+      CREATE TABLE IF NOT EXISTS cached_barcode_lookups (
+        barcode TEXT PRIMARY KEY,
+        food_id INTEGER,
+        status TEXT NOT NULL,
+        payload TEXT,
+        cached_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        FOREIGN KEY(food_id) REFERENCES food_items(id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_cached_barcode_lookups_expires
+      ON cached_barcode_lookups(expires_at);
+
+      CREATE TABLE IF NOT EXISTS cached_home_summaries (
+        user_external_id TEXT PRIMARY KEY,
+        payload TEXT NOT NULL,
+        cached_at TEXT NOT NULL,
+        source_data_version TEXT,
+        FOREIGN KEY(user_external_id) REFERENCES users(external_id)
+      );
+    `);
+    },
+  },
 ];
 
 const trackedTables = [
@@ -919,6 +1111,12 @@ const trackedTables = [
   "user_food_favorites",
   "user_food_log",
   "user_quick_food_log",
+  "cached_food_entries",
+  "user_diary_days",
+  "adaptive_calorie_recommendations",
+  "cached_search_results",
+  "cached_barcode_lookups",
+  "cached_home_summaries",
   "user_recipes",
   "user_recipe_ingredients",
   "activities",
@@ -1112,6 +1310,12 @@ export const resetDb = async (): Promise<void> => {
     DROP TABLE IF EXISTS activities;
     DROP TABLE IF EXISTS user_food_favorites;
     DROP TABLE IF EXISTS user_food_log;
+    DROP TABLE IF EXISTS cached_food_entries;
+    DROP TABLE IF EXISTS user_diary_days;
+    DROP TABLE IF EXISTS adaptive_calorie_recommendations;
+    DROP TABLE IF EXISTS cached_search_results;
+    DROP TABLE IF EXISTS cached_barcode_lookups;
+    DROP TABLE IF EXISTS cached_home_summaries;
     DROP TABLE IF EXISTS user_recipe_ingredients;
     DROP TABLE IF EXISTS user_recipes;
     DROP TABLE IF EXISTS custom_meals;

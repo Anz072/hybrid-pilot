@@ -22,6 +22,7 @@ import {
   useFonts,
 } from "@expo-google-fonts/inter";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 
 import AppNavigator from "./src/navigation/AppNavigator";
@@ -62,15 +63,19 @@ export default function App() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView
+      style={{ flex: 1, backgroundColor: appColors.surfaceCanvas }}
+    >
       <StatusBar
         style="dark"
         backgroundColor={appColors.surfaceCanvas}
         animated
       />
-      <Provider store={store}>
-        <AppNavigator />
-      </Provider>
+      <SafeAreaProvider>
+        <Provider store={store}>
+          <AppNavigator />
+        </Provider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

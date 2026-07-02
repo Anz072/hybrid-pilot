@@ -18,7 +18,7 @@ const KEY_ADAPTIVE_RECOMMENDATION_SEEN = "adaptiveRecommendationSeen";
 const KEY_SHORTCUT_RECENTS = "shortcutRecents";
 const KEY_FOOD_RECENT_SEARCHES = "foodRecentSearches";
 
-export type AuthProvider = "local" | "google" | "email";
+export type AuthProvider = "local" | "email";
 
 export type OnboardingProfile = {
   goal: GoalType;

@@ -82,10 +82,6 @@ const FoodBarcodeScannerModal = ({
         return;
       }
 
-      console.log("[BarcodeScanner] Expo barcode event", {
-        data: result.data,
-        type: result.type,
-      });
       void registerScan(result.data, result.type);
     },
     [isWithinScanWindow, registerScan],
@@ -114,7 +110,6 @@ const FoodBarcodeScannerModal = ({
         <CameraView
           style={StyleSheet.absoluteFill}
           facing="back"
-          onCameraReady={() => console.log("[BarcodeScanner] Camera ready")}
           onMountError={(error) =>
             console.warn("[BarcodeScanner] Camera mount error", error)
           }

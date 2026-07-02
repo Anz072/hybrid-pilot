@@ -24,7 +24,7 @@ import { clearCurrentUser } from "../../store/userSlice";
 import { appColors } from "../../theme/colors";
 import SettingsStackHeader from "./SettingsStackHeader";
 import { saveUserProfileChanges } from "./userSettingsActions";
-import { signOutSupabaseSession } from "../../API/supabase/googleAuth";
+import { signOutSupabaseSession } from "../../API/supabase/auth";
 
 type Props = NativeStackScreenProps<MoreParamList, "ProfileSettingsScreen">;
 
@@ -42,18 +42,6 @@ const formatBirthdateInput = (value: string | null | undefined) =>
   value?.slice(0, 10) ?? "";
 
 const normalizeText = (value: string) => value.trim();
-
-const formatProviderLabel = (provider: string | null | undefined) => {
-  if (provider === "google") {
-    return "Google";
-  }
-
-  if (!provider) {
-    return "Account";
-  }
-
-  return provider.charAt(0).toUpperCase() + provider.slice(1);
-};
 
 const parseHeightValue = (value: string) => {
   const parsed = Number(value.trim().replace(",", "."));
@@ -183,7 +171,7 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
 
     Alert.alert(
       "Sign out?",
-      "You will return to the Google sign-in screen. Your synced data will stay on your account.",
+      "You will return to the email sign-in screen. Your synced data will stay on your account.",
       [
         { text: "Cancel", style: "cancel" },
         {

@@ -37,8 +37,8 @@ export const saveUserProfileChanges = async ({
   await saveLocalAccount({
     id: resolvedUser.externalId,
     provider:
-      localAccount?.provider === "google" || resolvedUser.provider === "google"
-        ? "google"
+      localAccount?.provider === "email" || resolvedUser.provider === "email"
+        ? "email"
         : "local",
     displayName:
       resolvedUser.displayName ??

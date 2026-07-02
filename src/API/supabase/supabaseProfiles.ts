@@ -277,7 +277,7 @@ export const toDbUserFromSupabaseProfile = (
 ): DBUser => ({
   id: options.localId ?? 0,
   externalId: profile.id,
-  provider: options.provider ?? "google",
+  provider: options.provider ?? "email",
   displayName: profile.displayName,
   createdAt: profile.createdAt,
   email: profile.email,

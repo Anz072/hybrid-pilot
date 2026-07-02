@@ -266,7 +266,7 @@ const AdaptiveCaloriesSettingsScreen = ({ navigation }: Props) => {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>No active user</Text>
             <Text style={styles.cardText}>
-              Sign in with Google to use adaptive calories.
+              Sign in to use adaptive calories.
             </Text>
           </View>
         ) : loading ? (
@@ -742,4 +742,3 @@ const styles = StyleSheet.create({
 });
 
 export default AdaptiveCaloriesSettingsScreen;
-

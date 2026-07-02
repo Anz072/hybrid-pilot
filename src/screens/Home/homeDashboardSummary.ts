@@ -1,6 +1,11 @@
 import { getEffectiveCalorieTargetForDate } from "../../engine/calorieTargets";
 import { DB } from "../../store/DB";
 import type { DBUser } from "../../store/DB_TYPES";
+import {
+  clearCachedHomeSummary as clearPersistedHomeSummary,
+  getCachedHomeSummary,
+  saveCachedHomeSummary,
+} from "../../store/cacheRepository";
 import type { FoodNutritionTotals } from "../Food/foodUtils";
 import {
   collapseEntriesByLocalDate,
@@ -33,6 +38,19 @@ export const getCachedHomeDashboardSummary = (userExternalId: string) =>
 
 export const clearCachedHomeDashboardSummary = (userExternalId: string) => {
   summaryCache.delete(userExternalId);
+  void clearPersistedHomeSummary(userExternalId).catch(() => undefined);
+};
+
+export const getPersistedHomeDashboardSummary = async (
+  userExternalId: string,
+) => {
+  const summary =
+    await getCachedHomeSummary<HomeDashboardSummary>(userExternalId);
+  if (summary) {
+    summaryCache.set(userExternalId, summary);
+  }
+
+  return summary;
 };
 
 const buildSummaryFromSnapshot = async ({
@@ -46,7 +64,7 @@ const buildSummaryFromSnapshot = async ({
 }): Promise<HomeDashboardSummary> => {
   const [settings, weightEntries, goal] = await Promise.all([
     DB.getUserSettings(user.externalId),
-    DB.listWeightEntries(user.externalId, { includeDeleted: true }),
+    DB.listWeightEntries(user.externalId),
     DB.getWeightGoal(user.externalId),
   ]);
   const resolvedTarget = getEffectiveCalorieTargetForDate({
@@ -54,9 +72,7 @@ const buildSummaryFromSnapshot = async ({
     baseCalories: user.calorieAllowance,
     settings,
   });
-  const activeWeightEntries = collapseEntriesByLocalDate(
-    weightEntries.filter((entry) => entry.deletedAt == null),
-  );
+  const activeWeightEntries = collapseEntriesByLocalDate(weightEntries);
   const currentEntry = activeWeightEntries[0] ?? null;
   const startingEntry = activeWeightEntries[activeWeightEntries.length - 1] ?? null;
   const sevenDayAverage = computeMovingAverage(activeWeightEntries, 7);
@@ -93,5 +109,6 @@ export const loadHomeDashboardSummary = async (
   });
 
   summaryCache.set(user.externalId, summary);
+  await saveCachedHomeSummary(user.externalId, summary, summary.loadedAt);
   return summary;
 };

@@ -65,6 +65,23 @@ const normalizeFoodDiaryHours = (
 const parseAdaptiveMode = (value: unknown): AdaptiveCalorieMode =>
   value === "auto_apply" ? "auto_apply" : "recommend";
 
+const parseBoolean = (value: unknown): boolean => {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "number") {
+    return value !== 0;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return normalized === "true" || normalized === "1" || normalized === "t";
+  }
+
+  return false;
+};
+
 const toUserSettings = (
   row: Record<string, unknown>,
 ): DBUserSettings => {
@@ -93,7 +110,7 @@ const toUserSettings = (
     userExternalId: String(row.userExternalId ?? ""),
     ...normalized,
     dailyCalorieOverrides,
-    adaptiveCaloriesEnabled: Boolean(row.adaptiveCaloriesEnabled),
+    adaptiveCaloriesEnabled: parseBoolean(row.adaptiveCaloriesEnabled),
     adaptiveMode: parseAdaptiveMode(row.adaptiveMode),
     adaptiveLastCalculatedAt:
       typeof row.adaptiveLastCalculatedAt === "string" &&
@@ -118,6 +135,9 @@ export const getUserSettings = async (
       food_diary_start_hour AS foodDiaryStartHour,
       food_diary_end_hour AS foodDiaryEndHour,
       daily_calorie_overrides AS dailyCalorieOverrides,
+      adaptive_calories_enabled AS adaptiveCaloriesEnabled,
+      adaptive_mode AS adaptiveMode,
+      adaptive_last_calculated_at AS adaptiveLastCalculatedAt,
       created_at AS createdAt,
       updated_at AS updatedAt
     FROM user_settings
@@ -145,6 +165,13 @@ export const saveUserSettings = async (
     input.dailyCalorieOverrides !== undefined
       ? normalizeDailyCalorieOverrides(input.dailyCalorieOverrides)
       : existing?.dailyCalorieOverrides ?? null;
+  const adaptiveCaloriesEnabled =
+    input.adaptiveCaloriesEnabled ?? existing?.adaptiveCaloriesEnabled ?? false;
+  const adaptiveMode = input.adaptiveMode ?? existing?.adaptiveMode ?? "recommend";
+  const adaptiveLastCalculatedAt =
+    input.adaptiveLastCalculatedAt !== undefined
+      ? input.adaptiveLastCalculatedAt?.trim() || null
+      : existing?.adaptiveLastCalculatedAt ?? null;
 
   await db.runAsync(
     `
@@ -153,20 +180,29 @@ export const saveUserSettings = async (
       food_diary_start_hour,
       food_diary_end_hour,
       daily_calorie_overrides,
+      adaptive_calories_enabled,
+      adaptive_mode,
+      adaptive_last_calculated_at,
       created_at,
       updated_at
     )
-    VALUES (?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(user_external_id) DO UPDATE SET
       food_diary_start_hour = excluded.food_diary_start_hour,
       food_diary_end_hour = excluded.food_diary_end_hour,
       daily_calorie_overrides = excluded.daily_calorie_overrides,
+      adaptive_calories_enabled = excluded.adaptive_calories_enabled,
+      adaptive_mode = excluded.adaptive_mode,
+      adaptive_last_calculated_at = excluded.adaptive_last_calculated_at,
       updated_at = excluded.updated_at
     `,
     input.userExternalId,
     normalized.foodDiaryStartHour,
     normalized.foodDiaryEndHour,
     dailyCalorieOverrides ? JSON.stringify(dailyCalorieOverrides) : null,
+    adaptiveCaloriesEnabled ? 1 : 0,
+    adaptiveMode,
+    adaptiveLastCalculatedAt,
     existing?.createdAt ?? now,
     now,
   );

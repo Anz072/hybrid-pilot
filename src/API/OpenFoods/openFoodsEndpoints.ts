@@ -31,16 +31,12 @@ class OpenFoodsAPI {
 
   public getByBarcode = async (code: string) => {
     try {
-      console.log("received code: ", code);
       const res = await this.openFoodFactsApi.get(`${code}`, {
         params: {
           fields: this.fields.join(","),
         },
       });
       const isValid = this.dataValidator(res.data);
-
-      console.log("res.data");
-      console.log(JSON.stringify(res.data, null, 2));
 
       if (isValid) {
         return {
@@ -164,7 +160,6 @@ class OpenFoodsAPI {
       "product.product_name",
     ];
 
-    // console.log(JSON.stringify(data, null, 2));
     const missingFields: string[] = [];
 
     for (const path of requiredFields) {

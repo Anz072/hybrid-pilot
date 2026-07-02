@@ -41,15 +41,10 @@
           "imageWidth": 200
         }
       ],
-      [
-        "expo-web-browser",
-        {
-          "experimentalLauncherActivity": false
-        }
-      ],
       "expo-camera",
       "expo-font",
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-secure-store"
     ]
   }
 }

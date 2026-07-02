@@ -4,75 +4,59 @@ import {
   type SupabaseClient,
   type User,
 } from "@supabase/supabase-js";
-import { getDb, initDb } from "../../storage/sqlite";
+import * as SecureStore from "expo-secure-store";
 
-const SUPABASE_APP_KV_PREFIX = "supabase:";
 const SUPABASE_STORAGE_KEY = "dribsnis-auth";
 export const SUPABASE_SESSION_REQUIRED_MESSAGE =
-  "Your session is no longer valid. Please sign in with Google again.";
+  "Your session is no longer valid. Please sign in with email and password again.";
 
 const readConfig = () => ({
-  anonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? "",
+  publishableKey:
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ??
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.trim() ??
+    "",
   url: process.env.EXPO_PUBLIC_SUPABASE_URL?.trim() ?? "",
 });
 
-const buildStorageKey = (key: string) => `${SUPABASE_APP_KV_PREFIX}${key}`;
 const isTransientAuthNetworkError = (message: string) =>
   /fetch failed|network request failed|network/i.test(message);
 
+const isEmailPasswordSupabaseUser = (user: User): boolean => {
+  const provider = user.app_metadata?.provider;
+  return provider == null || provider === "email";
+};
+
 const supabaseStorage = {
   getItem: async (key: string) => {
-    await initDb();
-    const db = await getDb();
-    const row = await db.getFirstAsync<{ value: string }>(
-      `SELECT value FROM app_kv WHERE key = ? LIMIT 1`,
-      buildStorageKey(key),
-    );
-
-    return row?.value ?? null;
+    return SecureStore.getItemAsync(key);
   },
   removeItem: async (key: string) => {
-    await initDb();
-    const db = await getDb();
-    await db.runAsync(
-      `DELETE FROM app_kv WHERE key = ?`,
-      buildStorageKey(key),
-    );
+    await SecureStore.deleteItemAsync(key);
   },
   setItem: async (key: string, value: string) => {
-    await initDb();
-    const db = await getDb();
-    await db.runAsync(
-      `
-      INSERT INTO app_kv (key, value)
-      VALUES (?, ?)
-      ON CONFLICT(key) DO UPDATE SET value = excluded.value
-      `,
-      buildStorageKey(key),
-      value,
-    );
+    await SecureStore.setItemAsync(key, value);
   },
 };
 
 let cachedClient: SupabaseClient | null = null;
 
 export const isSupabaseConfigured = () => {
-  const { anonKey, url } = readConfig();
-  return url.length > 0 && anonKey.length > 0;
+  const { publishableKey, url } = readConfig();
+  return url.length > 0 && publishableKey.length > 0;
 };
 
 export const getSupabaseConfigError = () =>
-  "Missing Supabase config. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in dribsnis/.env.";
+  "Missing Supabase config. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY in dribsnis/.env.";
 
 export const getSupabaseClient = () => {
-  const { anonKey, url } = readConfig();
+  const { publishableKey, url } = readConfig();
 
-  if (!url || !anonKey) {
+  if (!url || !publishableKey) {
     throw new Error(getSupabaseConfigError());
   }
 
   if (!cachedClient) {
-    cachedClient = createClient(url, anonKey, {
+    cachedClient = createClient(url, publishableKey, {
       auth: {
         autoRefreshToken: false,
         detectSessionInUrl: false,
@@ -127,16 +111,27 @@ export const getValidatedSupabaseSessionUser = async (): Promise<User | null> =>
 
     if (error) {
       if (isTransientAuthNetworkError(error.message)) {
-        return getSupabaseSessionUser();
+        const cachedUser = await getSupabaseSessionUser();
+        return cachedUser && isEmailPasswordSupabaseUser(cachedUser)
+          ? cachedUser
+          : null;
       }
 
+      return null;
+    }
+
+    if (user && !isEmailPasswordSupabaseUser(user)) {
+      await supabase.auth.signOut();
       return null;
     }
 
     return user ?? null;
   } catch (error) {
     if (error instanceof Error && isTransientAuthNetworkError(error.message)) {
-      return getSupabaseSessionUser();
+      const cachedUser = await getSupabaseSessionUser();
+      return cachedUser && isEmailPasswordSupabaseUser(cachedUser)
+        ? cachedUser
+        : null;
     }
 
     return null;
@@ -148,7 +143,15 @@ export const requireSupabaseSessionUser = async (
 ): Promise<User> => {
   const sessionUser = await getSupabaseSessionUser();
 
-  if (!sessionUser || (expectedUserId && sessionUser.id !== expectedUserId)) {
+  if (
+    !sessionUser ||
+    !isEmailPasswordSupabaseUser(sessionUser) ||
+    (expectedUserId && sessionUser.id !== expectedUserId)
+  ) {
+    if (sessionUser && !isEmailPasswordSupabaseUser(sessionUser)) {
+      await getSupabaseClient().auth.signOut();
+    }
+
     throw new Error(SUPABASE_SESSION_REQUIRED_MESSAGE);
   }
 

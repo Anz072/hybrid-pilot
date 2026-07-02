@@ -12,13 +12,19 @@ import {
   TargetIcon,
   UserCircleIcon,
 } from "phosphor-react-native";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   buildEffectiveCalorieTargetsForDates,
   getWeeklyCalorieBudget,
 } from "../../engine/calorieTargets";
-import { isDeveloperAccountEmail } from "../../dev/developerAccount";
 import {
   resolveGoalStrategy,
 } from "../../engine/goalStrategy";
@@ -29,6 +35,7 @@ import { appColors } from "../../theme/colors";
 import { appTypography } from "../../theme/typography";
 import { formatFoodHourLabel } from "../Food/foodUtils";
 import CalorieBudgetChart from "./CalorieBudgetChart";
+import { seedDeveloperTestData } from "./testDataSeeder";
 import {
   formatActivityLevelLabel,
   formatGoalLabel,
@@ -98,8 +105,8 @@ const MoreScreen = () => {
   > | null>(null);
   const [adaptiveRecommendationReady, setAdaptiveRecommendationReady] =
     React.useState(false);
+  const [isSeedingTestData, setIsSeedingTestData] = React.useState(false);
   const weekDates = React.useMemo(() => buildCurrentWeekDates(new Date()), []);
-  const isDeveloperAccount = isDeveloperAccountEmail(user?.email);
 
   const loadSettings = React.useCallback(async () => {
     if (!user) {
@@ -152,6 +159,49 @@ const MoreScreen = () => {
 
     return `${formatFoodHourLabel(settings.foodDiaryStartHour)} - ${formatFoodHourLabel(settings.foodDiaryEndHour)}`;
   }, [settings]);
+  const runSeedDeveloperTestData = React.useCallback(async () => {
+    if (isSeedingTestData) {
+      return;
+    }
+
+    if (!user?.externalId) {
+      Alert.alert("No user found", "Sign in before generating test data.");
+      return;
+    }
+
+    setIsSeedingTestData(true);
+    try {
+      const result = await seedDeveloperTestData(user.externalId);
+      Alert.alert(
+        "Test data created",
+        `${result.foodEntries} food entries and ${result.weightEntries} weight entries were added for ${result.startDate} to ${result.endDate}.`,
+      );
+    } catch {
+      Alert.alert("Could not create test data", "Please try again.");
+    } finally {
+      setIsSeedingTestData(false);
+    }
+  }, [isSeedingTestData, user?.externalId]);
+
+  const confirmSeedDeveloperTestData = React.useCallback(() => {
+    if (isSeedingTestData) {
+      return;
+    }
+
+    Alert.alert(
+      "Generate test history?",
+      "This adds 28 days of sample diary entries and weights. Previous [Test] diary entries in that range are replaced, and weight entries for those dates are updated.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Generate",
+          onPress: () => {
+            void runSeedDeveloperTestData();
+          },
+        },
+      ],
+    );
+  }, [isSeedingTestData, runSeedDeveloperTestData]);
 
   return (
     <View style={styles.screen}>
@@ -382,25 +432,33 @@ const MoreScreen = () => {
           />
         </View>
 
-        {isDeveloperAccount ? (
-          <>
-            <Text style={styles.sectionTitle}>Developer</Text>
-            <View style={styles.sectionCard}>
-              <MoreActionRow
-                icon={
-                  <SlidersHorizontalIcon
-                    size={18}
-                    color={appColors.brand700}
-                    weight="fill"
-                  />
-                }
-                onPress={() => navigation.navigate("SettingsScreen")}
-                title="Debug tools"
-                value="Dev only"
+        <Text style={styles.sectionTitle}>Developer</Text>
+        <View style={styles.sectionCard}>
+          <MoreActionRow
+            icon={
+              <SlidersHorizontalIcon
+                size={18}
+                color={appColors.brand700}
+                weight="fill"
               />
-            </View>
-          </>
-        ) : null}
+            }
+            onPress={() => navigation.navigate("SettingsScreen")}
+            title="Debug tools"
+            value="Open"
+          />
+          <MoreActionRow
+            icon={
+              <LightningIcon
+                size={18}
+                color={appColors.brand700}
+                weight="fill"
+              />
+            }
+            onPress={confirmSeedDeveloperTestData}
+            title="Generate test history"
+            value={isSeedingTestData ? "Working..." : "28 days"}
+          />
+        </View>
       </ScrollView>
     </View>
   );
@@ -542,4 +600,3 @@ const styles = StyleSheet.create({
 });
 
 export default MoreScreen;
-

@@ -23,6 +23,8 @@ import {
   FileTextIcon,
   FlameIcon,
   LeafIcon,
+  LightningIcon,
+  MagnifyingGlassIcon,
   ScalesIcon,
   TargetIcon,
   TrendUpIcon,
@@ -52,6 +54,7 @@ import {
 import {
   clearCachedHomeDashboardSummary,
   getCachedHomeDashboardSummary,
+  getPersistedHomeDashboardSummary,
   loadHomeDashboardSummary,
   type HomeDashboardSummary,
 } from "./homeDashboardSummary";
@@ -387,6 +390,17 @@ const HomeScreen = () => {
       const sequence = refreshSequenceRef.current + 1;
       refreshSequenceRef.current = sequence;
 
+      if (preferCache && !cachedSummary) {
+        const persistedSummary = await getPersistedHomeDashboardSummary(
+          user.externalId,
+        ).catch(() => null);
+
+        if (persistedSummary && refreshSequenceRef.current === sequence) {
+          applySummary(persistedSummary);
+          setIsLoading(false);
+        }
+      }
+
       try {
         const summary = await loadHomeDashboardSummary(user);
 
@@ -467,6 +481,28 @@ const HomeScreen = () => {
     setScannerVisible(true);
   }, []);
 
+  const openFoodSearch = React.useCallback(() => {
+    const today = new Date();
+    const foodLogContext = resolveFoodLogContext({
+      date: formatFoodDateKey(today),
+    });
+
+    navigation.navigate("AddFood", {
+      ...toFoodLogRouteParams(foodLogContext),
+    });
+  }, [navigation]);
+
+  const openQuickAdd = React.useCallback(() => {
+    const today = new Date();
+    const foodLogContext = resolveFoodLogContext({
+      date: formatFoodDateKey(today),
+    });
+
+    navigation.navigate("QuickAddFood", {
+      ...toFoodLogRouteParams(foodLogContext),
+    });
+  }, [navigation]);
+
   const handleScannedFoodResolved = React.useCallback(
     (result: ScannedFoodLookupResult) => {
       const today = new Date();
@@ -503,34 +539,63 @@ const HomeScreen = () => {
           <Text style={styles.updatedText}>{updatedLabel}</Text>
         ) : null}
 
-        <Pressable
-          onPress={openScanner}
-          style={({ pressed }) => [
-            styles.scanCta,
-            pressed && styles.pressed,
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel="Scan barcode"
-        >
-          <View style={styles.scanCtaIcon}>
-            <BarcodeIcon
-              size={26}
-              color={appColors.white}
-              weight="bold"
-            />
-          </View>
-          <View style={styles.scanCtaCopy}>
-            <Text style={styles.scanCtaTitle}>Scan barcode</Text>
-            <Text style={styles.scanCtaText}>
-              Add packaged food to today's diary.
-            </Text>
-          </View>
-          <CaretRightIcon
-            size={22}
-            color={dashboardColors.muted}
-            weight="bold"
-          />
-        </Pressable>
+        <View style={styles.quickActionRow}>
+          <Pressable
+            onPress={openScanner}
+            style={({ pressed }) => [
+              styles.quickAction,
+              styles.quickActionPrimary,
+              pressed && styles.pressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Scan barcode"
+          >
+            <View style={[styles.quickActionIcon, styles.quickActionIconPrimary]}>
+              <BarcodeIcon
+                size={22}
+                color={appColors.white}
+                weight="bold"
+              />
+            </View>
+            <Text style={styles.quickActionLabel}>Scan</Text>
+          </Pressable>
+          <Pressable
+            onPress={openFoodSearch}
+            style={({ pressed }) => [
+              styles.quickAction,
+              pressed && styles.pressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Search foods"
+          >
+            <View style={styles.quickActionIcon}>
+              <MagnifyingGlassIcon
+                size={21}
+                color={dashboardColors.ink}
+                weight="bold"
+              />
+            </View>
+            <Text style={styles.quickActionLabel}>Search</Text>
+          </Pressable>
+          <Pressable
+            onPress={openQuickAdd}
+            style={({ pressed }) => [
+              styles.quickAction,
+              pressed && styles.pressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Quick add food"
+          >
+            <View style={styles.quickActionIcon}>
+              <LightningIcon
+                size={21}
+                color={dashboardColors.ink}
+                weight="fill"
+              />
+            </View>
+            <Text style={styles.quickActionLabel}>Quick Add</Text>
+          </Pressable>
+        </View>
 
         {isLoading ? (
           <View style={[styles.loadingState, { height: ringSize + 52 }]}>
@@ -796,46 +861,50 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginTop: 3,
   },
-  scanCta: {
+  quickActionRow: {
     marginTop: 16,
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 2,
+  },
+  quickAction: {
+    flex: 1,
+    minHeight: 84,
     borderRadius: 8,
     backgroundColor: dashboardColors.glass,
     borderWidth: 1,
     borderColor: dashboardColors.glassBorder,
-    padding: 14,
-    flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 12,
     shadowColor: dashboardColors.shadow,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 2,
   },
-  scanCtaIcon: {
-    width: 48,
-    height: 48,
+  quickActionPrimary: {
+    borderColor: appColors.borderStrong,
+  },
+  quickActionIcon: {
+    width: 42,
+    height: 42,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: appColors.surfaceField,
+  },
+  quickActionIconPrimary: {
     backgroundColor: dashboardColors.coral,
   },
-  scanCtaCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  scanCtaTitle: {
+  quickActionLabel: {
     color: dashboardColors.ink,
-    fontSize: 17,
-    lineHeight: 22,
-    fontWeight: "800",
-  },
-  scanCtaText: {
-    color: dashboardColors.text,
     fontSize: 13,
-    lineHeight: 18,
-    fontWeight: "500",
-    marginTop: 2,
+    lineHeight: 17,
+    fontWeight: "800",
+    textAlign: "center",
   },
   loadingState: {
     alignItems: "center",

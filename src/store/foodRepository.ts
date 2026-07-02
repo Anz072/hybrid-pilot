@@ -400,8 +400,13 @@ export const saveFoodItem = async (
     return existingId;
   }
 
-  const insertColumns = saveColumns.join(",\n      ");
-  const placeholders = saveColumns.map(() => "?").join(", ");
+  const insertColumns =
+    typeof input.id === "number"
+      ? ["id", ...saveColumns].join(",\n      ")
+      : saveColumns.join(",\n      ");
+  const insertValues =
+    typeof input.id === "number" ? [input.id, ...values] : values;
+  const placeholders = insertValues.map(() => "?").join(", ");
 
   const result = await db.runAsync(
     `
@@ -412,7 +417,7 @@ export const saveFoodItem = async (
     )
     VALUES (${placeholders}, ?, ?)
     `,
-    ...values,
+    ...insertValues,
     now,
     now,
   );
@@ -429,6 +434,29 @@ export const getFoodItemById = async (
   await initDb();
   const db = await getDb();
   return getFoodItemByIdWithDb(db, id);
+};
+
+export const getFoodItemsByIds = async (
+  ids: number[],
+): Promise<DBFoodItem[]> => {
+  const uniqueIds = [...new Set(ids.filter((id) => Number.isInteger(id)))];
+  if (uniqueIds.length === 0) {
+    return [];
+  }
+
+  await initDb();
+  const db = await getDb();
+  const placeholders = uniqueIds.map(() => "?").join(", ");
+  const rows = await db.getAllAsync<Record<string, unknown>>(
+    `
+    SELECT ${getFoodItemSelect()}
+    FROM food_items
+    WHERE id IN (${placeholders})
+    `,
+    ...uniqueIds,
+  );
+
+  return rows.map(toFoodItem);
 };
 
 export const getFoodItemByBarcode = async (

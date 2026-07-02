@@ -245,7 +245,7 @@ export const sharedStyleValues = {
     paddingHorizontal: 18,
     paddingTop: 12,
     gap: 10,
-    backgroundColor: appColors.surfaceOverlay,
+    backgroundColor: appColors.surfaceCard,
     borderTopWidth: 1,
     borderTopColor: appColors.borderSoft,
   },

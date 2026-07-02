@@ -974,7 +974,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
-    paddingHorizontal: 18,
+    paddingHorizontal: 14,
   },
   snackbar: {
     position: "absolute",
@@ -1012,4 +1012,3 @@ const styles = StyleSheet.create({
 });
 
 export default FoodDiaryScreen;
-

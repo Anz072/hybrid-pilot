@@ -38,6 +38,7 @@ import {
   getFavoriteFoodItems as getFavoriteFoodItemsLocal,
   getFoodItemByBarcode as getFoodItemByBarcodeLocal,
   getFoodItemById as getFoodItemByIdLocal,
+  getFoodItemsByIds as getFoodItemsByIdsLocal,
   getRecentFoodItems as getRecentFoodItemsLocal,
   listFoodItems as listFoodItemsLocal,
   saveFoodItem as saveFoodItemLocal,
@@ -49,6 +50,7 @@ import {
   addUserFoodLog as addUserFoodLogLocal,
   copyFoodLogsFromDate as copyFoodLogsFromDateLocal,
   deleteUserFoodLog as deleteUserFoodLogLocal,
+  getUserFoodLogEntriesBetween as getUserFoodLogEntriesBetweenLocal,
   getUserFoodLogEntriesByDate as getUserFoodLogEntriesByDateLocal,
   getUserFoodLogEntryById as getUserFoodLogEntryByIdLocal,
   updateQuickAddFoodLog as updateQuickAddFoodLogLocal,
@@ -67,6 +69,28 @@ import {
   getUserRecipeDetailsById as getUserRecipeDetailsByIdLocal,
   updateUserRecipe as updateUserRecipeLocal,
 } from "./recipeRepository";
+import {
+  deleteCachedFoodLogEntry,
+  getCachedBarcodeLookup,
+  getCachedFoodLogEntriesBetween,
+  getCachedFoodLogEntriesByDate,
+  getCachedFoodLogEntryById,
+  getRecentCachedFoodItems,
+  getCachedSearchResults,
+  getCachedDiaryDayStatus,
+  listCachedDiaryDayStatusesBetween,
+  markCachedFoodLogEntryDeleted,
+  markCachedFoodLogEntryError,
+  replaceCachedFavoriteFoodIds,
+  replaceCachedFoodLogEntriesBetween,
+  replaceCachedFoodLogEntriesForDate,
+  saveCachedBarcodeHit,
+  saveCachedSearchResults,
+  touchCachedFoodItems,
+  upsertCachedDiaryDayStatuses,
+  upsertCachedFoodItems,
+  upsertCachedFoodLogEntries,
+} from "./cacheRepository";
 
 const SUPABASE_FOOD_ITEMS_TABLE = "food_items";
 const SUPABASE_FAVORITES_TABLE = "user_food_favorites";
@@ -323,23 +347,6 @@ const combineDateKeyWithTime = (dateKey: string, timeSource: string) => {
     source.getSeconds(),
     source.getMilliseconds(),
   ).toISOString();
-};
-
-const listDateKeysBetween = (startDate: string, endDate: string): string[] => {
-  if (!startDate || !endDate || startDate > endDate) {
-    return [];
-  }
-
-  const dates: string[] = [];
-  const cursor = new Date(`${startDate}T12:00:00`);
-  const end = new Date(`${endDate}T12:00:00`);
-
-  while (cursor.getTime() <= end.getTime()) {
-    dates.push(cursor.toISOString().slice(0, 10));
-    cursor.setDate(cursor.getDate() + 1);
-  }
-
-  return dates;
 };
 
 const sanitizeSupabaseSearch = (value: string) =>
@@ -753,6 +760,100 @@ const fetchFoodItemByBarcodeSupabase = async (
   }
 
   return data ? toDbFoodItemFromSupabaseRow(data as SupabaseFoodItemRow) : null;
+};
+
+const cacheFoodItems = async (foods: DBFoodItem[]): Promise<DBFoodItem[]> => {
+  await upsertCachedFoodItems(foods);
+  await touchCachedFoodItems(foods.map((food) => food.id));
+  return foods;
+};
+
+const cacheFoodItem = async (
+  food: DBFoodItem | null,
+): Promise<DBFoodItem | null> => {
+  if (food) {
+    await cacheFoodItems([food]);
+  }
+
+  return food;
+};
+
+const refreshFoodItemByIdCache = async (
+  id: number,
+  authUserId: string,
+): Promise<void> => {
+  const food = isSyntheticRecipeFoodId(id)
+    ? await fetchSyntheticRecipeFoodById(fromSyntheticRecipeFoodId(id), authUserId)
+    : isSyntheticMealFoodId(id)
+      ? await fetchSyntheticMealFoodById(fromSyntheticMealFoodId(id), authUserId)
+      : await fetchFoodItemByIdSupabase(id);
+
+  await cacheFoodItem(food);
+};
+
+const refreshFoodItemsByIdsCache = async (
+  ids: number[],
+  authUserId: string,
+): Promise<void> => {
+  const uniqueIds = [...new Set(ids.filter((id) => Number.isInteger(id)))];
+  if (uniqueIds.length === 0) {
+    return;
+  }
+
+  const regularIds = uniqueIds.filter(
+    (id) => !isSyntheticRecipeFoodId(id) && !isSyntheticMealFoodId(id),
+  );
+  const syntheticRecipeIds = uniqueIds.filter(isSyntheticRecipeFoodId);
+  const syntheticMealIds = uniqueIds.filter(isSyntheticMealFoodId);
+  const [regularFoods, recipeFoods, mealFoods] = await Promise.all([
+    fetchFoodItemsByIds(regularIds),
+    Promise.all(
+      syntheticRecipeIds.map((id) =>
+        fetchSyntheticRecipeFoodById(fromSyntheticRecipeFoodId(id), authUserId),
+      ),
+    ),
+    Promise.all(
+      syntheticMealIds.map((id) =>
+        fetchSyntheticMealFoodById(fromSyntheticMealFoodId(id), authUserId),
+      ),
+    ),
+  ]);
+
+  await cacheFoodItems([
+    ...regularFoods,
+    ...recipeFoods.filter((food): food is DBFoodItem => food != null),
+    ...mealFoods.filter((food): food is DBFoodItem => food != null),
+  ]);
+};
+
+const refreshFoodSearchCache = async (
+  authUserId: string,
+  query: string,
+  limit: number,
+): Promise<void> => {
+  const [foodRows, recipeRows, mealRows] = await Promise.all([
+    fetchFoodRowsForList({ query, limit, source: null }),
+    fetchVisibleRecipeRows({
+      authUserId,
+      query,
+      limit: Math.max(8, Math.ceil(limit / 2)),
+    }),
+    fetchVisibleMealRows({
+      authUserId,
+      query,
+      limit: Math.max(8, Math.ceil(limit / 2)),
+    }),
+  ]);
+  const publicFoods = foodRows.map(toDbFoodItemFromSupabaseRow);
+  const remoteFoods = [
+    ...publicFoods,
+    ...recipeRows.map((recipe) => buildSyntheticRecipeFood(recipe)),
+    ...mealRows.map((meal) => buildSyntheticMealFood(meal)),
+  ];
+  await cacheFoodItems(remoteFoods);
+  await saveCachedSearchResults(query, publicFoods, {
+    source: "all",
+  });
 };
 
 const fetchCustomRecipeRowById = async (
@@ -1294,6 +1395,97 @@ const toDbDiaryDayStatus = (row: SupabaseDiaryDayRow): DBDiaryDayStatus => ({
     new Date().toISOString(),
 });
 
+const buildPendingFoodLogEntry = ({
+  entrySource,
+  food,
+  id,
+  input,
+  loggedAt,
+}: {
+  entrySource: UserFoodLogSource;
+  food: DBFoodItem;
+  id: number;
+  input: AddUserFoodLogInput;
+  loggedAt: string;
+}): DBUserFoodLogEntry => {
+  const serving = getResolvedServing(food);
+
+  return {
+    id,
+    userExternalId: input.userExternalId,
+    foodId: food.id,
+    date: input.date,
+    loggedAt,
+    quantityG: input.quantityG,
+    mealType: normalizeOptionalText(input.mealType),
+    createdAt: loggedAt,
+    entrySource,
+    foodName: food.name,
+    servingSize: serving.value,
+    servingUnit: serving.unit,
+    calories: food.calories ?? 0,
+    proteinG: food.proteinG ?? 0,
+    carbsG: food.carbsG ?? 0,
+    fatG: food.fatG ?? 0,
+    alcoholG: food.alcoholG,
+    systemCalculatedCalories: null,
+    isEnergyManuallySet: false,
+    quickAddName: null,
+  };
+};
+
+const buildPendingQuickAddEntry = ({
+  id,
+  input,
+  loggedAt,
+}: {
+  id: number;
+  input: AddQuickAddFoodLogInput;
+  loggedAt: string;
+}): DBUserFoodLogEntry => {
+  const displayName = normalizeOptionalText(input.name) ?? "Quick Add";
+
+  return {
+    id,
+    userExternalId: input.userExternalId,
+    foodId: null,
+    date: input.date,
+    loggedAt,
+    quantityG: 1,
+    mealType: normalizeOptionalText(input.mealType),
+    createdAt: loggedAt,
+    entrySource: "quick_add",
+    foodName: displayName,
+    servingSize: 1,
+    servingUnit: "entry",
+    calories: input.calories,
+    proteinG: input.proteinG ?? 0,
+    carbsG: input.carbsG ?? 0,
+    fatG: input.fatG ?? 0,
+    alcoholG: input.alcoholG ?? 0,
+    systemCalculatedCalories: input.systemCalculatedCalories ?? null,
+    isEnergyManuallySet: Boolean(input.isEnergyManuallySet),
+    quickAddName: normalizeOptionalText(input.name),
+  };
+};
+
+const cacheDiaryDayIncomplete = async (
+  userExternalId: string,
+  date: string,
+): Promise<void> => {
+  const now = new Date().toISOString();
+  await upsertCachedDiaryDayStatuses(userExternalId, [
+    {
+      userExternalId,
+      date,
+      isComplete: false,
+      completedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ]);
+};
+
 const fetchDiaryDayRow = async (
   userId: string,
   date: string,
@@ -1413,7 +1605,7 @@ const getRecentSupabaseItems = async (
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from(SUPABASE_FOOD_ENTRIES_TABLE)
-    .select("entry_type, food_item_id, custom_recipe_id, custom_meal_id, logged_at, created_at")
+    .select("*")
     .eq("user_id", userExternalId)
     .order("logged_at", { ascending: false })
     .order("created_at", { ascending: false })
@@ -1423,7 +1615,7 @@ const getRecentSupabaseItems = async (
     throw error;
   }
 
-  const rows = (data as Array<Record<string, unknown>>) ?? [];
+  const rows = (data as SupabaseUserFoodEntryRow[]) ?? [];
   const recentFoods: DBFoodItem[] = [];
   const seen = new Set<string>();
 
@@ -1473,6 +1665,12 @@ const getRecentSupabaseItems = async (
     }
   }
 
+  await cacheFoodItems(recentFoods);
+  await upsertCachedFoodLogEntries(
+    userExternalId,
+    rows.map(toDbFoodLogEntry),
+  );
+
   return recentFoods;
 };
 
@@ -1487,6 +1685,11 @@ export const saveFoodItem = async (input: SaveFoodItemInput): Promise<number> =>
 
   const existingId = await findExistingSupabaseFoodItemId(input);
   if (existingId != null) {
+    const existingFood = await fetchFoodItemByIdSupabase(existingId);
+    await cacheFoodItem(existingFood);
+    if (existingFood?.barcode) {
+      await saveCachedBarcodeHit(existingFood.barcode, existingFood);
+    }
     return existingId;
   }
 
@@ -1501,13 +1704,24 @@ export const saveFoodItem = async (input: SaveFoodItemInput): Promise<number> =>
   if (error) {
     const recoveredId = await findExistingSupabaseFoodItemId(input);
     if (recoveredId != null) {
+      const recoveredFood = await fetchFoodItemByIdSupabase(recoveredId);
+      await cacheFoodItem(recoveredFood);
+      if (recoveredFood?.barcode) {
+        await saveCachedBarcodeHit(recoveredFood.barcode, recoveredFood);
+      }
       return recoveredId;
     }
 
     throw error;
   }
 
-  return parseRequiredNumber(data.id);
+  const savedId = parseRequiredNumber(data.id);
+  const savedFood = await fetchFoodItemByIdSupabase(savedId);
+  await cacheFoodItem(savedFood);
+  if (savedFood?.barcode) {
+    await saveCachedBarcodeHit(savedFood.barcode, savedFood);
+  }
+  return savedId;
 };
 
 export const addFoodItem = async (input: AddFoodItemInput): Promise<number> =>
@@ -1522,15 +1736,74 @@ export const getFoodItemById = async (
     return getFoodItemByIdLocal(id);
   }
 
-  if (isSyntheticRecipeFoodId(id)) {
-    return fetchSyntheticRecipeFoodById(fromSyntheticRecipeFoodId(id), authUserId);
+  const cachedFood = await getFoodItemByIdLocal(id);
+  if (cachedFood) {
+    void refreshFoodItemByIdCache(id, authUserId).catch(() => undefined);
+    return cachedFood;
   }
 
-  if (isSyntheticMealFoodId(id)) {
-    return fetchSyntheticMealFoodById(fromSyntheticMealFoodId(id), authUserId);
+  const remoteFood = isSyntheticRecipeFoodId(id)
+    ? await fetchSyntheticRecipeFoodById(fromSyntheticRecipeFoodId(id), authUserId)
+    : isSyntheticMealFoodId(id)
+      ? await fetchSyntheticMealFoodById(fromSyntheticMealFoodId(id), authUserId)
+      : await fetchFoodItemByIdSupabase(id);
+
+  return cacheFoodItem(remoteFood);
+};
+
+export const getFoodItemsByIds = async (
+  ids: number[],
+): Promise<DBFoodItem[]> => {
+  const uniqueIds = [...new Set(ids.filter((id) => Number.isInteger(id)))];
+  if (uniqueIds.length === 0) {
+    return [];
   }
 
-  return fetchFoodItemByIdSupabase(id);
+  const authUserId = await resolveSupabaseUserId();
+
+  if (!authUserId) {
+    return getFoodItemsByIdsLocal(uniqueIds);
+  }
+
+  const cachedFoods = await getFoodItemsByIdsLocal(uniqueIds);
+  if (cachedFoods.length === uniqueIds.length) {
+    void refreshFoodItemsByIdsCache(uniqueIds, authUserId).catch(() => undefined);
+    const byId = new Map(cachedFoods.map((food) => [food.id, food]));
+    return uniqueIds
+      .map((id) => byId.get(id) ?? null)
+      .filter((food): food is DBFoodItem => food != null);
+  }
+
+  const regularIds = uniqueIds.filter(
+    (id) => !isSyntheticRecipeFoodId(id) && !isSyntheticMealFoodId(id),
+  );
+  const syntheticRecipeIds = uniqueIds.filter(isSyntheticRecipeFoodId);
+  const syntheticMealIds = uniqueIds.filter(isSyntheticMealFoodId);
+  const [regularFoods, recipeFoods, mealFoods] = await Promise.all([
+    fetchFoodItemsByIds(regularIds),
+    Promise.all(
+      syntheticRecipeIds.map((id) =>
+        fetchSyntheticRecipeFoodById(fromSyntheticRecipeFoodId(id), authUserId),
+      ),
+    ),
+    Promise.all(
+      syntheticMealIds.map((id) =>
+        fetchSyntheticMealFoodById(fromSyntheticMealFoodId(id), authUserId),
+      ),
+    ),
+  ]);
+
+  const foods = [
+    ...regularFoods,
+    ...recipeFoods.filter((food): food is DBFoodItem => food != null),
+    ...mealFoods.filter((food): food is DBFoodItem => food != null),
+  ];
+  await cacheFoodItems(foods);
+  const byId = new Map([...cachedFoods, ...foods].map((food) => [food.id, food]));
+
+  return uniqueIds
+    .map((id) => byId.get(id) ?? null)
+    .filter((food): food is DBFoodItem => food != null);
 };
 
 export const getFoodItemByBarcode = async (
@@ -1542,7 +1815,28 @@ export const getFoodItemByBarcode = async (
     return getFoodItemByBarcodeLocal(barcode);
   }
 
-  return fetchFoodItemByBarcodeSupabase(barcode);
+  const cachedLookup = await getCachedBarcodeLookup(barcode);
+  if (cachedLookup?.status === "hit") {
+    return cachedLookup.food;
+  }
+
+  if (cachedLookup?.status === "miss") {
+    return null;
+  }
+
+  const cachedFood = await getFoodItemByBarcodeLocal(barcode);
+  if (cachedFood) {
+    await saveCachedBarcodeHit(barcode, cachedFood);
+    return cachedFood;
+  }
+
+  const remoteFood = await fetchFoodItemByBarcodeSupabase(barcode);
+  if (remoteFood) {
+    await saveCachedBarcodeHit(barcode, remoteFood);
+    return remoteFood;
+  }
+
+  return null;
 };
 
 export const deleteFoodItem = async (foodId: number): Promise<void> => {
@@ -1573,6 +1867,8 @@ export const setFoodItemFavorite = async (
   if (foodId < 0) {
     return;
   }
+
+  await setFoodItemFavoriteLocal(userExternalId, foodId, isFavorite);
 
   const supabase = getSupabaseClient();
 
@@ -1612,6 +1908,27 @@ export const getFavoriteFoodIds = async (
     return getFavoriteFoodIdsLocal(userExternalId);
   }
 
+  const cachedIds = await getFavoriteFoodIdsLocal(userExternalId);
+  if (cachedIds.length > 0) {
+    void (async () => {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase
+        .from(SUPABASE_FAVORITES_TABLE)
+        .select("food_item_id")
+        .eq("user_id", authUserId)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      const ids = ((data as Array<{ food_item_id: number | string }>) ?? [])
+        .map((row) => parseRequiredNumber(row.food_item_id));
+      await replaceCachedFavoriteFoodIds(userExternalId, ids);
+    })().catch(() => undefined);
+    return cachedIds;
+  }
+
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from(SUPABASE_FAVORITES_TABLE)
@@ -1623,9 +1940,11 @@ export const getFavoriteFoodIds = async (
     throw error;
   }
 
-  return ((data as Array<{ food_item_id: number | string }>) ?? []).map((row) =>
-    parseRequiredNumber(row.food_item_id),
+  const ids = ((data as Array<{ food_item_id: number | string }>) ?? []).map(
+    (row) => parseRequiredNumber(row.food_item_id),
   );
+  await replaceCachedFavoriteFoodIds(userExternalId, ids);
+  return ids;
 };
 
 export const getFavoriteFoodItems = async (
@@ -1638,9 +1957,20 @@ export const getFavoriteFoodItems = async (
     return getFavoriteFoodItemsLocal(userExternalId, limit);
   }
 
+  const cachedFoods = await getFavoriteFoodItemsLocal(userExternalId, limit);
+  if (cachedFoods.length > 0) {
+    void (async () => {
+      const ids = await getFavoriteFoodIds(userExternalId);
+      const foods = await fetchFoodItemsByIds(ids.slice(0, limit));
+      await cacheFoodItems(foods);
+    })().catch(() => undefined);
+    return cachedFoods;
+  }
+
   const ids = await getFavoriteFoodIds(userExternalId);
   const limitedIds = ids.slice(0, limit);
   const foods = await fetchFoodItemsByIds(limitedIds);
+  await cacheFoodItems(foods);
   const byId = new Map(foods.map((food) => [food.id, food]));
 
   return limitedIds
@@ -1672,21 +2002,72 @@ export const listFoodItems = async ({
   }
 
   if (source === "recipe") {
+    const cachedRecipes = await listFoodItemsLocal({
+      query,
+      limit: Math.max(limit, 1),
+      source: "recipe",
+    });
+    if (cachedRecipes.length > 0) {
+      void (async () => {
+        const recipes = await fetchVisibleRecipeRows({
+          authUserId,
+          query: query?.trim() ?? "",
+          limit,
+        });
+        await cacheFoodItems(recipes.map((recipe) => buildSyntheticRecipeFood(recipe)));
+      })().catch(() => undefined);
+      return cachedRecipes;
+    }
+
     const recipes = await fetchVisibleRecipeRows({
       authUserId,
       query: query?.trim() ?? "",
       limit,
     });
-    return recipes.map((recipe) => buildSyntheticRecipeFood(recipe));
+    return cacheFoodItems(recipes.map((recipe) => buildSyntheticRecipeFood(recipe)));
   }
 
   if (source === "custom_meal") {
+    const cachedMeals = (
+      await listFoodItemsLocal({
+        query,
+        limit: Math.max(limit * 4, 200),
+        source: "recipe",
+      })
+    )
+      .filter((food) => parseJsonObject(food.rawPayload)?.entityType === "custom_meal")
+      .slice(0, Math.max(limit, 1));
+    if (cachedMeals.length > 0) {
+      void (async () => {
+        const meals = await fetchVisibleMealRows({
+          authUserId,
+          query: query?.trim() ?? "",
+          limit,
+        });
+        await cacheFoodItems(meals.map((meal) => buildSyntheticMealFood(meal)));
+      })().catch(() => undefined);
+      return cachedMeals;
+    }
+
     const meals = await fetchVisibleMealRows({
       authUserId,
       query: query?.trim() ?? "",
       limit,
     });
-    return meals.map((meal) => buildSyntheticMealFood(meal));
+    return cacheFoodItems(meals.map((meal) => buildSyntheticMealFood(meal)));
+  }
+
+  const cachedFoods = await listFoodItemsLocal({ query, limit, source });
+  if (cachedFoods.length > 0) {
+    void (async () => {
+      const rows = await fetchFoodRowsForList({
+        query,
+        limit,
+        source,
+      });
+      await cacheFoodItems(rows.map(toDbFoodItemFromSupabaseRow));
+    })().catch(() => undefined);
+    return cachedFoods;
   }
 
   const rows = await fetchFoodRowsForList({
@@ -1695,7 +2076,7 @@ export const listFoodItems = async ({
     source,
   });
 
-  return rows.map(toDbFoodItemFromSupabaseRow);
+  return cacheFoodItems(rows.map(toDbFoodItemFromSupabaseRow));
 };
 
 export const listUserCreatedRecipeFoods = async (
@@ -1720,8 +2101,10 @@ export const listUserCreatedRecipeFoods = async (
     throw error;
   }
 
-  return ((data as SupabaseCustomRecipeRow[]) ?? []).map((recipe) =>
-    buildSyntheticRecipeFood(recipe),
+  return cacheFoodItems(
+    ((data as SupabaseCustomRecipeRow[]) ?? []).map((recipe) =>
+      buildSyntheticRecipeFood(recipe),
+    ),
   );
 };
 
@@ -1747,8 +2130,10 @@ export const listUserCreatedCustomMealFoods = async (
     throw error;
   }
 
-  return ((data as SupabaseCustomMealRow[]) ?? []).map((meal) =>
-    buildSyntheticMealFood(meal),
+  return cacheFoodItems(
+    ((data as SupabaseCustomMealRow[]) ?? []).map((meal) =>
+      buildSyntheticMealFood(meal),
+    ),
   );
 };
 
@@ -1767,6 +2152,25 @@ export const searchFoodItems = async (
     return [];
   }
 
+  const cachedSearch = await getCachedSearchResults(normalized, {
+    limit,
+    source: "all",
+  });
+  if (cachedSearch && cachedSearch.length > 0) {
+    void refreshFoodSearchCache(authUserId, normalized, limit).catch(
+      () => undefined,
+    );
+    return cachedSearch;
+  }
+
+  const localSearch = await searchFoodItemsLocal(normalized, limit);
+  if (localSearch.length > 0) {
+    void refreshFoodSearchCache(authUserId, normalized, limit).catch(
+      () => undefined,
+    );
+    return localSearch;
+  }
+
   const [foodRows, recipeRows, mealRows] = await Promise.all([
     fetchFoodRowsForList({ query: normalized, limit, source: null }),
     fetchVisibleRecipeRows({
@@ -1781,11 +2185,17 @@ export const searchFoodItems = async (
     }),
   ]);
 
-  return [
-    ...foodRows.map(toDbFoodItemFromSupabaseRow),
+  const publicFoods = foodRows.map(toDbFoodItemFromSupabaseRow);
+  const foods = [
+    ...publicFoods,
     ...recipeRows.map((recipe) => buildSyntheticRecipeFood(recipe)),
     ...mealRows.map((meal) => buildSyntheticMealFood(meal)),
   ];
+  await cacheFoodItems(foods);
+  await saveCachedSearchResults(normalized, publicFoods, {
+    source: "all",
+  });
+  return foods;
 };
 
 export const getRecentFoodItems = async (
@@ -1798,7 +2208,17 @@ export const getRecentFoodItems = async (
     return getRecentFoodItemsLocal(userExternalId, limit);
   }
 
-  return getRecentSupabaseItems(authUserId, limit);
+  const cachedRecent = await getRecentCachedFoodItems(userExternalId, limit);
+  if (cachedRecent.length > 0) {
+    void getRecentSupabaseItems(authUserId, limit)
+      .then(cacheFoodItems)
+      .catch(() => undefined);
+    return cachedRecent;
+  }
+
+  const recent = await getRecentSupabaseItems(authUserId, limit);
+  await cacheFoodItems(recent);
+  return recent;
 };
 
 export const createUserRecipe = async (
@@ -2398,15 +2818,39 @@ export const addUserFoodLog = async (
     is_energy_manually_set: false,
     metadata: buildEntrySnapshotMetadata(food),
   };
+  const pendingId = -Date.now();
+  await upsertCachedFoodLogEntries(
+    input.userExternalId,
+    [
+      buildPendingFoodLogEntry({
+        entrySource: entryType,
+        food,
+        id: pendingId,
+        input,
+        loggedAt: payload.logged_at,
+      }),
+    ],
+    "pending",
+  );
 
   const supabase = getSupabaseClient();
-  const { error } = await supabase.from(SUPABASE_FOOD_ENTRIES_TABLE).insert(payload);
+  const { data, error } = await supabase
+    .from(SUPABASE_FOOD_ENTRIES_TABLE)
+    .insert(payload)
+    .select("*")
+    .single();
 
   if (error) {
+    await markCachedFoodLogEntryError(pendingId, error);
     throw error;
   }
 
+  await deleteCachedFoodLogEntry(pendingId, input.userExternalId);
+  await upsertCachedFoodLogEntries(input.userExternalId, [
+    toDbFoodLogEntry(data as SupabaseUserFoodEntryRow),
+  ]);
   await clearCompletedDiaryDayIfNeeded(authUserId, input.date);
+  await cacheDiaryDayIncomplete(input.userExternalId, input.date);
 };
 
 export const addQuickAddFoodLog = async (
@@ -2420,13 +2864,27 @@ export const addQuickAddFoodLog = async (
 
   const supabase = getSupabaseClient();
   const displayName = normalizeOptionalText(input.name) ?? "Quick Add";
+  const loggedAt = input.loggedAt ?? new Date().toISOString();
+  const pendingId = -Date.now();
+  await upsertCachedFoodLogEntries(
+    input.userExternalId,
+    [
+      buildPendingQuickAddEntry({
+        id: pendingId,
+        input,
+        loggedAt,
+      }),
+    ],
+    "pending",
+  );
+
   const { data, error } = await supabase
     .from(SUPABASE_FOOD_ENTRIES_TABLE)
     .insert({
       user_id: authUserId,
       entry_type: "quick_add",
       date: input.date,
-      logged_at: input.loggedAt ?? new Date().toISOString(),
+      logged_at: loggedAt,
       meal_type: normalizeOptionalText(input.mealType),
       amount_value: 1,
       amount_unit: "entry",
@@ -2445,14 +2903,20 @@ export const addQuickAddFoodLog = async (
         servingUnit: "entry",
       },
     })
-    .select("id")
+    .select("*")
     .single();
 
   if (error) {
+    await markCachedFoodLogEntryError(pendingId, error);
     throw error;
   }
 
+  await deleteCachedFoodLogEntry(pendingId, input.userExternalId);
+  await upsertCachedFoodLogEntries(input.userExternalId, [
+    toDbFoodLogEntry(data as SupabaseUserFoodEntryRow),
+  ]);
   await clearCompletedDiaryDayIfNeeded(authUserId, input.date);
+  await cacheDiaryDayIncomplete(input.userExternalId, input.date);
 
   return parseRequiredNumber(data.id);
 };
@@ -2492,7 +2956,14 @@ export const updateUserFoodLog = async (
     throw error;
   }
 
+  const updatedRow = await fetchFoodLogEntryRowByIdSupabase(input.id);
+  if (updatedRow) {
+    await upsertCachedFoodLogEntries(authUserId, [
+      toDbFoodLogEntry(updatedRow),
+    ]);
+  }
   await clearCompletedDiaryDayIfNeeded(authUserId, entry.date);
+  await cacheDiaryDayIncomplete(authUserId, entry.date);
 };
 
 export const updateQuickAddFoodLog = async (
@@ -2538,7 +3009,14 @@ export const updateQuickAddFoodLog = async (
     throw error;
   }
 
+  const updatedRow = await fetchFoodLogEntryRowByIdSupabase(input.id);
+  if (updatedRow) {
+    await upsertCachedFoodLogEntries(authUserId, [
+      toDbFoodLogEntry(updatedRow),
+    ]);
+  }
   await clearCompletedDiaryDayIfNeeded(authUserId, existingRow.date);
+  await cacheDiaryDayIncomplete(authUserId, existingRow.date);
 };
 
 export const deleteUserFoodLog = async (id: number): Promise<void> => {
@@ -2553,6 +3031,8 @@ export const deleteUserFoodLog = async (id: number): Promise<void> => {
     return;
   }
 
+  await markCachedFoodLogEntryDeleted(id, authUserId);
+
   const supabase = getSupabaseClient();
   const { error } = await supabase
     .from(SUPABASE_FOOD_ENTRIES_TABLE)
@@ -2560,10 +3040,13 @@ export const deleteUserFoodLog = async (id: number): Promise<void> => {
     .eq("id", id);
 
   if (error) {
+    await markCachedFoodLogEntryError(id, error);
     throw error;
   }
 
+  await deleteCachedFoodLogEntry(id, authUserId);
   await clearCompletedDiaryDayIfNeeded(authUserId, existingRow.date);
+  await cacheDiaryDayIncomplete(authUserId, existingRow.date);
 };
 
 export const getUserFoodLogEntryById = async (
@@ -2575,8 +3058,26 @@ export const getUserFoodLogEntryById = async (
     return getUserFoodLogEntryByIdLocal(id);
   }
 
+  const cached = await getCachedFoodLogEntryById(id, authUserId);
+  if (cached) {
+    void fetchFoodLogEntryRowByIdSupabase(id)
+      .then((row) =>
+        row
+          ? upsertCachedFoodLogEntries(authUserId, [toDbFoodLogEntry(row)])
+          : undefined,
+      )
+      .catch(() => undefined);
+    return cached;
+  }
+
   const row = await fetchFoodLogEntryRowByIdSupabase(id);
-  return row ? toDbFoodLogEntry(row) : null;
+  if (!row) {
+    return null;
+  }
+
+  const entry = toDbFoodLogEntry(row);
+  await upsertCachedFoodLogEntries(authUserId, [entry]);
+  return entry;
 };
 
 export const getUserFoodLogEntriesBetween = async (
@@ -2587,17 +3088,39 @@ export const getUserFoodLogEntriesBetween = async (
   const authUserId = await resolveSupabaseUserId(userExternalId);
 
   if (!authUserId) {
-    const localEntries = await Promise.all(
-      listDateKeysBetween(startDate, endDate).map((date) =>
-        getUserFoodLogEntriesByDateLocal(userExternalId, date),
-      ),
-    );
+    return getUserFoodLogEntriesBetweenLocal(userExternalId, startDate, endDate);
+  }
 
-    return localEntries.flat().sort((left, right) => {
-      const leftTime = new Date(left.loggedAt ?? left.createdAt).getTime();
-      const rightTime = new Date(right.loggedAt ?? right.createdAt).getTime();
-      return leftTime - rightTime;
-    });
+  const cached = await getCachedFoodLogEntriesBetween(
+    userExternalId,
+    startDate,
+    endDate,
+  );
+  if (cached.length > 0) {
+    void (async () => {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase
+        .from(SUPABASE_FOOD_ENTRIES_TABLE)
+        .select("*")
+        .eq("user_id", authUserId)
+        .gte("date", startDate)
+        .lte("date", endDate)
+        .order("date", { ascending: true })
+        .order("logged_at", { ascending: true })
+        .order("created_at", { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      await replaceCachedFoodLogEntriesBetween(
+        userExternalId,
+        startDate,
+        endDate,
+        ((data as SupabaseUserFoodEntryRow[]) ?? []).map(toDbFoodLogEntry),
+      );
+    })().catch(() => undefined);
+    return cached;
   }
 
   const supabase = getSupabaseClient();
@@ -2615,7 +3138,16 @@ export const getUserFoodLogEntriesBetween = async (
     throw error;
   }
 
-  return ((data as SupabaseUserFoodEntryRow[]) ?? []).map(toDbFoodLogEntry);
+  const entries = ((data as SupabaseUserFoodEntryRow[]) ?? []).map(
+    toDbFoodLogEntry,
+  );
+  await replaceCachedFoodLogEntriesBetween(
+    userExternalId,
+    startDate,
+    endDate,
+    entries,
+  );
+  return entries;
 };
 
 export const getDiaryDayStatus = async (
@@ -2630,11 +3162,31 @@ export const getDiaryDayStatus = async (
     return null;
   }
   if (!authUserId) {
-    return null;
+    return getCachedDiaryDayStatus(userExternalId, date);
+  }
+
+  const cached = await getCachedDiaryDayStatus(userExternalId, date);
+  if (cached) {
+    void fetchDiaryDayRow(authUserId, date)
+      .then((row) =>
+        row
+          ? upsertCachedDiaryDayStatuses(userExternalId, [
+              toDbDiaryDayStatus(row),
+            ])
+          : undefined,
+      )
+      .catch(() => undefined);
+    return cached;
   }
 
   const row = await fetchDiaryDayRow(authUserId, date);
-  return row ? toDbDiaryDayStatus(row) : null;
+  if (!row) {
+    return null;
+  }
+
+  const status = toDbDiaryDayStatus(row);
+  await upsertCachedDiaryDayStatuses(userExternalId, [status]);
+  return status;
 };
 
 export const listDiaryDayStatusesBetween = async (
@@ -2650,11 +3202,30 @@ export const listDiaryDayStatusesBetween = async (
     return [];
   }
   if (!authUserId) {
-    return [];
+    return listCachedDiaryDayStatusesBetween(userExternalId, startDate, endDate);
+  }
+
+  const cached = await listCachedDiaryDayStatusesBetween(
+    userExternalId,
+    startDate,
+    endDate,
+  );
+  if (cached.length > 0) {
+    void listDiaryDayRowsBetween(authUserId, startDate, endDate)
+      .then((rows) =>
+        upsertCachedDiaryDayStatuses(
+          userExternalId,
+          rows.map(toDbDiaryDayStatus),
+        ),
+      )
+      .catch(() => undefined);
+    return cached;
   }
 
   const rows = await listDiaryDayRowsBetween(authUserId, startDate, endDate);
-  return rows.map(toDbDiaryDayStatus);
+  const statuses = rows.map(toDbDiaryDayStatus);
+  await upsertCachedDiaryDayStatuses(userExternalId, statuses);
+  return statuses;
 };
 
 export const saveDiaryDayStatus = async (
@@ -2666,7 +3237,7 @@ export const saveDiaryDayStatus = async (
     authUserId = await resolveSupabaseUserId(input.userExternalId);
   } catch {
     const now = new Date().toISOString();
-    return {
+    const localStatus = {
       userExternalId: input.userExternalId,
       date: input.date,
       isComplete: input.isComplete,
@@ -2674,10 +3245,12 @@ export const saveDiaryDayStatus = async (
       createdAt: now,
       updatedAt: now,
     };
+    await upsertCachedDiaryDayStatuses(input.userExternalId, [localStatus]);
+    return localStatus;
   }
   if (!authUserId) {
     const now = new Date().toISOString();
-    return {
+    const localStatus = {
       userExternalId: input.userExternalId,
       date: input.date,
       isComplete: input.isComplete,
@@ -2685,10 +3258,28 @@ export const saveDiaryDayStatus = async (
       createdAt: now,
       updatedAt: now,
     };
+    await upsertCachedDiaryDayStatuses(input.userExternalId, [localStatus]);
+    return localStatus;
   }
 
   const existing = await fetchDiaryDayRow(authUserId, input.date);
   const now = new Date().toISOString();
+  const pendingStatus = {
+    userExternalId: input.userExternalId,
+    date: input.date,
+    isComplete: input.isComplete,
+    completedAt: input.isComplete ? now : null,
+    createdAt:
+      normalizeOptionalText(existing?.created_at) ??
+      normalizeOptionalText(existing?.updated_at) ??
+      now,
+    updatedAt: now,
+  };
+  await upsertCachedDiaryDayStatuses(
+    input.userExternalId,
+    [pendingStatus],
+    "pending",
+  );
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from(SUPABASE_DIARY_DAYS_TABLE)
@@ -2710,10 +3301,18 @@ export const saveDiaryDayStatus = async (
     .single();
 
   if (error) {
-    throw error;
+    await upsertCachedDiaryDayStatuses(
+      input.userExternalId,
+      [pendingStatus],
+      "error",
+      error.message,
+    );
+    return pendingStatus;
   }
 
-  return toDbDiaryDayStatus(data as SupabaseDiaryDayRow);
+  const savedStatus = toDbDiaryDayStatus(data as SupabaseDiaryDayRow);
+  await upsertCachedDiaryDayStatuses(input.userExternalId, [savedStatus]);
+  return savedStatus;
 };
 
 export const getUserFoodLogEntriesByDate = async (
@@ -2724,6 +3323,31 @@ export const getUserFoodLogEntriesByDate = async (
 
   if (!authUserId) {
     return getUserFoodLogEntriesByDateLocal(userExternalId, date);
+  }
+
+  const cached = await getCachedFoodLogEntriesByDate(userExternalId, date);
+  if (cached.length > 0) {
+    void (async () => {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase
+        .from(SUPABASE_FOOD_ENTRIES_TABLE)
+        .select("*")
+        .eq("user_id", authUserId)
+        .eq("date", date)
+        .order("logged_at", { ascending: true })
+        .order("created_at", { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      await replaceCachedFoodLogEntriesForDate(
+        userExternalId,
+        date,
+        ((data as SupabaseUserFoodEntryRow[]) ?? []).map(toDbFoodLogEntry),
+      );
+    })().catch(() => undefined);
+    return cached;
   }
 
   const supabase = getSupabaseClient();
@@ -2739,7 +3363,11 @@ export const getUserFoodLogEntriesByDate = async (
     throw error;
   }
 
-  return ((data as SupabaseUserFoodEntryRow[]) ?? []).map(toDbFoodLogEntry);
+  const entries = ((data as SupabaseUserFoodEntryRow[]) ?? []).map(
+    toDbFoodLogEntry,
+  );
+  await replaceCachedFoodLogEntriesForDate(userExternalId, date, entries);
+  return entries;
 };
 
 export const copyFoodLogsFromDate = async (

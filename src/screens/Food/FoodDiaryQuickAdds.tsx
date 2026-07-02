@@ -62,6 +62,7 @@ const FoodDiaryQuickAdds = ({
                   color={appColors.white}
                   weight="fill"
                 />
+                <Text style={styles.favoriteButtonText}>Log</Text>
               </Pressable>
               <Pressable
                 onPress={() => onAddFavorite(food, selectedHour)}
@@ -139,9 +140,16 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 999,
     backgroundColor: appColors.brand700,
+    flexDirection: "row",
+    gap: 6,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 10,
+  },
+  favoriteButtonText: {
+    color: appColors.white,
+    fontSize: 12,
+    fontWeight: "900",
   },
   favoriteActionRow: {
     flexDirection: "row",

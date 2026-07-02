@@ -301,6 +301,41 @@ export const getUserFoodLogEntriesByDate = async (
     .filter((entry): entry is DBUserFoodLogEntry => entry != null);
 };
 
+export const getUserFoodLogEntriesBetween = async (
+  userExternalId: string,
+  startDate: string,
+  endDate: string,
+): Promise<DBUserFoodLogEntry[]> => {
+  await initDb();
+  const db = await getDb();
+
+  const rows = await db.getAllAsync<RawFoodLogEntryRow>(
+    `
+    SELECT *
+    FROM (
+      ${NORMAL_FOOD_LOG_SELECT}
+      WHERE l.user_external_id = ? AND l.date >= ? AND l.date <= ?
+
+      UNION ALL
+
+      ${QUICK_ADD_FOOD_LOG_SELECT}
+      WHERE q.user_external_id = ? AND q.date >= ? AND q.date <= ?
+    )
+    ORDER BY date ASC, datetime(COALESCE(loggedAt, createdAt)) ASC
+    `,
+    userExternalId,
+    startDate,
+    endDate,
+    userExternalId,
+    startDate,
+    endDate,
+  );
+
+  return rows
+    .map(mapFoodLogEntryRow)
+    .filter((entry): entry is DBUserFoodLogEntry => entry != null);
+};
+
 export const copyFoodLogsFromDate = async (
   userExternalId: string,
   fromDate: string,

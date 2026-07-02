@@ -20,17 +20,17 @@ import {
 } from "../../API/supabase/client";
 import {
   signInWithEmailPassword,
-  signInWithGoogleViaSupabase,
-  upsertGoogleUserAccount,
+  signUpWithEmailPassword,
   upsertSupabaseAuthUserAccount,
-} from "../../API/supabase/googleAuth";
+} from "../../API/supabase/auth";
 
 type LoginScreenProps = {
   onAuthenticated?: () => void | Promise<void>;
   onBackToOnboarding?: () => void;
 };
 
-type SubmissionMode = "email" | "google" | null;
+type AuthMode = "signIn" | "register";
+type SubmissionMode = AuthMode | null;
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 
@@ -49,11 +49,13 @@ const LoginScreen = ({
   onBackToOnboarding,
 }: LoginScreenProps) => {
   const dispatch = useAppDispatch();
+  const [authMode, setAuthMode] = React.useState<AuthMode>("signIn");
+  const [displayName, setDisplayName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
-  const [signingIn, setSigningIn] = React.useState<SubmissionMode>(null);
+  const [submitting, setSubmitting] = React.useState<SubmissionMode>(null);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
-  const isSigningIn = signingIn !== null;
+  const isSubmitting = submitting !== null;
 
   const finishWithUser = React.useCallback(
     async (user: Awaited<ReturnType<typeof upsertSupabaseAuthUserAccount>>) => {
@@ -63,12 +65,12 @@ const LoginScreen = ({
     [dispatch, onAuthenticated],
   );
 
-  const handleEmailAuth = React.useCallback(async () => {
-    if (isSigningIn) {
+  const handleEmailSignIn = React.useCallback(async () => {
+    if (isSubmitting) {
       return;
     }
 
-    setSigningIn("email");
+    setSubmitting("signIn");
     setErrorMessage(null);
 
     try {
@@ -90,9 +92,7 @@ const LoginScreen = ({
         throw new Error(message);
       }
 
-      const user = await upsertSupabaseAuthUserAccount(session.user, {
-        allowCreate: false,
-      });
+      const user = await upsertSupabaseAuthUserAccount(session.user);
       await finishWithUser(user);
     } catch (error) {
       const message =
@@ -101,16 +101,16 @@ const LoginScreen = ({
       setErrorMessage(message);
       Alert.alert("Sign-in failed", message);
     } finally {
-      setSigningIn(null);
+      setSubmitting(null);
     }
-  }, [email, finishWithUser, isSigningIn, password]);
+  }, [email, finishWithUser, isSubmitting, password]);
 
-  const handleGoogleSignIn = React.useCallback(async () => {
-    if (isSigningIn) {
+  const handleEmailRegistration = React.useCallback(async () => {
+    if (isSubmitting) {
       return;
     }
 
-    setSigningIn("google");
+    setSubmitting("register");
     setErrorMessage(null);
 
     try {
@@ -118,28 +118,57 @@ const LoginScreen = ({
         throw new Error(getSupabaseConfigError());
       }
 
-      const session = await signInWithGoogleViaSupabase();
+      const normalizedEmail = normalizeEmail(email);
+      validateEmailPassword(normalizedEmail, password);
+      const resolvedDisplayName =
+        displayName.trim() || normalizedEmail.split("@")[0] || "Dribsnis User";
 
-      if (!session?.user) {
+      const result = await signUpWithEmailPassword({
+        displayName: resolvedDisplayName,
+        email: normalizedEmail,
+        password,
+      });
+
+      if (result.needsEmailConfirmation || !result.session?.user) {
+        const message =
+          "Check your email to confirm the account, then sign in here.";
+        setErrorMessage(message);
+        Alert.alert("Check your email", message);
         return;
       }
 
-      const user = await upsertGoogleUserAccount(session.user, {
-        allowCreate: false,
+      const user = await upsertSupabaseAuthUserAccount(result.session.user, {
+        allowCreate: true,
       });
       await finishWithUser(user);
     } catch (error) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Could not sign in with Google.";
+        error instanceof Error ? error.message : "Could not create account.";
 
       setErrorMessage(message);
-      Alert.alert("Google sign-in failed", message);
+      Alert.alert("Account creation failed", message);
     } finally {
-      setSigningIn(null);
+      setSubmitting(null);
     }
-  }, [finishWithUser, isSigningIn]);
+  }, [displayName, email, finishWithUser, isSubmitting, password]);
+
+  const handlePrimaryAction = React.useCallback(() => {
+    if (authMode === "register") {
+      void handleEmailRegistration();
+      return;
+    }
+
+    void handleEmailSignIn();
+  }, [authMode, handleEmailRegistration, handleEmailSignIn]);
+
+  const primaryLabel =
+    authMode === "register"
+      ? submitting === "register"
+        ? "Creating account..."
+        : "Create account"
+      : submitting === "signIn"
+        ? "Signing in..."
+        : "Sign in";
 
   return (
     <KeyboardAvoidingView
@@ -147,17 +176,66 @@ const LoginScreen = ({
       style={styles.screen}
     >
       <View style={styles.card}>
-        <Text style={styles.title}>Sign in</Text>
-        <Text style={styles.body}>
-          Use your existing Supabase email account, or continue with your
-          Google-backed account in a build.
+        <Text style={styles.title}>
+          {authMode === "register" ? "Create account" : "Sign in"}
         </Text>
+        <Text style={styles.body}>
+          Use your email and password to keep your food, weight, and nutrition
+          profile synced.
+        </Text>
+
+        <View style={styles.modeSwitcher}>
+          {(["signIn", "register"] as const).map((mode) => {
+            const selected = authMode === mode;
+
+            return (
+              <Pressable
+                key={mode}
+                disabled={isSubmitting}
+                onPress={() => {
+                  setAuthMode(mode);
+                  setErrorMessage(null);
+                }}
+                style={({ pressed }) => [
+                  styles.modeTab,
+                  selected && styles.modeTabSelected,
+                  pressed && !isSubmitting && styles.pressed,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.modeTabText,
+                    selected && styles.modeTabTextSelected,
+                  ]}
+                >
+                  {mode === "signIn" ? "Sign in" : "Register"}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {authMode === "register" ? (
+          <>
+            <Text style={styles.inputLabel}>Name</Text>
+            <TextInput
+              value={displayName}
+              onChangeText={setDisplayName}
+              editable={!isSubmitting}
+              placeholder="Your name"
+              placeholderTextColor={appColors.textMuted}
+              style={styles.input}
+              textContentType="name"
+              returnKeyType="next"
+            />
+          </>
+        ) : null}
 
         <Text style={styles.inputLabel}>Email</Text>
         <TextInput
           value={email}
           onChangeText={setEmail}
-          editable={!isSigningIn}
+          editable={!isSubmitting}
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="email-address"
@@ -172,56 +250,31 @@ const LoginScreen = ({
         <TextInput
           value={password}
           onChangeText={setPassword}
-          editable={!isSigningIn}
+          editable={!isSubmitting}
           autoCapitalize="none"
           autoCorrect={false}
           secureTextEntry
           placeholder="Minimum 6 characters"
           placeholderTextColor={appColors.textMuted}
           style={styles.input}
-          textContentType="password"
+          textContentType={authMode === "register" ? "newPassword" : "password"}
           returnKeyType="done"
-          onSubmitEditing={() => {
-            void handleEmailAuth();
-          }}
+          onSubmitEditing={handlePrimaryAction}
         />
 
         <Pressable
-          onPress={() => {
-            void handleEmailAuth();
-          }}
-          disabled={isSigningIn}
+          onPress={handlePrimaryAction}
+          disabled={isSubmitting}
           style={({ pressed }) => [
             styles.button,
-            isSigningIn && styles.buttonDisabled,
-            pressed && !isSigningIn && styles.pressed,
+            isSubmitting && styles.buttonDisabled,
+            pressed && !isSubmitting && styles.pressed,
           ]}
         >
-          {signingIn === "email" ? (
+          {submitting === authMode ? (
             <ActivityIndicator color={appColors.slate900} />
           ) : null}
-          <Text style={styles.buttonText}>
-            {signingIn === "email" ? "Signing in..." : "Sign in"}
-          </Text>
-        </Pressable>
-
-        <Pressable
-          onPress={() => {
-            void handleGoogleSignIn();
-          }}
-          disabled={isSigningIn}
-          style={({ pressed }) => [
-            styles.googleButton,
-            isSigningIn && styles.buttonDisabled,
-            pressed && !isSigningIn && styles.pressed,
-          ]}
-        >
-          {signingIn === "google" ? (
-            <ActivityIndicator color={appColors.textPrimary} />
-          ) : null}
-          <Text style={styles.googleButtonText}>
-            {signingIn === "google" ? "Signing in..." : "Continue with Google"}
-          </Text>
+          <Text style={styles.buttonText}>{primaryLabel}</Text>
         </Pressable>
 
         {onBackToOnboarding ? (
@@ -229,15 +282,15 @@ const LoginScreen = ({
             onPress={() => {
               onBackToOnboarding();
             }}
-            disabled={isSigningIn}
+            disabled={isSubmitting}
             style={({ pressed }) => [
               styles.createAccountButton,
-              isSigningIn && styles.buttonDisabled,
-              pressed && !isSigningIn && styles.pressed,
+              isSubmitting && styles.buttonDisabled,
+              pressed && !isSubmitting && styles.pressed,
             ]}
           >
             <Text style={styles.createAccountButtonText}>
-              Back to onboarding
+              Set up nutrition profile
             </Text>
           </Pressable>
         ) : null}
@@ -256,24 +309,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 24,
     backgroundColor: appColors.surfaceCanvas,
-  },
-  orbTop: {
-    position: "absolute",
-    top: -70,
-    right: -30,
-    width: 220,
-    height: 220,
-    borderRadius: 999,
-    backgroundColor: appColors.brand800,
-  },
-  orbBottom: {
-    position: "absolute",
-    bottom: -110,
-    left: -70,
-    width: 280,
-    height: 280,
-    borderRadius: 999,
-    backgroundColor: appColors.success700,
   },
   card: {
     backgroundColor: appColors.surfaceCard,
@@ -294,6 +329,32 @@ const styles = StyleSheet.create({
     color: appColors.textSecondary,
     textAlign: "center",
     marginBottom: 18,
+  },
+  modeSwitcher: {
+    flexDirection: "row",
+    backgroundColor: appColors.surfaceRaised,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
+    padding: 4,
+    marginBottom: 8,
+  },
+  modeTab: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 6,
+    paddingVertical: 10,
+  },
+  modeTabSelected: {
+    backgroundColor: appColors.surfaceCard,
+  },
+  modeTabText: {
+    ...appTypography.label,
+    color: appColors.textSecondary,
+  },
+  modeTabTextSelected: {
+    color: appColors.textPrimary,
   },
   inputLabel: {
     ...appTypography.label,
@@ -323,28 +384,12 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     marginTop: 18,
   },
-  googleButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    borderRadius: 9999,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    marginTop: 10,
-  },
   buttonDisabled: {
     opacity: 0.7,
   },
   buttonText: {
     ...appTypography.button,
     color: appColors.slate900,
-  },
-  googleButtonText: {
-    ...appTypography.button,
-    color: appColors.textPrimary,
   },
   createAccountButton: {
     flexDirection: "row",

@@ -1,15 +1,15 @@
 /**
  * Shared app color tokens.
- * The palette is intentionally collapsed onto a small Sunset set:
- * cream surfaces, ink text, coral accents, sage positives, and gold warnings.
+ * The palette keeps the warm coral/sage identity while using quieter neutral
+ * surfaces so dense tracking screens feel cleaner and more professional.
  */
 const palette = {
-  white: "#fef9f3",
-  cream: "#FFF8F0",
-  creamSoft: "#F7EFE5",
-  sand: "#EAD7C5",
-  sandDeep: "#D6C2AE",
-  taupe: "#A88F7B",
+  white: "#FFFFFF",
+  cream: "#F6F7F2",
+  creamSoft: "#EEF2EA",
+  sand: "#D8DED2",
+  sandDeep: "#C2CCBC",
+  taupe: "#7F8879",
   ink: "#3D405B",
   inkSoft: "#6B6E8A",
   inkMuted: "#9A9DB2",

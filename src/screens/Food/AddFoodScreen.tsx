@@ -22,6 +22,7 @@ import {
   MagnifyingGlassIcon,
   PencilSimpleIcon,
   StarIcon,
+  XIcon,
 } from "phosphor-react-native";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
@@ -362,6 +363,7 @@ const AddFoodScreen = () => {
   const searchCacheRef = React.useRef(new Map<string, SearchFoodResult[]>());
   const localOnlySearchCacheRef = React.useRef(new Set<string>());
   const lastSavedSearchRef = React.useRef<string | null>(null);
+  const activeSearchCacheKeyRef = React.useRef<string | null>(null);
 
   const applyStaticListsSnapshot = useCallback(
     (snapshot: AddFoodStaticListsSnapshot) => {
@@ -402,6 +404,7 @@ const AddFoodScreen = () => {
   const searchFoods = useCallback(
     async (normalizedQuery: string, mode: FoodSearchMode) => {
       const cacheKey = getSearchCacheKey(mode, normalizedQuery);
+      activeSearchCacheKeyRef.current = cacheKey;
       const cachedResults = searchCacheRef.current.get(cacheKey);
       if (cachedResults) {
         setIsUsingLocalSearchOnly(localOnlySearchCacheRef.current.has(cacheKey));
@@ -433,6 +436,15 @@ const AddFoodScreen = () => {
               ? isCustomMealResult(food)
               : !isRecipeResult(food) && !isCustomMealResult(food),
         includeRemote: mode === "all",
+        onLocalResults: (localResults) => {
+          if (
+            mode === "all" &&
+            activeSearchCacheKeyRef.current === cacheKey &&
+            localResults.length > 0
+          ) {
+            setResults(localResults);
+          }
+        },
         onRemoteSearchError: () => {
           remoteSearchFailed = true;
         },
@@ -571,6 +583,7 @@ const AddFoodScreen = () => {
     const run = async () => {
       const normalized = query.trim();
       if (!normalized) {
+        activeSearchCacheKeyRef.current = null;
         setResults([]);
         setIsSearching(false);
         setIsUsingLocalSearchOnly(false);
@@ -1158,6 +1171,19 @@ const AddFoodScreen = () => {
                 style={styles.searchInput}
                 returnKeyType="search"
               />
+              {query.trim().length > 0 ? (
+                <Pressable
+                  onPress={() => setQuery("")}
+                  accessibilityLabel="Clear search"
+                  hitSlop={8}
+                  style={({ pressed }) => [
+                    styles.clearSearchButton,
+                    pressed && styles.cardPressed,
+                  ]}
+                >
+                  <XIcon size={17} color={appColors.textMuted} weight="bold" />
+                </Pressable>
+              ) : null}
             </View>
             {shouldShowScanner ? (
               <Pressable
@@ -1551,6 +1577,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
   },
+  clearSearchButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: appColors.surfaceGhost,
+  },
   moreRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1925,4 +1959,3 @@ const styles = StyleSheet.create({
 });
 
 export default AddFoodScreen;
-

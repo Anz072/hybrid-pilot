@@ -211,28 +211,16 @@ export const useBarcodeDebugScanner = (
       rawValue?: string | null,
       rawType?: SupportedBarcodeType | string | null,
     ) => {
-      console.log("[BarcodeScanner] Registering scan", {
-        rawType,
-        rawValue,
-      });
       if (lockRef.current || locked) {
         return false;
       }
 
       const nextValue = normalizeBarcodeValue(rawValue);
       if (!nextValue) {
-        console.log("[BarcodeScanner] Ignoring non-numeric barcode", {
-          rawType,
-          rawValue,
-        });
         return false;
       }
 
       if (!validateBarcode(nextValue, rawType)) {
-        console.log("[BarcodeScanner] Ignoring invalid food barcode", {
-          rawType,
-          value: nextValue,
-        });
         return false;
       }
 
@@ -253,6 +241,24 @@ export const useBarcodeDebugScanner = (
       };
 
       try {
+        const cachedLookup = await DB.getCachedBarcodeLookup(nextValue);
+
+        if (cachedLookup?.status === "hit") {
+          resolveFood({
+            foodId: cachedLookup.food.id,
+            barcode: nextValue,
+            status: "existing",
+            foodName: cachedLookup.food.name,
+          });
+          return true;
+        }
+
+        if (cachedLookup?.status === "miss") {
+          setScannedCode(`No food found for barcode ${nextValue}.`);
+          setModalVisible(true);
+          return true;
+        }
+
         const localFood = await DB.getFoodItemByBarcode(nextValue);
 
         if (localFood) {
@@ -273,6 +279,7 @@ export const useBarcodeDebugScanner = (
         }
 
         if (!foodData.valid || !foodData.foodItem) {
+          await DB.saveCachedBarcodeMiss(nextValue);
           setScannedCode(`No food found for barcode ${nextValue}.`);
           setModalVisible(true);
           return true;
@@ -1011,4 +1018,3 @@ export const styles = StyleSheet.create({
     opacity: 0.9,
   },
 });
-

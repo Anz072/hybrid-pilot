@@ -5,7 +5,7 @@ import type {
   ProteinFocus,
 } from "../navigation/onboardingTypes";
 
-export type DBUserProvider = "local" | "google" | "apple" | "email";
+export type DBUserProvider = "local" | "email";
 export type DBUserGender = "male" | "female" | "other" | null;
 
 export type DBUser = {

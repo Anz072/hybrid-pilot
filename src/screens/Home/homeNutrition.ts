@@ -217,22 +217,24 @@ export const loadNutritionSnapshot = async (
   dates: string[],
 ): Promise<NutritionSnapshot> => {
   const safeDates = dates.length > 0 ? dates : [formatFoodDateKey(new Date())];
-  const entryGroups = await Promise.all(
-    safeDates.map((date) => DB.getUserFoodLogEntriesByDate(userExternalId, date)),
+  const sortedDates = [...safeDates].sort();
+  const requestedDateSet = new Set(safeDates);
+  const entriesInRange = await DB.getUserFoodLogEntriesBetween(
+    userExternalId,
+    sortedDates[0],
+    sortedDates[sortedDates.length - 1],
   );
-  const entries = entryGroups.flat();
+  const entries = entriesInRange.filter((entry) =>
+    requestedDateSet.has(entry.date),
+  );
   const uniqueFoodIds = [...new Set(entries.map((entry) => entry.foodId).filter(
     (foodId): foodId is number => foodId != null,
   ))];
-  const foods = await Promise.all(
-    uniqueFoodIds.map(async (foodId) => [foodId, await DB.getFoodItemById(foodId)] as const),
-  );
+  const foods = await DB.getFoodItemsByIds(uniqueFoodIds);
   const foodMap = new Map<number, DBFoodItem>();
 
-  for (const [foodId, food] of foods) {
-    if (food) {
-      foodMap.set(foodId, food);
-    }
+  for (const food of foods) {
+    foodMap.set(food.id, food);
   }
 
   const micronutrients = entries.reduce<MicronutrientTotals>((accumulator, entry) => {

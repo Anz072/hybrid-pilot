@@ -97,6 +97,7 @@ const ScannedFoodLogScreen = () => {
   const route = useRoute<ScannedFoodRoute>();
   const navigation = useNavigation<ScannedFoodNav>();
   const insets = useSafeAreaInsets();
+  const footerBottomPadding = Math.max(insets.bottom, 16);
   const { barcode, contextLabel, date, foodId, loggedAt, mealType, scanStatus } =
     route.params;
   const isScannedFlow = scanStatus != null;
@@ -386,7 +387,7 @@ const ScannedFoodLogScreen = () => {
         style={styles.screen}
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: 148 + Math.max(insets.bottom, 12) },
+          { paddingBottom: 148 + footerBottomPadding },
         ]}
         focusedInputBottomOffset={132}
       >
@@ -518,7 +519,7 @@ const ScannedFoodLogScreen = () => {
       <View
         style={[
           styles.stickyFooter,
-          { paddingBottom: Math.min(insets.bottom, 16) },
+          { paddingBottom: footerBottomPadding },
         ]}
       >
         <Pressable

@@ -6,7 +6,8 @@ import AdjustGoalSettingsScreen from "../screens/User_Settings/ActivityLevelSett
 import CalorieAllowanceSettingsScreen from "../screens/User_Settings/CalorieAllowanceSettingsScreen";
 import AdaptiveCaloriesSettingsScreen from "../screens/User_Settings/AdaptiveCaloriesSettingsScreen";
 import CalorieScheduleScreen from "../screens/User_Settings/CalorieScheduleScreen";
-import PreferencesScreen from "../screens/User_Settings/DiaryHoursDebugScreen";
+import PreferencesScreen from "../screens/User_Settings/PreferencesScreen";
+import DataExportScreen from "../screens/User_Settings/DataExportScreen";
 import GoalStrategySettingsScreen from "../screens/User_Settings/GoalStrategySettingsScreen";
 import ProfileSettingsScreen from "../screens/User_Settings/ProfileSettingsScreen";
 import TrainingTypesSettingsScreen from "../screens/User_Settings/TrainingTypesSettingsScreen";
@@ -25,6 +26,7 @@ export type MoreParamList = {
   MoreMainScreen: undefined;
   ProfileSettingsScreen: undefined;
   PreferencesScreen: undefined;
+  DataExportScreen: undefined;
   WeeklyReviewScreen: undefined;
   SettingsScreen: undefined;
   CalorieAllowanceSettingsScreen: undefined;
@@ -59,6 +61,7 @@ const MoreNavigator = () => {
         component={ProfileSettingsScreen}
       />
       <Stack.Screen name="PreferencesScreen" component={PreferencesScreen} />
+      <Stack.Screen name="DataExportScreen" component={DataExportScreen} />
       {isDeveloperAccount ? (
         <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
       ) : null}

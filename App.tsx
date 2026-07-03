@@ -29,10 +29,25 @@ import AppNavigator from "./src/navigation/AppNavigator";
 import { store } from "./src/store/appStore";
 import { applyInterFontDefaults } from "./src/theme/applyInterFontDefaults";
 import { appColors } from "./src/theme/colors";
+import { loadDisplayPreferences } from "./src/preferences/displayPreferences";
 
 applyInterFontDefaults();
 
 export default function App() {
+  const [preferencesReady, setPreferencesReady] = React.useState(false);
+
+  React.useEffect(() => {
+    let active = true;
+    void loadDisplayPreferences().finally(() => {
+      if (active) {
+        setPreferencesReady(true);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const [fontsLoaded, fontError] = useFonts({
     Inter_100Thin,
     Inter_100Thin_Italic,
@@ -54,7 +69,7 @@ export default function App() {
     Inter_900Black_Italic,
   });
 
-  if (!fontsLoaded && !fontError) {
+  if ((!fontsLoaded && !fontError) || !preferencesReady) {
     return null;
   }
 

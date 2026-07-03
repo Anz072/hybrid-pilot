@@ -34,7 +34,8 @@ import Svg, { Circle } from "react-native-svg";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import type { MainTabParamList } from "../../navigation/MainTabNavigator";
 import { formatFoodDateKey, type FoodNutritionTotals } from "../Food/foodUtils";
-import { formatWeightKg } from "../Weight/weightUtils";
+import { formatWeight } from "../../preferences/displayPreferences";
+import { useDisplayPreferences } from "../../preferences/usePreferences";
 import FoodBarcodeScannerModal from "../Food/FoodBarcodeScannerModal";
 import type { ScannedFoodLookupResult } from "../Food/FoodBarcodeScannerShared";
 import {
@@ -98,14 +99,6 @@ const formatHeroDate = (date: Date) =>
     month: "short",
     day: "numeric",
   });
-
-const formatWeightValue = (value: number | null) => {
-  if (value == null) {
-    return "--";
-  }
-
-  return `${formatWeightKg(value)} kg`;
-};
 
 const formatSummaryUpdatedAt = (loadedAt: string | null) => {
   if (!loadedAt) {
@@ -312,6 +305,9 @@ const InsightMetric = ({ icon, label, value }: InsightMetricProps) => (
 
 const HomeScreen = () => {
   const insets = useSafeAreaInsets();
+  const { weightUnit } = useDisplayPreferences();
+  const formatWeightValue = (value: number | null) =>
+    value != null ? formatWeight(value, weightUnit) : "--";
   const navigation = useNavigation<HomeNavigation>();
   const { width } = useWindowDimensions();
   const user = useAppSelector((state) => state.user.currentUser);
@@ -742,11 +738,7 @@ const HomeScreen = () => {
                 />
               }
               label="Latest"
-              value={
-                currentWeightKg != null
-                  ? `${formatWeightKg(currentWeightKg)} kg`
-                  : "--"
-              }
+              value={formatWeightValue(currentWeightKg)}
             />
             <InsightMetric
               icon={

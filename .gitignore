@@ -2,7 +2,10 @@
 
 # dependencies
 node_modules/
-
+.claude
+.agents
+.codex
+.interface-design
 # Expo
 .expo/
 dist/

@@ -99,6 +99,72 @@ export const formatFoodLoggedTime = (iso: string): string =>
 
 export const getFoodLoggedHour = (iso: string): number => new Date(iso).getHours();
 
+export type MealSlot = "breakfast" | "lunch" | "dinner" | "snacks";
+
+export const MEAL_SLOTS: MealSlot[] = ["breakfast", "lunch", "dinner", "snacks"];
+
+export const MEAL_SLOT_LABELS: Record<MealSlot, string> = {
+  breakfast: "Breakfast",
+  lunch: "Lunch",
+  dinner: "Dinner",
+  snacks: "Snacks",
+};
+
+// Representative time-of-day used when logging into a meal on a past/future day,
+// so entries stay roughly ordered without asking for an exact clock time.
+export const MEAL_SLOT_DEFAULT_HOUR: Record<MealSlot, number> = {
+  breakfast: 8,
+  lunch: 12,
+  dinner: 19,
+  snacks: 16,
+};
+
+export const getMealSlotForHour = (hour: number): MealSlot => {
+  if (hour < 11) {
+    return "breakfast";
+  }
+  if (hour < 16) {
+    return "lunch";
+  }
+  if (hour < 21) {
+    return "dinner";
+  }
+  return "snacks";
+};
+
+export const getDefaultMealSlotForNow = (): MealSlot =>
+  getMealSlotForHour(new Date().getHours());
+
+export const getMealSlotFromLabel = (
+  value: string | null | undefined,
+): MealSlot | null => {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+  if (normalized.includes("breakfast")) {
+    return "breakfast";
+  }
+  if (normalized.includes("lunch")) {
+    return "lunch";
+  }
+  if (normalized.includes("dinner")) {
+    return "dinner";
+  }
+  if (normalized.includes("snack")) {
+    return "snacks";
+  }
+  return null;
+};
+
+// Group any entry into a meal slot: trust an explicit mealType label when it maps
+// to a known slot, otherwise fall back to the time it was logged (legacy entries).
+export const resolveEntryMealSlot = (
+  entry: Pick<DBUserFoodLogEntry, "mealType" | "loggedAt" | "createdAt">,
+): MealSlot =>
+  getMealSlotFromLabel(entry.mealType) ??
+  getMealSlotForHour(getFoodLoggedHour(entry.loggedAt ?? entry.createdAt));
+
 export const formatFoodServing = (
   amount: number | null | undefined,
   unit: string | null | undefined,

@@ -23,7 +23,7 @@ import type {
 } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
-import { FireIcon, PencilSimpleIcon } from "phosphor-react-native";
+import { ArrowLeftIcon, FireIcon, PencilSimpleIcon } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
@@ -458,6 +458,21 @@ const QuickAddFoodScreen = () => {
         >
           <View style={styles.card}>
             <View style={styles.heroHeaderRow}>
+              <Pressable
+                onPress={() => navigation.goBack()}
+                accessibilityLabel="Go back"
+                hitSlop={8}
+                style={({ pressed }) => [
+                  styles.backButton,
+                  pressed && styles.cardPressed,
+                ]}
+              >
+                <ArrowLeftIcon
+                  size={18}
+                  color={appColors.textPrimary}
+                  weight="bold"
+                />
+              </Pressable>
               <Text style={styles.heroTitle}>Quick Add</Text>
             </View>
 
@@ -672,10 +687,19 @@ const styles = StyleSheet.create({
   heroCard: sharedStyleValues.card,
   heroHeaderRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 12,
+    alignItems: "center",
+    justifyContent: "flex-start",
+    gap: 10,
     marginBottom: 12,
+  },
+  backButton: {
+    width: 42,
+    height: 42,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 999,
+    backgroundColor: appColors.surfaceGhost,
+    borderColor: appColors.surfaceGhostStrong,
   },
   heroHeaderCopy: {
     flex: 1,

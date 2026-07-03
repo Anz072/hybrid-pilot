@@ -53,7 +53,6 @@ import {
   filterEntriesByRange,
   formatDateOnly,
   formatLocalDateLabel,
-  formatWeightKg,
   generateUuid,
   getLocalDateKey,
   parseDateOnly,
@@ -61,6 +60,13 @@ import {
   roundWeightKg,
 } from "./weightUtils";
 import { appColors } from "../../theme/colors";
+import {
+  displayNumberToWeightKg,
+  formatWeight,
+  formatWeightValue,
+  weightUnitLabel,
+} from "../../preferences/displayPreferences";
+import { useDisplayPreferences } from "../../preferences/usePreferences";
 
 const SOFT_MIN_WEIGHT_KG = 20;
 const SOFT_MAX_WEIGHT_KG = 300;
@@ -153,6 +159,7 @@ const WeightScreen = ({
   externalRefreshToken = 0,
 }: WeightScreenProps) => {
   const insets = useSafeAreaInsets();
+  const { weightUnit } = useDisplayPreferences();
   const hasHydratedOnceRef = React.useRef(false);
   const lastExternalRefreshTokenRef = React.useRef(externalRefreshToken);
   const [userId, setUserId] = React.useState<string | null>(null);
@@ -190,12 +197,12 @@ const WeightScreen = ({
     setAllEntries(sortEntriesDesc(entries));
     setGoal(nextGoal);
     setTargetWeightValue(
-      nextGoal ? formatWeightKg(nextGoal.targetWeightKg) : "",
+      nextGoal ? formatWeightValue(nextGoal.targetWeightKg, weightUnit) : "",
     );
     setTargetDate(
       nextGoal?.targetDate ? parseDateOnly(nextGoal.targetDate) : null,
     );
-  }, []);
+  }, [weightUnit]);
 
   const clearWeightState = React.useCallback(() => {
     setAllEntries([]);
@@ -298,7 +305,11 @@ const WeightScreen = ({
     currentEntry && startEntry
       ? computeGoalProgress(currentEntry.valueKg, startEntry.valueKg, goal)
       : null;
-  const parsedTargetWeight = parseLocalizedWeight(targetWeightValue);
+  const parsedTargetNumber = parseLocalizedWeight(targetWeightValue);
+  const parsedTargetWeight =
+    parsedTargetNumber != null
+      ? displayNumberToWeightKg(parsedTargetNumber, weightUnit)
+      : null;
   const previewGoal: WeightEntryGoal | null =
     parsedTargetWeight != null
       ? {
@@ -354,11 +365,11 @@ const WeightScreen = ({
   }, [activeEntries]);
 
   const currentWeightText = currentEntry
-    ? formatWeightKg(currentEntry.valueKg)
+    ? formatWeightValue(currentEntry.valueKg, weightUnit)
     : "--";
   const deltaText = currentEntry
     ? deltaVsTrend != null
-      ? `${deltaVsTrend > 0 ? "+" : ""}${formatWeightKg(deltaVsTrend)} kg vs 7d avg`
+      ? `${deltaVsTrend > 0 ? "+" : ""}${formatWeight(deltaVsTrend, weightUnit)} vs 7d avg`
       : "Need more recent entries for a 7d average"
     : "Log your first weight to start your trend";
   const goalChipText = goal
@@ -366,20 +377,21 @@ const WeightScreen = ({
       ? goalProgress >= 100
         ? "Goal reached"
         : `${goalProgress}% to goal`
-      : `Target ${formatWeightKg(goal.targetWeightKg)} kg`
+      : `Target ${formatWeight(goal.targetWeightKg, weightUnit)}`
     : "Set a target";
   const goalSummaryText = goal
     ? goal.targetDate
-      ? `Target ${formatWeightKg(goal.targetWeightKg)} kg by ${parseDateOnly(
+      ? `Target ${formatWeight(goal.targetWeightKg, weightUnit)} by ${parseDateOnly(
           goal.targetDate,
         ).toLocaleDateString(undefined, {
           month: "short",
           day: "numeric",
           year: "numeric",
         })}`
-      : `Target ${formatWeightKg(goal.targetWeightKg)} kg with a +/- ${formatWeightKg(
+      : `Target ${formatWeight(goal.targetWeightKg, weightUnit)} with a +/- ${formatWeight(
           goal.goalBandKg ?? DEFAULT_GOAL_BAND_KG,
-        )} kg band`
+          weightUnit,
+        )} band`
     : "Set a target to add a goal line and progress band to the chart.";
   const goalLauncherLabel = goal ? "Edit goal" : "Set goal";
   const chartOldestEntry = chartEntries[chartEntries.length - 1] ?? null;
@@ -393,7 +405,7 @@ const WeightScreen = ({
   }, [chartNewestEntry, chartOldestEntry]);
   const visibleDifferenceText =
     visibleDifference != null
-      ? `${visibleDifference > 0 ? "+" : ""}${formatWeightKg(visibleDifference)}`
+      ? `${visibleDifference > 0 ? "+" : ""}${formatWeightValue(visibleDifference, weightUnit)}`
       : "--";
   const chartPeriodText =
     chartOldestEntry && chartNewestEntry
@@ -425,10 +437,12 @@ const WeightScreen = ({
   };
 
   const resetGoalDraftFromGoal = React.useCallback(() => {
-    setTargetWeightValue(goal ? formatWeightKg(goal.targetWeightKg) : "");
+    setTargetWeightValue(
+      goal ? formatWeightValue(goal.targetWeightKg, weightUnit) : "",
+    );
     setTargetDate(goal?.targetDate ? parseDateOnly(goal.targetDate) : null);
     setShowGoalDatePicker(false);
-  }, [goal]);
+  }, [goal, weightUnit]);
 
   const openGoalModal = () => {
     resetGoalDraftFromGoal();
@@ -672,11 +686,13 @@ const WeightScreen = ({
       return;
     }
 
-    const parsedTarget = parseLocalizedWeight(targetWeightValue);
-    if (parsedTarget == null || parsedTarget <= 0) {
-      Alert.alert("Invalid target", "Enter a valid goal weight in kilograms.");
+    const parsedTargetInput = parseLocalizedWeight(targetWeightValue);
+    if (parsedTargetInput == null || parsedTargetInput <= 0) {
+      Alert.alert("Invalid target", "Enter a valid goal weight.");
       return;
     }
+
+    const parsedTarget = displayNumberToWeightKg(parsedTargetInput, weightUnit);
 
     if (activeEntries.length === 0) {
       Alert.alert(
@@ -706,7 +722,7 @@ const WeightScreen = ({
         goalBandKg: DEFAULT_GOAL_BAND_KG,
       });
       setGoal(saved);
-      setTargetWeightValue(formatWeightKg(saved.targetWeightKg));
+      setTargetWeightValue(formatWeightValue(saved.targetWeightKg, weightUnit));
       setTargetDate(saved.targetDate ? parseDateOnly(saved.targetDate) : null);
       setShowGoalDatePicker(false);
       setGoalModalVisible(false);
@@ -776,11 +792,11 @@ const WeightScreen = ({
       title: "Trend",
       value:
         deltaVsTrend != null
-          ? `${deltaVsTrend > 0 ? "+" : ""}${formatWeightKg(deltaVsTrend)} kg`
+          ? `${deltaVsTrend > 0 ? "+" : ""}${formatWeight(deltaVsTrend, weightUnit)}`
           : "Need more data",
       detail:
         monthlyAverage != null
-          ? `30d avg ${formatWeightKg(monthlyAverage)} kg · ${trendConfidenceText}`
+          ? `30d avg ${formatWeight(monthlyAverage, weightUnit)} · ${trendConfidenceText}`
           : "We need more recent check-ins to compare your pace.",
       explanation:
         `The trend compares your latest weigh-in against your recent 7-day average so day-to-day fluctuations feel less noisy. ${trendConfidenceText}.`,
@@ -799,7 +815,7 @@ const WeightScreen = ({
       title: "Volatility",
       value:
         volatility != null
-          ? `+/- ${formatWeightKg(volatility)} kg`
+          ? `+/- ${formatWeight(volatility, weightUnit)}`
           : "Need more data",
       detail: "Lower is steadier. Daily fluctuations are still normal.",
       explanation:
@@ -921,7 +937,7 @@ const WeightScreen = ({
             <Text style={styles.heroStatLabel}>Current</Text>
             <Text style={styles.heroStatValue}>
               {currentWeightText}
-              <Text style={styles.heroStatUnit}> kg</Text>
+              <Text style={styles.heroStatUnit}> {weightUnitLabel(weightUnit)}</Text>
             </Text>
             <Text style={styles.heroStatCaption}>
               {currentEntry
@@ -934,7 +950,7 @@ const WeightScreen = ({
             <Text style={styles.heroStatLabel}>Trend</Text>
             <Text style={styles.heroStatValue}>
               {visibleDifferenceText}
-              <Text style={styles.heroStatUnit}> kg</Text>
+              <Text style={styles.heroStatUnit}> {weightUnitLabel(weightUnit)}</Text>
             </Text>
             <Text style={styles.heroStatCaption}>{chartPeriodText}</Text>
           </View>
@@ -943,7 +959,9 @@ const WeightScreen = ({
         <View style={styles.heroMetaRow}>
           <View style={styles.heroInfoPill}>
             <Text style={styles.heroInfoLabel}>Current</Text>
-            <Text style={styles.heroInfoValue}>{currentWeightText} kg</Text>
+            <Text style={styles.heroInfoValue}>
+              {currentWeightText} {weightUnitLabel(weightUnit)}
+            </Text>
           </View>
           <View style={styles.heroInfoPill}>
             <TargetIcon size={13} color={appColors.brand700} weight="bold" />
@@ -983,7 +1001,7 @@ const WeightScreen = ({
             <View style={styles.softPanel}>
               <Text style={styles.panelLabel}>Target</Text>
               <Text style={styles.panelValue}>
-                {formatWeightKg(goal.targetWeightKg)} kg
+                {formatWeight(goal.targetWeightKg, weightUnit)}
               </Text>
             </View>
             <View style={styles.softPanel}>
@@ -1140,7 +1158,7 @@ const WeightScreen = ({
                     styles.deleteSwipe,
                     pressed && styles.cardPressed,
                   ]}
-                  accessibilityLabel={`Delete ${formatWeightKg(item.valueKg)} kilogram entry`}
+                  accessibilityLabel={`Delete ${formatWeight(item.valueKg, weightUnit)} entry`}
                 >
                   <TrashIcon size={18} color={appColors.white} weight="bold" />
                   <Text style={styles.deleteSwipeText}>Delete</Text>
@@ -1169,9 +1187,11 @@ const WeightScreen = ({
 
                   <View style={[styles.historyCell, styles.historyWeightColumn]}>
                     <Text style={styles.historyWeightText} numberOfLines={1}>
-                      {formatWeightKg(item.valueKg)}
+                      {formatWeightValue(item.valueKg, weightUnit)}
                     </Text>
-                    <Text style={styles.historyWeightUnit}>kg</Text>
+                    <Text style={styles.historyWeightUnit}>
+                      {weightUnitLabel(weightUnit)}
+                    </Text>
                   </View>
 
                   <View style={[styles.historyCell, styles.historySourceColumn]}>
@@ -1282,8 +1302,10 @@ const WeightScreen = ({
                   <View style={[styles.pill, styles.goalBandPill]}>
                     <Text style={styles.goalBandText}>
                       Band +/-{" "}
-                      {formatWeightKg(goal.goalBandKg ?? DEFAULT_GOAL_BAND_KG)}{" "}
-                      kg
+                      {formatWeight(
+                        goal.goalBandKg ?? DEFAULT_GOAL_BAND_KG,
+                        weightUnit,
+                      )}
                     </Text>
                   </View>
                 ) : null}
@@ -1298,10 +1320,10 @@ const WeightScreen = ({
                   placeholder="78.0"
                   placeholderTextColor={appColors.slate400}
                   style={styles.input}
-                  accessibilityLabel="Target weight in kilograms"
+                  accessibilityLabel={`Target weight in ${weightUnitLabel(weightUnit)}`}
                 />
                 <View style={styles.unitPill}>
-                  <Text style={styles.unitText}>kg</Text>
+                  <Text style={styles.unitText}>{weightUnitLabel(weightUnit)}</Text>
                 </View>
               </View>
 
@@ -1355,7 +1377,7 @@ const WeightScreen = ({
                   <Text style={styles.panelLabel}>Target</Text>
                   <Text style={styles.panelValue}>
                     {parsedTargetWeight != null
-                      ? `${formatWeightKg(parsedTargetWeight)} kg`
+                      ? formatWeight(parsedTargetWeight, weightUnit)
                       : "--"}
                   </Text>
                 </View>

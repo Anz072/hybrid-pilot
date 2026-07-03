@@ -6,6 +6,7 @@ import {
   CaretRightIcon,
   ChartLineUpIcon,
   CookingPotIcon,
+  ExportIcon,
   ForkKnifeIcon,
   LightningIcon,
   SlidersHorizontalIcon,
@@ -31,9 +32,11 @@ import {
 import type { MoreParamList } from "../../navigation/MoreNavigator";
 import { DB } from "../../store/DB";
 import { useAppSelector } from "../../store/hooks";
+import { isDeveloperAccountEmail } from "../../dev/developerAccount";
+import { useDisplayPreferences } from "../../preferences/usePreferences";
+import { weightUnitLabel } from "../../preferences/displayPreferences";
 import { appColors } from "../../theme/colors";
 import { appTypography } from "../../theme/typography";
-import { formatFoodHourLabel } from "../Food/foodUtils";
 import CalorieBudgetChart from "./CalorieBudgetChart";
 import { seedDeveloperTestData } from "./testDataSeeder";
 import {
@@ -100,6 +103,8 @@ const MoreScreen = () => {
   const user = useAppSelector((state) => state.user.currentUser);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<MoreScreenNav>();
+  const preferences = useDisplayPreferences();
+  const isDeveloperAccount = isDeveloperAccountEmail(user?.email);
   const [settings, setSettings] = React.useState<Awaited<
     ReturnType<typeof DB.getUserSettings>
   > | null>(null);
@@ -152,13 +157,11 @@ const MoreScreen = () => {
       }),
     [settings, user?.calorieAllowance, weekDates],
   );
-  const diaryHoursLabel = React.useMemo(() => {
-    if (!settings) {
-      return "07:00 - 22:00";
-    }
-
-    return `${formatFoodHourLabel(settings.foodDiaryStartHour)} - ${formatFoodHourLabel(settings.foodDiaryEndHour)}`;
-  }, [settings]);
+  const preferencesLabel = React.useMemo(() => {
+    const timeLabel = preferences.timeFormat === "12h" ? "12h" : "24h";
+    const heightLabel = preferences.heightUnit === "ft_in" ? "ft/in" : "cm";
+    return `${weightUnitLabel(preferences.weightUnit)} · ${heightLabel} · ${timeLabel}`;
+  }, [preferences]);
   const runSeedDeveloperTestData = React.useCallback(async () => {
     if (isSeedingTestData) {
       return;
@@ -261,8 +264,8 @@ const MoreScreen = () => {
               />
             }
             onPress={() => navigation.navigate("WeeklyReviewScreen")}
-            title="Weekly review"
-            value="Open"
+            title="Weekly check-in"
+            value={adaptiveRecommendationReady ? "Review ready" : "Open"}
           />
           <MoreActionRow
             icon={
@@ -388,7 +391,7 @@ const MoreScreen = () => {
           />
         </View>
 
-        <Text style={styles.sectionTitle}>Diary</Text>
+        <Text style={styles.sectionTitle}>Preferences</Text>
         <View style={styles.sectionCard}>
           <MoreActionRow
             icon={
@@ -399,8 +402,20 @@ const MoreScreen = () => {
               />
             }
             onPress={() => navigation.navigate("PreferencesScreen")}
-            title="Diary settings"
-            value={diaryHoursLabel}
+            title="Units & display"
+            value={preferencesLabel}
+          />
+          <MoreActionRow
+            icon={
+              <ExportIcon
+                size={18}
+                color={appColors.brand700}
+                weight="fill"
+              />
+            }
+            onPress={() => navigation.navigate("DataExportScreen")}
+            title="Export & backup"
+            value="Open"
           />
         </View>
 
@@ -432,33 +447,37 @@ const MoreScreen = () => {
           />
         </View>
 
-        <Text style={styles.sectionTitle}>Developer</Text>
-        <View style={styles.sectionCard}>
-          <MoreActionRow
-            icon={
-              <SlidersHorizontalIcon
-                size={18}
-                color={appColors.brand700}
-                weight="fill"
+        {isDeveloperAccount ? (
+          <>
+            <Text style={styles.sectionTitle}>Developer</Text>
+            <View style={styles.sectionCard}>
+              <MoreActionRow
+                icon={
+                  <SlidersHorizontalIcon
+                    size={18}
+                    color={appColors.brand700}
+                    weight="fill"
+                  />
+                }
+                onPress={() => navigation.navigate("SettingsScreen")}
+                title="Debug tools"
+                value="Open"
               />
-            }
-            onPress={() => navigation.navigate("SettingsScreen")}
-            title="Debug tools"
-            value="Open"
-          />
-          <MoreActionRow
-            icon={
-              <LightningIcon
-                size={18}
-                color={appColors.brand700}
-                weight="fill"
+              <MoreActionRow
+                icon={
+                  <LightningIcon
+                    size={18}
+                    color={appColors.brand700}
+                    weight="fill"
+                  />
+                }
+                onPress={confirmSeedDeveloperTestData}
+                title="Generate test history"
+                value={isSeedingTestData ? "Working..." : "28 days"}
               />
-            }
-            onPress={confirmSeedDeveloperTestData}
-            title="Generate test history"
-            value={isSeedingTestData ? "Working..." : "28 days"}
-          />
-        </View>
+            </View>
+          </>
+        ) : null}
       </ScrollView>
     </View>
   );

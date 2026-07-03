@@ -1,5 +1,5 @@
 import type { DBFoodItem, DBUserFoodLogEntry } from "../../store/DB_TYPES";
-import type { FoodNutritionTotals } from "./foodUtils";
+import type { FoodNutritionTotals, MealSlot } from "./foodUtils";
 
 export type FoodDiaryFavoriteFood = DBFoodItem & {
   servingSize: number;
@@ -10,8 +10,9 @@ export type FoodDiaryFavoriteFood = DBFoodItem & {
   fatG: number;
 };
 
-export type FoodDiaryHourBucket = {
-  hour: number;
+export type FoodDiaryMealBucket = {
+  slot: MealSlot;
+  label: string;
   entries: DBUserFoodLogEntry[];
   totals: FoodNutritionTotals;
 };

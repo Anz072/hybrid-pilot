@@ -2,86 +2,127 @@ import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { LightningIcon, PencilSimpleIcon } from "phosphor-react-native";
 import type { FoodDiaryFavoriteFood } from "./foodDiaryTypes";
-import { formatFoodHourLabel, formatFoodServing, formatFoodSourceLabel } from "./foodUtils";
+import {
+  formatFoodServing,
+  formatFoodSourceLabel,
+  MEAL_SLOT_LABELS,
+  type MealSlot,
+} from "./foodUtils";
 import { appColors } from "../../theme/colors";
 
 type FoodDiaryQuickAddsProps = {
   favoriteFoods: FoodDiaryFavoriteFood[];
-  selectedHour: number;
-  onAddFavorite: (food: FoodDiaryFavoriteFood, hour: number) => void;
-  onQuickLogFavorite: (food: FoodDiaryFavoriteFood, hour: number) => void;
+  recentFoods: FoodDiaryFavoriteFood[];
+  selectedMeal: MealSlot;
+  onAddFavorite: (food: FoodDiaryFavoriteFood, slot: MealSlot) => void;
+  onQuickLogFavorite: (food: FoodDiaryFavoriteFood, slot: MealSlot) => void;
 };
+
+const QuickPickCard = ({
+  food,
+  selectedMeal,
+  onAddFavorite,
+  onQuickLogFavorite,
+}: {
+  food: FoodDiaryFavoriteFood;
+  selectedMeal: MealSlot;
+  onAddFavorite: (food: FoodDiaryFavoriteFood, slot: MealSlot) => void;
+  onQuickLogFavorite: (food: FoodDiaryFavoriteFood, slot: MealSlot) => void;
+}) => (
+  <View style={styles.favoriteCard}>
+    <Text style={styles.favoriteEyebrow}>
+      {formatFoodSourceLabel(food.source)}
+    </Text>
+    <Text style={styles.favoriteName} numberOfLines={2}>
+      {food.name}
+    </Text>
+    <Text style={styles.favoriteMeta}>
+      {Math.round(food.calories)} kcal |{" "}
+      {formatFoodServing(food.servingSize, food.servingUnit)}
+    </Text>
+    <Text style={styles.favoriteMeta}>
+      {food.proteinG.toFixed(0)}P | {food.carbsG.toFixed(0)}C |{" "}
+      {food.fatG.toFixed(0)}F
+    </Text>
+    <View style={styles.favoriteActionRow}>
+      <Pressable
+        onPress={() => onQuickLogFavorite(food, selectedMeal)}
+        accessibilityLabel={`Quick log ${food.name}`}
+        style={({ pressed }) => [
+          styles.favoriteButton,
+          pressed && styles.cardPressed,
+        ]}
+      >
+        <LightningIcon size={16} color={appColors.white} weight="fill" />
+        <Text style={styles.favoriteButtonText}>Log</Text>
+      </Pressable>
+      <Pressable
+        onPress={() => onAddFavorite(food, selectedMeal)}
+        accessibilityLabel={`Adjust ${food.name} before logging`}
+        style={({ pressed }) => [
+          styles.favoriteIconButton,
+          pressed && styles.cardPressed,
+        ]}
+      >
+        <PencilSimpleIcon size={16} color={appColors.brand500} weight="bold" />
+      </Pressable>
+    </View>
+  </View>
+);
 
 const FoodDiaryQuickAdds = ({
   favoriteFoods,
-  selectedHour,
+  recentFoods,
+  selectedMeal,
   onAddFavorite,
   onQuickLogFavorite,
 }: FoodDiaryQuickAddsProps) => {
-  if (favoriteFoods.length === 0) {
+  if (favoriteFoods.length === 0 && recentFoods.length === 0) {
     return null;
   }
 
+  const renderRail = (foods: FoodDiaryFavoriteFood[]) => (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.favoriteRow}
+    >
+      {foods.map((food) => (
+        <QuickPickCard
+          key={food.id}
+          food={food}
+          selectedMeal={selectedMeal}
+          onAddFavorite={onAddFavorite}
+          onQuickLogFavorite={onQuickLogFavorite}
+        />
+      ))}
+    </ScrollView>
+  );
+
   return (
     <View style={styles.card}>
-      <Text style={styles.sectionTitle}>
-        Quick picks for {formatFoodHourLabel(selectedHour)}
-      </Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.favoriteRow}
-      >
-        {favoriteFoods.map((food) => (
-          <View key={food.id} style={styles.favoriteCard}>
-            <Text style={styles.favoriteEyebrow}>
-              {formatFoodSourceLabel(food.source)}
-            </Text>
-            <Text style={styles.favoriteName} numberOfLines={2}>
-              {food.name}
-            </Text>
-            <Text style={styles.favoriteMeta}>
-              {Math.round(food.calories)} kcal |{" "}
-              {formatFoodServing(food.servingSize, food.servingUnit)}
-            </Text>
-            <Text style={styles.favoriteMeta}>
-              {food.proteinG.toFixed(0)}P | {food.carbsG.toFixed(0)}C |{" "}
-              {food.fatG.toFixed(0)}F
-            </Text>
-            <View style={styles.favoriteActionRow}>
-              <Pressable
-                onPress={() => onQuickLogFavorite(food, selectedHour)}
-                accessibilityLabel={`Quick log ${food.name}`}
-                style={({ pressed }) => [
-                  styles.favoriteButton,
-                  pressed && styles.cardPressed,
-                ]}
-              >
-                <LightningIcon
-                  size={16}
-                  color={appColors.white}
-                  weight="fill"
-                />
-                <Text style={styles.favoriteButtonText}>Log</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => onAddFavorite(food, selectedHour)}
-                accessibilityLabel={`Adjust ${food.name} before logging`}
-                style={({ pressed }) => [
-                  styles.favoriteIconButton,
-                  pressed && styles.cardPressed,
-                ]}
-              >
-                <PencilSimpleIcon
-                  size={16}
-                  color={appColors.brand500}
-                  weight="bold"
-                />
-              </Pressable>
-            </View>
-          </View>
-        ))}
-      </ScrollView>
+      {favoriteFoods.length > 0 ? (
+        <>
+          <Text style={styles.sectionTitle}>
+            Quick picks for {MEAL_SLOT_LABELS[selectedMeal]}
+          </Text>
+          {renderRail(favoriteFoods)}
+        </>
+      ) : null}
+
+      {recentFoods.length > 0 ? (
+        <>
+          <Text
+            style={[
+              styles.sectionTitle,
+              favoriteFoods.length > 0 && styles.sectionTitleSpaced,
+            ]}
+          >
+            Recently logged
+          </Text>
+          {renderRail(recentFoods)}
+        </>
+      ) : null}
     </View>
   );
 };
@@ -102,6 +143,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.7,
     textTransform: "uppercase",
     marginBottom: 12,
+  },
+  sectionTitleSpaced: {
+    marginTop: 16,
   },
   favoriteRow: {
     gap: 12,

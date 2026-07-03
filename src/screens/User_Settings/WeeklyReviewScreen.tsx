@@ -32,7 +32,13 @@ import {
   formatFoodNumber,
   formatFoodShortDate,
 } from "../Food/foodUtils";
-import { formatWeightKg } from "../Weight/weightUtils";
+import {
+  formatWeight,
+  formatWeightValue,
+  weightUnitLabel,
+  type WeightUnit,
+} from "../../preferences/displayPreferences";
+import { useDisplayPreferences } from "../../preferences/usePreferences";
 import SettingsStackHeader from "./SettingsStackHeader";
 import {
   applyAdaptiveRecommendationForUser,
@@ -127,8 +133,8 @@ const formatSignedCalories = (value: number): string => {
   return "0 kcal";
 };
 
-const formatSignedWeightDelta = (value: number): string =>
-  `${value > 0 ? "+" : ""}${formatWeightKg(value)} kg`;
+const formatSignedWeightDelta = (value: number, unit: WeightUnit): string =>
+  `${value > 0 ? "+" : ""}${formatWeightValue(value, unit)} ${weightUnitLabel(unit)}`;
 
 const formatRecommendationStatus = (
   status: DBAdaptiveCalorieRecommendation["status"],
@@ -280,6 +286,7 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.user.currentUser);
+  const { weightUnit } = useDisplayPreferences();
   const [review, setReview] = React.useState<WeeklyReviewState>(EMPTY_REVIEW);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -408,9 +415,9 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
   );
   const weightTrendLabel =
     weightTrend.delta != null
-      ? formatSignedWeightDelta(weightTrend.delta)
+      ? formatSignedWeightDelta(weightTrend.delta, weightUnit)
       : weightTrend.last
-        ? `${formatWeightKg(weightTrend.last.valueKg)} kg`
+        ? formatWeight(weightTrend.last.valueKg, weightUnit)
         : "--";
   const completionQualityLabel = `${completedDays}/${review.dayReviews.length || 7} complete`;
   const adaptiveStatus = !review.settings?.adaptiveCaloriesEnabled
@@ -534,10 +541,10 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
         showsVerticalScrollIndicator={false}
       >
         <SettingsStackHeader
-          eyebrow="Insights"
+          eyebrow="Check-in"
           onBack={() => navigation.goBack()}
-          subtitle="A compact readout of the week: intake, completion, weight movement, adaptive calories, and the foods showing up most often."
-          title="Weekly Review"
+          subtitle="Your weekly check-in: intake vs target, weight movement, completion quality, and the adaptive calorie decision — all in one place."
+          title="Weekly check-in"
         />
 
         {!user ? (
@@ -754,17 +761,18 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
                   <TrendUpIcon size={18} color={appColors.brand300} weight="bold" />
                   <Text style={styles.bigValue}>
                     {weightTrend.delta != null
-                      ? formatSignedWeightDelta(weightTrend.delta)
+                      ? formatSignedWeightDelta(weightTrend.delta, weightUnit)
                       : weightTrend.last
-                        ? `${formatWeightKg(weightTrend.last.valueKg)} kg`
+                        ? formatWeight(weightTrend.last.valueKg, weightUnit)
                         : "--"}
                   </Text>
                 </View>
                 <Text style={styles.cardText}>
                   {weightTrend.delta != null
-                    ? `From ${formatWeightKg(
+                    ? `From ${formatWeight(
                         weightTrend.first?.valueKg ?? 0,
-                      )} kg to ${formatWeightKg(weightTrend.last?.valueKg ?? 0)} kg.`
+                        weightUnit,
+                      )} to ${formatWeight(weightTrend.last?.valueKg ?? 0, weightUnit)}.`
                     : weightTrend.last
                       ? "Only one weigh-in this week, so no delta yet."
                       : "No weigh-ins logged this week."}

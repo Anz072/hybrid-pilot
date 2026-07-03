@@ -15,6 +15,7 @@ import type {
 } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
+  ArrowLeftIcon,
   BarcodeIcon,
   CookingPotIcon,
   ForkKnifeIcon,
@@ -897,6 +898,27 @@ const AddFoodScreen = () => {
             <View style={styles.foodBadge}>
               <Text style={styles.foodBadgeText}>{sourceLabel}</Text>
             </View>
+            {isLibraryItem ? (
+              <View
+                style={[
+                  styles.ownershipChip,
+                  isOwnedLibraryItem
+                    ? styles.ownershipChipOwned
+                    : styles.ownershipChipPublic,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.ownershipChipText,
+                    isOwnedLibraryItem
+                      ? styles.ownershipChipTextOwned
+                      : styles.ownershipChipTextPublic,
+                  ]}
+                >
+                  {isOwnedLibraryItem ? "Yours" : "Public"}
+                </Text>
+              </View>
+            ) : null}
             <Text style={styles.slate300} numberOfLines={1}>
               {food.brand ? `${food.brand} | ` : ""}
               {defaultAmount}
@@ -909,40 +931,28 @@ const AddFoodScreen = () => {
           </Text>
         </Pressable>
         <View style={styles.foodActionColumn}>
-          {isLibraryItem ? (
-            isOwnedLibraryItem ? (
-              <Pressable
-                onPress={() =>
-                  isRecipe
-                    ? openRecipeEditor(food)
-                    : openCustomMealEditor(food)
-                }
-                accessibilityLabel={`Edit ${food.name}`}
-                style={({ pressed }) => [
-                  styles.iconAction,
-                  pressed && styles.cardPressed,
-                ]}
-              >
-                <PencilSimpleIcon
-                  size={18}
-                  color={appColors.brand500}
-                  weight="bold"
-                />
-              </Pressable>
-            ) : (
-              <View style={styles.publicPill}>
-                <Text
-                  style={styles.publicPillText}
-                >
-                  Public
-                </Text>
-              </View>
-            )
+          {isOwnedLibraryItem ? (
+            <Pressable
+              onPress={() =>
+                isRecipe ? openRecipeEditor(food) : openCustomMealEditor(food)
+              }
+              accessibilityLabel={`Edit ${food.name}`}
+              style={({ pressed }) => [
+                styles.iconAction,
+                pressed && styles.cardPressed,
+              ]}
+            >
+              <PencilSimpleIcon
+                size={18}
+                color={appColors.brand500}
+                weight="bold"
+              />
+            </Pressable>
           ) : (
             <Pressable
               onPress={() => void toggleFavorite(food, isFavorite)}
               accessibilityLabel={
-                isFavorite ? `Remove ${food.name} favorite` : `Save ${food.name}`
+                isFavorite ? `Remove ${food.name} bookmark` : `Save ${food.name}`
               }
               style={({ pressed }) => [
                 styles.iconAction,
@@ -1076,6 +1086,23 @@ const AddFoodScreen = () => {
         contentContainerStyle={styles.content}
       >
         <View style={styles.heroCard}>
+          <View style={styles.headerRow}>
+            <Pressable
+              onPress={() => navigation.goBack()}
+              accessibilityLabel="Go back"
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.backButton,
+                pressed && styles.cardPressed,
+              ]}
+            >
+              <ArrowLeftIcon
+                size={18}
+                color={appColors.textPrimary}
+                weight="bold"
+              />
+            </Pressable>
+          </View>
           <View style={styles.searchModeRow}>
             <Pressable
               onPress={() => setSearchMode("all")}
@@ -1414,6 +1441,20 @@ const styles = StyleSheet.create({
     borderColor: appColors.borderSoft,
     padding: 16,
     marginBottom: 16,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  backButton: {
+    width: 42,
+    height: 42,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 999,
+    backgroundColor: appColors.surfaceGhost,
+    borderColor: appColors.surfaceGhostStrong,
   },
   heroHeaderRow: {
     flexDirection: "row",
@@ -1793,6 +1834,30 @@ const styles = StyleSheet.create({
     color: appColors.brand500,
     fontSize: 10,
     fontWeight: "800",
+  },
+  ownershipChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+  },
+  ownershipChipOwned: {
+    backgroundColor: appColors.brand800,
+    borderColor: appColors.brand500,
+  },
+  ownershipChipPublic: {
+    backgroundColor: appColors.surfaceGhost,
+    borderColor: appColors.borderStrong,
+  },
+  ownershipChipText: {
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  ownershipChipTextOwned: {
+    color: appColors.brand700,
+  },
+  ownershipChipTextPublic: {
+    color: appColors.textSecondary,
   },
   foodCalories: {
     color: appColors.textPrimary,

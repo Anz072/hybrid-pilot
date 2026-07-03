@@ -14,16 +14,22 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ClockIcon, PencilSimpleIcon, XIcon } from "phosphor-react-native";
+import { ArrowLeftIcon, ClockIcon, PencilSimpleIcon } from "phosphor-react-native";
 import type { DBWeightEntry } from "../../store/DB_TYPES";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import OnboardingPrimaryButton from "../Onboarding/OnboardingPrimaryButton";
 import {
-  formatWeightKg,
   getZoneOffsetMinutes,
   parseLocalizedWeight,
   toLocalIsoWithOffset,
 } from "./weightUtils";
+import {
+  displayNumberToWeightKg,
+  formatTimeOfDay,
+  formatWeightValue,
+  weightUnitLabel,
+} from "../../preferences/displayPreferences";
+import { useDisplayPreferences } from "../../preferences/usePreferences";
 import { appColors } from "../../theme/colors";
 
 export type WeightEntryDraft = {
@@ -64,13 +70,14 @@ const WeightEntryModal = ({
   onDelete,
 }: WeightEntryModalProps) => {
   const insets = useSafeAreaInsets();
+  const { weightUnit, timeFormat } = useDisplayPreferences();
   const initialDate = React.useMemo(
     () =>
       initialEntry ? new Date(initialEntry.measuredAtLocalIso) : new Date(),
     [initialEntry],
   );
   const [value, setValue] = React.useState(
-    initialEntry ? formatWeightKg(initialEntry.valueOriginal) : "",
+    initialEntry ? formatWeightValue(initialEntry.valueKg, weightUnit) : "",
   );
   const [measuredAtDate, setMeasuredAtDate] = React.useState(initialDate);
   const [notes, setNotes] = React.useState(initialEntry?.notes ?? "");
@@ -86,7 +93,9 @@ const WeightEntryModal = ({
     const nextDate = initialEntry
       ? new Date(initialEntry.measuredAtLocalIso)
       : new Date();
-    setValue(initialEntry ? formatWeightKg(initialEntry.valueOriginal) : "");
+    setValue(
+      initialEntry ? formatWeightValue(initialEntry.valueKg, weightUnit) : "",
+    );
     setMeasuredAtDate(nextDate);
     setNotes(initialEntry?.notes ?? "");
     setShowDatePicker(false);
@@ -96,11 +105,13 @@ const WeightEntryModal = ({
   const initialSnapshot = React.useMemo(
     () =>
       serializeDraft({
-        value: initialEntry ? formatWeightKg(initialEntry.valueOriginal) : "",
+        value: initialEntry
+          ? formatWeightValue(initialEntry.valueKg, weightUnit)
+          : "",
         measuredAt: initialDate.toISOString(),
         notes: initialEntry?.notes ?? "",
       }),
-    [initialDate, initialEntry],
+    [initialDate, initialEntry, weightUnit],
   );
 
   const currentSnapshot = serializeDraft({
@@ -157,11 +168,16 @@ const WeightEntryModal = ({
   const handleSave = () => {
     try {
       setSaving(true);
-      const parsed = parseLocalizedWeight(value);
-      if (parsed == null) {
-        Alert.alert("Invalid weight", "Enter a valid number in kilograms.");
+      const parsedDisplay = parseLocalizedWeight(value);
+      if (parsedDisplay == null) {
+        Alert.alert(
+          "Invalid weight",
+          `Enter a valid number in ${weightUnit === "lb" ? "pounds" : "kilograms"}.`,
+        );
         return;
       }
+
+      const parsed = displayNumberToWeightKg(parsedDisplay, weightUnit);
 
       onSave({
         valueOriginal: parsed,
@@ -185,16 +201,16 @@ const WeightEntryModal = ({
     >
       <View style={styles.container}>
         <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-          <View />
           <Pressable
             onPress={handleRequestClose}
+            hitSlop={8}
             style={({ pressed }) => [
               styles.closeButton,
               pressed && styles.closeButtonPressed,
             ]}
-            accessibilityLabel="Close weight entry"
+            accessibilityLabel="Go back"
           >
-            <XIcon size={24} color={appColors.textSecondary} />
+            <ArrowLeftIcon size={18} color={appColors.textPrimary} weight="bold" />
           </Pressable>
         </View>
 
@@ -220,13 +236,13 @@ const WeightEntryModal = ({
                 returnKeyType="done"
                 blurOnSubmit
                 onSubmitEditing={Keyboard.dismiss}
-                placeholder="82.4"
+                placeholder={weightUnit === "lb" ? "181.5" : "82.4"}
                 placeholderTextColor={appColors.slate400}
                 style={styles.weightInput}
-                accessibilityLabel="Weight in kilograms"
+                accessibilityLabel={`Weight in ${weightUnit === "lb" ? "pounds" : "kilograms"}`}
               />
               <View style={styles.unitPill}>
-                <Text style={styles.unitText}>kg</Text>
+                <Text style={styles.unitText}>{weightUnitLabel(weightUnit)}</Text>
               </View>
             </View>
 
@@ -267,10 +283,7 @@ const WeightEntryModal = ({
                   weight="bold"
                 />
                 <Text style={styles.dateButtonText}>
-                  {measuredAtDate.toLocaleTimeString(undefined, {
-                    hour: "numeric",
-                    minute: "2-digit",
-                  })}
+                  {formatTimeOfDay(measuredAtDate, timeFormat)}
                 </Text>
               </Pressable>
             </View>
@@ -404,14 +417,13 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   closeButton: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: appColors.surfaceGhost,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
+    borderColor: appColors.surfaceGhostStrong,
   },
   closeButtonPressed: {
     opacity: 0.9,

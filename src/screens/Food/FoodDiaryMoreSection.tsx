@@ -6,7 +6,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { formatFoodHourLabel } from "./foodUtils";
+import { MEAL_SLOT_LABELS, type MealSlot } from "./foodUtils";
 import { appColors } from "../../theme/colors";
 import {
   BowlFoodIcon,
@@ -17,10 +17,10 @@ import {
 
 type FoodDiaryMoreSectionProps = {
   isCopyingYesterday: boolean;
-  isRepeatingYesterdayHour: boolean;
-  selectedHour: number;
+  isRepeatingYesterdayMeal: boolean;
+  selectedMeal: MealSlot;
   onCopyYesterday: () => void;
-  onRepeatYesterdayHour: () => void;
+  onRepeatYesterdayMeal: () => void;
   onQuickAddFood: () => void;
   onCreateRecipe: () => void;
   onCreateCustomFood: () => void;
@@ -28,35 +28,35 @@ type FoodDiaryMoreSectionProps = {
 
 const FoodDiaryMoreSection = ({
   isCopyingYesterday,
-  isRepeatingYesterdayHour,
-  selectedHour,
+  isRepeatingYesterdayMeal,
+  selectedMeal,
   onCopyYesterday,
-  onRepeatYesterdayHour,
+  onRepeatYesterdayMeal,
   onQuickAddFood,
   onCreateRecipe,
   onCreateCustomFood,
 }: FoodDiaryMoreSectionProps) => {
-  const selectedHourLabel = formatFoodHourLabel(selectedHour);
+  const selectedMealLabel = MEAL_SLOT_LABELS[selectedMeal];
 
   return (
     <View style={styles.card}>
       <Text style={styles.sectionTitle}>
-        Fast actions for {selectedHourLabel}
+        Fast actions for {selectedMealLabel}
       </Text>
       <View style={styles.quickActionGrid}>
         <Pressable
-          disabled={isRepeatingYesterdayHour}
-          onPress={onRepeatYesterdayHour}
-          accessibilityLabel={`Repeat yesterday at ${selectedHourLabel}`}
+          disabled={isRepeatingYesterdayMeal}
+          onPress={onRepeatYesterdayMeal}
+          accessibilityLabel={`Repeat yesterday's ${selectedMealLabel}`}
           style={({ pressed }) => [
             styles.actionTile,
             styles.actionTilePrimary,
-            isRepeatingYesterdayHour && styles.moreRowDisabled,
+            isRepeatingYesterdayMeal && styles.moreRowDisabled,
             pressed && styles.cardPressed,
           ]}
         >
           <View style={styles.actionIcon}>
-            {isRepeatingYesterdayHour ? (
+            {isRepeatingYesterdayMeal ? (
               <ActivityIndicator color={appColors.textPrimary} size="small" />
             ) : (
               <CalendarCheckIcon
@@ -67,12 +67,12 @@ const FoodDiaryMoreSection = ({
             )}
           </View>
           <Text style={styles.actionTileText}>
-            {isRepeatingYesterdayHour ? "Repeating" : "Repeat hour"}
+            {isRepeatingYesterdayMeal ? "Repeating" : "Repeat meal"}
           </Text>
         </Pressable>
         <Pressable
           onPress={onQuickAddFood}
-          accessibilityLabel={`Quick add at ${selectedHourLabel}`}
+          accessibilityLabel={`Quick add to ${selectedMealLabel}`}
           style={({ pressed }) => [
             styles.actionTile,
             styles.actionTilePrimary,
@@ -110,7 +110,7 @@ const FoodDiaryMoreSection = ({
             )}
           </View>
           <Text style={styles.actionTileText}>
-            {isCopyingYesterday ? "Copying" : "Copy day"}
+            {isCopyingYesterday ? "Copying" : "Copy last day"}
           </Text>
         </Pressable>
         <Pressable

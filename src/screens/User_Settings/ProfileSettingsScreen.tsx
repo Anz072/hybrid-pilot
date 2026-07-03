@@ -21,6 +21,11 @@ import type { MoreParamList } from "../../navigation/MoreNavigator";
 import type { DBUserGender } from "../../store/DB_TYPES";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { clearCurrentUser } from "../../store/userSlice";
+import {
+  cmToFeetInches,
+  feetInchesToCm,
+} from "../../preferences/displayPreferences";
+import { useDisplayPreferences } from "../../preferences/usePreferences";
 import { appColors } from "../../theme/colors";
 import SettingsStackHeader from "./SettingsStackHeader";
 import { saveUserProfileChanges } from "./userSettingsActions";
@@ -48,16 +53,31 @@ const parseHeightValue = (value: string) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const seedFeetInches = (heightCm: number | null | undefined) => {
+  if (heightCm == null) {
+    return { feet: "", inches: "" };
+  }
+  const { feet, inches } = cmToFeetInches(heightCm);
+  return { feet: String(feet), inches: String(inches) };
+};
+
 const ProfileSettingsScreen = ({ navigation }: Props) => {
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.user.currentUser);
+  const { heightUnit } = useDisplayPreferences();
   const [displayName, setDisplayName] = React.useState(user?.displayName ?? "");
   const [birthdateValue, setBirthdateValue] = React.useState(
     formatBirthdateInput(user?.birthdate),
   );
   const [heightValue, setHeightValue] = React.useState(
     user?.heightCm != null ? String(user.heightCm) : "",
+  );
+  const [feetValue, setFeetValue] = React.useState(
+    () => seedFeetInches(user?.heightCm).feet,
+  );
+  const [inchesValue, setInchesValue] = React.useState(
+    () => seedFeetInches(user?.heightCm).inches,
   );
   const [selectedGender, setSelectedGender] = React.useState<DBUserGender>(
     user?.gender ?? null,
@@ -70,9 +90,33 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
     setDisplayName(user?.displayName ?? "");
     setBirthdateValue(formatBirthdateInput(user?.birthdate));
     setHeightValue(user?.heightCm != null ? String(user.heightCm) : "");
+    const seeded = seedFeetInches(user?.heightCm);
+    setFeetValue(seeded.feet);
+    setInchesValue(seeded.inches);
     setSelectedGender(user?.gender ?? null);
     setStatusMessage(null);
   }, [user?.birthdate, user?.displayName, user?.gender, user?.heightCm]);
+
+  // Keep the canonical cm `heightValue` in sync when editing feet/inches.
+  const handleFeetInchesChange = React.useCallback(
+    (nextFeet: string, nextInches: string) => {
+      setFeetValue(nextFeet);
+      setInchesValue(nextInches);
+      setStatusMessage(null);
+      const feet = Number(nextFeet.trim());
+      const inches = Number(nextInches.trim());
+      if (
+        (nextFeet.trim() === "" && nextInches.trim() === "") ||
+        !Number.isFinite(feet) ||
+        !Number.isFinite(inches)
+      ) {
+        setHeightValue(nextFeet.trim() === "" && nextInches.trim() === "" ? "" : heightValue);
+        return;
+      }
+      setHeightValue(String(Math.round(feetInchesToCm(feet, inches))));
+    },
+    [heightValue],
+  );
 
   const hasChanges = React.useMemo(() => {
     if (!user) {
@@ -126,7 +170,9 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
     if (trimmedHeight && (parsedHeight == null || parsedHeight < 100 || parsedHeight > 260)) {
       Alert.alert(
         "Invalid height",
-        "Enter a height between 100 cm and 260 cm, or leave it blank.",
+        heightUnit === "ft_in"
+          ? "Enter a height between about 3'3\" and 8'6\", or leave it blank."
+          : "Enter a height between 100 cm and 260 cm, or leave it blank.",
       );
       return;
     }
@@ -158,6 +204,7 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
     birthdateValue,
     dispatch,
     displayName,
+    heightUnit,
     heightValue,
     navigation,
     selectedGender,
@@ -233,8 +280,23 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
           ) : (
             <>
               <View style={styles.card}>
-                <Text style={styles.cardTitle}>Synced account</Text>
+                <Text style={styles.cardTitle}>Account & sync</Text>
                 <Text style={styles.accountValue}>{user.email ?? "No email"}</Text>
+                <View style={styles.syncRow}>
+                  <View
+                    style={[
+                      styles.syncDot,
+                      user.provider === "local"
+                        ? styles.syncDotLocal
+                        : styles.syncDotOnline,
+                    ]}
+                  />
+                  <Text style={styles.syncText}>
+                    {user.provider === "local"
+                      ? "Local device account — data stays on this device and is not synced."
+                      : "Signed in — your diary, weights, and settings sync to your account."}
+                  </Text>
+                </View>
               </View>
 
               <View style={styles.card}>
@@ -275,22 +337,53 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
                 <Text style={[styles.fieldLabel, styles.fieldSpacing]}>
                   Height
                 </Text>
-                <View style={styles.inlineInputRow}>
-                  <TextInput
-                    style={[styles.textInput, styles.inlineInput]}
-                    placeholder="170"
-                    placeholderTextColor={appColors.slate200}
-                    value={heightValue}
-                    onChangeText={(value) => {
-                      setHeightValue(value);
-                      setStatusMessage(null);
-                    }}
-                    keyboardType="decimal-pad"
-                  />
-                  <View style={styles.unitPill}>
-                    <Text style={styles.unitPillText}>cm</Text>
+                {heightUnit === "ft_in" ? (
+                  <View style={styles.inlineInputRow}>
+                    <TextInput
+                      style={[styles.textInput, styles.inlineInput]}
+                      placeholder="5"
+                      placeholderTextColor={appColors.slate200}
+                      value={feetValue}
+                      onChangeText={(value) =>
+                        handleFeetInchesChange(value, inchesValue)
+                      }
+                      keyboardType="number-pad"
+                    />
+                    <View style={styles.unitPill}>
+                      <Text style={styles.unitPillText}>ft</Text>
+                    </View>
+                    <TextInput
+                      style={[styles.textInput, styles.inlineInput]}
+                      placeholder="10"
+                      placeholderTextColor={appColors.slate200}
+                      value={inchesValue}
+                      onChangeText={(value) =>
+                        handleFeetInchesChange(feetValue, value)
+                      }
+                      keyboardType="number-pad"
+                    />
+                    <View style={styles.unitPill}>
+                      <Text style={styles.unitPillText}>in</Text>
+                    </View>
                   </View>
-                </View>
+                ) : (
+                  <View style={styles.inlineInputRow}>
+                    <TextInput
+                      style={[styles.textInput, styles.inlineInput]}
+                      placeholder="170"
+                      placeholderTextColor={appColors.slate200}
+                      value={heightValue}
+                      onChangeText={(value) => {
+                        setHeightValue(value);
+                        setStatusMessage(null);
+                      }}
+                      keyboardType="decimal-pad"
+                    />
+                    <View style={styles.unitPill}>
+                      <Text style={styles.unitPillText}>cm</Text>
+                    </View>
+                  </View>
+                )}
 
                 <Text style={[styles.fieldLabel, styles.fieldSpacing]}>
                   Sex profile
@@ -428,6 +521,30 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     fontWeight: "800",
     marginBottom: 8,
+  },
+  syncRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    marginTop: 2,
+  },
+  syncDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 999,
+    marginTop: 5,
+  },
+  syncDotOnline: {
+    backgroundColor: appColors.success700,
+  },
+  syncDotLocal: {
+    backgroundColor: appColors.warning600,
+  },
+  syncText: {
+    flex: 1,
+    color: appColors.slate600,
+    fontSize: 13,
+    lineHeight: 19,
   },
   sectionTitle: {
     color: appColors.slate800,

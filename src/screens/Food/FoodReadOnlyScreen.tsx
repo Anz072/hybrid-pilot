@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -28,6 +27,7 @@ import { DB } from "../../store/DB";
 import type { DBFoodItem } from "../../store/DB_TYPES";
 import { useAppSelector } from "../../store/hooks";
 import { appColors } from "../../theme/colors";
+import { LoadingState } from "../../components/ui";
 import { sharedStyleValues } from "../../theme/sharedStyles";
 import { MacroBar } from "./FoodDiaryHeroCard";
 import FoodScreenHeader from "./FoodScreenHeader";
@@ -39,7 +39,9 @@ import {
   formatFoodNumber,
   formatFoodShortDate,
   formatFoodSourceLabel,
+  getFoodQuantityFactor,
   getFoodResolvedServing,
+  scaleFoodNutritionForQuantity,
   type FoodNutritionTotals,
 } from "./foodUtils";
 
@@ -49,11 +51,6 @@ type FoodReadOnlyNav = CompositeNavigationProp<
   NativeStackNavigationProp<RootStackParamList>
 >;
 
-const roundTo = (value: number, places = 1) => {
-  const factor = 10 ** places;
-  return Math.round(value * factor) / factor;
-};
-
 const buildPreview = (
   food: DBFoodItem,
   quantity: number,
@@ -62,15 +59,7 @@ const buildPreview = (
     return null;
   }
 
-  const serving = getFoodResolvedServing(food);
-  const factor = serving.value > 0 ? quantity / serving.value : 1;
-
-  return {
-    calories: roundTo((food.calories ?? 0) * factor, 0),
-    proteinG: roundTo((food.proteinG ?? 0) * factor),
-    carbsG: roundTo((food.carbsG ?? 0) * factor),
-    fatG: roundTo((food.fatG ?? 0) * factor),
-  };
+  return scaleFoodNutritionForQuantity(food, quantity);
 };
 
 const FoodReadOnlyScreen = () => {
@@ -145,12 +134,12 @@ const FoodReadOnlyScreen = () => {
     [food, quantity],
   );
   const micronutrientFactor = React.useMemo(() => {
-    if (!serving || !Number.isFinite(quantity) || quantity <= 0) {
+    if (!food || !Number.isFinite(quantity) || quantity <= 0) {
       return 0;
     }
 
-    return serving.value > 0 ? quantity / serving.value : 1;
-  }, [quantity, serving]);
+    return getFoodQuantityFactor(food, quantity);
+  }, [food, quantity]);
 
   if (loading) {
     return (
@@ -162,10 +151,11 @@ const FoodReadOnlyScreen = () => {
             subtitle="Loading food details..."
             onBack={() => navigation.goBack()}
           />
-          <View style={styles.centerCard}>
-            <ActivityIndicator size="small" color={appColors.brand700} />
-            <Text style={styles.centerText}>Preparing the ingredient view.</Text>
-          </View>
+          <LoadingState
+            title="Loading food"
+            message="Preparing the ingredient view."
+            style={styles.centerCard}
+          />
         </View>
       </View>
     );
@@ -342,29 +332,11 @@ const styles = StyleSheet.create({
   title: {
     color: appColors.textPrimary,
     fontSize: 24,
-    fontWeight: "900",
+    fontWeight: "600",
     marginTop: 16,
     marginBottom: 12,
   },
   content: sharedStyleValues.content,
-  bgOrbTop: {
-    position: "absolute",
-    top: -90,
-    right: -70,
-    width: 250,
-    height: 250,
-    borderRadius: 999,
-    backgroundColor: appColors.brand800,
-  },
-  bgOrbBottom: {
-    position: "absolute",
-    bottom: -120,
-    left: -90,
-    width: 280,
-    height: 280,
-    borderRadius: 999,
-    backgroundColor: appColors.success700,
-  },
   centerCard: sharedStyleValues.centerCard,
   centerText: sharedStyleValues.centerText,
   heroCard: sharedStyleValues.cardCompact,
@@ -401,7 +373,7 @@ const styles = StyleSheet.create({
   previewValue: {
     color: appColors.white,
     fontSize: 22,
-    fontWeight: "900",
+    fontWeight: "600",
     marginBottom: 2,
   },
   previewText: {
@@ -434,7 +406,7 @@ const styles = StyleSheet.create({
   readOnlyLabel: {
     color: appColors.slate300,
     fontSize: 11,
-    fontWeight: "800",
+    fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 0.6,
     flexShrink: 0,
@@ -442,7 +414,7 @@ const styles = StyleSheet.create({
   readOnlyValue: {
     color: appColors.textPrimary,
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "600",
     flex: 1,
     textAlign: "right",
   },
@@ -451,7 +423,7 @@ const styles = StyleSheet.create({
   nutritionLabel: {
     color: appColors.slate300,
     fontSize: 11,
-    fontWeight: "800",
+    fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 0.6,
     marginBottom: 6,
@@ -467,4 +439,3 @@ const styles = StyleSheet.create({
 });
 
 export default FoodReadOnlyScreen;
-

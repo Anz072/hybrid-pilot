@@ -1,24 +1,29 @@
 import type { DBFoodItem, DBUserFoodLogEntry } from "../../store/DB_TYPES";
+import {
+  getFoodResolvedServing,
+  roundNutrient,
+  type FoodNutritionTotals,
+} from "../../engine/nutrition";
+
+// Nutrition math lives in src/engine/nutrition.ts; re-exported here so food
+// screens keep one import site for both math and diary formatting helpers.
+export {
+  calculateLoggedNutrition,
+  calculateQuickAddCaloriesFromMacros,
+  getEntryScaleFactor,
+  getFoodDefaultLogAmount,
+  getFoodQuantityFactor,
+  getFoodResolvedServing,
+  getLoggedCaloriesRaw,
+  getQuantityScaleFactor,
+  scaleFoodNutritionForQuantity,
+  sumLoggedNutrition,
+} from "../../engine/nutrition";
+export type { FoodNutritionTotals } from "../../engine/nutrition";
 
 export const DEFAULT_MEALS = ["Breakfast", "Lunch", "Dinner", "Snacks"];
 
-export type FoodNutritionTotals = {
-  calories: number;
-  proteinG: number;
-  carbsG: number;
-  fatG: number;
-};
-
-const roundTo = (value: number, places = 1): number => {
-  const factor = 10 ** places;
-  return Math.round(value * factor) / factor;
-};
-
-const FOOD_BASIS_DEFAULTS = {
-  "100g": { value: 100, unit: "g" },
-  "100ml": { value: 100, unit: "ml" },
-  serving: { value: 1, unit: "serving" },
-} as const;
+const roundTo = roundNutrient;
 
 export const formatFoodDateKey = (date: Date): string => {
   const year = date.getFullYear();
@@ -211,21 +216,6 @@ export const normalizePositiveFoodInput = (
   return String(safeFallback);
 };
 
-export const getFoodResolvedServing = (
-  food: Pick<DBFoodItem, "nutritionBasis" | "servingSizeValue" | "servingSizeUnit">,
-) => {
-  const fallback = FOOD_BASIS_DEFAULTS[food.nutritionBasis];
-
-  return {
-    value: food.servingSizeValue ?? fallback.value,
-    unit: food.servingSizeUnit?.trim() || fallback.unit,
-  };
-};
-
-export const getFoodDefaultLogAmount = (
-  food: Pick<DBFoodItem, "nutritionBasis" | "servingSizeValue" | "servingSizeUnit">,
-): number => getFoodResolvedServing(food).value;
-
 export const formatFoodItemServing = (
   food: Pick<DBFoodItem, "nutritionBasis" | "servingSizeValue" | "servingSizeUnit">,
 ): string => {
@@ -259,77 +249,6 @@ export const formatFoodSourceLabel = (source: string): string => {
         .map((part) => part[0]?.toUpperCase() + part.slice(1))
         .join(" ");
   }
-};
-
-export const calculateQuickAddCaloriesFromMacros = ({
-  carbsG = 0,
-  fatG = 0,
-  proteinG = 0,
-}: {
-  carbsG?: number | null;
-  fatG?: number | null;
-  proteinG?: number | null;
-}): number =>
-  roundTo(
-    (proteinG ?? 0) * 4 +
-      (carbsG ?? 0) * 4 +
-      (fatG ?? 0) * 9,
-    0,
-  );
-
-export const calculateLoggedNutrition = (
-  entry: DBUserFoodLogEntry,
-): FoodNutritionTotals => {
-  if (entry.entrySource === "quick_add") {
-    return {
-      calories: roundTo(entry.calories, 0),
-      proteinG: roundTo(entry.proteinG),
-      carbsG: roundTo(entry.carbsG),
-      fatG: roundTo(entry.fatG),
-    };
-  }
-
-  const factor = entry.servingSize > 0 ? entry.quantityG / entry.servingSize : 1;
-
-  return {
-    calories: roundTo(entry.calories * factor, 0),
-    proteinG: roundTo(entry.proteinG * factor),
-    carbsG: roundTo(entry.carbsG * factor),
-    fatG: roundTo(entry.fatG * factor),
-  };
-};
-
-export const sumLoggedNutrition = (
-  entries: DBUserFoodLogEntry[],
-): FoodNutritionTotals => {
-  const totals = entries.reduce<FoodNutritionTotals>(
-    (accumulator, entry) => {
-      if (entry.entrySource === "quick_add") {
-        accumulator.calories += entry.calories;
-        accumulator.proteinG += entry.proteinG;
-        accumulator.carbsG += entry.carbsG;
-        accumulator.fatG += entry.fatG;
-        return accumulator;
-      }
-
-      const factor =
-        entry.servingSize > 0 ? entry.quantityG / entry.servingSize : 1;
-
-      accumulator.calories += entry.calories * factor;
-      accumulator.proteinG += entry.proteinG * factor;
-      accumulator.carbsG += entry.carbsG * factor;
-      accumulator.fatG += entry.fatG * factor;
-      return accumulator;
-    },
-    { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 },
-  );
-
-  return {
-    calories: roundTo(totals.calories, 0),
-    proteinG: roundTo(totals.proteinG),
-    carbsG: roundTo(totals.carbsG),
-    fatG: roundTo(totals.fatG),
-  };
 };
 
 export const clampFoodRatio = (value: number): number => {

@@ -4,36 +4,41 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { AppButton, AppCard, AppInput, AppText } from "../../components/ui";
+import {
+  signUpWithEmailPassword,
+} from "../../API/supabase/auth";
+import {
+  getSupabaseConfigError,
+  isSupabaseConfigured,
+} from "../../API/supabase/client";
+import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import type { OnboardingParamList } from "../../navigation/onboardingTypes";
+import { DB } from "../../store/DB";
+import { useAppDispatch } from "../../store/hooks";
+import { setCurrentUser } from "../../store/userSlice";
 import {
   saveLocalAccount,
   saveOnboardingProfile,
   setOnboardingComplete,
   type LocalAccount,
 } from "../../storage/localStore";
-import {
-  getSupabaseConfigError,
-  isSupabaseConfigured,
-} from "../../API/supabase/client";
-import { signUpWithEmailPassword } from "../../API/supabase/auth";
-import { DB } from "../../store/DB";
-import { useAppDispatch } from "../../store/hooks";
-import { setCurrentUser } from "../../store/userSlice";
+import { appColors } from "../../theme/colors";
+import { appBorders, appSpacing, appSurfaces } from "../../theme/tokens";
 import {
   generateUuid,
   getZoneOffsetMinutes,
   toLocalIsoWithOffset,
 } from "../Weight/weightUtils";
+import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
 import OnboardingReviewCard from "./OnboardingReviewCard";
 import OnboardingTopBar from "./OnboardingTopBar";
+import { onboardingStepProgress } from "./OnboardingStepScreen";
 import {
   formatActivitySummary,
   formatBodySummary,
@@ -41,9 +46,6 @@ import {
   formatProteinFocusSummary,
   formatTrainingSummary,
 } from "./onboardingSummary";
-import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
-import { appColors } from "../../theme/colors";
-import { appTypography } from "../../theme/typography";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "Account">;
 
@@ -189,23 +191,35 @@ const AccountScreen = ({ navigation, route }: Props) => {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
       enabled
-      style={styles.container}
+      keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
+      style={styles.screen}
     >
       <KeyboardAwareScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: insets.top + appSpacing.md,
+            paddingBottom: insets.bottom + appSpacing.xl,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
       >
         <OnboardingTopBar
           onBack={() => navigation.goBack()}
+          progress={onboardingStepProgress(9)}
           stepLabel="Account"
         />
-        <Text style={styles.eyebrow}>Final Step</Text>
-        <Text style={styles.title}>Create your account</Text>
-        <Text style={styles.subtitle}>
-          Finish with a Supabase-backed email account so your plan, logs, and
-          progress stay tied to one profile.
-        </Text>
+        <View style={styles.header}>
+          <AppText color="coral" variant="eyebrow">
+            Final Step
+          </AppText>
+          <AppText variant="sectionTitleLarge">Create your account</AppText>
+          <AppText color="secondary" variant="bodySmall">
+            Finish with a Supabase-backed email account so your plan, logs, and
+            progress stay tied to one profile.
+          </AppText>
+        </View>
 
         <OnboardingReviewCard
           title="Review onboarding"
@@ -273,172 +287,90 @@ const AccountScreen = ({ navigation, route }: Props) => {
           ]}
         />
 
-        <View style={styles.card}>
-          <Text style={styles.label}>Name</Text>
-          <TextInput
-            value={displayName}
+        <AppCard style={styles.formCard}>
+          <AppInput
+            editable={!isSaving}
+            label="Name"
             onChangeText={(value) => {
               setDisplayName(value);
               setStatusMessage(null);
             }}
-            editable={!isSaving}
             placeholder="Your name"
-            placeholderTextColor={appColors.textMuted}
-            style={styles.input}
             returnKeyType="next"
+            value={displayName}
           />
-
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            value={email}
+          <AppInput
+            autoCapitalize="none"
+            autoCorrect={false}
+            editable={!isSaving}
+            keyboardType="email-address"
+            label="Email"
             onChangeText={(value) => {
               setEmail(value);
               setStatusMessage(null);
             }}
-            editable={!isSaving}
+            placeholder="you@example.com"
+            returnKeyType="next"
+            textContentType="emailAddress"
+            value={email}
+          />
+          <AppInput
             autoCapitalize="none"
             autoCorrect={false}
-            keyboardType="email-address"
-            placeholder="you@example.com"
-            placeholderTextColor={appColors.textMuted}
-            style={styles.input}
-            textContentType="emailAddress"
-            returnKeyType="next"
-          />
-
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            value={password}
+            editable={!isSaving}
+            label="Password"
             onChangeText={(value) => {
               setPassword(value);
               setStatusMessage(null);
             }}
-            editable={!isSaving}
-            autoCapitalize="none"
-            autoCorrect={false}
-            secureTextEntry
-            placeholder="Minimum 6 characters"
-            placeholderTextColor={appColors.textMuted}
-            style={styles.input}
-            textContentType="newPassword"
-            returnKeyType="done"
             onSubmitEditing={() => {
+              void handleCreateEmailAccount();
+            }}
+            placeholder="Minimum 6 characters"
+            returnKeyType="done"
+            secureTextEntry
+            textContentType="newPassword"
+            value={password}
+          />
+
+          <AppButton
+            disabled={isSaving}
+            icon={isSaving ? <ActivityIndicator color={appColors.white} /> : undefined}
+            label={isSaving ? "Creating account..." : "Create account"}
+            onPress={() => {
               void handleCreateEmailAccount();
             }}
           />
 
-          <Pressable
-            disabled={isSaving}
-            onPress={() => {
-              void handleCreateEmailAccount();
-            }}
-            style={({ pressed }) => [
-              styles.emailButton,
-              isSaving && styles.buttonDisabled,
-              pressed && !isSaving && styles.buttonPressed,
-            ]}
-          >
-            {isSaving ? (
-              <ActivityIndicator color={appColors.slate900} />
-            ) : null}
-            <Text style={styles.emailButtonText}>
-              {isSaving ? "Creating account..." : "Create account"}
-            </Text>
-          </Pressable>
-
           {statusMessage ? (
-            <Text style={styles.statusText}>{statusMessage}</Text>
+            <AppText color="secondary" variant="bodySmall">
+              {statusMessage}
+            </AppText>
           ) : null}
-        </View>
+        </AppCard>
       </KeyboardAwareScrollView>
     </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
-    backgroundColor: appColors.surfaceCanvas,
+    backgroundColor: appSurfaces.canvas,
   },
-  scrollContent: {
-    paddingHorizontal: 22,
-    paddingTop: 36,
-    paddingBottom: 26,
+  content: {
     flexGrow: 1,
+    paddingHorizontal: appSpacing.gutter,
   },
-  eyebrow: {
-    alignSelf: "flex-start",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    color: appColors.brand500,
-    backgroundColor: appColors.brand800,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    marginBottom: 12,
+  header: {
+    gap: appSpacing.xs,
+    marginBottom: appSpacing.xl,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: "800",
-    color: appColors.textPrimary,
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: appColors.slate600,
-    marginBottom: 14,
-  },
-  card: {
-    padding: 16,
-  },
-  label: {
-    marginTop: 12,
-    marginBottom: 2,
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-    color: appColors.slate500,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    backgroundColor: appColors.slate100,
-    color: appColors.slate800,
-    fontSize: 16,
-    letterSpacing: 0.2,
-    fontWeight: "600",
-  },
-  emailButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    borderRadius: 8,
-    backgroundColor: appColors.slate50,
-    paddingHorizontal: 16,
-    paddingVertical: 18,
-    marginTop: 18,
-  },
-  emailButtonText: {
-    ...appTypography.button,
-    color: appColors.slate900,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonPressed: {
-    opacity: 0.9,
-  },
-  statusText: {
-    ...appTypography.bodySmall,
-    color: appColors.slate600,
-    marginTop: 12,
+  formCard: {
+    gap: appSpacing.md,
+    marginBottom: appSpacing.md,
+    borderWidth: appBorders.width,
+    borderColor: appColors.borderSoft,
   },
 });
 

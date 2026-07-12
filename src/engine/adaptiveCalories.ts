@@ -7,6 +7,7 @@ import {
   getGoalCalorieOffset,
   resolveGoalStrategy,
 } from "./goalStrategy";
+import { getLoggedCaloriesRaw } from "./nutrition";
 import {
   collapseEntriesByLocalDate,
   computeEmaSeries,
@@ -295,7 +296,7 @@ export const buildAdaptiveWindow = ({
 
     entryTotalsByDate.set(
       entry.date,
-      (entryTotalsByDate.get(entry.date) ?? 0) + entry.calories,
+      (entryTotalsByDate.get(entry.date) ?? 0) + getLoggedCaloriesRaw(entry),
     );
     totalEntriesUsed += 1;
   }

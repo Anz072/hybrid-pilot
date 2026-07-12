@@ -7,7 +7,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -57,6 +56,15 @@ import {
 import { refreshAdaptiveRecommendationForUser } from "../screens/User_Settings/adaptiveCaloriesActions";
 import { appColors } from "../theme/colors";
 import { appTypography } from "../theme/typography";
+import { IconButton } from "../components/ui/AppButton";
+import { AppText } from "../components/ui/AppText";
+import {
+  appBorders,
+  appRadius,
+  appSpacing,
+  appStates,
+  appSurfaces,
+} from "../theme/tokens";
 
 export type MainTabParamList = {
   Home: undefined;
@@ -66,8 +74,8 @@ export type MainTabParamList = {
   More: NavigatorScreenParams<MoreParamList> | undefined;
 };
 
-const FOCUSED_COLOR = "#070707";
-const UNFOCUSED_COLOR = "rgba(7, 7, 7, 0.64)";
+const FOCUSED_COLOR = appColors.textPrimary;
+const UNFOCUSED_COLOR = appColors.textMuted;
 const TAB_BAR_BACKGROUND = appColors.surfaceCard;
 const TAB_BAR_BORDER = appColors.borderSoft;
 const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.4);
@@ -329,6 +337,7 @@ const MainTabNavigator = () => {
   ) => (
     <Pressable
       key={shortcut}
+      accessibilityRole="button"
       onPress={() => handleShortcutPress(shortcut)}
       accessibilityLabel={SHORTCUT_LABELS[shortcut]}
       style={({ pressed }) => [
@@ -345,7 +354,9 @@ const MainTabNavigator = () => {
       >
         {renderShortcutIcon(shortcut, variant === "primary" ? 28 : 25)}
       </View>
-      <Text style={styles.shortcutLabel}>{SHORTCUT_LABELS[shortcut]}</Text>
+      <AppText align="center" style={styles.shortcutLabel} variant="bodySmall">
+        {SHORTCUT_LABELS[shortcut]}
+      </AppText>
     </Pressable>
   );
 
@@ -434,6 +445,8 @@ const MainTabNavigator = () => {
             tabBarLabel: () => null,
             tabBarButton: () => (
               <Pressable
+                accessibilityLabel="Open shortcuts"
+                accessibilityRole="button"
                 onPress={openShortcuts}
                 style={({ pressed }) => [
                   styles.shortcutTabSlot,
@@ -441,7 +454,9 @@ const MainTabNavigator = () => {
                 ]}
               >
                 <PlusIcon size={31} color={FOCUSED_COLOR} weight="regular" />
-                <Text style={styles.shortcutTabLabel}>Add</Text>
+                <AppText style={styles.shortcutTabLabel} variant="bodySmall">
+                  Add
+                </AppText>
               </Pressable>
             ),
           }}
@@ -511,19 +526,17 @@ const MainTabNavigator = () => {
           >
             <View style={styles.sheetHeader}>
               <View style={styles.headerSpacer} />
-              <Text style={styles.sheetTitle}>SHORTCUTS</Text>
+              <AppText color="secondary" style={styles.sheetTitle} variant="label">
+                SHORTCUTS
+              </AppText>
 
-              <Pressable
-                accessibilityRole="button"
+              <IconButton
                 accessibilityLabel="Close shortcuts"
                 onPress={handleCloseShortcuts}
-                style={({ pressed }) => [
-                  styles.closeButton,
-                  pressed && styles.pressed,
-                ]}
+                style={styles.closeButton}
               >
                 <XIcon size={24} color={appColors.textSecondary} />
-              </Pressable>
+              </IconButton>
             </View>
 
             <View style={styles.sheetDivider} />
@@ -576,11 +589,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: TAB_BAR_BORDER,
     paddingTop: 6,
-    shadowColor: appColors.borderStrong,
-    shadowOffset: { width: 0, height: -8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 18,
-    elevation: 10,
   },
   tabBarHidden: {
     display: "none",
@@ -589,11 +597,7 @@ const styles = StyleSheet.create({
     paddingTop: 2,
   },
   tabBarLabel: {
-    color: appColors.textPrimary,
-    fontSize: 13,
-    lineHeight: 16,
-    fontWeight: "400",
-    letterSpacing: 0,
+    ...appTypography.bodySmall,
   },
   shortcutTabSlot: {
     flex: 1,
@@ -604,10 +608,7 @@ const styles = StyleSheet.create({
   },
   shortcutTabLabel: {
     color: FOCUSED_COLOR,
-    fontSize: 13,
-    lineHeight: 16,
-    fontWeight: "400",
-    letterSpacing: 0,
+    ...appTypography.bodySmall,
   },
   modalRoot: {
     flex: 1,
@@ -618,78 +619,52 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceOverlay,
   },
   sheet: {
-    backgroundColor: appColors.surfaceBase,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    borderTopWidth: 1,
-    borderTopColor: appColors.borderSoft,
-    paddingHorizontal: 20,
-    paddingTop: 10,
-  },
-  sheetHandle: {
-    alignSelf: "center",
-    width: 52,
-    height: 5,
-    borderRadius: 999,
-    backgroundColor: appColors.textMuted,
-    marginBottom: 16,
+    backgroundColor: appSurfaces.canvas,
+    borderTopLeftRadius: appRadius.xl,
+    borderTopRightRadius: appRadius.xl,
+    borderTopWidth: appBorders.width,
+    borderTopColor: appBorders.soft,
+    paddingHorizontal: appSpacing.lg,
+    paddingTop: appSpacing.sm,
   },
   sheetHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 8,
+    marginBottom: appSpacing.xs,
   },
   closeButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: appColors.surfaceGhost,
-    borderWidth: 2,
-    borderColor: appColors.surfaceGhostStrong,
+    backgroundColor: appSurfaces.ghost,
+    borderColor: appSurfaces.ghostStrong,
   },
   headerSpacer: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
   },
   sheetTitle: {
     ...appTypography.label,
-    color: appColors.textSecondary,
   },
   sheetDivider: {
-    height: 1,
-    backgroundColor: appColors.slate100,
-    marginTop: 6,
-    marginBottom: 24,
-    marginHorizontal:24
-  },
-  shortcutSectionLabel: {
-    ...appTypography.label,
-    color: appColors.textSecondary,
-    marginBottom: 10,
-    marginTop: 8,
+    height: appBorders.width,
+    backgroundColor: appBorders.soft,
+    marginTop: appSpacing.xs,
+    marginBottom: appSpacing.xl,
+    marginHorizontal: appSpacing.xl,
   },
   shortcutScrollContent: {
-    paddingBottom: 18,
-  },
-  recentShortcutGrid: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 10,
+    paddingBottom: appSpacing.gutter,
   },
   shortcutsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 8,
+    gap: appSpacing.sm,
+    marginBottom: appSpacing.xs,
   },
   shortcutCard: {
     width: "30%",
     alignItems: "center",
-    gap: 10,
+    gap: appSpacing.xs,
     minHeight: 98,
   },
   shortcutCardPrimary: {
@@ -699,25 +674,23 @@ const styles = StyleSheet.create({
   shortcutIconWrap: {
     width: 64,
     height: 64,
-    borderRadius: 999,
-    backgroundColor: appColors.surfaceCardAlt,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
+    borderRadius: appRadius.pill,
+    backgroundColor: appSurfaces.card,
+    borderWidth: appBorders.width,
+    borderColor: appBorders.strong,
     alignItems: "center",
     justifyContent: "center",
   },
   shortcutIconWrapPrimary: {
     width: 70,
     height: 70,
-    backgroundColor: appColors.surfaceGhost,
+    backgroundColor: appSurfaces.ghost,
   },
   shortcutLabel: {
     ...appTypography.bodySmall,
-    color: appColors.textPrimary,
-    textAlign: "center",
   },
   pressed: {
-    opacity: 0.88,
+    opacity: appStates.pressedOpacity,
   },
 });
 

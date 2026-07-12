@@ -8,18 +8,19 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { RulerIcon } from "phosphor-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import {
+  AppButton,
+  AppCard,
+  AppInput,
+  AppText,
+  Chip,
+  NumericText,
+} from "../../components/ui";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
-import type {
-  BodyData,
-  OnboardingParamList,
-} from "../../navigation/onboardingTypes";
 import { formatGoalStrategyMeta } from "../../engine/goalStrategy";
 import {
   buildBirthdateIsoString,
@@ -27,19 +28,22 @@ import {
   getAgeToday,
   parseBirthdateValue,
 } from "../../helpers";
+import type {
+  BodyData,
+  OnboardingParamList,
+} from "../../navigation/onboardingTypes";
+import { appColors } from "../../theme/colors";
+import { appTypography } from "../../theme/typography";
+import { appBorders, appRadius, appSpacing, appSurfaces } from "../../theme/tokens";
 import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
 import OnboardingTopBar from "./OnboardingTopBar";
-import { appColors } from "../../theme/colors";
+import { onboardingStepProgress } from "./OnboardingStepScreen";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "BodyData">;
 
 const resolveInitialBirthdate = (value?: string): Date => {
   const parsed = parseBirthdateValue(value);
-  if (parsed) {
-    return parsed;
-  }
-
-  return new Date(1998, 0, 1);
+  return parsed ?? new Date(1998, 0, 1);
 };
 
 const BodyDataScreen = ({ navigation, route }: Props) => {
@@ -67,10 +71,6 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
     () => getAgeToday(selectedBirthdate),
     [selectedBirthdate],
   );
-
-  const openDatePicker = () => {
-    setShowDatePicker(true);
-  };
 
   const handleDateChange = (event: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS === "android") {
@@ -124,119 +124,119 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
+      style={styles.screen}
     >
       <KeyboardAwareScrollView
         contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: Math.max(172, insets.bottom + 140) },
+          styles.content,
+          {
+            paddingTop: insets.top + appSpacing.md,
+            paddingBottom: Math.max(172, insets.bottom + 140),
+          },
         ]}
         focusedInputBottomOffset={128}
+        showsVerticalScrollIndicator={false}
       >
         <OnboardingTopBar
           onBack={() => navigation.goBack()}
+          progress={onboardingStepProgress(4)}
           stepLabel="Body Data"
         />
-        <View style={styles.headerWrap}>
-          <View style={styles.headerRow}>
-            <RulerIcon size={22} color={appColors.brand700} weight="fill" />
-            <Text style={styles.eyebrow}>Body Data</Text>
-          </View>
-          <Text style={styles.title}>Body basics</Text>
-          <Text style={styles.subtitle}>
+        <View style={styles.header}>
+          <AppText color="coral" variant="eyebrow">
+            Body Data
+          </AppText>
+          <AppText variant="sectionTitleLarge">Body basics</AppText>
+          <AppText color="secondary" variant="bodySmall">
             Quick setup for a better TDEE estimate. We use your birthdate to
             calculate age automatically.
-          </Text>
-          <Text style={styles.contextNote}>
+          </AppText>
+          <AppText color="success" style={styles.contextNote} variant="metadata">
             Selected approach:{" "}
             {formatGoalStrategyMeta(route.params.goal, route.params.goalStrategy)}.
-          </Text>
+          </AppText>
         </View>
 
-        <View style={styles.formCard}>
+        <AppCard style={styles.formCard} variant="soft">
           <View>
-            <Text style={styles.sectionLabelx}>Birthdate</Text>
+            <AppText color="secondary" variant="eyebrow">
+              Birthdate
+            </AppText>
             <Pressable
-              style={styles.input}
-              onPress={openDatePicker}
+              accessibilityRole="button"
+              onPress={() => setShowDatePicker(true)}
+              style={({ pressed }) => [
+                styles.dateButton,
+                pressed && styles.pressed,
+              ]}
             >
-              <Text style={styles.birthdateText}>{formattedBirthdate}</Text>
+              <NumericText style={styles.inputValue} variant="numberWeightEntry">
+                {formattedBirthdate}
+              </NumericText>
             </Pressable>
-            <Text style={styles.ageHint}>
+            <AppText color="secondary" style={styles.hint} variant="metadata">
               Age used for calculations: {derivedAge} years
-            </Text>
+            </AppText>
             {showDatePicker ? (
               <View style={styles.pickerWrap}>
                 <DateTimePicker
-                  value={selectedBirthdate}
-                  mode="date"
                   display={Platform.OS === "ios" ? "spinner" : "default"}
                   maximumDate={maxBirthdate}
                   minimumDate={minBirthdate}
+                  mode="date"
                   onChange={handleDateChange}
+                  value={selectedBirthdate}
                 />
                 {Platform.OS === "ios" ? (
-                  <Pressable
+                  <AppButton
+                    label="Done"
                     onPress={() => setShowDatePicker(false)}
+                    size="sm"
                     style={styles.pickerDoneButton}
-                  >
-                    <Text style={styles.pickerDoneText}>Done</Text>
-                  </Pressable>
+                    variant="secondary"
+                  />
                 ) : null}
               </View>
             ) : null}
           </View>
-          <View>
-            <Text style={styles.sectionLabelx}>Height (cm)</Text>
-            <TextInput
-              style={styles.input}
-              value={heightCm}
-              onChangeText={setHeightCm}
-              keyboardType="numeric"
-              placeholder="Height (cm)"
-              placeholderTextColor={appColors.slate400}
-            />
+
+          <AppInput
+            keyboardType="numeric"
+            label="Height (cm)"
+            onChangeText={setHeightCm}
+            placeholder="Height (cm)"
+            value={heightCm}
+          />
+          <AppInput
+            keyboardType="numeric"
+            label="Weight (kg)"
+            onChangeText={setWeightKg}
+            placeholder="Weight (kg)"
+            value={weightKg}
+          />
+
+          <View style={styles.sexGroup}>
+            <AppText color="secondary" variant="eyebrow">
+              Sex
+            </AppText>
+            <View style={styles.sexRow}>
+              {(["female", "male", "other"] as const).map((value) => (
+                <Chip
+                  key={value}
+                  label={value}
+                  onPress={() => setSex(value)}
+                  selected={sex === value}
+                  style={styles.sexChip}
+                />
+              ))}
+            </View>
           </View>
-          <View>
-            <Text style={styles.sectionLabelx}>Weight (kg)</Text>
-            <TextInput
-              style={styles.input}
-              value={weightKg}
-              onChangeText={setWeightKg}
-              keyboardType="numeric"
-              placeholder="Weight (kg)"
-              placeholderTextColor={appColors.slate400}
-            />
-          </View>
-          <Text style={styles.sectionLabel}>Sex</Text>
-          <View style={styles.sexRow}>
-            {(["female", "male", "other"] as const).map((value) => (
-              <Pressable
-                key={value}
-                style={({ pressed }) => [
-                  styles.sexChip,
-                  sex === value && styles.sexChipActive,
-                  pressed && styles.sexChipPressed,
-                ]}
-                onPress={() => setSex(value)}
-              >
-                <Text
-                  style={[
-                    styles.sexChipText,
-                    sex === value && styles.sexChipTextActive,
-                  ]}
-                >
-                  {value}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
+        </AppCard>
       </KeyboardAwareScrollView>
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 6 }]}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + appSpacing.xs }]}>
         <OnboardingPrimaryButton label="Next" onPress={handleNext} />
       </View>
     </KeyboardAvoidingView>
@@ -244,170 +244,74 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
-    backgroundColor: appColors.surfaceCanvas,
+    backgroundColor: appSurfaces.canvas,
   },
-  scrollContent: {
+  content: {
     flexGrow: 1,
-    paddingHorizontal: 22,
-    paddingTop: 34,
+    paddingHorizontal: appSpacing.gutter,
   },
-  footer: {
-    paddingTop: 12,
-  },
-  bgOrbTop: {
-    position: "absolute",
-    top: -60,
-    right: -42,
-    width: 170,
-    height: 170,
-    borderRadius: 999,
-    backgroundColor: appColors.brand800,
-  },
-  bgOrbBottom: {
-    position: "absolute",
-    bottom: -80,
-    left: -60,
-    width: 210,
-    height: 210,
-    borderRadius: 999,
-    backgroundColor: appColors.brand800,
-  },
-  headerWrap: {
-    marginTop: 18,
-    marginBottom: 16,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 10,
-  },
-  eyebrow: {
-    alignSelf: "flex-start",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    color: appColors.brand500,
-    backgroundColor: appColors.brand800,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-  },
-  title: {
-    fontSize: 32,
-    lineHeight: 38,
-    fontWeight: "800",
-    color: appColors.textPrimary,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: appColors.slate600,
+  header: {
+    gap: appSpacing.xs,
+    marginBottom: appSpacing.xl,
   },
   contextNote: {
-    marginTop: 10,
-    fontSize: 13,
-    lineHeight: 19,
-    color: appColors.success700,
-    fontWeight: "700",
+    marginTop: appSpacing.xxs,
   },
   formCard: {
-    backgroundColor: appColors.surfaceCanvasAlt,
-    borderRadius: 8,
-    padding: 14,
-    gap: 16,
+    gap: appSpacing.md,
   },
-  input: {
-    borderWidth: 1,
+  dateButton: {
+    minHeight: 48,
+    justifyContent: "center",
+    borderWidth: appBorders.width,
     borderColor: appColors.borderStrong,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 14,
-    backgroundColor: appColors.surfaceCanvasAlt,
-    color: appColors.textPrimary,
-    fontSize: 18,
-    letterSpacing: 0.5,
-    fontWeight: "600",
+    borderRadius: appRadius.md,
+    backgroundColor: appSurfaces.soft,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: appSpacing.xs,
   },
-  sectionLabel: {
-    marginTop: 2,
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-    color: appColors.slate500,
+  inputValue: {
+    ...appTypography.bodyStrong,
+    textAlign: "left",
   },
-  sectionLabelx: {
-    marginTop: 4,
-    marginBottom: 4,
-    marginLeft: 4,
-    fontSize: 10,
-    fontWeight: "500",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-    color: appColors.slate500,
-  },
-  birthdateText: {
-    color: appColors.textPrimary,
-    fontSize: 18,
-    letterSpacing: 0.5,
-    fontWeight: "600",
-  },
-  ageHint: {
-    marginTop: 8,
-    marginLeft: 4,
-    color: appColors.slate600,
-    fontSize: 12,
-    fontWeight: "700",
+  hint: {
+    marginTop: appSpacing.xs,
   },
   pickerWrap: {
-    marginTop: 8,
-    borderWidth: 1,
+    marginTop: appSpacing.xs,
+    borderWidth: appBorders.width,
     borderColor: appColors.borderStrong,
-    borderRadius: 8,
-    paddingVertical: 8,
+    borderRadius: appRadius.md,
+    padding: appSpacing.xs,
   },
   pickerDoneButton: {
     alignSelf: "flex-end",
-    marginRight: 12,
-    marginTop: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    marginTop: appSpacing.xs,
   },
-  pickerDoneText: {
-    color: appColors.slate900,
-    fontWeight: "700",
+  sexGroup: {
+    gap: appSpacing.xs,
   },
   sexRow: {
     flexDirection: "row",
-    gap: 8,
+    flexWrap: "wrap",
+    gap: appSpacing.xs,
   },
   sexChip: {
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: appColors.white,
+    minWidth: 84,
+    justifyContent: "center",
   },
-  sexChipActive: {
-    backgroundColor: appColors.slate900,
-    borderColor: appColors.textPrimary,
+  footer: {
+    paddingHorizontal: appSpacing.gutter,
+    paddingTop: appSpacing.sm,
+    backgroundColor: appColors.surfaceCard,
+    borderTopWidth: appBorders.width,
+    borderTopColor: appColors.borderSoft,
   },
-  sexChipPressed: {
-    opacity: 0.88,
-  },
-  sexChipText: {
-    color: appColors.slate700,
-    fontWeight: "700",
-    textTransform: "capitalize",
-  },
-  sexChipTextActive: {
-    color: appColors.white,
+  pressed: {
+    opacity: 0.9,
   },
 });
 

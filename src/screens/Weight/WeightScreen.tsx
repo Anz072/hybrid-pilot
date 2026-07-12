@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  ActivityIndicator,
   Alert,
   LayoutAnimation,
   Modal,
@@ -9,8 +8,6 @@ import {
   RefreshControl,
   SectionList,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from "react-native";
 import DateTimePicker, {
@@ -20,7 +17,6 @@ import { useFocusEffect } from "@react-navigation/native";
 import { Swipeable } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
-  ArrowsClockwiseIcon,
   CalendarIcon,
   CaretDownIcon,
   CaretUpIcon,
@@ -39,7 +35,6 @@ import type {
 } from "../../store/DB_TYPES";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import { DB } from "../../store/DB";
-import OnboardingPrimaryButton from "../Onboarding/OnboardingPrimaryButton";
 import WeightEntryModal, { type WeightEntryDraft } from "./WeightEntryModal";
 import { refreshAdaptiveRecommendationForUser } from "../User_Settings/adaptiveCaloriesActions";
 import WeightTrendChart from "./WeightTrendChart";
@@ -67,6 +62,19 @@ import {
   weightUnitLabel,
 } from "../../preferences/displayPreferences";
 import { useDisplayPreferences } from "../../preferences/usePreferences";
+import {
+  AppButton,
+  AppCard,
+  AppInput,
+  AppText,
+  EmptyState,
+  IconButton,
+  InteractiveCard,
+  LoadingState,
+  NumericText,
+} from "../../components/ui";
+import { appBorders, appRadius, appSpacing, appStates, appSurfaces } from "../../theme/tokens";
+import { appTypography } from "../../theme/typography";
 
 const SOFT_MIN_WEIGHT_KG = 20;
 const SOFT_MAX_WEIGHT_KG = 300;
@@ -856,38 +864,44 @@ const WeightScreen = ({
       const expanded = expandedInsightTitle === title;
 
       return (
-        <Pressable
+        <InteractiveCard
           key={title}
           onPress={() => toggleInsightCard(title)}
-          accessibilityRole="button"
           accessibilityState={{ expanded }}
-          style={({ pressed }) => [
+          style={[
             styles.insightCard,
             expanded && styles.insightCardExpanded,
-            pressed && styles.cardPressed,
           ]}
+          variant="compact"
         >
           <View style={styles.insightTopRow}>
             <View style={styles.insightHeaderCopy}>
-              <Text style={styles.insightTitle}>{title}</Text>
-              <Text style={styles.insightDetail}>{detail}</Text>
+              <AppText color="secondary" style={styles.insightTitle} variant="eyebrow">
+                {title}
+              </AppText>
+              <AppText color="secondary" style={styles.insightDetail} variant="metadata">
+                {detail}
+              </AppText>
             </View>
             <View style={styles.insightMetaSide}>
-              <Text style={styles.insightValue}>{value}</Text>
+              <NumericText style={styles.insightValue} variant="numberWeightEntry">
+                {value}
+              </NumericText>
               <View
                 style={[
                   styles.insightToggleChip,
                   expanded && styles.insightToggleChipExpanded,
                 ]}
               >
-                <Text
+                <AppText
                   style={[
                     styles.insightToggleText,
                     expanded && styles.insightToggleTextExpanded,
                   ]}
+                  variant="label"
                 >
                   {expanded ? "Hide" : "Open"}
-                </Text>
+                </AppText>
                 {expanded ? (
                   <CaretUpIcon size={14} color={appColors.textSecondary} weight="bold" />
                 ) : (
@@ -901,11 +915,15 @@ const WeightScreen = ({
 
           {expanded ? (
             <View style={styles.insightExpandedBody}>
-              <Text style={styles.insightExpandedLabel}>How calculated</Text>
-              <Text style={[styles.insightExpandedText]}>{explanation}</Text>
+              <AppText color="muted" style={styles.insightExpandedLabel} variant="eyebrow">
+                How calculated
+              </AppText>
+              <AppText color="secondary" style={styles.insightExpandedText} variant="metadata">
+                {explanation}
+              </AppText>
             </View>
           ) : null}
-        </Pressable>
+        </InteractiveCard>
       );
     })();
 
@@ -913,59 +931,70 @@ const WeightScreen = ({
     <View style={[styles.content, { paddingTop: insets.top + 24 }]}>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
-          <Text style={styles.title}>Weight</Text>
-          <Text style={styles.headerSubtitle}>
+          <AppText style={styles.title} variant="screenTitle">Weight</AppText>
+          <AppText color="secondary" style={styles.headerSubtitle} variant="metadata">
             {currentEntry
               ? `Latest ${formatHeaderDateLabel(currentEntry.measuredAt)}`
               : "Log your first check-in"}
-          </Text>
+          </AppText>
         </View>
-        <Pressable
+        <AppButton
           onPress={openCreateModal}
-          style={({ pressed }) => [
-            styles.logWeightButton,
-            pressed && styles.cardPressed,
-          ]}
-        >
-          <PlusIcon size={17} color={appColors.white} weight="bold" />
-          <Text style={styles.logWeightButtonText}>Log</Text>
-        </Pressable>
+          label="Log"
+          icon={<PlusIcon size={17} color={appColors.white} weight="bold" />}
+          style={styles.logWeightButton}
+        />
       </View>
-      <View style={styles.heroCard}>
-        <View style={styles.heroStatRow}>
-          <View style={styles.heroStatBlock}>
-            <Text style={styles.heroStatLabel}>Current</Text>
-            <Text style={styles.heroStatValue}>
+      <AppCard variant="hero" style={styles.heroCard}>
+        <View style={styles.heroCurrentBlock}>
+          <AppText color="muted" style={styles.heroStatLabel} variant="eyebrow">
+            Current
+          </AppText>
+          <View style={styles.heroWeightLine}>
+            <NumericText style={styles.heroStatValue} variant="numberWeightHero">
               {currentWeightText}
-              <Text style={styles.heroStatUnit}> {weightUnitLabel(weightUnit)}</Text>
-            </Text>
-            <Text style={styles.heroStatCaption}>
-              {currentEntry
-                ? formatHeaderDateLabel(currentEntry.measuredAt)
-                : "Need at least one entry"}
-            </Text>
+            </NumericText>
+            <AppText color="secondary" style={styles.heroStatUnit} variant="body">
+              {weightUnitLabel(weightUnit)}
+            </AppText>
           </View>
-          <View style={styles.heroStatDivider} />
-          <View style={styles.heroStatBlock}>
-            <Text style={styles.heroStatLabel}>Trend</Text>
-            <Text style={styles.heroStatValue}>
-              {visibleDifferenceText}
-              <Text style={styles.heroStatUnit}> {weightUnitLabel(weightUnit)}</Text>
-            </Text>
-            <Text style={styles.heroStatCaption}>{chartPeriodText}</Text>
-          </View>
+          <AppText color="secondary" style={styles.heroStatCaption} variant="bodySmall">
+            {currentEntry
+              ? formatHeaderDateLabel(currentEntry.measuredAt)
+              : "Need at least one entry"}
+          </AppText>
         </View>
 
-        <View style={styles.heroMetaRow}>
-          <View style={styles.heroInfoPill}>
-            <Text style={styles.heroInfoLabel}>Current</Text>
-            <Text style={styles.heroInfoValue}>
-              {currentWeightText} {weightUnitLabel(weightUnit)}
-            </Text>
+        <View style={styles.heroSupportRow}>
+          <View style={styles.heroSupportPanel}>
+            <AppText color="muted" style={styles.heroStatLabel} variant="eyebrow">
+              Trend
+            </AppText>
+            <View style={styles.heroSupportValueRow}>
+              <NumericText style={styles.heroTrendValue} variant="numberWeightEntry">
+              {visibleDifferenceText}
+              </NumericText>
+              <AppText color="secondary" style={styles.heroSupportUnit} variant="metadata">
+                {weightUnitLabel(weightUnit)}
+              </AppText>
+            </View>
+            <AppText color="secondary" style={styles.heroStatCaption} variant="metadata">
+              {chartPeriodText}
+            </AppText>
           </View>
-          <View style={styles.heroInfoPill}>
-            <TargetIcon size={13} color={appColors.brand700} weight="bold" />
-            <Text style={styles.heroInfoGoalText}>{goalChipText}</Text>
+          <View style={styles.heroSupportPanel}>
+            <AppText color="muted" style={styles.heroStatLabel} variant="eyebrow">
+              Goal
+            </AppText>
+            <View style={styles.heroGoalLine}>
+              <TargetIcon size={14} color={appColors.actionPrimaryPressed} weight="bold" />
+              <AppText color={appColors.actionPrimaryPressed} style={styles.heroInfoGoalText} variant="bodySmallStrong">
+                {goalChipText}
+              </AppText>
+            </View>
+            <AppText color="secondary" style={styles.heroStatCaption} variant="metadata">
+              {goal ? goalSummaryText : "Add a target when you are ready."}
+            </AppText>
           </View>
         </View>
 
@@ -975,38 +1004,42 @@ const WeightScreen = ({
           range={range}
           onChangeRange={setRange}
         />
-      </View>
+      </AppCard>
 
-      <Pressable
+      <InteractiveCard
         onPress={openGoalModal}
-        style={({ pressed }) => [
-          styles.card,
-          styles.goalCard,
-          pressed && styles.cardPressed,
-        ]}
+        style={[styles.card, styles.goalCard]}
       >
         <View style={styles.rowBetween}>
           <View style={styles.flexOne}>
-            <Text style={styles.dashboardSectionTitle}>Goal & Target</Text>
-            <Text style={styles.subtleText}>{goalSummaryText}</Text>
+            <AppText style={styles.dashboardSectionTitle} variant="sectionTitle">
+              Goal & Target
+            </AppText>
+            <AppText color="secondary" style={styles.subtleText} variant="bodySmall">
+              {goalSummaryText}
+            </AppText>
           </View>
           <View style={[styles.pill, styles.goalLauncherPill]}>
             <TargetIcon size={14} color={appColors.textPrimary} weight="bold" />
-            <Text style={styles.pillText}>{goalLauncherLabel}</Text>
+            <AppText style={styles.pillText} variant="label">{goalLauncherLabel}</AppText>
           </View>
         </View>
 
         {goal ? (
           <View style={[styles.twoUp, styles.goalPreviewPanels]}>
-            <View style={styles.softPanel}>
-              <Text style={styles.panelLabel}>Target</Text>
-              <Text style={styles.panelValue}>
+            <AppCard variant="soft" style={styles.softPanel}>
+              <AppText color="muted" style={styles.panelLabel} variant="eyebrow">
+                Target
+              </AppText>
+              <NumericText style={styles.panelValue} variant="numberWeightEntry">
                 {formatWeight(goal.targetWeightKg, weightUnit)}
-              </Text>
-            </View>
-            <View style={styles.softPanel}>
-              <Text style={styles.panelLabel}>Pace helper</Text>
-              <Text style={styles.panelText}>
+              </NumericText>
+            </AppCard>
+            <AppCard variant="soft" style={styles.softPanel}>
+              <AppText color="muted" style={styles.panelLabel} variant="eyebrow">
+                Pace helper
+              </AppText>
+              <AppText style={styles.panelText} variant="bodySmallStrong">
                 {currentEntry != null
                   ? (computeWeeklyPaceToGoal(
                       currentEntry.valueKg,
@@ -1014,81 +1047,86 @@ const WeightScreen = ({
                       goal,
                     ) ?? "Add a date to estimate weekly pace.")
                   : "Add a current entry to estimate weekly pace."}
-              </Text>
-            </View>
+              </AppText>
+            </AppCard>
           </View>
         ) : null}
-      </Pressable>
+      </InteractiveCard>
 
-      <Pressable
+      <InteractiveCard
         onPress={() => setHideInsights((current) => !current)}
-        style={({ pressed }) => [pressed && styles.cardPressed]}
+        style={[styles.card, styles.sectionCard]}
       >
-        <View style={[styles.card, styles.sectionCard]}>
-          <View style={styles.sectionHeaderRow}>
-            <View style={styles.flexOne}>
-              <Text style={styles.dashboardSectionTitle}>Insights & Data</Text>
-              <Text style={styles.sectionCaption}>
-                Trend, consistency, and volatility. Tap to expand.
-              </Text>
-            </View>
-            <View style={styles.sectionToggle}>
-              {hideInsights ? (
-                <CaretDownIcon size={18} color={appColors.slate300} weight="bold" />
-              ) : (
-                <CaretUpIcon size={18} color={appColors.slate300} weight="bold" />
-              )}
-            </View>
+        <View style={styles.sectionHeaderRow}>
+          <View style={styles.flexOne}>
+            <AppText style={styles.dashboardSectionTitle} variant="sectionTitle">
+              Insights & Data
+            </AppText>
+            <AppText color="muted" style={styles.sectionCaption} variant="metadata">
+              Trend, consistency, and volatility. Tap to expand.
+            </AppText>
           </View>
-          {!hideInsights && (
-            <View style={styles.stack}>
-              {insightCards.map((item) => renderInsightCard(item))}
-            </View>
-          )}
+          <View style={styles.sectionToggle}>
+            {hideInsights ? (
+              <CaretDownIcon size={18} color={appColors.textMuted} weight="bold" />
+            ) : (
+              <CaretUpIcon size={18} color={appColors.textMuted} weight="bold" />
+            )}
+          </View>
         </View>
-      </Pressable>
+        {!hideInsights && (
+          <View style={styles.stack}>
+            {insightCards.map((item) => renderInsightCard(item))}
+          </View>
+        )}
+      </InteractiveCard>
 
-      <View style={styles.card}>
-        <Pressable
+      <AppCard style={styles.card}>
+        <InteractiveCard
           onPress={() => {
             animateQuickLayout();
             setHideHistory((current) => !current);
           }}
-          style={({ pressed }) => [pressed && styles.cardPressed]}
+          style={styles.historyHeaderButton}
+          variant="compact"
         >
           <View style={styles.sectionHeaderRow}>
             <View style={styles.flexOne}>
-              <Text style={styles.dashboardSectionTitle}>History</Text>
-              <Text style={styles.sectionCaption}>
+              <AppText style={styles.dashboardSectionTitle} variant="sectionTitle">
+                History
+              </AppText>
+              <AppText color="muted" style={styles.sectionCaption} variant="metadata">
                 {historyEntries.length > 0
                   ? `${historyEntries.length} daily check-ins. New saves on the same day replace the earlier entry.`
                   : "Your weight history will appear here once you log an entry."}
-              </Text>
+              </AppText>
             </View>
             <View style={styles.sectionToggle}>
               {hideHistory ? (
-                <CaretDownIcon size={18} color={appColors.slate300} weight="bold" />
+                <CaretDownIcon size={18} color={appColors.textMuted} weight="bold" />
               ) : (
-                <CaretUpIcon size={18} color={appColors.slate300} weight="bold" />
+                <CaretUpIcon size={18} color={appColors.textMuted} weight="bold" />
               )}
             </View>
           </View>
-        </Pressable>
+        </InteractiveCard>
 
         {hideHistory ? (
-          <Text style={styles.collapsedSectionText}>
+          <AppText color="muted" style={styles.collapsedSectionText} variant="metadata">
             {collapsedHistoryText}
-          </Text>
+          </AppText>
         ) : null}
-      </View>
+      </AppCard>
     </View>
   );
 
   if (loading) {
     return (
-      <View style={styles.centerState}>
-        <ActivityIndicator size="small" color={appColors.brand500} />
-      </View>
+      <LoadingState
+        title="Loading weight"
+        message="Reading your recent check-ins and goal."
+        style={styles.centerState}
+      />
     );
   }
 
@@ -1111,26 +1149,30 @@ const WeightScreen = ({
         ListHeaderComponent={listHeader}
         ListEmptyComponent={
           hideHistory ? null : (
-            <View style={[styles.card, styles.emptyCard]}>
-              <ChartLineIcon size={28} color={appColors.success700} weight="bold" />
-              <Text style={styles.sectionTitle}>Log your first weigh-in</Text>
-              <Text style={styles.subtleText}>
-                Add your first weight entry to unlock trend lines, goal
-                progress, and history.
-              </Text>
-            </View>
+            <EmptyState
+              icon={<ChartLineIcon size={28} color={appColors.statusSuccess} weight="bold" />}
+              title="Log your first weigh-in"
+              message="Add your first weight entry to unlock trend lines, goal progress, and history."
+              style={[styles.card, styles.emptyCard]}
+            />
           )
         }
         renderSectionHeader={() => (
           <View style={styles.historyTableHeader}>
             <View style={[styles.historyHeaderCell, styles.historyDateColumn]}>
-              <Text style={styles.historyHeaderLabel}>Date</Text>
+              <AppText color="secondary" style={styles.historyHeaderLabel} variant="eyebrow">
+                Date
+              </AppText>
             </View>
             <View style={[styles.historyHeaderCell, styles.historyWeightColumn]}>
-              <Text style={styles.historyHeaderLabel}>Weight</Text>
+              <AppText color="secondary" style={styles.historyHeaderLabel} variant="eyebrow">
+                Weight
+              </AppText>
             </View>
             <View style={[styles.historyHeaderCell, styles.historySourceColumn]}>
-              <Text style={styles.historyHeaderLabel}>Source</Text>
+              <AppText color="secondary" style={styles.historyHeaderLabel} variant="eyebrow">
+                Source
+              </AppText>
             </View>
             <View style={styles.historyActionColumn} />
           </View>
@@ -1161,43 +1203,46 @@ const WeightScreen = ({
                   accessibilityLabel={`Delete ${formatWeight(item.valueKg, weightUnit)} entry`}
                 >
                   <TrashIcon size={18} color={appColors.white} weight="bold" />
-                  <Text style={styles.deleteSwipeText}>Delete</Text>
+                  <AppText style={styles.deleteSwipeText} variant="label">
+                    Delete
+                  </AppText>
                 </Pressable>
               )}
             >
-              <Pressable
+              <InteractiveCard
                 onPress={() => openEditModal(item)}
-                style={({ pressed }) => [
+                style={[
                   styles.historyRow,
                   isFirst && styles.historyRowFirst,
                   isLast && styles.historyRowLast,
                   selected && styles.historyRowActive,
-                  pressed && styles.cardPressed,
                 ]}
+                selected={selected}
+                variant="compact"
               >
                 <View style={styles.historyRowMain}>
                   <View style={[styles.historyCell, styles.historyDateColumn]}>
-                    <Text style={styles.historyDateText} numberOfLines={1}>
+                    <AppText style={styles.historyDateText} numberOfLines={1} variant="bodySmallStrong">
                       {formatLocalDateLabel(item.measuredAtLocalIso)}
-                    </Text>
-                    <Text style={styles.historyTimeText} numberOfLines={1}>
+                    </AppText>
+                    <AppText color="secondary" style={styles.historyTimeText} numberOfLines={1} variant="label">
                       {formatHistoryTimeLabel(item.measuredAtLocalIso)}
-                    </Text>
+                    </AppText>
                   </View>
 
                   <View style={[styles.historyCell, styles.historyWeightColumn]}>
-                    <Text style={styles.historyWeightText} numberOfLines={1}>
+                    <NumericText style={styles.historyWeightText} numberOfLines={1} variant="numberWeightEntry">
                       {formatWeightValue(item.valueKg, weightUnit)}
-                    </Text>
-                    <Text style={styles.historyWeightUnit}>
+                    </NumericText>
+                    <AppText color="secondary" style={styles.historyWeightUnit} variant="micro">
                       {weightUnitLabel(weightUnit)}
-                    </Text>
+                    </AppText>
                   </View>
 
                   <View style={[styles.historyCell, styles.historySourceColumn]}>
-                    <Text style={styles.historySourceText} numberOfLines={1}>
+                    <AppText style={styles.historySourceText} numberOfLines={1} variant="label">
                       {sourceLabel}
-                    </Text>
+                    </AppText>
                     <View
                       style={[
                         styles.statusChip,
@@ -1205,7 +1250,7 @@ const WeightScreen = ({
                         item.syncStatus === "synced" && styles.statusChipSynced,
                       ]}
                     >
-                      <Text
+                      <AppText
                         style={[
                           styles.statusChipText,
                           item.syncStatus === "error" &&
@@ -1213,9 +1258,10 @@ const WeightScreen = ({
                           item.syncStatus === "synced" &&
                             styles.statusChipTextSynced,
                         ]}
+                        variant="micro"
                       >
                         {statusLabel}
-                      </Text>
+                      </AppText>
                     </View>
                   </View>
 
@@ -1231,9 +1277,9 @@ const WeightScreen = ({
                 {hasSecondaryRow ? (
                   <View style={styles.historySupplementalRow}>
                     {item.notes ? (
-                      <Text style={styles.historyNoteText} numberOfLines={2}>
+                      <AppText color="secondary" style={styles.historyNoteText} numberOfLines={2} variant="label">
                         {item.notes}
-                      </Text>
+                      </AppText>
                     ) : null}
                     {item.syncError ? (
                       <View style={styles.historyInlineWarning}>
@@ -1242,14 +1288,14 @@ const WeightScreen = ({
                           color={appColors.warning600}
                           weight="fill"
                         />
-                        <Text style={styles.historyInlineWarningText}>
+                        <AppText color={appColors.warning700} style={styles.historyInlineWarningText} variant="micro">
                           Edit and try saving again
-                        </Text>
+                        </AppText>
                       </View>
                     ) : null}
                   </View>
                 ) : null}
-              </Pressable>
+              </InteractiveCard>
             </Swipeable>
           );
         }}
@@ -1266,21 +1312,19 @@ const WeightScreen = ({
             style={[styles.goalModalHeader, { paddingTop: insets.top + 12 }]}
           >
             <View>
-              <Text style={styles.eyebrow}>Goal</Text>
-              <Text style={styles.goalModalTitle}>
+              <AppText color="secondary" style={styles.eyebrow} variant="eyebrow">
+                Goal
+              </AppText>
+              <AppText style={styles.goalModalTitle} variant="sectionTitleLarge">
                 {goal ? "Edit weight goal" : "Set weight goal"}
-              </Text>
+              </AppText>
             </View>
-            <Pressable
-              onPress={closeGoalModal}
-              style={({ pressed }) => [
-                styles.goalModalCloseButton,
-                pressed && styles.cardPressed,
-              ]}
+            <IconButton
               accessibilityLabel="Close goal editor"
+              onPress={closeGoalModal}
             >
               <XIcon size={18} color={appColors.textPrimary} weight="bold" />
-            </Pressable>
+            </IconButton>
           </View>
 
           <KeyboardAwareScrollView
@@ -1289,58 +1333,60 @@ const WeightScreen = ({
               { paddingBottom: insets.bottom + 24 },
             ]}
           >
-            <View style={styles.card}>
+            <AppCard style={styles.card}>
               <View style={styles.rowBetween}>
                 <View style={styles.flexOne}>
-                  <Text style={styles.sectionTitle}>Goal details</Text>
-                  <Text style={styles.subtleText}>
+                  <AppText style={styles.sectionTitle} variant="sectionTitle">
+                    Goal details
+                  </AppText>
+                  <AppText color="secondary" style={styles.subtleText} variant="bodySmall">
                     Set a target to add a goal line and progress band to the
                     chart.
-                  </Text>
+                  </AppText>
                 </View>
                 {goal ? (
                   <View style={[styles.pill, styles.goalBandPill]}>
-                    <Text style={styles.goalBandText}>
+                    <NumericText color={appColors.actionPrimaryPressed} style={styles.goalBandText} variant="numberTrendDelta">
                       Band +/-{" "}
                       {formatWeight(
                         goal.goalBandKg ?? DEFAULT_GOAL_BAND_KG,
                         weightUnit,
                       )}
-                    </Text>
+                    </NumericText>
                   </View>
                 ) : null}
               </View>
 
-              <Text style={styles.label}>Target weight</Text>
               <View style={styles.inputRow}>
-                <TextInput
+                <AppInput
+                  label="Target weight"
                   value={targetWeightValue}
                   onChangeText={setTargetWeightValue}
                   keyboardType="decimal-pad"
                   placeholder="78.0"
-                  placeholderTextColor={appColors.slate400}
                   style={styles.input}
+                  containerStyle={styles.goalWeightInput}
                   accessibilityLabel={`Target weight in ${weightUnitLabel(weightUnit)}`}
                 />
                 <View style={styles.unitPill}>
-                  <Text style={styles.unitText}>{weightUnitLabel(weightUnit)}</Text>
+                  <AppText style={styles.unitText} variant="bodyStrong">
+                    {weightUnitLabel(weightUnit)}
+                  </AppText>
                 </View>
               </View>
 
               <View style={styles.inlineRow}>
-                <Pressable
+                <InteractiveCard
                   onPress={() => setShowGoalDatePicker((current) => !current)}
-                  style={({ pressed }) => [
-                    styles.inlineButton,
-                    pressed && styles.cardPressed,
-                  ]}
+                  style={styles.inlineButton}
+                  variant="compact"
                 >
                   <CalendarIcon
                     size={16}
                     color={appColors.textPrimary}
                     weight="bold"
                   />
-                  <Text style={styles.inlineButtonText}>
+                  <AppText style={styles.inlineButtonText} variant="bodySmallStrong">
                     {targetDate
                       ? targetDate.toLocaleDateString(undefined, {
                           month: "short",
@@ -1348,18 +1394,16 @@ const WeightScreen = ({
                           year: "numeric",
                         })
                       : "Add target date"}
-                  </Text>
-                </Pressable>
+                  </AppText>
+                </InteractiveCard>
                 {targetDate ? (
-                  <Pressable
+                  <AppButton
                     onPress={() => setTargetDate(null)}
-                    style={({ pressed }) => [
-                      styles.textButton,
-                      pressed && styles.cardPressed,
-                    ]}
-                  >
-                    <Text style={styles.textButtonText}>Clear date</Text>
-                  </Pressable>
+                    label="Clear date"
+                    variant="ghost"
+                    size="sm"
+                    style={styles.textButton}
+                  />
                 ) : null}
               </View>
 
@@ -1373,39 +1417,41 @@ const WeightScreen = ({
               ) : null}
 
               <View style={styles.twoUp}>
-                <View style={styles.softPanel}>
-                  <Text style={styles.panelLabel}>Target</Text>
-                  <Text style={styles.panelValue}>
+                <AppCard variant="soft" style={styles.softPanel}>
+                  <AppText color="muted" style={styles.panelLabel} variant="eyebrow">
+                    Target
+                  </AppText>
+                  <NumericText style={styles.panelValue} variant="numberWeightEntry">
                     {parsedTargetWeight != null
                       ? formatWeight(parsedTargetWeight, weightUnit)
                       : "--"}
-                  </Text>
-                </View>
-                <View style={styles.softPanel}>
-                  <Text style={styles.panelLabel}>Pace helper</Text>
-                  <Text style={styles.panelText}>
+                  </NumericText>
+                </AppCard>
+                <AppCard variant="soft" style={styles.softPanel}>
+                  <AppText color="muted" style={styles.panelLabel} variant="eyebrow">
+                    Pace helper
+                  </AppText>
+                  <AppText style={styles.panelText} variant="bodySmallStrong">
                     {goalPaceText ?? "Add a date to estimate weekly pace."}
-                  </Text>
-                </View>
+                  </AppText>
+                </AppCard>
               </View>
 
-              <OnboardingPrimaryButton
+              <AppButton
                 label={goalSaving ? "Saving goal..." : "Save goal"}
                 onPress={() => void handleSaveGoal()}
                 disabled={goalSaving}
               />
               {goal ? (
-                <Pressable
+                <AppButton
                   onPress={() => void handleClearGoal()}
-                  style={({ pressed }) => [
-                    styles.textButton,
-                    pressed && styles.cardPressed,
-                  ]}
-                >
-                  <Text style={styles.destructiveText}>Clear goal</Text>
-                </Pressable>
+                  label="Clear goal"
+                  variant="danger"
+                  size="sm"
+                  style={styles.textButton}
+                />
               ) : null}
-            </View>
+            </AppCard>
           </KeyboardAwareScrollView>
         </View>
       </Modal>
@@ -1429,17 +1475,17 @@ const WeightScreen = ({
 
       {snackbar ? (
         <View style={[styles.snackbar, { bottom: insets.bottom + 98 }]}>
-          <Text style={styles.snackbarText}>{snackbar.message}</Text>
+          <AppText style={styles.snackbarText} variant="bodySmall">
+            {snackbar.message}
+          </AppText>
           {snackbar.actionLabel && snackbar.onAction ? (
-            <Pressable
+            <AppButton
               onPress={snackbar.onAction}
-              style={({ pressed }) => [
-                styles.pillDark,
-                pressed && styles.cardPressed,
-              ]}
-            >
-              <Text style={styles.pillDarkText}>{snackbar.actionLabel}</Text>
-            </Pressable>
+              label={snackbar.actionLabel}
+              size="sm"
+              variant="secondary"
+              style={styles.snackbarAction}
+            />
           ) : null}
         </View>
       ) : null}
@@ -1448,498 +1494,243 @@ const WeightScreen = ({
 };
 
 const styles = StyleSheet.create({
-  button: {
-    backgroundColor: appColors.slate50,
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: appColors.borderSoft,
-    shadowColor: "transparent",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonPressed: {
-    opacity: 0.96,
-    transform: [{ scale: 0.96 }],
-  },
-  buttonText: {
-    color: appColors.slate900,
-    fontSize: 34,
-    lineHeight: 34,
-    fontWeight: "700",
-    includeFontPadding: false,
-    textAlign: "center",
-  },
   screen: {
     flex: 1,
-    backgroundColor: appColors.surfaceCanvas,
+    backgroundColor: appSurfaces.canvas,
   },
   centerState: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.surfaceCanvas,
+    backgroundColor: appSurfaces.canvas,
   },
   content: {
-    paddingHorizontal: 20,
+    paddingHorizontal: appSpacing.gutter,
   },
   card: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 12,
-    marginBottom: 18,
-    shadowColor: "transparent",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
+    marginBottom: appSpacing.lg,
   },
   cardPressed: {
-    opacity: 0.92,
+    opacity: appStates.pressedOpacity,
   },
   rowBetween: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
+    gap: appSpacing.sm,
   },
   heroCard: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    paddingVertical: 20,
-    paddingHorizontal: 6,
-    marginBottom: 16,
-  },
-  heroTopBar: {
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 44,
-    marginBottom: 18,
-  },
-  heroStatusButton: {
-    position: "absolute",
-    right: 0,
-    width: 42,
-    height: 42,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: appColors.surfaceGhost,
-  },
-  heroStatRow: {
-    flexDirection: "row",
-    alignItems: "stretch",
-    paddingHorizontal: 16,
-    marginBottom: 16,
-  },
-  heroStatBlock: {
-    flex: 1,
-  },
-  heroStatDivider: {
-    width: 1,
-    marginHorizontal: 14,
-    backgroundColor: appColors.borderSoft,
+    marginBottom: appSpacing.lg,
+    padding: appSpacing.lg,
   },
   heroStatLabel: {
-    color: appColors.textMuted,
-    fontSize: 13,
-    fontWeight: "700",
-    marginBottom: 6,
+    marginBottom: appSpacing.xxs,
   },
   heroStatValue: {
     color: appColors.textPrimary,
-    fontSize: 26,
-    lineHeight: 30,
-    fontWeight: "800",
-    marginBottom: 6,
+    textAlign: "left",
   },
   heroStatUnit: {
-    color: appColors.slate300,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  heroStatCaption: {
-    color: appColors.slate600,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  heroMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    flexWrap: "wrap",
-    marginBottom: 10,
-    paddingLeft: 8,
-  },
-  heroInfoPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    borderRadius: 999,
-    backgroundColor: appColors.surfaceFieldAlt,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-  },
-  heroInfoLabel: {
-    color: appColors.textMuted,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  heroInfoValue: {
-    color: appColors.textPrimary,
-    fontSize: 13,
-    fontWeight: "800",
+    marginLeft: appSpacing.xs,
   },
   heroInfoGoalText: {
-    color: appColors.brand700,
-    fontSize: 13,
-    fontWeight: "800",
+    flexShrink: 1,
   },
-  heroStatusRow: {
+  heroCurrentBlock: {
+    marginBottom: appSpacing.lg,
+  },
+  heroWeightLine: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
+    gap: appSpacing.xs,
     flexWrap: "wrap",
   },
-  heroStatusText: {
-    color: appColors.textMuted,
-    fontSize: 12,
-    lineHeight: 17,
+  heroStatCaption: {
+    flexShrink: 1,
   },
-  heroHeaderRow: {
+  heroSupportRow: {
+    flexDirection: "row",
+    gap: appSpacing.sm,
     flexWrap: "wrap",
+    marginBottom: appSpacing.md,
+  },
+  heroSupportPanel: {
+    flex: 1,
+    minWidth: 132,
+    borderRadius: appRadius.lg,
+    borderWidth: appBorders.width,
+    borderColor: appBorders.soft,
+    backgroundColor: appSurfaces.soft,
+    padding: appSpacing.md,
+  },
+  heroSupportValueRow: {
+    minHeight: 28,
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: appSpacing.xxs,
+  },
+  heroTrendValue: {
+    color: appColors.textPrimary,
+    textAlign: "left",
+  },
+  heroSupportUnit: {
+    textTransform: "uppercase",
+  },
+  heroGoalLine: {
+    minHeight: 28,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: appSpacing.xs,
   },
   flexOne: {
     flex: 1,
   },
-  flexOne1: {
-    flex: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
   eyebrow: {
     alignSelf: "flex-start",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    color: appColors.success700,
-    backgroundColor: appColors.success700,
-    paddingHorizontal: 10,
+    color: appColors.statusSuccess,
+    backgroundColor: appColors.statusSuccessSoft,
+    paddingHorizontal: appSpacing.sm,
     paddingVertical: 6,
-    borderRadius: 999,
-    marginBottom: 10,
-  },
-  heroTitle: {
-    color: appColors.textPrimary,
-    fontSize: 24,
-    lineHeight: 28,
-    fontWeight: "500",
-    textAlign: "center",
+    borderRadius: appRadius.pill,
+    marginBottom: appSpacing.xs,
   },
   pill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    borderRadius: 999,
-    backgroundColor: appColors.surfaceFieldAlt,
-    paddingHorizontal: 12,
+    gap: appSpacing.xs,
+    borderRadius: appRadius.pill,
+    backgroundColor: appSurfaces.soft,
+    paddingHorizontal: appSpacing.sm,
     paddingVertical: 9,
   },
-  expandInsightLike: {},
   pillText: {
-    color: appColors.textPrimary,
-    fontSize: 13,
-    fontWeight: "700",
     flexShrink: 1,
-  },
-  pillDark: {
-    borderRadius: 999,
-    backgroundColor: appColors.slate800,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  pillDarkText: {
-    color: appColors.slate200,
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  metric: {
-    color: appColors.textPrimary,
-    fontSize: 44,
-    lineHeight: 48,
-    fontWeight: "900",
-    marginBottom: 12,
   },
   header: {
     minHeight: 52,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 14,
-    marginBottom: 18,
+    gap: appSpacing.md,
+    marginBottom: appSpacing.lg,
   },
   headerCopy: {
     flex: 1,
   },
   title: {
-    color: appColors.textPrimary,
-    fontSize: 28,
-    lineHeight: 34,
-    fontWeight: "900",
     marginBottom: 2,
   },
   headerSubtitle: {
-    color: appColors.textSecondary,
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: "600",
+    flexShrink: 1,
   },
   logWeightButton: {
     minHeight: 44,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 7,
-    borderRadius: 999,
-    backgroundColor: appColors.brand700,
-    paddingHorizontal: 16,
-  },
-  logWeightButtonText: {
-    color: appColors.white,
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  metricUnit: {
-    fontSize: 20,
-    color: appColors.textSecondary,
-  },
-  metricRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    flexWrap: "wrap",
+    paddingHorizontal: appSpacing.md,
   },
   subtleText: {
-    color: appColors.textMuted,
-    fontSize: 14,
-    lineHeight: 20,
+    marginTop: appSpacing.xxs,
   },
   sectionCaption: {
-    color: appColors.textMuted,
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: 4,
-  },
-  goalChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderRadius: 999,
-    backgroundColor: appColors.surfaceCardAlt,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-  },
-  goalChipText: {
-    color: appColors.brand700,
-    fontSize: 13,
-    fontWeight: "800",
+    marginTop: appSpacing.xxs,
   },
   goalBandPill: {
-    backgroundColor: appColors.surfaceFieldAlt,
+    backgroundColor: appColors.actionPrimarySoft,
   },
   goalLauncherPill: {
     alignSelf: "flex-start",
   },
   goalBandText: {
-    color: appColors.brand700,
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  warningCard: {
-    backgroundColor: appColors.warningSurfaceStrong,
-    borderColor: appColors.warning300,
-  },
-  warningRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  warningTitle: {
-    color: appColors.warning800,
-    fontSize: 14,
-    fontWeight: "800",
-    marginBottom: 2,
-  },
-  warningText: {
-    color: appColors.warning700,
-    fontSize: 13,
-    lineHeight: 18,
+    textAlign: "left",
   },
   sectionTitle: {
-    color: appColors.textPrimary,
-    fontSize: 20,
-    fontWeight: "800",
     marginBottom: 2,
   },
   dashboardSectionTitle: {
-    color: appColors.textPrimary,
-    fontSize: 28,
-    fontWeight: "800",
     marginBottom: 2,
-  },
-  label: {
-    color: appColors.textMuted,
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-    marginTop: 14,
-    marginBottom: 8,
   },
   inputRow: {
     flexDirection: "row",
-    gap: 10,
-    alignItems: "center",
-    marginBottom: 12,
+    gap: appSpacing.sm,
+    alignItems: "flex-end",
+    marginBottom: appSpacing.md,
   },
   input: {
+    ...appTypography.numberWeightEntry,
+    minHeight: 50,
+    textAlign: "left",
+  },
+  goalWeightInput: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    fontSize: 20,
-    fontWeight: "800",
-    color: appColors.textPrimary,
-    backgroundColor: appColors.surfaceField,
   },
   unitPill: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceGhost,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
+    minHeight: 50,
+    minWidth: 58,
+    paddingHorizontal: appSpacing.md,
+    borderRadius: appRadius.md,
+    backgroundColor: appSurfaces.ghost,
+    borderWidth: appBorders.width,
+    borderColor: appBorders.soft,
+    alignItems: "center",
+    justifyContent: "center",
   },
   unitText: {
-    color: appColors.textPrimary,
-    fontSize: 16,
-    fontWeight: "800",
+    textTransform: "uppercase",
   },
   inlineRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: appSpacing.sm,
     flexWrap: "wrap",
-    marginBottom: 12,
+    marginBottom: appSpacing.md,
   },
   inlineButton: {
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceField,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    gap: appSpacing.xs,
+    paddingHorizontal: appSpacing.sm,
   },
   inlineButtonText: {
-    color: appColors.textPrimary,
-    fontSize: 14,
-    fontWeight: "700",
+    flexShrink: 1,
   },
   goalPreviewPanels: {
-    marginTop: 14,
+    marginTop: appSpacing.sm,
     marginBottom: 0,
   },
   textButton: {
     alignSelf: "center",
-    paddingVertical: 12,
-  },
-  textButtonText: {
-    color: appColors.textSecondary,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  destructiveText: {
-    color: appColors.danger700,
-    fontSize: 15,
-    fontWeight: "800",
+    marginTop: appSpacing.xs,
   },
   twoUp: {
     flexDirection: "row",
-    gap: 10,
-    marginBottom: 16,
+    gap: appSpacing.sm,
+    marginBottom: appSpacing.md,
   },
   softPanel: {
     flex: 1,
-    backgroundColor: appColors.surfaceCardAlt,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 12,
   },
   panelLabel: {
-    color: appColors.textMuted,
-    fontSize: 12,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-    marginBottom: 6,
+    marginBottom: appSpacing.xs,
   },
   panelValue: {
     color: appColors.textPrimary,
-    fontSize: 16,
-    fontWeight: "800",
+    textAlign: "left",
   },
   panelText: {
-    color: appColors.textPrimary,
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: "700",
+    flexShrink: 1,
   },
   stack: {
-    gap: 12,
-  },
-  stickyHeader: {
-    backgroundColor: appColors.surfaceCanvas,
-    paddingHorizontal: 20,
-    paddingTop: 4,
-    paddingBottom: 8,
-  },
-  stickyHeaderText: {
-    color: appColors.textSecondary,
-    fontSize: 13,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
+    gap: appSpacing.sm,
   },
   emptyCard: {
-    alignItems: "flex-start",
-    gap: 12,
+    marginHorizontal: appSpacing.gutter,
+    marginTop: appSpacing.xs,
   },
   deleteSwipe: {
     width: 108,
-    marginRight: 20,
+    marginRight: appSpacing.gutter,
     marginBottom: 0,
-    borderRadius: 8,
+    borderRadius: appRadius.md,
     backgroundColor: appColors.danger700,
     alignItems: "center",
     justifyContent: "center",
@@ -1947,58 +1738,54 @@ const styles = StyleSheet.create({
   },
   deleteSwipeText: {
     color: appColors.white,
-    fontSize: 13,
-    fontWeight: "800",
   },
   historyTableHeader: {
-    marginHorizontal: 20,
-    marginTop: 6,
+    marginHorizontal: appSpacing.gutter,
+    marginTop: appSpacing.xs,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: appColors.surfaceGhost,
-    borderWidth: 1,
+    backgroundColor: appSurfaces.ghost,
+    borderWidth: appBorders.width,
     borderBottomWidth: 0,
-    borderColor: appColors.borderSoft,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
+    borderColor: appBorders.soft,
+    borderTopLeftRadius: appRadius.lg,
+    borderTopRightRadius: appRadius.lg,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: appSpacing.sm,
   },
   historyHeaderCell: {
     justifyContent: "center",
   },
   historyHeaderLabel: {
-    color: appColors.textSecondary,
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
+    flexShrink: 1,
   },
   historyRow: {
-    marginHorizontal: 20,
-    backgroundColor: appColors.surfaceCardAlt,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
+    marginHorizontal: appSpacing.gutter,
+    borderRadius: appRadius.none,
+    backgroundColor: appSurfaces.card,
+    borderLeftWidth: appBorders.width,
+    borderRightWidth: appBorders.width,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderColor: appColors.borderSoft,
+    borderColor: appBorders.soft,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: appSpacing.sm,
   },
   historyRowFirst: {
-    borderTopWidth: 1,
+    borderTopWidth: appBorders.width,
   },
   historyRowLast: {
-    borderBottomWidth: 1,
-    borderBottomLeftRadius: 18,
-    borderBottomRightRadius: 18,
+    borderBottomWidth: appBorders.width,
+    borderBottomLeftRadius: appRadius.lg,
+    borderBottomRightRadius: appRadius.lg,
   },
   historyRowActive: {
-    backgroundColor: appColors.surfaceRaised,
+    backgroundColor: appStates.selectedFill,
+    borderColor: appStates.selectedBorder,
   },
   historyRowMain: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: appSpacing.sm,
   },
   historyCell: {
     justifyContent: "center",
@@ -2020,68 +1807,49 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   historyDateText: {
-    color: appColors.textPrimary,
-    fontSize: 13,
-    fontWeight: "800",
+    flexShrink: 1,
   },
   historyTimeText: {
-    color: appColors.textSecondary,
-    fontSize: 12,
-    lineHeight: 16,
+    flexShrink: 1,
   },
   historyWeightText: {
     color: appColors.textPrimary,
-    fontSize: 18,
-    fontWeight: "900",
-    letterSpacing: -0.3,
   },
   historyWeightUnit: {
-    color: appColors.textSecondary,
-    fontSize: 11,
-    fontWeight: "700",
     textTransform: "uppercase",
-    letterSpacing: 0.8,
   },
   historySourceText: {
-    color: appColors.textPrimary,
-    fontSize: 12,
-    fontWeight: "800",
     textAlign: "right",
   },
   historySupplementalRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     alignItems: "center",
-    gap: 6,
-    marginTop: 8,
-    paddingTop: 8,
+    gap: appSpacing.xs,
+    marginTop: appSpacing.xs,
+    paddingTop: appSpacing.xs,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderColor: appColors.borderSoft,
+    borderColor: appBorders.soft,
   },
   historyNoteText: {
     flex: 1,
-    color: appColors.textSecondary,
-    fontSize: 12,
-    lineHeight: 16,
   },
   statusChip: {
-    borderRadius: 999,
-    backgroundColor: appColors.surfaceGhost,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    borderRadius: appRadius.pill,
+    backgroundColor: appSurfaces.ghost,
+    paddingHorizontal: appSpacing.xs,
+    paddingVertical: appSpacing.xxs,
   },
   statusChipWarning: {
     backgroundColor: appColors.warningSurfaceStrong,
   },
   statusChipSynced: {
-    backgroundColor: appColors.surfaceField,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
+    backgroundColor: appSurfaces.soft,
+    borderWidth: appBorders.width,
+    borderColor: appBorders.soft,
   },
   statusChipText: {
     color: appColors.textSecondary,
-    fontSize: 11,
-    fontWeight: "800",
   },
   statusChipTextWarning: {
     color: appColors.warning700,
@@ -2092,195 +1860,150 @@ const styles = StyleSheet.create({
   historyInlineWarning: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    borderRadius: 999,
+    gap: appSpacing.xxs,
+    borderRadius: appRadius.pill,
     backgroundColor: appColors.warningSurfaceStrong,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: appSpacing.xs,
+    paddingVertical: appSpacing.xxs,
   },
   historyInlineWarningText: {
-    color: appColors.warning700,
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  fabWrap: {
-    position: "absolute",
-    right: 20,
-    alignItems: "flex-end",
-  },
-  fabHalo: {
-    padding: 6,
-    borderRadius: 999,
-    backgroundColor: appColors.brand800,
+    flexShrink: 1,
   },
   goalModalScreen: {
     flex: 1,
-    backgroundColor: appColors.surfaceCanvas,
+    backgroundColor: appSurfaces.canvas,
   },
   goalModalHeader: {
-    paddingHorizontal: 20,
-    paddingBottom: 14,
+    paddingHorizontal: appSpacing.gutter,
+    paddingBottom: appSpacing.md,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
+    gap: appSpacing.sm,
   },
   goalModalTitle: {
-    color: appColors.textPrimary,
-    fontSize: 28,
-    fontWeight: "900",
-    marginTop: 10,
-  },
-  goalModalCloseButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: appColors.surfaceGhost,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
+    marginTop: appSpacing.xs,
   },
   goalModalContent: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingHorizontal: appSpacing.gutter,
+    paddingTop: appSpacing.xs,
   },
   snackbar: {
     position: "absolute",
-    left: 20,
-    right: 20,
-    borderRadius: 8,
+    left: appSpacing.gutter,
+    right: appSpacing.gutter,
+    borderRadius: appRadius.md,
     backgroundColor: appColors.surfaceRaised,
-    paddingHorizontal: 16,
+    paddingHorizontal: appSpacing.md,
     paddingVertical: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
+    gap: appSpacing.sm,
   },
   snackbarText: {
     flex: 1,
     color: appColors.white,
-    fontSize: 14,
-    fontWeight: "700",
+  },
+  snackbarAction: {
+    minHeight: 44,
   },
   insightCard: {
-    backgroundColor: appColors.surfaceCardAlt,
-    borderRadius: 8,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
+    backgroundColor: appSurfaces.soft,
   },
   insightCardExpanded: {
-    backgroundColor: appColors.surfaceRaised,
-    borderColor: appColors.borderStrong,
+    backgroundColor: appStates.selectedFill,
+    borderColor: appStates.selectedBorder,
   },
   insightTopRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: 12,
+    gap: appSpacing.sm,
   },
   insightHeaderCopy: {
     flex: 1,
   },
   insightMetaSide: {
     alignItems: "flex-end",
-    gap: 10,
+    gap: appSpacing.xs,
   },
   insightTitle: {
-    color: appColors.textSecondary,
-    fontSize: 12,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-    marginBottom: 4,
+    marginBottom: appSpacing.xxs,
   },
   insightValue: {
     color: appColors.textPrimary,
-    fontSize: 22,
-    fontWeight: "900",
   },
   insightDetail: {
-    color: appColors.textSecondary,
-    fontSize: 13,
-    lineHeight: 18,
+    flexShrink: 1,
   },
   insightAccentLine: {
     width: 38,
     height: 3,
-    borderRadius: 999,
+    borderRadius: appRadius.pill,
     backgroundColor: appColors.brand400,
-    marginTop: 12,
+    marginTop: appSpacing.sm,
     marginBottom: 2,
   },
   insightToggleChip: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    borderRadius: 999,
-    paddingHorizontal: 10,
+    borderRadius: appRadius.pill,
+    paddingHorizontal: appSpacing.sm,
     paddingVertical: 6,
-    backgroundColor: appColors.surfaceGhost,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
+    backgroundColor: appSurfaces.ghost,
+    borderWidth: appBorders.width,
+    borderColor: appBorders.strong,
   },
   insightToggleChipExpanded: {
-    backgroundColor: appColors.surfaceRaised,
-    borderColor: appColors.borderSoft,
+    backgroundColor: appSurfaces.card,
+    borderColor: appBorders.soft,
   },
   insightToggleText: {
     color: appColors.textMuted,
-    fontSize: 12,
-    fontWeight: "700",
   },
   insightToggleTextExpanded: {
     color: appColors.textSecondary,
   },
   insightExpandedBody: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: appColors.borderSoft,
+    marginTop: appSpacing.sm,
+    paddingTop: appSpacing.sm,
+    borderTopWidth: appBorders.width,
+    borderTopColor: appBorders.soft,
     gap: 6,
   },
   insightExpandedLabel: {
-    color: appColors.textMuted,
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
+    flexShrink: 1,
   },
   insightExpandedText: {
-    color: appColors.textSecondary,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  goalCard: {
-    backgroundColor: appColors.surfaceCard,
-  },
-  sectionCard: {
-    backgroundColor: appColors.surfaceCard,
+    flexShrink: 1,
   },
   sectionHeaderRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 8,
+    gap: appSpacing.sm,
+    marginBottom: appSpacing.xs,
   },
   sectionToggle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 44,
+    height: 44,
+    borderRadius: appRadius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.surfaceGhost,
+    backgroundColor: appSurfaces.ghost,
   },
   collapsedSectionText: {
-    color: appColors.textMuted,
-    fontSize: 12,
-    lineHeight: 18,
+    marginTop: appSpacing.xs,
+  },
+  goalCard: {},
+  sectionCard: {},
+  historyHeaderButton: {
+    borderWidth: 0,
+    backgroundColor: "transparent",
+    paddingHorizontal: appSpacing.none,
+    paddingVertical: appSpacing.none,
   },
 });
 

@@ -29,6 +29,8 @@ import {
 } from "../Weight/weightUtils";
 import { refreshAdaptiveRecommendationForUser } from "../User_Settings/adaptiveCaloriesActions";
 import { appColors } from "../../theme/colors";
+import { appTypography } from "../../theme/typography";
+import { appBorders, appRadius, appSpacing, appSurfaces } from "../../theme/tokens";
 
 type WeightSeedPreset = "down" | "up" | "maintain";
 const WEIGHT_PRESET_ENTRY_COUNT = 180;
@@ -382,8 +384,8 @@ const SettingsScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    padding: 16,
-    backgroundColor: appColors.white,
+    padding: appSpacing.gutter,
+    backgroundColor: appColors.surfaceCanvas,
   },
   headerRow: {
     marginTop: 8,
@@ -392,28 +394,27 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: appColors.slate900,
+    ...appTypography.sectionTitleLarge,
+    color: appColors.textPrimary,
   },
   subtitle: {
-    marginTop: 8,
+    ...appTypography.bodySmall,
+    marginTop: appSpacing.xs,
     marginBottom: 14,
-    color: appColors.slate600,
-    fontSize: 14,
+    color: appColors.textSecondary,
   },
   buttonRow: {
-    gap: 10,
-    marginBottom: 16,
+    gap: appSpacing.xs,
+    marginBottom: appSpacing.md,
   },
   button: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: appColors.slate900,
-    borderRadius: 8,
-    paddingVertical: 12,
+    backgroundColor: appColors.textPrimary,
+    borderRadius: appRadius.pill,
+    paddingVertical: appSpacing.sm,
   },
   seedButton: {
     backgroundColor: appColors.success700,
@@ -431,25 +432,24 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.danger800,
   },
   buttonText: {
+    ...appTypography.buttonSmall,
     color: appColors.white,
-    fontWeight: "700",
   },
   card: {
-    borderWidth: 1,
-    borderColor: appColors.slate200,
-    borderRadius: 8,
-    padding: 12,
-    backgroundColor: appColors.slate50,
+    borderWidth: appBorders.width,
+    borderColor: appBorders.soft,
+    borderRadius: appRadius.md,
+    padding: appSpacing.sm,
+    backgroundColor: appSurfaces.card,
   },
   seedGroup: {
-    marginTop: 12,
-    gap: 10,
+    marginTop: appSpacing.sm,
+    gap: appSpacing.xs,
   },
   cardTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: appColors.slate900,
-    marginBottom: 8,
+    ...appTypography.cardTitle,
+    color: appColors.textPrimary,
+    marginBottom: appSpacing.xs,
   },
   empty: {
     color: appColors.textMuted,
@@ -457,17 +457,17 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
-    borderTopWidth: 1,
-    borderTopColor: appColors.slate200,
-    paddingVertical: 8,
+    borderTopWidth: appBorders.width,
+    borderTopColor: appBorders.soft,
+    paddingVertical: appSpacing.xs,
   },
   table: {
-    color: appColors.slate700,
-    fontWeight: "600",
+    ...appTypography.bodySmallStrong,
+    color: appColors.textSecondary,
   },
   count: {
-    color: appColors.slate900,
-    fontWeight: "800",
+    ...appTypography.bodySmallStrong,
+    color: appColors.textPrimary,
   },
 });
 

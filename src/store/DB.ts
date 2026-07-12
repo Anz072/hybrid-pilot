@@ -88,6 +88,19 @@ const notifyWeightChanged = (userExternalId?: string | null) => {
   });
 };
 
+const getFoodLogChangeContext = async (id: number) => {
+  try {
+    const entry = await getUserFoodLogEntryById(id);
+    return entry
+      ? { date: entry.date, userExternalId: entry.userExternalId }
+      : undefined;
+  } catch {
+    // A failed context lookup must not prevent the requested write. Consumers
+    // still receive the broad food-log notification after it succeeds.
+    return undefined;
+  }
+};
+
 const addUserFoodLog = async (input: AddUserFoodLogInput) => {
   const result = await addUserFoodLogBase(input);
   notifyFoodLogChanged({
@@ -107,20 +120,23 @@ const addQuickAddFoodLog = async (input: AddQuickAddFoodLogInput) => {
 };
 
 const updateUserFoodLog = async (input: UpdateUserFoodLogInput) => {
+  const changeContext = await getFoodLogChangeContext(input.id);
   const result = await updateUserFoodLogBase(input);
-  notifyFoodLogChanged();
+  notifyFoodLogChanged(changeContext);
   return result;
 };
 
 const updateQuickAddFoodLog = async (input: UpdateQuickAddFoodLogInput) => {
+  const changeContext = await getFoodLogChangeContext(input.id);
   const result = await updateQuickAddFoodLogBase(input);
-  notifyFoodLogChanged();
+  notifyFoodLogChanged(changeContext);
   return result;
 };
 
 const deleteUserFoodLog = async (id: number) => {
+  const changeContext = await getFoodLogChangeContext(id);
   const result = await deleteUserFoodLogBase(id);
-  notifyFoodLogChanged();
+  notifyFoodLogChanged(changeContext);
   return result;
 };
 

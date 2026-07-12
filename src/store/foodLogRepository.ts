@@ -1,8 +1,13 @@
 import { getDb, initDb } from "../storage/sqlite";
+import {
+  assertValidFoodLogQuantity,
+  getFoodResolvedServing,
+} from "../engine/nutrition";
 import type {
   AddQuickAddFoodLogInput,
   AddUserFoodLogInput,
   DBUserFoodLogEntry,
+  NutritionBasis,
   UpdateQuickAddFoodLogInput,
   UpdateUserFoodLogInput,
 } from "./DB_TYPES";
@@ -32,8 +37,13 @@ const toQuickAddEntryId = (id: number) => -Math.abs(id);
 const fromQuickAddEntryId = (id: number) => Math.abs(id);
 const isQuickAddEntryId = (id: number) => id < 0;
 
-type RawFoodLogEntryRow = Omit<DBUserFoodLogEntry, "isEnergyManuallySet"> & {
+type RawFoodLogEntryRow = Omit<
+  DBUserFoodLogEntry,
+  "isEnergyManuallySet" | "servingSize"
+> & {
   isEnergyManuallySet: boolean | number;
+  servingSize: number | null;
+  nutritionBasis: NutritionBasis | null;
 };
 
 const mapFoodLogEntryRow = (
@@ -43,8 +53,19 @@ const mapFoodLogEntryRow = (
     return null;
   }
 
+  // Foods can be stored without a serving size; resolve the basis fallback here
+  // so every consumer scales against the same positive base the previews used.
+  const { nutritionBasis, ...entry } = row;
+  const serving = getFoodResolvedServing({
+    nutritionBasis: nutritionBasis ?? "serving",
+    servingSizeValue: row.servingSize,
+    servingSizeUnit: row.servingUnit,
+  });
+
   return {
-    ...row,
+    ...entry,
+    servingSize: serving.value,
+    servingUnit: serving.unit,
     isEnergyManuallySet: Boolean(row.isEnergyManuallySet),
   };
 };
@@ -63,6 +84,7 @@ const NORMAL_FOOD_LOG_SELECT = `
     f.name AS foodName,
     f.serving_size_value AS servingSize,
     f.serving_size_unit AS servingUnit,
+    f.nutrition_basis AS nutritionBasis,
     COALESCE(f.calories, 0) AS calories,
     COALESCE(f.protein_g, 0) AS proteinG,
     COALESCE(f.carbs_g, 0) AS carbsG,
@@ -89,6 +111,7 @@ const QUICK_ADD_FOOD_LOG_SELECT = `
     COALESCE(NULLIF(TRIM(q.name), ''), 'Quick Add') AS foodName,
     1 AS servingSize,
     'entry' AS servingUnit,
+    'serving' AS nutritionBasis,
     q.calories AS calories,
     q.protein_g AS proteinG,
     q.carbs_g AS carbsG,
@@ -103,6 +126,7 @@ const QUICK_ADD_FOOD_LOG_SELECT = `
 export const addUserFoodLog = async (
   input: AddUserFoodLogInput,
 ): Promise<void> => {
+  assertValidFoodLogQuantity(input.quantityG);
   await initDb();
   const db = await getDb();
   const now = new Date().toISOString();
@@ -171,6 +195,7 @@ export const addQuickAddFoodLog = async (
 export const updateUserFoodLog = async (
   input: UpdateUserFoodLogInput,
 ): Promise<void> => {
+  assertValidFoodLogQuantity(input.quantityG);
   await initDb();
   const db = await getDb();
 

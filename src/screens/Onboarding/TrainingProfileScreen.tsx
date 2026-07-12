@@ -1,70 +1,69 @@
 import React from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { StyleSheet, View } from "react-native";
 import {
   BarbellIcon,
   BicycleIcon,
-  CheckIcon,
   SneakerMoveIcon,
 } from "phosphor-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { AppText, OptionCard } from "../../components/ui";
+import { DEFAULT_PROTEIN_FOCUS } from "../../engine/proteinFocus";
 import type {
   OnboardingParamList,
   TrainingType,
 } from "../../navigation/onboardingTypes";
+import { appColors } from "../../theme/colors";
+import { appSpacing } from "../../theme/tokens";
 import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
 import OnboardingReviewCard from "./OnboardingReviewCard";
-import OnboardingTopBar from "./OnboardingTopBar";
+import OnboardingStepScreen, { onboardingStepProgress } from "./OnboardingStepScreen";
 import {
   formatActivitySummary,
   formatBodySummary,
   formatGoalSummary,
 } from "./onboardingSummary";
-import { appColors } from "../../theme/colors";
-import { DEFAULT_PROTEIN_FOCUS } from "../../engine/proteinFocus";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "Training">;
 
 const TrainingProfileScreen = ({ navigation, route }: Props) => {
-  const insets = useSafeAreaInsets();
   const [selectedTraining, setSelectedTraining] = React.useState<TrainingType[]>(
     route.params.training ?? [],
   );
 
   const options: {
-    label: string;
-    value: TrainingType;
     icon: React.ReactNode;
+    label: string;
     note: string;
+    value: TrainingType;
   }[] = [
     {
       label: "Running",
       value: "running",
-      icon: <SneakerMoveIcon size={30} color={appColors.slate900} weight="fill" />,
+      icon: <SneakerMoveIcon size={22} color={appColors.textPrimary} weight="fill" />,
       note: "Useful for endurance-focused fueling and recovery.",
     },
     {
       label: "Cycling",
       value: "cycling",
-      icon: <BicycleIcon size={30} color={appColors.slate900} weight="fill" />,
+      icon: <BicycleIcon size={22} color={appColors.textPrimary} weight="fill" />,
       note: "Great if riding volume changes your energy demands.",
     },
     {
       label: "Gym / Bodybuilding",
       value: "bodybuilding",
-      icon: <BarbellIcon size={30} color={appColors.slate900} weight="fill" />,
+      icon: <BarbellIcon size={22} color={appColors.textPrimary} weight="fill" />,
       note: "Helps bias the plan toward performance and muscle retention.",
     },
     {
       label: "CrossFit",
       value: "crossfit",
-      icon: <BarbellIcon size={30} color={appColors.slate900} weight="fill" />,
+      icon: <BarbellIcon size={22} color={appColors.textPrimary} weight="fill" />,
       note: "Useful when training mixes strength and conditioning demands.",
     },
     {
       label: "Other",
       value: "other",
-      icon: <BarbellIcon size={30} color={appColors.slate900} weight="fill" />,
+      icon: <BarbellIcon size={22} color={appColors.textPrimary} weight="fill" />,
       note: "Pick this if your main training mode is something else.",
     },
   ];
@@ -78,25 +77,31 @@ const TrainingProfileScreen = ({ navigation, route }: Props) => {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 },
-      ]}
-      contentInsetAdjustmentBehavior="automatic"
-      showsVerticalScrollIndicator={false}
+    <OnboardingStepScreen
+      eyebrow="Training Profile"
+      onBack={() => navigation.goBack()}
+      progress={onboardingStepProgress(6)}
+      stepLabel="Training"
+      subtitle="Select all that apply so the plan reflects your real training mix."
+      title="What do you train?"
+      footer={
+        <OnboardingPrimaryButton
+          disabled={selectedTraining.length === 0}
+          label="Continue"
+          onPress={() =>
+            navigation.push("ProteinFocus", {
+              goal: route.params.goal,
+              goalStrategy: route.params.goalStrategy,
+              bodyData: route.params.bodyData,
+              activity: route.params.activity,
+              training: selectedTraining,
+              proteinFocus:
+                route.params.proteinFocus ?? DEFAULT_PROTEIN_FOCUS,
+            })
+          }
+        />
+      }
     >
-      <OnboardingTopBar
-        onBack={() => navigation.goBack()}
-        stepLabel="Training"
-      />
-      <Text style={styles.eyebrow}>Training Profile</Text>
-      <Text style={styles.title}>What do you train?</Text>
-      <Text style={styles.subtitle}>
-        Select all that apply so the plan reflects your real training mix.
-      </Text>
-
       <OnboardingReviewCard
         items={[
           {
@@ -139,172 +144,32 @@ const TrainingProfileScreen = ({ navigation, route }: Props) => {
           const isSelected = selectedTraining.includes(option.value);
 
           return (
-            <Pressable
+            <OptionCard
+              icon={option.icon}
               key={option.value}
               onPress={() => toggleTraining(option.value)}
-              style={({ pressed }) => [
-                styles.option,
-                isSelected && styles.optionSelected,
-                pressed && styles.optionPressed,
-              ]}
-            >
-              <View style={styles.optionRow}>
-                <View style={styles.optionTextWrap}>
-                  <Text style={[styles.optionText,isSelected && styles.optionTextSelected]}>{option.label}</Text>
-                  <Text style={styles.optionNote}>{option.note}</Text>
-                </View>
-                <View style={styles.optionMeta}>
-                  <View style={styles.iconBadge}>{option.icon}</View>
-                  <View
-                    style={[
-                      styles.checkBadge,
-                      isSelected && styles.checkBadgeSelected,
-                    ]}
-                  >
-                    {isSelected ? (
-                      <CheckIcon size={14} color={appColors.white} weight="bold" />
-                    ) : null}
-                  </View>
-                </View>
-              </View>
-            </Pressable>
+              selected={isSelected}
+              subtitle={option.note}
+              title={option.label}
+            />
           );
         })}
       </View>
 
-      <Text style={styles.helper}>
+      <AppText align="center" color="secondary" style={styles.helper} variant="metadata">
         Pick at least one. You can come back later and adjust this mix.
-      </Text>
-
-      <OnboardingPrimaryButton
-        label="Continue"
-        disabled={selectedTraining.length === 0}
-        style={styles.primaryButton}
-        onPress={() =>
-          navigation.push("ProteinFocus", {
-            goal: route.params.goal,
-            goalStrategy: route.params.goalStrategy,
-            bodyData: route.params.bodyData,
-            activity: route.params.activity,
-            training: selectedTraining,
-            proteinFocus:
-              route.params.proteinFocus ?? DEFAULT_PROTEIN_FOCUS,
-          })
-        }
-      />
-    </ScrollView>
+      </AppText>
+    </OnboardingStepScreen>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: appColors.surfaceCanvas,
-  },
-  content: {
-    paddingHorizontal: 22,
-    flexGrow: 1,
-  },
-  eyebrow: {
-    alignSelf: "flex-start",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    color: appColors.brand500,
-    backgroundColor: appColors.brand800,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    marginBottom: 12,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "800",
-    color: appColors.textPrimary,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: appColors.slate600,
-    marginBottom: 18,
-  },
   listWrap: {
-    gap: 10,
-  },
-  option: {
-    backgroundColor: appColors.surfaceCanvasAlt,
-    borderWidth: 1,
-    borderColor: appColors.slate300,
-    borderRadius: 8,
-    padding: 14,
-  },
-  optionSelected: {
-    borderColor: appColors.brand700,
-    backgroundColor: appColors.slate900,
-  },
-  optionPressed: {
-    opacity: 0.95,
-    transform: [{ scale: 0.99 }],
-  },
-  optionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  optionTextWrap: {
-    flex: 1,
-  },
-  optionText: {
-    color: appColors.textPrimary,
-    fontWeight: "800",
-    fontSize: 17,
-    marginBottom: 4,
-  },
-   optionTextSelected: {
-    color: appColors.slate100,
-  },
-  optionNote: {
-    color: appColors.slate500,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  optionMeta: {
-    alignItems: "center",
-    gap: 8,
-  },
-  iconBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 999,
-    backgroundColor: appColors.slate100,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkBadge: {
-    width: 22,
-    height: 22,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: appColors.slate300,
-    backgroundColor: appColors.surfaceCanvasAlt,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkBadgeSelected: {
-    backgroundColor: appColors.slate900,
-    borderColor: appColors.brand700,
+    gap: appSpacing.sm,
   },
   helper: {
-    marginTop: 12,
-    color: appColors.slate600,
-    fontSize: 13,
-    textAlign: "center",
-  },
-  primaryButton: {
-    marginTop: 18,
+    marginTop: appSpacing.sm,
   },
 });
 
 export default TrainingProfileScreen;
-

@@ -27,7 +27,6 @@ export type SignUpWithEmailPasswordResult = {
 };
 
 type UpsertSupabaseAuthUserAccountOptions = {
-  allowCreate?: boolean;
   markOnboardingComplete?: boolean;
   persistLocalAccount?: boolean;
 };
@@ -165,7 +164,10 @@ export const upsertSupabaseAuthUserAccount = async (
     existingUser?.displayName,
   );
 
-  if (!existingUser && options.allowCreate === false) {
+  // App profiles are created by the final onboarding Account step, which
+  // persists the complete nutrition profile. Authentication may update an
+  // existing profile, but must never synthesize an incomplete one.
+  if (!existingUser) {
     await getSupabaseClient().auth.signOut();
     throw new Error(
       "No app account exists for this email yet. Finish onboarding first to create one.",

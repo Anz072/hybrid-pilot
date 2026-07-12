@@ -1,10 +1,12 @@
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import {
   CALORIE_SCHEDULE_DAY_LABELS,
   getMondayFirstDayIndex,
 } from "../../engine/calorieTargets";
 import { appColors } from "../../theme/colors";
+import { AppCard, AppText, NumericText } from "../../components/ui";
+import { appRadius, appSpacing, appSurfaces } from "../../theme/tokens";
 
 type CalorieBudgetChartProps = {
   highlightDate?: Date | null;
@@ -27,9 +29,13 @@ const CalorieBudgetChart = ({
     highlightDate != null ? getMondayFirstDayIndex(highlightDate) : null;
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.title}>{title}</Text>
-      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+    <AppCard style={styles.card}>
+      <AppText variant="cardTitle">{title}</AppText>
+      {subtitle ? (
+        <AppText color="secondary" style={styles.subtitle} variant="bodySmall">
+          {subtitle}
+        </AppText>
+      ) : null}
 
       {hasAnyValues ? (
         <View style={styles.chartWrap}>
@@ -44,14 +50,16 @@ const CalorieBudgetChart = ({
 
               return (
                 <View key={`${CALORIE_SCHEDULE_DAY_LABELS[index]}-${index}`} style={styles.barColumn}>
-                  <Text
+                  <NumericText
+                    align="center"
+                    color={highlighted ? "primary" : "muted"}
                     style={[
                       styles.barValue,
-                      highlighted && styles.barValueHighlighted,
                     ]}
+                    variant="numberChartAxis"
                   >
                     {safeValue > 0 ? safeValue : "--"}
-                  </Text>
+                  </NumericText>
                   <View style={styles.barTrack}>
                     <View
                       style={[
@@ -61,105 +69,79 @@ const CalorieBudgetChart = ({
                       ]}
                     />
                   </View>
-                  <Text
+                  <AppText
+                    align="center"
+                    color={highlighted ? "primary" : "muted"}
                     style={[
                       styles.barLabel,
-                      highlighted && styles.barLabelHighlighted,
                     ]}
+                    variant="eyebrow"
                   >
                     {CALORIE_SCHEDULE_DAY_LABELS[index]}
-                  </Text>
+                  </AppText>
                 </View>
               );
             })}
           </View>
         </View>
       ) : (
-        <Text style={styles.empty}>Set a calorie target to see your weekly shape.</Text>
+        <AppText color="secondary" variant="bodySmall">
+          Set a calorie target to see your weekly shape.
+        </AppText>
       )}
-    </View>
+    </AppCard>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-  },
-  title: {
-    color: appColors.textPrimary,
-    fontSize: 17,
-    fontWeight: "600",
-    marginBottom: 16,
+    marginBottom: appSpacing.md,
   },
   subtitle: {
-    color: appColors.textSecondary,
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 16,
+    marginTop: appSpacing.xxs,
+    marginBottom: appSpacing.md,
   },
   chartWrap: {
     overflow: "hidden",
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceField,
-    paddingHorizontal: 12,
+    borderRadius: appRadius.md,
+    backgroundColor: appSurfaces.soft,
+    paddingHorizontal: appSpacing.sm,
     paddingVertical: 14,
   },
   barRail: {
     flexDirection: "row",
     alignItems: "flex-end",
     justifyContent: "space-between",
-    gap: 8,
+    gap: appSpacing.xs,
   },
   barColumn: {
     flex: 1,
     minWidth: 0,
     alignItems: "center",
-    gap: 8,
+    gap: appSpacing.xs,
   },
   barValue: {
-    color: appColors.textMuted,
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  barValueHighlighted: {
-    color: appColors.textPrimary,
+    minHeight: 14,
   },
   barTrack: {
     width: "100%",
     height: CHART_BAR_MAX_HEIGHT,
     justifyContent: "flex-end",
-    borderRadius: 8,
+    borderRadius: appRadius.md,
     backgroundColor: appColors.surfaceGhost,
-    padding: 4,
+    padding: appSpacing.xxs,
   },
   barFill: {
     width: "100%",
-    borderRadius: 8,
-    backgroundColor: appColors.brand800,
+    borderRadius: appRadius.sm,
+    backgroundColor: appColors.actionPrimarySoft,
   },
   barFillHighlighted: {
-    backgroundColor: appColors.brand500,
+    backgroundColor: appColors.actionPrimary,
   },
   barLabel: {
-    color: appColors.textMuted,
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-  },
-  barLabelHighlighted: {
-    color: appColors.textPrimary,
-  },
-  empty: {
-    color: appColors.textSecondary,
-    fontSize: 13,
-    lineHeight: 18,
+    minHeight: 16,
   },
 });
 
 export default CalorieBudgetChart;
-

@@ -55,6 +55,7 @@ import {
   formatFoodNumber,
   formatFoodSourceLabel,
   getFoodResolvedServing,
+  getQuantityScaleFactor,
   normalizePositiveFoodInput,
 } from "./foodUtils";
 import { resolveFoodLogContext } from "./foodLogContext";
@@ -144,17 +145,9 @@ const calculateIngredientFactor = (ingredient: RecipeIngredientDraft) => {
   const serving = getFoodResolvedServing(ingredient.food);
   const amount = toSafeNumber(ingredient.amountValue);
 
-  if (serving.value <= 0) {
-    return {
-      amount,
-      factor: amount > 0 ? amount : 0,
-      serving,
-    };
-  }
-
   return {
     amount,
-    factor: amount / serving.value,
+    factor: amount > 0 ? getQuantityScaleFactor(amount, serving.value) : 0,
     serving,
   };
 };
@@ -243,6 +236,9 @@ const CreateRecipeScreen = () => {
   const [formError, setFormError] = React.useState<string | null>(null);
   const bypassUnsavedGuardRef = React.useRef(false);
   const initialDraftSignatureRef = React.useRef<string | null>(null);
+  // Synchronous lock: state-based disabling applies only after a re-render, so
+  // a fast double-tap could otherwise save twice.
+  const savingRef = React.useRef(false);
   const saving = saveMode != null;
 
   const foodLogContext = React.useMemo(
@@ -750,6 +746,10 @@ const CreateRecipeScreen = () => {
 
   const handleSave = React.useCallback(
     async (mode: RecipeSaveMode = "save") => {
+      if (savingRef.current) {
+        return;
+      }
+
       if (!user) {
         Alert.alert(
           "No account found",
@@ -792,6 +792,8 @@ const CreateRecipeScreen = () => {
         setFormError("Prep and cook time must be zero or higher.");
         return;
       }
+
+      savingRef.current = true;
 
       try {
         setSaveMode(mode);
@@ -842,6 +844,7 @@ const CreateRecipeScreen = () => {
           error instanceof Error ? error.message : "Please try again.",
         );
       } finally {
+        savingRef.current = false;
         setSaveMode(null);
       }
     },
@@ -1522,24 +1525,6 @@ const CreateRecipeScreen = () => {
 const styles = StyleSheet.create({
   screen: sharedStyleValues.screen,
   content: sharedStyleValues.content,
-  bgOrbTop: {
-    position: "absolute",
-    top: -90,
-    right: -70,
-    width: 250,
-    height: 250,
-    borderRadius: 999,
-    backgroundColor: appColors.brand800,
-  },
-  bgOrbBottom: {
-    position: "absolute",
-    bottom: -120,
-    left: -90,
-    width: 280,
-    height: 280,
-    borderRadius: 999,
-    backgroundColor: appColors.success700,
-  },
   heroCard: sharedStyleValues.card,
   heroHeaderCopy: {
     flex: 1,
@@ -1584,7 +1569,7 @@ const styles = StyleSheet.create({
   previewValue: {
     color: appColors.white,
     fontSize: 22,
-    fontWeight: "900",
+    fontWeight: "600",
     marginBottom: 2,
   },
   previewText: {
@@ -1677,7 +1662,7 @@ const styles = StyleSheet.create({
   methodBadgeText: {
     color: appColors.brand700,
     fontSize: 10,
-    fontWeight: "900",
+    fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
@@ -1749,12 +1734,12 @@ const styles = StyleSheet.create({
   resultCalories: {
     color: appColors.brand700,
     fontSize: 11,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   resultTitle: {
     color: appColors.textPrimary,
     fontSize: 13,
-    fontWeight: "800",
+    fontWeight: "600",
     flex: 1,
     marginRight: 8,
   },
@@ -1831,7 +1816,7 @@ const styles = StyleSheet.create({
   ingredientAmountLabel: {
     color: appColors.slate300,
     fontSize: 10,
-    fontWeight: "800",
+    fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 0.5,
     width: 52,
@@ -1896,7 +1881,7 @@ const styles = StyleSheet.create({
     color: appColors.brand700,
     fontSize: 12,
     lineHeight: 17,
-    fontWeight: "900",
+    fontWeight: "600",
     textAlign: "right",
   },
   multilineInput: {
@@ -1941,7 +1926,7 @@ const styles = StyleSheet.create({
   stepTitle: {
     color: appColors.textPrimary,
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "600",
   },
   stepInput: {
     minHeight: 76,
@@ -1989,7 +1974,7 @@ const styles = StyleSheet.create({
   deleteSwipeText: {
     color: appColors.white,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   footer: sharedStyleValues.footer,
   footerRow: sharedStyleValues.footerRow,
@@ -2016,4 +2001,3 @@ const styles = StyleSheet.create({
 });
 
 export default CreateRecipeScreen;
-

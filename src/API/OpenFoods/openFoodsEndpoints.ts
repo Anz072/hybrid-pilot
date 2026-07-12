@@ -1,8 +1,18 @@
 import type { AxiosInstance } from "axios";
 import { baseApi } from "../axios.client";
-import type { SaveFoodItemInput } from "../../store/DB_TYPES";
+import type { NutritionBasis, SaveFoodItemInput } from "../../store/DB_TYPES";
 
 type NutrientTargetUnit = "g" | "mg" | "ug" | "kcal";
+
+// How nutrient values are read off an OFF payload. When the product reports
+// per-serving data, `per100FallbackFactor` (serving grams / 100) lets per-100g
+// values stand in for missing per-serving ones; when the serving weight is
+// unknown the fallback stays off, because an unscaled per-100g value would be
+// silently wrong.
+type NutrientReadContext = {
+  suffix: "_100g" | "_serving";
+  per100FallbackFactor: number | null;
+};
 
 class OpenFoodsAPI {
   openFoodFactsApi: AxiosInstance;
@@ -22,6 +32,9 @@ class OpenFoodsAPI {
       "quantity",
       "product_quantity",
       "product_quantity_unit",
+      "serving_size",
+      "serving_quantity",
+      "serving_quantity_unit",
       "nutrition_data_per",
       "ingredients_text",
       "nutriments",
@@ -68,27 +81,58 @@ class OpenFoodsAPI {
     const quantityUnit =
       this.normalizeText(product?.product_quantity_unit) ??
       (nutritionPer?.includes("ml") ? "ml" : "g");
-    const nutritionBasis =
+    // nutrition_data_per can also be a concrete amount like "330ml" (per whole
+    // can); treat that as a serving of that size.
+    const parsedNutritionPerQuantity = this.parseNutritionQuantity(
+      nutritionPer ?? null,
+    );
+    const nutritionBasis: NutritionBasis =
       nutritionPer === "100ml"
         ? "100ml"
-        : nutritionPer === "100g"
-          ? "100g"
-          : "serving";
+        : nutritionPer === "serving" || parsedNutritionPerQuantity
+          ? "serving"
+          : "100g";
+    // Grams (or ml) in one serving. This must describe the same amount the
+    // per-serving nutrient values describe — never the whole package size.
+    const servingQuantity = this.firstFinite(product?.serving_quantity);
+    const parsedServingSize = this.parseServingSizeText(
+      this.normalizeText(product?.serving_size),
+    );
+    const servingAmount =
+      (servingQuantity != null && servingQuantity > 0
+        ? servingQuantity
+        : null) ??
+      parsedServingSize?.value ??
+      parsedNutritionPerQuantity?.value ??
+      null;
+    const servingAmountUnit =
+      this.normalizeText(product?.serving_quantity_unit)?.toLowerCase() ??
+      parsedServingSize?.unit ??
+      parsedNutritionPerQuantity?.unit ??
+      (quantityUnit === "ml" ? "ml" : "g");
     const servingSizeValue =
-      nutritionBasis === "serving" ? (productQuantity ?? 1) : 100;
+      nutritionBasis === "serving" ? (servingAmount ?? 1) : 100;
     const servingSizeUnit =
       nutritionBasis === "100ml"
         ? "ml"
         : nutritionBasis === "100g"
           ? "g"
-          : (quantityUnit ?? "serving");
-    const suffix =
+          : servingAmount != null
+            ? servingAmountUnit
+            : "serving";
+    // OFF stores computed per-100g values under `_100g` even for ml products.
+    const nutrientRead: NutrientReadContext =
       nutritionBasis === "serving"
-        ? "_serving"
-        : nutritionBasis === "100ml"
-          ? "_100g"
-          : "_100g";
-    const nutrientDetails = this.getFoodNutrientDetails(nutriments, suffix);
+        ? {
+            suffix: "_serving",
+            per100FallbackFactor:
+              servingAmount != null &&
+              (servingAmountUnit === "g" || servingAmountUnit === "ml")
+                ? servingAmount / 100
+                : null,
+          }
+        : { suffix: "_100g", per100FallbackFactor: null };
+    const nutrientDetails = this.getFoodNutrientDetails(nutriments, nutrientRead);
 
     return {
       source: "open_food_facts",
@@ -107,12 +151,17 @@ class OpenFoodsAPI {
       servingSizeUnit,
       nutritionBasis,
       calories:
-        this.readNutrient(nutriments, suffix, "kcal", "energy-kcal", "energy") ??
-        0,
-      proteinG: this.readNutrient(nutriments, suffix, "g", "proteins") ?? 0,
+        this.readNutrient(
+          nutriments,
+          nutrientRead,
+          "kcal",
+          "energy-kcal",
+          "energy",
+        ) ?? 0,
+      proteinG: this.readNutrient(nutriments, nutrientRead, "g", "proteins") ?? 0,
       carbsG:
-        this.readNutrient(nutriments, suffix, "g", "carbohydrates") ?? 0,
-      fatG: this.readNutrient(nutriments, suffix, "g", "fat") ?? 0,
+        this.readNutrient(nutriments, nutrientRead, "g", "carbohydrates") ?? 0,
+      fatG: this.readNutrient(nutriments, nutrientRead, "g", "fat") ?? 0,
       ...nutrientDetails,
       ingredientsText: this.normalizeText(product?.ingredients_text),
       rawPayload: this.stringifyRawPayload({
@@ -204,7 +253,7 @@ class OpenFoodsAPI {
 
   private getFoodNutrientDetails = (
     nutriments: Record<string, unknown>,
-    suffix: string,
+    suffix: NutrientReadContext,
   ) => {
     const fatSaturatedG = this.readNutrient(
       nutriments,
@@ -386,26 +435,39 @@ class OpenFoodsAPI {
 
   private readNutrient = (
     nutriments: Record<string, unknown>,
-    suffix: string,
+    context: NutrientReadContext,
     targetUnit: NutrientTargetUnit,
     ...keys: string[]
   ): number | null => {
     for (const key of keys) {
-      const numeric = this.firstFinite(
-        nutriments[`${key}${suffix}`],
-        suffix === "_100g" ? null : nutriments[`${key}_100g`],
-        nutriments[key],
-      );
+      const sourceUnit = this.normalizeText(nutriments[`${key}_unit`]);
 
-      if (numeric == null) {
-        continue;
+      const primary = this.firstFinite(nutriments[`${key}${context.suffix}`]);
+      if (primary != null) {
+        return this.convertNutrientUnit(primary, sourceUnit, targetUnit);
       }
 
-      return this.convertNutrientUnit(
-        numeric,
-        this.normalizeText(nutriments[`${key}_unit`]),
-        targetUnit,
-      );
+      if (context.suffix === "_serving") {
+        const per100 = this.firstFinite(nutriments[`${key}_100g`]);
+        if (per100 != null) {
+          if (context.per100FallbackFactor == null) {
+            // A per-100g value cannot be scaled to an unknown serving weight;
+            // skipping it is better than storing a wrong amount.
+            continue;
+          }
+
+          return (
+            this.convertNutrientUnit(per100, sourceUnit, targetUnit) *
+            context.per100FallbackFactor
+          );
+        }
+      }
+
+      // Unsuffixed values are reported in the product's declared basis.
+      const bare = this.firstFinite(nutriments[key]);
+      if (bare != null) {
+        return this.convertNutrientUnit(bare, sourceUnit, targetUnit);
+      }
     }
 
     return null;
@@ -461,6 +523,30 @@ class OpenFoodsAPI {
     } catch {
       return null;
     }
+  };
+
+  // serving_size is free text like "2 biscuits (30 g)"; extract the g/ml amount.
+  private parseServingSizeText = (
+    value: string | null,
+  ): { value: number; unit: string } | null => {
+    if (!value) {
+      return null;
+    }
+
+    const match = value.match(/(\d+(?:[.,]\d+)?)\s*(g|ml)\b/i);
+    if (!match) {
+      return null;
+    }
+
+    const parsedValue = Number(match[1].replace(",", "."));
+    if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+      return null;
+    }
+
+    return {
+      value: parsedValue,
+      unit: match[2].toLowerCase(),
+    };
   };
 
   private parseNutritionQuantity = (

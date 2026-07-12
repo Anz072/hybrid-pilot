@@ -7,6 +7,7 @@ import type {
 import type { FoodNutritionTotals } from "../Food/foodUtils";
 import {
   formatFoodDateKey,
+  getEntryScaleFactor,
   shiftFoodDate,
   sumLoggedNutrition,
 } from "../Food/foodUtils";
@@ -58,6 +59,10 @@ export type NutritionSnapshot = {
   totals: FoodNutritionTotals;
   micronutrients: MicronutrientTotals;
   trackedMicronutrientCount: number;
+};
+
+type LoadNutritionSnapshotOptions = {
+  forceRefresh?: boolean;
 };
 
 export const MICRONUTRIENT_META: MicronutrientMeta[] = [
@@ -132,7 +137,7 @@ const getEntryFactor = (entry: DBUserFoodLogEntry) => {
     return 0;
   }
 
-  return entry.servingSize > 0 ? entry.quantityG / entry.servingSize : 1;
+  return getEntryScaleFactor(entry);
 };
 
 const getMicronutrientValueFromFood = (
@@ -215,14 +220,17 @@ export const formatMicronutrientValue = (
 export const loadNutritionSnapshot = async (
   userExternalId: string,
   dates: string[],
+  options: LoadNutritionSnapshotOptions = {},
 ): Promise<NutritionSnapshot> => {
   const safeDates = dates.length > 0 ? dates : [formatFoodDateKey(new Date())];
   const sortedDates = [...safeDates].sort();
   const requestedDateSet = new Set(safeDates);
+  const readOptions = options.forceRefresh ? { forceRefresh: true } : undefined;
   const entriesInRange = await DB.getUserFoodLogEntriesBetween(
     userExternalId,
     sortedDates[0],
     sortedDates[sortedDates.length - 1],
+    readOptions,
   );
   const entries = entriesInRange.filter((entry) =>
     requestedDateSet.has(entry.date),

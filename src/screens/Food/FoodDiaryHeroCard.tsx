@@ -1,11 +1,11 @@
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { LayoutAnimation, StyleSheet, Text, View } from "react-native";
+import { CaretDownIcon, CaretUpIcon } from "phosphor-react-native";
 import type { DBUser } from "../../store/DB_TYPES";
-import {
-  clampFoodRatio,
-  type FoodNutritionTotals,
-} from "./foodUtils";
+import { InteractiveCard } from "../../components/ui";
+import { clampFoodRatio, type FoodNutritionTotals } from "./foodUtils";
 import { appColors } from "../../theme/colors";
+import { appRadius, appSpacing } from "../../theme/tokens";
 
 type MacroBarProps = {
   accent: string;
@@ -14,6 +14,7 @@ type MacroBarProps = {
   places?: number;
   target: number | null;
   unit: string;
+  accessory?: React.ReactNode;
 };
 
 type FoodDiaryHeroCardProps = {
@@ -29,6 +30,7 @@ export const MacroBar = ({
   places = 0,
   target,
   unit,
+  accessory,
 }: MacroBarProps) => {
   const safeConsumed = Number.isFinite(consumed) ? consumed : 0;
   const safeTarget = target != null && Number.isFinite(target) ? target : null;
@@ -56,11 +58,19 @@ export const MacroBar = ({
             {hasTarget ? safeTarget.toFixed(places) : "--"} {unit}
           </Text>
         </Text>
-        <Text
-          style={[styles.progressPercent, isOver && styles.progressPercentOver]}
-        >
-          {progressLabel}
-        </Text>
+        <View style={styles.progressMetaGroup}>
+          <Text
+            style={[
+              styles.progressPercent,
+              isOver && styles.progressPercentOver,
+            ]}
+          >
+            {progressLabel}
+          </Text>
+          {accessory ? (
+            <View style={styles.progressAccessory}>{accessory}</View>
+          ) : null}
+        </View>
       </View>
       <View style={styles.progressTrack}>
         <View
@@ -84,67 +94,104 @@ const FoodDiaryHeroCard = ({
   totals,
   user,
 }: FoodDiaryHeroCardProps) => {
+  const [expanded, setExpanded] = React.useState(false);
+  const toggleExpanded = React.useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpanded((current) => !current);
+  }, []);
+
   return (
-    <View style={styles.hero}>
+    <InteractiveCard
+      accessibilityLabel={
+        expanded ? "Collapse nutrition summary" : "Expand nutrition summary"
+      }
+      accessibilityState={{ expanded }}
+      onPress={toggleExpanded}
+      variant="hero"
+      style={styles.hero}
+    >
       <View style={styles.progressPanel}>
         <MacroBar
-          accent={appColors.brand700}
+          accent={appColors.calories}
           consumed={Number(totals.calories.toFixed(0))}
           label="Energy"
           places={0}
           target={energyTargetCalories}
           unit="kcal"
+          accessory={
+            expanded ? (
+              <CaretUpIcon
+                size={17}
+                color={appColors.textMuted}
+                weight="bold"
+              />
+            ) : (
+              <CaretDownIcon
+                size={17}
+                color={appColors.textMuted}
+                weight="bold"
+              />
+            )
+          }
         />
-        <MacroBar
-          accent={appColors.success500}
-          consumed={Number(totals.proteinG.toFixed(0))}
-          label="Protein"
-          target={user?.proteinG ?? null}
-          unit="g"
-        />
-        <MacroBar
-          accent={appColors.brand400}
-          consumed={Number(totals.carbsG.toFixed(0))}
-          label="Carbs"
-          target={user?.carbsG ?? null}
-          unit="g"
-        />
-        <MacroBar
-          accent={appColors.warning600}
-          consumed={Number(totals.fatG.toFixed(0))}
-          label="Fat"
-          target={user?.fatG ?? null}
-          unit="g"
-        />
-       
+        {expanded ? (
+          <>
+            <MacroBar
+              accent={appColors.protein}
+              consumed={Number(totals.proteinG.toFixed(0))}
+              label="Protein"
+              target={user?.proteinG ?? null}
+              unit="g"
+            />
+            <MacroBar
+              accent={appColors.carbs}
+              consumed={Number(totals.carbsG.toFixed(0))}
+              label="Carbs"
+              target={user?.carbsG ?? null}
+              unit="g"
+            />
+            <MacroBar
+              accent={appColors.fat}
+              consumed={Number(totals.fatG.toFixed(0))}
+              label="Fat"
+              target={user?.fatG ?? null}
+              unit="g"
+            />
+          </>
+        ) : null}
       </View>
-    </View>
+    </InteractiveCard>
   );
 };
 
 const styles = StyleSheet.create({
   hero: {
-    paddingHorizontal: 2,
-    paddingVertical: 12,
-    marginTop: 16,
+    marginTop: appSpacing.xs,
+    marginBottom: appSpacing.sm,
+    paddingHorizontal: 0,
+    paddingVertical: appSpacing.xxs,
+    backgroundColor: "transparent",
+    borderWidth: 0,
   },
   progressPanel: {
-    gap: 6,
-    borderRadius: 8,
+    gap: appSpacing.xxs,
+    borderRadius: appRadius.sm,
   },
   macroCard: {
-    gap: 6,
+    gap: appSpacing.xxs,
   },
   progressTextRow: {
     flexDirection: "row",
     alignItems: "flex-end",
     justifyContent: "space-between",
+    gap: appSpacing.xs,
   },
   progressHeadline: {
     flex: 1,
     color: appColors.textPrimary,
     fontSize: 13,
     lineHeight: 16,
+    fontVariant: ["tabular-nums"],
   },
   progressHeadlineStrong: {
     fontWeight: "500",
@@ -153,18 +200,30 @@ const styles = StyleSheet.create({
     color: appColors.textSecondary,
     fontWeight: "400",
   },
+  progressMetaGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: appSpacing.xs,
+  },
   progressPercent: {
     color: appColors.textPrimary,
     fontSize: 14,
     fontWeight: "400",
+    fontVariant: ["tabular-nums"],
   },
   progressPercentOver: {
     color: appColors.danger600,
   },
+  progressAccessory: {
+    width: 18,
+    height: 18,
+    alignItems: "flex-end",
+    justifyContent: "center",
+  },
   progressTrack: {
-    marginTop: -3,
+    marginTop: -2,
     flexDirection: "row",
-    height: 14,
+    height: 9,
     borderRadius: 999,
     backgroundColor: appColors.surfaceGhostStrong,
     overflow: "hidden",
@@ -179,4 +238,3 @@ const styles = StyleSheet.create({
 });
 
 export default FoodDiaryHeroCard;
-

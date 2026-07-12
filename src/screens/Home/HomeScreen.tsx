@@ -1,10 +1,7 @@
 import React from "react";
 import {
-  ActivityIndicator,
-  Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -13,7 +10,6 @@ import type { CompositeNavigationProp } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
-  BarcodeIcon,
   BowlFoodIcon,
   CalendarBlankIcon,
   CaretRightIcon,
@@ -23,8 +19,6 @@ import {
   FileTextIcon,
   FlameIcon,
   LeafIcon,
-  LightningIcon,
-  MagnifyingGlassIcon,
   ScalesIcon,
   TargetIcon,
   TrendUpIcon,
@@ -36,16 +30,19 @@ import type { MainTabParamList } from "../../navigation/MainTabNavigator";
 import { formatFoodDateKey, type FoodNutritionTotals } from "../Food/foodUtils";
 import { formatWeight } from "../../preferences/displayPreferences";
 import { useDisplayPreferences } from "../../preferences/usePreferences";
-import FoodBarcodeScannerModal from "../Food/FoodBarcodeScannerModal";
-import type { ScannedFoodLookupResult } from "../Food/FoodBarcodeScannerShared";
-import {
-  resolveFoodLogContext,
-  toFoodLogRouteParams,
-} from "../Food/foodLogContext";
 import { subscribeToAppDataChanges } from "../../store/dataChangeEvents";
 import { useAppSelector } from "../../store/hooks";
 import { appColors } from "../../theme/colors";
-import { appTypography } from "../../theme/typography";
+import { appRadius, appSpacing, appSurfaces } from "../../theme/tokens";
+import {
+  AppButton,
+  AppCard,
+  AppText,
+  ErrorState,
+  InteractiveCard,
+  LoadingState,
+  NumericText,
+} from "../../components/ui";
 import {
   createEmptyMicronutrientTotals,
   formatMicronutrientValue,
@@ -77,20 +74,15 @@ const INITIAL_MICROS = createEmptyMicronutrientTotals();
 const dashboardColors = {
   background: appColors.surfaceCanvas,
   ink: appColors.textPrimary,
-  text: appColors.textSecondary,
   muted: appColors.textMuted,
-  glass: appColors.surfaceCard,
-  glassBorder: appColors.borderSoft,
   track: appColors.borderSoft,
-  shadow: appColors.slate400,
   coral: appColors.calories,
-  coralSoft: appColors.brand300,
-  sage: appColors.protein,
-  sageSoft: appColors.surfaceField,
-  gold: appColors.carbs,
-  goldSoft: appColors.warningSurface,
-  clay: appColors.fat,
-  claySoft: appColors.dangerSoftBg,
+  protein: appColors.protein,
+  proteinSoft: appColors.surfaceField,
+  carbs: appColors.carbs,
+  carbsSoft: appColors.warningSurface,
+  fat: appColors.fat,
+  fatSoft: appColors.surfaceField,
 } as const;
 
 const formatHeroDate = (date: Date) =>
@@ -219,7 +211,7 @@ const CalorieRings = ({
           cx={center}
           cy={center}
           r={innerRadius}
-          stroke={dashboardColors.sage}
+          stroke={dashboardColors.protein}
           strokeWidth={innerStroke}
           strokeLinecap="round"
           strokeDasharray={`${innerCircumference} ${innerCircumference}`}
@@ -230,11 +222,22 @@ const CalorieRings = ({
       </Svg>
 
       <View style={styles.ringCenter}>
-        <Text style={styles.ringValue} adjustsFontSizeToFit numberOfLines={1}>
-          {centerValue}
-          <Text style={styles.ringTarget}> / {targetValue} kcal</Text>
-        </Text>
-        <Text style={styles.ringCaption}>{remainingLabel}</Text>
+        <View style={styles.ringValueRow}>
+          <NumericText
+            adjustsFontSizeToFit
+            numberOfLines={1}
+            style={styles.ringValue}
+            variant="numberCalorieHero"
+          >
+            {centerValue}
+          </NumericText>
+          <AppText color="secondary" style={styles.ringTarget} variant="label">
+            / {targetValue} kcal
+          </AppText>
+        </View>
+        <AppText align="center" color="muted" style={styles.ringCaption} variant="bodySmall">
+          {remainingLabel}
+        </AppText>
       </View>
     </View>
   );
@@ -263,13 +266,21 @@ const MacroTile = ({
   const progress = hasTarget ? clampRatio(safeConsumed / safeTarget) : 0;
 
   return (
-    <View style={styles.macroTile}>
+    <AppCard variant="compact" style={styles.macroTile}>
       <View style={styles.macroIconRow}>{icons}</View>
-      <Text style={styles.macroLabel}>{label}</Text>
-      <Text style={styles.macroValue} adjustsFontSizeToFit numberOfLines={1}>
+      <AppText style={styles.macroLabel} variant="bodySmallStrong">
+        {label}
+      </AppText>
+      <NumericText
+        color="secondary"
+        style={styles.macroValue}
+        adjustsFontSizeToFit
+        numberOfLines={1}
+        variant="numberMacroRow"
+      >
         {formatWholeNumber(safeConsumed)} /{" "}
         {hasTarget ? formatWholeNumber(safeTarget) : "--"} g
-      </Text>
+      </NumericText>
       <View style={[styles.macroTrack, { backgroundColor: softAccent }]}>
         <View
           style={[
@@ -281,7 +292,7 @@ const MacroTile = ({
           ]}
         />
       </View>
-    </View>
+    </AppCard>
   );
 };
 
@@ -294,12 +305,12 @@ type InsightMetricProps = {
 const InsightMetric = ({ icon, label, value }: InsightMetricProps) => (
   <View style={styles.insightMetric}>
     <View style={styles.insightMetricIcon}>{icon}</View>
-    <Text style={styles.insightMetricValue} numberOfLines={1}>
+    <NumericText style={styles.insightMetricValue} numberOfLines={1} variant="numberWeightEntry">
       {value}
-    </Text>
-    <Text style={styles.insightMetricLabel} numberOfLines={1}>
+    </NumericText>
+    <AppText color="muted" style={styles.insightMetricLabel} numberOfLines={1} variant="label">
       {label}
-    </Text>
+    </AppText>
   </View>
 );
 
@@ -332,7 +343,6 @@ const HomeScreen = () => {
   const [summaryLoadedAt, setSummaryLoadedAt] = React.useState<string | null>(
     null,
   );
-  const [scannerVisible, setScannerVisible] = React.useState(false);
   const hasLoadedSummaryRef = React.useRef(false);
   const refreshSequenceRef = React.useRef(0);
 
@@ -473,50 +483,6 @@ const HomeScreen = () => {
   );
   const updatedLabel = formatSummaryUpdatedAt(summaryLoadedAt);
 
-  const openScanner = React.useCallback(() => {
-    setScannerVisible(true);
-  }, []);
-
-  const openFoodSearch = React.useCallback(() => {
-    const today = new Date();
-    const foodLogContext = resolveFoodLogContext({
-      date: formatFoodDateKey(today),
-    });
-
-    navigation.navigate("AddFood", {
-      ...toFoodLogRouteParams(foodLogContext),
-    });
-  }, [navigation]);
-
-  const openQuickAdd = React.useCallback(() => {
-    const today = new Date();
-    const foodLogContext = resolveFoodLogContext({
-      date: formatFoodDateKey(today),
-    });
-
-    navigation.navigate("QuickAddFood", {
-      ...toFoodLogRouteParams(foodLogContext),
-    });
-  }, [navigation]);
-
-  const handleScannedFoodResolved = React.useCallback(
-    (result: ScannedFoodLookupResult) => {
-      const today = new Date();
-      const foodLogContext = resolveFoodLogContext({
-        date: formatFoodDateKey(today),
-      });
-
-      setScannerVisible(false);
-      navigation.navigate("ScannedFood", {
-        ...toFoodLogRouteParams(foodLogContext),
-        foodId: result.foodId,
-        barcode: result.barcode,
-        scanStatus: result.status,
-      });
-    },
-    [navigation],
-  );
-
   return (
     <View style={styles.screen}>
       <ScrollView
@@ -527,91 +493,39 @@ const HomeScreen = () => {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title} adjustsFontSizeToFit numberOfLines={1}>
+        <AppText style={styles.title} adjustsFontSizeToFit numberOfLines={1} variant="sectionTitle">
           Daily Summary
-        </Text>
-        <Text style={styles.dateText}>{formatHeroDate(new Date())}</Text>
+        </AppText>
+        <AppText color="muted" style={styles.dateText} variant="bodySmall">
+          {formatHeroDate(new Date())}
+        </AppText>
         {updatedLabel ? (
-          <Text style={styles.updatedText}>{updatedLabel}</Text>
+          <AppText color="muted" style={styles.updatedText} variant="metadata">
+            {updatedLabel}
+          </AppText>
         ) : null}
 
-        <View style={styles.quickActionRow}>
-          <Pressable
-            onPress={openScanner}
-            style={({ pressed }) => [
-              styles.quickAction,
-              styles.quickActionPrimary,
-              pressed && styles.pressed,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Scan barcode"
-          >
-            <View style={[styles.quickActionIcon, styles.quickActionIconPrimary]}>
-              <BarcodeIcon
-                size={22}
-                color={appColors.white}
-                weight="bold"
-              />
-            </View>
-            <Text style={styles.quickActionLabel}>Scan</Text>
-          </Pressable>
-          <Pressable
-            onPress={openFoodSearch}
-            style={({ pressed }) => [
-              styles.quickAction,
-              pressed && styles.pressed,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Search foods"
-          >
-            <View style={styles.quickActionIcon}>
-              <MagnifyingGlassIcon
-                size={21}
-                color={dashboardColors.ink}
-                weight="bold"
-              />
-            </View>
-            <Text style={styles.quickActionLabel}>Search</Text>
-          </Pressable>
-          <Pressable
-            onPress={openQuickAdd}
-            style={({ pressed }) => [
-              styles.quickAction,
-              pressed && styles.pressed,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Quick add food"
-          >
-            <View style={styles.quickActionIcon}>
-              <LightningIcon
-                size={21}
-                color={dashboardColors.ink}
-                weight="fill"
-              />
-            </View>
-            <Text style={styles.quickActionLabel}>Quick Add</Text>
-          </Pressable>
-        </View>
-
         {isLoading ? (
-          <View style={[styles.loadingState, { height: ringSize + 52 }]}>
-            <ActivityIndicator color={dashboardColors.coral} />
-          </View>
+          <LoadingState
+            message="Checking today's logged food and targets."
+            style={[styles.loadingState, { minHeight: ringSize + 52 }]}
+            title="Loading daily summary"
+          />
         ) : error ? (
-          <View style={styles.errorPanel}>
-            <Text style={styles.errorText}>{error}</Text>
-            <Pressable
+          <ErrorState
+            message={error}
+            style={styles.errorPanel}
+            title="Could not load summary"
+            action={
+              <AppButton
+                label="Try again"
+                variant="danger"
+                size="sm"
               onPress={() => void refreshSummary()}
-              style={({ pressed }) => [
-                styles.retryButton,
-                pressed && styles.pressed,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Retry loading home summary"
-            >
-              <Text style={styles.retryButtonText}>Try again</Text>
-            </Pressable>
-          </View>
+                accessibilityLabel="Retry loading home summary"
+              />
+            }
+          />
         ) : (
           <>
             <View style={styles.ringWrap}>
@@ -626,107 +540,106 @@ const HomeScreen = () => {
 
             <View style={styles.macroGrid}>
               <MacroTile
-                accent={dashboardColors.sage}
+                accent={dashboardColors.protein}
                 consumed={todayTotals.proteinG}
                 icons={[
                   <DnaIcon
                     key="dna"
                     size={25}
-                    color={dashboardColors.sage}
+                    color={dashboardColors.protein}
                     weight="regular"
                   />,
                   <FileTextIcon
                     key="file"
                     size={24}
-                    color={dashboardColors.sage}
+                    color={dashboardColors.protein}
                     weight="regular"
                   />,
                 ]}
                 label="Protein"
-                softAccent={dashboardColors.sageSoft}
+                softAccent={dashboardColors.proteinSoft}
                 target={user?.proteinG ?? null}
               />
               <MacroTile
-                accent={dashboardColors.gold}
+                accent={dashboardColors.carbs}
                 consumed={todayTotals.carbsG}
                 icons={[
                   <BowlFoodIcon
                     key="bowl"
                     size={25}
-                    color={dashboardColors.gold}
+                    color={dashboardColors.carbs}
                     weight="regular"
                   />,
                   <ChartBarIcon
                     key="chart"
                     size={24}
-                    color={dashboardColors.gold}
+                    color={dashboardColors.carbs}
                     weight="regular"
                   />,
                 ]}
                 label="Carbs"
-                softAccent={dashboardColors.goldSoft}
+                softAccent={dashboardColors.carbsSoft}
                 target={user?.carbsG ?? null}
               />
               <MacroTile
-                accent={dashboardColors.clay}
+                accent={dashboardColors.fat}
                 consumed={todayTotals.fatG}
                 icons={[
                   <DropIcon
                     key="drop"
                     size={25}
-                    color={dashboardColors.clay}
+                    color={dashboardColors.fat}
                     weight="regular"
                   />,
                   <FlameIcon
                     key="flame"
                     size={24}
-                    color={dashboardColors.clay}
+                    color={dashboardColors.fat}
                     weight="regular"
                   />,
                 ]}
                 label="Fat"
-                softAccent={dashboardColors.claySoft}
+                softAccent={dashboardColors.fatSoft}
                 target={user?.fatG ?? null}
               />
             </View>
           </>
         )}
 
-        <Pressable
+        <InteractiveCard
           onPress={() =>
             navigation.navigate("More", {
               screen: "WeeklyReviewScreen",
             })
           }
-          style={({ pressed }) => [
-            styles.weeklySection,
-            pressed && styles.pressed,
-          ]}
+          style={styles.weeklySection}
+          variant="standard"
         >
           <View style={styles.sectionTitleRow}>
             <View style={[styles.inlineIcon, styles.weeklyIcon]}>
               <CalendarBlankIcon
                 size={24}
-                color={dashboardColors.clay}
+                color={dashboardColors.fat}
                 weight="regular"
               />
             </View>
-            <Text
+            <AppText
               style={styles.sectionTitle}
               adjustsFontSizeToFit
               numberOfLines={1}
+              variant="sectionTitle"
             >
               Weekly Insights
-            </Text>
+            </AppText>
             <CaretRightIcon
               size={22}
               color={appColors.textMuted}
               weight="bold"
             />
           </View>
-          <Text style={styles.weeklyCopy}>
+          <AppText color="secondary" style={styles.weeklyCopy} variant="bodySmall">
             Progress, calorie targets, weight trend, and repeated foods.
-          </Text>
+          </AppText>
 
           <View style={styles.insightMetricRow}>
             <InsightMetric
@@ -765,42 +678,46 @@ const HomeScreen = () => {
               }
             />
           </View>
-        </Pressable>
+        </InteractiveCard>
 
-        <View style={styles.microsSection}>
-          <Pressable
-            onPress={() => navigation.navigate("MicrosOverview")}
-            style={({ pressed }) => [
-              styles.microsHeaderButton,
-              pressed && styles.pressed,
-            ]}
-          >
-            <View style={styles.sectionTitleRow}>
+        <InteractiveCard
+          onPress={() => navigation.navigate("MicrosOverview")}
+          accessibilityLabel="Open micronutrients overview"
+          style={styles.microsSection}
+          variant="standard"
+        >
+          <View style={styles.microsHeaderButton}>
+            <View
+              style={[styles.sectionTitleRow, styles.microsHeaderTitleRow]}
+            >
               <View style={[styles.inlineIcon, styles.microsIcon]}>
                 <LeafIcon
                   size={24}
-                  color={dashboardColors.sage}
+                  color={appColors.protein}
                   weight="regular"
                 />
               </View>
-              <Text
+              <AppText
                 style={styles.sectionTitle}
                 adjustsFontSizeToFit
                 numberOfLines={1}
+                variant="sectionTitle"
               >
                 Micronutrients
-              </Text>
+              </AppText>
             </View>
-            <CaretRightIcon
-              size={27}
-              color="rgba(7, 7, 7, 0.34)"
-              weight="regular"
-            />
-          </Pressable>
+            <View style={styles.microsChevron}>
+              <CaretRightIcon
+                size={22}
+                color={appColors.textMuted}
+                weight="regular"
+              />
+            </View>
+          </View>
 
-          <Text style={styles.microCount}>
+          <AppText color="muted" style={styles.microCount} variant="bodySmall">
             {trackedMicronutrientCount} tracked nutrients today
-          </Text>
+          </AppText>
 
           <ScrollView
             horizontal
@@ -808,23 +725,18 @@ const HomeScreen = () => {
             contentContainerStyle={styles.microTileRow}
           >
             {microsPreview.map((item) => (
-              <View key={item.key} style={styles.microTile}>
-                <Text style={styles.microLabel} numberOfLines={1}>
+              <AppCard key={item.key} variant="compact" style={styles.microTile}>
+                <AppText style={styles.microLabel} numberOfLines={1} variant="bodySmallStrong">
                   {item.label}
-                </Text>
-                <Text style={styles.microValue}>
+                </AppText>
+                <NumericText color="secondary" style={styles.microValue} variant="numberMacroRow">
                   {formatMicronutrientValue(item.value, item.unit)}
-                </Text>
-              </View>
+                </NumericText>
+              </AppCard>
             ))}
           </ScrollView>
-        </View>
+        </InteractiveCard>
       </ScrollView>
-      <FoodBarcodeScannerModal
-        visible={scannerVisible}
-        onClose={() => setScannerVisible(false)}
-        onFoodResolved={handleScannedFoodResolved}
-      />
     </View>
   );
 };
@@ -835,221 +747,114 @@ const styles = StyleSheet.create({
     backgroundColor: dashboardColors.background,
   },
   content: {
-    paddingHorizontal: 20,
+    paddingHorizontal: appSpacing.gutter,
   },
   title: {
-    ...appTypography.title,
     color: dashboardColors.ink,
   },
   dateText: {
-    ...appTypography.bodySmall,
-    color: dashboardColors.muted,
     marginTop: 4,
   },
   updatedText: {
-    color: dashboardColors.muted,
-    fontSize: 12,
-    lineHeight: 17,
-    fontWeight: "600",
     marginTop: 3,
   },
-  quickActionRow: {
-    marginTop: 16,
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 2,
-  },
-  quickAction: {
-    flex: 1,
-    minHeight: 84,
-    borderRadius: 8,
-    backgroundColor: dashboardColors.glass,
-    borderWidth: 1,
-    borderColor: dashboardColors.glassBorder,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 12,
-    shadowColor: dashboardColors.shadow,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 2,
-  },
-  quickActionPrimary: {
-    borderColor: appColors.borderStrong,
-  },
-  quickActionIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: appColors.surfaceField,
-  },
-  quickActionIconPrimary: {
-    backgroundColor: dashboardColors.coral,
-  },
-  quickActionLabel: {
-    color: dashboardColors.ink,
-    fontSize: 13,
-    lineHeight: 17,
-    fontWeight: "800",
-    textAlign: "center",
-  },
   loadingState: {
-    alignItems: "center",
-    justifyContent: "center",
+    marginTop: appSpacing.xl,
+    marginBottom: appSpacing.md,
   },
   errorPanel: {
-    marginTop: 32,
-    borderRadius: 8,
-    backgroundColor: dashboardColors.glass,
-    borderWidth: 1,
-    borderColor: dashboardColors.glassBorder,
-    padding: 16,
-  },
-  errorText: {
-    color: appColors.dangerText,
-    fontSize: 15,
-    lineHeight: 21,
-  },
-  retryButton: {
-    alignSelf: "flex-start",
-    borderRadius: 999,
-    backgroundColor: appColors.dangerSoftBg,
-    borderWidth: 1,
-    borderColor: appColors.dangerBorder,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    marginTop: 14,
-  },
-  retryButtonText: {
-    color: appColors.danger700,
-    fontSize: 13,
-    lineHeight: 17,
-    fontWeight: "800",
+    marginTop: appSpacing.xl,
+    marginBottom: appSpacing.md,
   },
   ringWrap: {
     alignItems: "center",
-    marginTop: 18,
-    marginBottom: 22,
+    marginTop: appSpacing.md,
+    marginBottom: appSpacing.xl,
   },
   ringShell: {
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 999,
+    borderRadius: appRadius.pill,
     backgroundColor: appColors.surfaceCard,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: appColors.borderSoft,
-    shadowColor: dashboardColors.shadow,
-    shadowOffset: { width: 0, height: 18 },
-    shadowOpacity: 0.1,
-    shadowRadius: 18,
-    elevation: 3,
   },
   ringCenter: {
     alignItems: "center",
     justifyContent: "center",
     width: "68%",
   },
+  ringValueRow: {
+    alignItems: "baseline",
+    justifyContent: "center",
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
   ringValue: {
     color: dashboardColors.ink,
-    fontSize: 32,
-    lineHeight: 38,
-    fontWeight: "800",
-    letterSpacing: 0,
     textAlign: "center",
   },
   ringTarget: {
-    color: dashboardColors.ink,
-    fontSize: 14,
-    lineHeight: 18,
-    fontWeight: "700",
+    marginLeft: appSpacing.xxs,
   },
   ringCaption: {
-    color: dashboardColors.muted,
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: "600",
-    letterSpacing: 0,
-    marginTop: 5,
-    textAlign: "center",
+    marginTop: appSpacing.xxs,
   },
   macroGrid: {
     flexDirection: "row",
-    gap: 10,
-    marginBottom: 18,
+    gap: appSpacing.xs,
+    marginBottom: appSpacing.md,
   },
   macroTile: {
+    borderWidth: 0,
     flex: 1,
     minWidth: 0,
-    borderRadius: 8,
-    backgroundColor: dashboardColors.glass,
-    borderWidth: 1,
-    borderColor: dashboardColors.glassBorder,
-    paddingHorizontal: 14,
-    paddingTop: 14,
-    paddingBottom: 14,
-    shadowColor: dashboardColors.shadow,
-    shadowOffset: { width: 0, height: 13 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 2,
+    paddingHorizontal: appSpacing.sm,
+    paddingTop: appSpacing.sm,
+    paddingBottom: appSpacing.sm,
   },
   macroIconRow: {
     minHeight: 27,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 16,
+    marginBottom: appSpacing.sm,
   },
   macroLabel: {
     color: dashboardColors.ink,
-    fontSize: 16,
-    lineHeight: 20,
-    fontWeight: "800",
-    marginBottom: 6,
+    marginBottom: appSpacing.xxs,
   },
   macroValue: {
-    color: dashboardColors.text,
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: "700",
-    marginBottom: 12,
+    textAlign: "left",
+    marginBottom: appSpacing.sm,
   },
   macroTrack: {
     height: 9,
-    borderRadius: 999,
+    borderRadius: appRadius.pill,
     overflow: "hidden",
   },
   macroFill: {
     height: "100%",
-    borderRadius: 999,
+    borderRadius: appRadius.pill,
   },
   weeklySection: {
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceCard,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 16,
-    marginBottom: 16,
+    borderWidth: 0,
+    marginBottom: appSpacing.md,
   },
   sectionTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: appSpacing.xs,
   },
   inlineIcon: {
     width: 38,
     height: 38,
-    borderRadius: 8,
+    borderRadius: appRadius.sm,
     alignItems: "center",
     justifyContent: "center",
   },
   weeklyIcon: {
-    backgroundColor: dashboardColors.claySoft,
+    backgroundColor: appSurfaces.soft,
   },
   microsIcon: {
     backgroundColor: appColors.surfaceField,
@@ -1057,103 +862,78 @@ const styles = StyleSheet.create({
   sectionTitle: {
     flex: 1,
     color: dashboardColors.ink,
-    fontSize: 20,
-    lineHeight: 26,
-    fontWeight: "800",
   },
   weeklyCopy: {
-    color: dashboardColors.text,
-    fontSize: 13,
-    lineHeight: 19,
-    fontWeight: "500",
-    marginTop: 10,
+    marginTop: appSpacing.xs,
   },
   insightMetricRow: {
     flexDirection: "row",
-    gap: 10,
-    marginTop: 14,
+    gap: appSpacing.xs,
+    marginTop: appSpacing.sm,
   },
   insightMetric: {
     flex: 1,
     minWidth: 0,
-    borderRadius: 8,
+    borderRadius: appRadius.md,
     backgroundColor: appColors.surfaceField,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
-    paddingHorizontal: 10,
-    paddingVertical: 12,
+    paddingHorizontal: appSpacing.xs,
+    paddingVertical: appSpacing.sm,
   },
   insightMetricIcon: {
-    marginBottom: 8,
+    marginBottom: appSpacing.xs,
   },
   insightMetricValue: {
-    color: dashboardColors.ink,
-    fontSize: 18,
-    lineHeight: 23,
-    fontWeight: "600",
-    letterSpacing: 0,
+    textAlign: "left",
   },
   insightMetricLabel: {
-    color: dashboardColors.muted,
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: "400",
-    letterSpacing: 0,
-    marginTop: 2,
+    marginTop: appSpacing.xxs,
   },
   microsSection: {
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceCard,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 16,
-    marginBottom: 16,
+    borderWidth: 0,
+    marginBottom: appSpacing.md,
   },
   microsHeaderButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
+    gap: appSpacing.sm,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    borderWidth: 0,
+    backgroundColor: "transparent",
+  },
+  microsHeaderTitleRow: {
+    flex: 1,
+    minWidth: 0,
+  },
+  microsChevron: {
+    width: 28,
+    minHeight: 38,
+    alignItems: "flex-end",
+    justifyContent: "center",
   },
   microCount: {
-    color: dashboardColors.muted,
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: "400",
-    letterSpacing: 0,
-    marginTop: 6,
-    marginLeft: 50,
+    marginTop: appSpacing.xs,
+    marginLeft: 46,
   },
   microTileRow: {
-    gap: 10,
-    paddingTop: 14,
-    paddingBottom: 2,
-    paddingRight: 8,
+    gap: appSpacing.xs,
+    paddingTop: appSpacing.sm,
+    paddingBottom: appSpacing.xxs,
+    paddingRight: appSpacing.xs,
   },
   microTile: {
     width: 154,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceField,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    backgroundColor: appSurfaces.soft,
   },
   microLabel: {
     color: dashboardColors.ink,
-    fontSize: 15,
-    lineHeight: 20,
-    fontWeight: "800",
   },
   microValue: {
-    color: dashboardColors.text,
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: "700",
-    marginTop: 8,
-  },
-  pressed: {
-    opacity: 0.86,
+    textAlign: "left",
+    marginTop: appSpacing.xs,
   },
 });
 

@@ -1,64 +1,27 @@
 import React from "react";
-import {
-  Pressable,
-  StyleProp,
-  StyleSheet,
-  Text,
-  ViewStyle,
-} from "react-native";
-import { appColors } from "../../theme/colors";
+import { type StyleProp, type ViewStyle } from "react-native";
+import { AppButton } from "../../components/ui";
 
 type OnboardingPrimaryButtonProps = {
+  disabled?: boolean;
   label: string;
   onPress: () => void;
-  disabled?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
 const OnboardingPrimaryButton = ({
+  disabled = false,
   label,
   onPress,
-  disabled = false,
   style,
-}: OnboardingPrimaryButtonProps) => {
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.button,
-        style,
-        disabled && styles.buttonDisabled,
-        pressed && !disabled && styles.buttonPressed,
-      ]}
-      disabled={disabled}
-      onPress={onPress}
-    >
-      <Text style={styles.buttonText}>{label}</Text>
-    </Pressable>
-  );
-};
-
-const styles = StyleSheet.create({
-  button: {
-    backgroundColor: appColors.brand500,
-    borderRadius: 8,
-    paddingVertical: 12,
-    marginHorizontal: 12,
-    alignItems: "center",
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.99 }],
-  },
-  buttonText: {
-    color: appColors.white,
-    fontSize: 18,
-    letterSpacing: 2,
-    fontWeight: "800",
-    paddingVertical: 6,
-  },
-});
+}: OnboardingPrimaryButtonProps) => (
+  <AppButton
+    disabled={disabled}
+    label={label}
+    onPress={onPress}
+    style={style}
+    variant="primary"
+  />
+);
 
 export default OnboardingPrimaryButton;

@@ -1,10 +1,7 @@
 import React from "react";
 import {
-  ActivityIndicator,
-  Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
@@ -24,7 +21,16 @@ import {
   type UserMicronutrientProfile,
 } from "../../engine/micronutrients";
 import { appColors } from "../../theme/colors";
-import { appTypography } from "../../theme/typography";
+import { appSpacing, appSurfaces } from "../../theme/tokens";
+import {
+  AppCard,
+  AppText,
+  ErrorState,
+  IconButton,
+  LoadingState,
+  NumericText,
+  SegmentedControl,
+} from "../../components/ui";
 import {
   averageMicronutrientTotals,
   buildRecentDateKeys,
@@ -306,7 +312,7 @@ const MicrosOverviewScreen = () => {
 
   const renderNutrientRow = (item: MicronutrientRowWithTarget) => {
     return (
-      <View key={item.key} style={styles.nutrientRow}>
+      <AppCard key={item.key} variant="compact" style={styles.nutrientRow}>
         <MacroBar
           accent={getMacroBarAccent(item)}
           consumed={item.value}
@@ -316,20 +322,22 @@ const MicrosOverviewScreen = () => {
           unit={item.unit}
         />
         <View style={styles.nutrientMetaRow}>
-          <Text style={styles.nutrientMetaText}>
+          <AppText color="secondary" style={styles.nutrientMetaText} variant="bodySmall">
             {item.basis} target: {formatMicronutrientValue(item.target, item.unit)}
-          </Text>
-          <Text style={styles.nutrientMetaText}>{item.statusText}</Text>
+          </AppText>
+          <AppText color="secondary" style={styles.nutrientMetaText} variant="bodySmall">
+            {item.statusText}
+          </AppText>
         </View>
         <View style={styles.nutrientMetaRow}>
-          <Text style={styles.nutrientMetaText}>
+          <NumericText color="secondary" style={styles.nutrientMetaText} variant="numberMacroRow">
             {item.progressPercent.toLocaleString(undefined, {
               maximumFractionDigits: item.progressPercent >= 100 ? 0 : 1,
             })}
             % reached
-          </Text>
+          </NumericText>
         </View>
-      </View>
+      </AppCard>
     );
   };
 
@@ -345,133 +353,129 @@ const MicrosOverviewScreen = () => {
       >
         <View style={styles.headerRow}>
           <View style={styles.headerCopy}>
-            <Text style={styles.eyebrow}>Micros</Text>
-            <Text style={styles.title}>Micronutrients</Text>
-            <Text style={styles.subtitle}>
+            <AppText color="secondary" style={styles.eyebrow} variant="eyebrow">
+              Micros
+            </AppText>
+            <AppText style={styles.title} variant="sectionTitleLarge">
+              Micronutrients
+            </AppText>
+            <AppText color="secondary" style={styles.subtitle} variant="bodySmall">
               Totals come from foods with micronutrient data. Quick adds do not
               contribute here.
-            </Text>
+            </AppText>
           </View>
-          <Pressable
+          <IconButton
+            accessibilityLabel="Close micronutrients"
             onPress={() => navigation.goBack()}
-            style={({ pressed }) => [
-              styles.closeButton,
-              pressed && styles.cardPressed,
-            ]}
           >
             <XIcon size={18} color={appColors.textPrimary} weight="bold" />
-          </Pressable>
+          </IconButton>
         </View>
 
-        <View style={styles.heroCard}>
-          <View style={styles.toggleRow}>
-            <Pressable
-              onPress={() => setSelectedMode("today")}
-              style={({ pressed }) => [
-                styles.togglePill,
-                selectedMode === "today" && styles.togglePillActive,
-                pressed && styles.cardPressed,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.toggleText,
-                  selectedMode === "today" && styles.toggleTextActive,
-                ]}
-              >
-                Today
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => setSelectedMode("average_7d")}
-              style={({ pressed }) => [
-                styles.togglePill,
-                selectedMode === "average_7d" && styles.togglePillActive,
-                pressed && styles.cardPressed,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.toggleText,
-                  selectedMode === "average_7d" && styles.toggleTextActive,
-                ]}
-              >
-                7 day avg
-              </Text>
-            </Pressable>
-          </View>
+        <AppCard variant="hero" style={styles.heroCard}>
+          <SegmentedControl
+            value={selectedMode}
+            onChange={setSelectedMode}
+            style={styles.toggleRow}
+            options={[
+              { label: "Today", value: "today" },
+              { label: "7 day avg", value: "average_7d" },
+            ]}
+          />
 
           {loading ? (
-            <View style={styles.loadingWrap}>
-              <ActivityIndicator color={appColors.brand500} />
-            </View>
+            <LoadingState
+              message="Reading recent logged nutrition."
+              style={styles.loadingWrap}
+              title="Loading micronutrients"
+            />
           ) : error ? (
-            <Text style={styles.errorText}>{error}</Text>
+            <ErrorState
+              message={error}
+              style={styles.stateWrap}
+              title="Could not load micronutrients"
+            />
           ) : (
             <>
-              <Text style={styles.heroHeadline}>{headlineText}</Text>
-              <Text style={styles.heroRangeLabel}>
+              <AppText style={styles.heroHeadline} variant="sectionTitle">
+                {headlineText}
+              </AppText>
+              <AppText color="secondary" style={styles.heroRangeLabel} variant="bodySmall">
                 {selectedMode === "today"
                   ? rangeLabel
                   : `${rangeLabel} per-day average`}
-              </Text>
+              </AppText>
 
               <View style={styles.summaryGrid}>
-                <View style={styles.summaryTile}>
-                  <Text style={styles.summaryTileLabel}>Tracked</Text>
-                  <Text style={styles.summaryTileValue}>{trackedCount}</Text>
-                </View>
-                <View style={styles.summaryTile}>
-                  <Text style={styles.summaryTileLabel}>Food logs</Text>
-                  <Text style={styles.summaryTileValue}>
+                <AppCard variant="compact" style={styles.summaryTile}>
+                  <AppText color="muted" style={styles.summaryTileLabel} variant="label">
+                    Tracked
+                  </AppText>
+                  <NumericText style={styles.summaryTileValue} variant="numberMacroSummary">
+                    {trackedCount}
+                  </NumericText>
+                </AppCard>
+                <AppCard variant="compact" style={styles.summaryTile}>
+                  <AppText color="muted" style={styles.summaryTileLabel} variant="label">
+                    Food logs
+                  </AppText>
+                  <NumericText style={styles.summaryTileValue} variant="numberMacroSummary">
                     {selectedMode === "today"
                       ? todaySnapshot?.entries.length ?? 0
                       : weekSnapshot?.entries.length ?? 0}
-                  </Text>
-                </View>
+                  </NumericText>
+                </AppCard>
               </View>
 
-              <View style={styles.referenceNote}>
-                <Text style={styles.referenceNoteText}>{referenceCopy}</Text>
-              </View>
+              <AppCard variant="soft" style={styles.referenceNote}>
+                <AppText color="secondary" style={styles.referenceNoteText} variant="bodySmall">
+                  {referenceCopy}
+                </AppText>
+              </AppCard>
             </>
           )}
-        </View>
+        </AppCard>
 
         {!loading && !error ? (
           <>
             {trackedCount === 0 ? (
-              <View style={styles.infoCard}>
-                <Text style={styles.infoTitle}>Everything is at zero so far</Text>
-                <Text style={styles.infoText}>
+              <AppCard variant="soft" style={styles.infoCard}>
+                <AppText style={styles.infoTitle} variant="bodyStrong">
+                  Everything is at zero so far
+                </AppText>
+                <AppText color="secondary" style={styles.infoText} variant="bodySmall">
                   The targets are still shown below so users can see what daily
                   intake they are aiming for even before richer micronutrient
                   foods are logged.
-                </Text>
-              </View>
+                </AppText>
+              </AppCard>
             ) : null}
 
-            <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Vitamins</Text>
-              <Text style={styles.sectionSubtitle}>
+            <AppCard style={styles.sectionCard}>
+              <AppText style={styles.sectionTitle} variant="sectionTitle">
+                Vitamins
+              </AppText>
+              <AppText color="secondary" style={styles.sectionSubtitle} variant="bodySmall">
                 Daily intake compared against {micronutrientProfile ? "your" : "general"}{" "}
                 RDA.
-              </Text>
+              </AppText>
               <View style={styles.sectionStack}>
                 {vitamins.map(renderNutrientRow)}
               </View>
-            </View>
+            </AppCard>
 
-            <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Minerals</Text>
-              <Text style={styles.sectionSubtitle}>
+            <AppCard style={styles.sectionCard}>
+              <AppText style={styles.sectionTitle} variant="sectionTitle">
+                Minerals
+              </AppText>
+              <AppText color="secondary" style={styles.sectionSubtitle} variant="bodySmall">
                 A quick visual read on what is covered, what is low, and what is
                 already above target.
-              </Text>
+              </AppText>
               <View style={styles.sectionStack}>
                 {minerals.map(renderNutrientRow)}
               </View>
-            </View>
+            </AppCard>
           </>
         ) : null}
       </ScrollView>
@@ -485,208 +489,96 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
-    paddingHorizontal: 20,
-  },
-  orbTop: {
-    position: "absolute",
-    top: -70,
-    right: -50,
-    width: 220,
-    height: 220,
-    borderRadius: 999,
-    backgroundColor: appColors.brand800,
-  },
-  orbBottom: {
-    position: "absolute",
-    bottom: -100,
-    left: -70,
-    width: 260,
-    height: 260,
-    borderRadius: 999,
-    backgroundColor: appColors.success700,
+    paddingHorizontal: appSpacing.gutter,
   },
   headerRow: {
     flexDirection: "row",
-    gap: 14,
-    marginBottom: 16,
+    alignItems: "flex-start",
+    gap: appSpacing.sm,
+    marginBottom: appSpacing.md,
   },
   headerCopy: {
     flex: 1,
   },
-  closeButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: appColors.surfaceGhost,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-  },
   eyebrow: {
-    ...appTypography.label,
-    color: appColors.textSecondary,
-    marginBottom: 8,
+    marginBottom: appSpacing.xs,
   },
   title: {
-    ...appTypography.displayCard,
-    color: appColors.textPrimary,
-    marginBottom: 8,
+    marginBottom: appSpacing.xs,
   },
   subtitle: {
-    ...appTypography.bodySmall,
-    color: appColors.textSecondary,
   },
   heroCard: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 18,
-    marginBottom: 16,
+    marginBottom: appSpacing.md,
   },
   toggleRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 18,
-  },
-  togglePill: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 999,
-    backgroundColor: appColors.surfaceField,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    paddingVertical: 12,
-  },
-  togglePillActive: {
-    backgroundColor: appColors.brand700,
-    borderColor: appColors.brand700,
-  },
-  toggleText: {
-    ...appTypography.bodySmall,
-    color: appColors.brand300,
-    fontWeight: "800",
-  },
-  toggleTextActive: {
-    color: appColors.textPrimary,
+    marginBottom: appSpacing.md,
   },
   heroHeadline: {
-    ...appTypography.title,
-    color: appColors.textPrimary,
-    marginBottom: 4,
+    marginBottom: appSpacing.xxs,
   },
   heroRangeLabel: {
-    ...appTypography.bodySmall,
-    color: appColors.textSecondary,
-    marginBottom: 16,
+    marginBottom: appSpacing.md,
   },
   summaryGrid: {
     flexDirection: "row",
-    gap: 12,
+    gap: appSpacing.sm,
   },
   summaryTile: {
     flex: 1,
-    backgroundColor: appColors.surfaceCardAlt,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 14,
+    backgroundColor: appSurfaces.soft,
   },
   summaryTileLabel: {
-    ...appTypography.label,
-    color: appColors.textMuted,
-    marginBottom: 6,
+    marginBottom: appSpacing.xxs,
   },
   summaryTileValue: {
-    ...appTypography.displayCard,
-    color: appColors.textPrimary,
+    textAlign: "left",
   },
   referenceNote: {
-    marginTop: 14,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceCardAlt,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    marginTop: appSpacing.sm,
   },
   referenceNoteText: {
-    ...appTypography.bodySmall,
-    color: appColors.textSecondary,
   },
   infoCard: {
-    backgroundColor: appColors.surfaceCardAlt,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 16,
-    marginBottom: 16,
+    marginBottom: appSpacing.md,
   },
   infoTitle: {
-    ...appTypography.bodyStrong,
-    color: appColors.textPrimary,
-    marginBottom: 6,
+    marginBottom: appSpacing.xxs,
   },
   infoText: {
-    ...appTypography.bodySmall,
-    color: appColors.textSecondary,
   },
   sectionCard: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 18,
-    marginBottom: 16,
+    marginBottom: appSpacing.md,
   },
   sectionTitle: {
-    ...appTypography.title,
-    color: appColors.textPrimary,
-    marginBottom: 6,
+    marginBottom: appSpacing.xxs,
   },
   sectionSubtitle: {
-    ...appTypography.bodySmall,
-    color: appColors.textSecondary,
-    marginBottom: 14,
+    marginBottom: appSpacing.sm,
   },
   sectionStack: {
-    gap: 12,
+    gap: appSpacing.sm,
   },
   nutrientRow: {
-    gap: 6,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceCardAlt,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    gap: appSpacing.xxs,
+    backgroundColor: appSurfaces.soft,
   },
   nutrientMetaRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 8,
+    gap: appSpacing.xs,
   },
   nutrientMetaText: {
-    ...appTypography.bodySmall,
-    color: appColors.textSecondary,
+    textAlign: "left",
   },
   loadingWrap: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 24,
+    paddingVertical: appSpacing.md,
   },
-  errorText: {
-    ...appTypography.bodySmall,
-    color: appColors.dangerText,
-  },
-  cardPressed: {
-    opacity: 0.88,
+  stateWrap: {
+    marginTop: appSpacing.xs,
   },
 });
 
 export default MicrosOverviewScreen;
-

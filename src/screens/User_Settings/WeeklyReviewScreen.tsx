@@ -1,12 +1,9 @@
 import React from "react";
 import {
-  ActivityIndicator,
   Alert,
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import { CalendarCheckIcon, LightningIcon, TrendUpIcon } from "phosphor-react-native";
@@ -25,9 +22,9 @@ import type {
   DBWeightEntry,
 } from "../../store/DB_TYPES";
 import { appColors } from "../../theme/colors";
-import { appTypography } from "../../theme/typography";
 import {
   calculateLoggedNutrition,
+  sumLoggedNutrition,
   formatFoodDateKey,
   formatFoodNumber,
   formatFoodShortDate,
@@ -39,11 +36,20 @@ import {
   type WeightUnit,
 } from "../../preferences/displayPreferences";
 import { useDisplayPreferences } from "../../preferences/usePreferences";
-import SettingsStackHeader from "./SettingsStackHeader";
 import {
   applyAdaptiveRecommendationForUser,
   rejectAdaptiveRecommendationForUser,
 } from "./adaptiveCaloriesActions";
+import {
+  AppButton,
+  AppCard,
+  AppText,
+  ErrorState,
+  LoadingState,
+  NumericText,
+  ScreenHeader,
+} from "../../components/ui";
+import { appRadius, appSpacing, appSurfaces } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<MoreParamList, "WeeklyReviewScreen">;
 
@@ -223,10 +229,7 @@ const buildDayReviews = ({
   return weekDates.map((date) => {
     const dateKey = formatFoodDateKey(date);
     const dateEntries = entriesByDate.get(dateKey) ?? [];
-    const calories = dateEntries.reduce(
-      (sum, entry) => sum + calculateLoggedNutrition(entry).calories,
-      0,
-    );
+    const calories = sumLoggedNutrition(dateEntries).calories;
 
     return {
       date,
@@ -540,7 +543,7 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
         }
         showsVerticalScrollIndicator={false}
       >
-        <SettingsStackHeader
+        <ScreenHeader
           eyebrow="Check-in"
           onBack={() => navigation.goBack()}
           subtitle="Your weekly check-in: intake vs target, weight movement, completion quality, and the adaptive calorie decision — all in one place."
@@ -548,39 +551,46 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
         />
 
         {!user ? (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>No active user</Text>
-            <Text style={styles.cardText}>
+          <AppCard style={styles.card}>
+            <AppText style={styles.cardTitle} variant="cardTitle">No active user</AppText>
+            <AppText color="secondary" style={styles.cardText} variant="bodySmall">
               Sign in to review your weekly food and weight signals.
-            </Text>
-          </View>
+            </AppText>
+          </AppCard>
         ) : loading ? (
-          <View style={styles.loadingCard}>
-            <ActivityIndicator size="small" color={appColors.brand700} />
-            <Text style={styles.cardText}>Building your weekly review...</Text>
-          </View>
+          <LoadingState
+            message="Building your weekly review..."
+            style={styles.loadingCard}
+            title="Loading check-in"
+          />
         ) : loadError ? (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Could not load review</Text>
-            <Text style={styles.cardText}>{loadError}</Text>
-            <Pressable
-              onPress={() => void loadReview()}
-              style={({ pressed }) => [
-                styles.secondaryButton,
-                pressed && styles.buttonPressed,
-              ]}
-            >
-              <Text style={styles.secondaryButtonText}>Try again</Text>
-            </Pressable>
-          </View>
+          <ErrorState
+            message={loadError}
+            style={styles.card}
+            title="Could not load review"
+            action={
+              <AppButton
+                label="Try again"
+                size="sm"
+                variant="secondary"
+                onPress={() => void loadReview()}
+              />
+            }
+          />
         ) : (
           <>
-            <View style={styles.nextActionCard}>
+            <AppCard style={styles.nextActionCard}>
               <View style={styles.rowBetween}>
                 <View style={styles.copyColumn}>
-                  <Text style={styles.eyebrow}>Next action</Text>
-                  <Text style={styles.nextActionTitle}>{nextActionTitle}</Text>
-                  <Text style={styles.cardText}>{nextActionText}</Text>
+                  <AppText color="secondary" style={styles.eyebrow} variant="eyebrow">
+                    Next action
+                  </AppText>
+                  <AppText style={styles.nextActionTitle} variant="sectionTitleLarge">
+                    {nextActionTitle}
+                  </AppText>
+                  <AppText color="secondary" style={styles.cardText} variant="bodySmall">
+                    {nextActionText}
+                  </AppText>
                 </View>
                 <View style={styles.nextActionIcon}>
                   <LightningIcon
@@ -594,102 +604,83 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
               </View>
 
               <View style={styles.nextActionStats}>
-                <View style={styles.nextActionStat}>
-                  <Text style={styles.metricLabel}>Calories vs target</Text>
-                  <Text style={styles.nextActionStatValue}>
+                <AppCard variant="compact" style={styles.nextActionStat}>
+                  <AppText color="muted" style={styles.metricLabel} variant="label">
+                    Calories vs target
+                  </AppText>
+                  <NumericText style={styles.nextActionStatValue} variant="numberTrendDelta">
                     {calorieDelta != null ? formatSignedCalories(calorieDelta) : "--"}
-                  </Text>
-                </View>
-                <View style={styles.nextActionStat}>
-                  <Text style={styles.metricLabel}>Weight trend</Text>
-                  <Text style={styles.nextActionStatValue}>{weightTrendLabel}</Text>
-                </View>
-                <View style={styles.nextActionStat}>
-                  <Text style={styles.metricLabel}>Completion quality</Text>
-                  <Text style={styles.nextActionStatValue}>
+                  </NumericText>
+                </AppCard>
+                <AppCard variant="compact" style={styles.nextActionStat}>
+                  <AppText color="muted" style={styles.metricLabel} variant="label">
+                    Weight trend
+                  </AppText>
+                  <NumericText style={styles.nextActionStatValue} variant="numberTrendDelta">
+                    {weightTrendLabel}
+                  </NumericText>
+                </AppCard>
+                <AppCard variant="compact" style={styles.nextActionStat}>
+                  <AppText color="muted" style={styles.metricLabel} variant="label">
+                    Completion quality
+                  </AppText>
+                  <NumericText style={styles.nextActionStatValue} variant="numberTrendDelta">
                     {completionQualityLabel}
-                  </Text>
-                </View>
+                  </NumericText>
+                </AppCard>
               </View>
 
               {hasOpenProposal ? (
                 <>
-                  <Pressable
+                  <AppButton
                     onPress={() => void handleApplyRecommendation()}
                     disabled={actionBusy != null}
-                    style={({ pressed }) => [
-                      styles.primaryButton,
-                      actionBusy != null && styles.buttonDisabled,
-                      pressed && actionBusy == null && styles.buttonPressed,
-                    ]}
-                  >
-                    <Text style={styles.primaryButtonText}>
-                      {actionBusy === "accept"
-                        ? "Applying update..."
-                        : "Accept update"}
-                    </Text>
-                  </Pressable>
+                    label={actionBusy === "accept" ? "Applying update..." : "Accept update"}
+                    style={styles.nextActionPrimaryButton}
+                  />
 
                   <View style={styles.nextActionButtonRow}>
-                    <Pressable
+                    <AppButton
                       onPress={handlePostponeRecommendation}
                       disabled={actionBusy != null}
-                      style={({ pressed }) => [
-                        styles.secondaryButton,
-                        styles.nextActionButton,
-                        actionBusy != null && styles.buttonDisabled,
-                        pressed && actionBusy == null && styles.buttonPressed,
-                      ]}
-                    >
-                      <Text style={styles.secondaryButtonText}>Postpone</Text>
-                    </Pressable>
-                    <Pressable
+                      label="Postpone"
+                      variant="secondary"
+                      style={styles.nextActionButton}
+                    />
+                    <AppButton
                       onPress={() => void handleDismissRecommendation()}
                       disabled={actionBusy != null}
-                      style={({ pressed }) => [
-                        styles.secondaryButton,
-                        styles.nextActionButton,
-                        styles.dismissButton,
-                        actionBusy != null && styles.buttonDisabled,
-                        pressed && actionBusy == null && styles.buttonPressed,
-                      ]}
-                    >
-                      <Text
-                        style={[styles.secondaryButtonText, styles.dismissButtonText]}
-                      >
-                        {actionBusy === "dismiss"
-                          ? "Dismissing..."
-                          : "Dismiss"}
-                      </Text>
-                    </Pressable>
+                      label={actionBusy === "dismiss" ? "Dismissing..." : "Dismiss"}
+                      variant="danger"
+                      style={styles.nextActionButton}
+                    />
                   </View>
                 </>
               ) : (
-                <Pressable
+                <AppButton
                   onPress={openAdaptiveSettings}
-                  style={({ pressed }) => [
-                    styles.secondaryButton,
-                    pressed && styles.buttonPressed,
-                  ]}
-                >
-                  <Text style={styles.secondaryButtonText}>
-                    Open adaptive calories
-                  </Text>
-                </Pressable>
+                  label="Open adaptive calories"
+                  variant="secondary"
+                  style={styles.nextActionPrimaryButton}
+                />
               )}
 
               {nextActionNote ? (
-                <Text style={styles.nextActionNote}>{nextActionNote}</Text>
+                <AppText color="secondary" style={styles.nextActionNote} variant="bodySmall">
+                  {nextActionNote}
+                </AppText>
               ) : null}
-            </View>
+            </AppCard>
 
-            <View style={styles.heroCard}>
+            <AppCard variant="hero" style={styles.heroCard}>
               <View style={styles.heroTopRow}>
                 <View style={styles.copyColumn}>
-                  <Text style={styles.eyebrow}>This week</Text>
-                  <Text style={styles.heroTitle}>
+                  <AppText color="secondary" style={styles.eyebrow} variant="eyebrow">
+                    This week
+                  </AppText>
+                  <AppText style={styles.heroTitle} variant="sectionTitleLarge">
                     {formatDateRange(review.weekDates)}
-                  </Text>
+                  </AppText>
                 </View>
                 <View style={styles.heroIcon}>
                   <CalendarCheckIcon
@@ -700,7 +691,7 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
                 </View>
               </View>
 
-              <Text style={styles.heroSummary}>
+              <NumericText style={styles.heroSummary} variant="numberCalorieRow">
                 {averageCalories != null
                   ? `${formatFoodNumber(
                       averageCalories,
@@ -713,25 +704,33 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
                 {calorieDelta != null
                   ? ` (${formatSignedCalories(calorieDelta)})`
                   : ""}
-              </Text>
+              </NumericText>
 
               <View style={styles.heroMetrics}>
-                <View style={styles.metricCard}>
-                  <Text style={styles.metricLabel}>Completion quality</Text>
-                  <Text style={styles.metricValue}>
+                <AppCard variant="compact" style={styles.metricCard}>
+                  <AppText color="muted" style={styles.metricLabel} variant="label">
+                    Completion quality
+                  </AppText>
+                  <NumericText style={styles.metricValue} variant="numberMacroSummary">
                     {completedDays}/{review.dayReviews.length || 7}
-                  </Text>
-                </View>
-                <View style={styles.metricCard}>
-                  <Text style={styles.metricLabel}>Logged so far</Text>
-                  <Text style={styles.metricValue}>
+                  </NumericText>
+                </AppCard>
+                <AppCard variant="compact" style={styles.metricCard}>
+                  <AppText color="muted" style={styles.metricLabel} variant="label">
+                    Logged so far
+                  </AppText>
+                  <NumericText style={styles.metricValue} variant="numberMacroSummary">
                     {formatFoodNumber(totalCalories, " kcal")}
-                  </Text>
-                </View>
-                <View style={styles.metricCard}>
-                  <Text style={styles.metricLabel}>Entries</Text>
-                  <Text style={styles.metricValue}>{review.entries.length}</Text>
-                </View>
+                  </NumericText>
+                </AppCard>
+                <AppCard variant="compact" style={styles.metricCard}>
+                  <AppText color="muted" style={styles.metricLabel} variant="label">
+                    Entries
+                  </AppText>
+                  <NumericText style={styles.metricValue} variant="numberMacroSummary">
+                    {review.entries.length}
+                  </NumericText>
+                </AppCard>
               </View>
 
               <View style={styles.progressTrack}>
@@ -742,32 +741,36 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
                   ]}
                 />
               </View>
-            </View>
+            </AppCard>
 
             <View style={styles.metricGrid}>
-              <View style={styles.insightCard}>
-                <Text style={styles.metricLabel}>Calories vs target</Text>
-                <Text style={styles.bigValue}>
+              <AppCard style={styles.insightCard}>
+                <AppText color="muted" style={styles.metricLabel} variant="label">
+                  Calories vs target
+                </AppText>
+                <NumericText style={styles.bigValue} variant="numberCalorieHero">
                   {calorieDelta != null ? formatSignedCalories(calorieDelta) : "--"}
-                </Text>
-                <Text style={styles.cardText}>
+                </NumericText>
+                <AppText color="secondary" style={styles.cardText} variant="bodySmall">
                   Average difference across elapsed days this week.
-                </Text>
-              </View>
+                </AppText>
+              </AppCard>
 
-              <View style={styles.insightCard}>
-                <Text style={styles.metricLabel}>Weight trend</Text>
+              <AppCard style={styles.insightCard}>
+                <AppText color="muted" style={styles.metricLabel} variant="label">
+                  Weight trend
+                </AppText>
                 <View style={styles.iconValueRow}>
                   <TrendUpIcon size={18} color={appColors.brand300} weight="bold" />
-                  <Text style={styles.bigValue}>
+                  <NumericText style={styles.bigValue} variant="numberWeightEntry">
                     {weightTrend.delta != null
                       ? formatSignedWeightDelta(weightTrend.delta, weightUnit)
                       : weightTrend.last
                         ? formatWeight(weightTrend.last.valueKg, weightUnit)
                         : "--"}
-                  </Text>
+                  </NumericText>
                 </View>
-                <Text style={styles.cardText}>
+                <AppText color="secondary" style={styles.cardText} variant="bodySmall">
                   {weightTrend.delta != null
                     ? `From ${formatWeight(
                         weightTrend.first?.valueKg ?? 0,
@@ -776,15 +779,21 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
                     : weightTrend.last
                       ? "Only one weigh-in this week, so no delta yet."
                       : "No weigh-ins logged this week."}
-                </Text>
-              </View>
+                </AppText>
+              </AppCard>
 
-              <View style={styles.insightCardFull}>
+              <AppCard style={styles.insightCardFull}>
                 <View style={styles.rowBetween}>
                   <View style={styles.copyColumn}>
-                    <Text style={styles.metricLabel}>Adaptive recommendation</Text>
-                    <Text style={styles.bigValue}>{adaptiveStatus}</Text>
-                    <Text style={styles.cardText}>{adaptiveDetail}</Text>
+                    <AppText color="muted" style={styles.metricLabel} variant="label">
+                      Adaptive recommendation
+                    </AppText>
+                    <AppText style={styles.bigValue} variant="sectionTitleLarge">
+                      {adaptiveStatus}
+                    </AppText>
+                    <AppText color="secondary" style={styles.cardText} variant="bodySmall">
+                      {adaptiveDetail}
+                    </AppText>
                   </View>
                   <LightningIcon
                     size={24}
@@ -796,25 +805,20 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
                     weight="fill"
                   />
                 </View>
-                <Pressable
+                <AppButton
                   onPress={() => navigation.navigate("AdaptiveCaloriesSettingsScreen")}
-                  style={({ pressed }) => [
-                    styles.secondaryButton,
-                    pressed && styles.buttonPressed,
-                  ]}
-                >
-                  <Text style={styles.secondaryButtonText}>
-                    Open adaptive calories
-                  </Text>
-                </Pressable>
-              </View>
+                  label="Open adaptive calories"
+                  variant="secondary"
+                  style={styles.cardButton}
+                />
+              </AppCard>
             </View>
 
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Diary days</Text>
-              <Text style={styles.cardText}>
+            <AppCard style={styles.card}>
+              <AppText style={styles.cardTitle} variant="cardTitle">Diary days</AppText>
+              <AppText color="secondary" style={styles.cardText} variant="bodySmall">
                 Completion comes from days you explicitly marked complete in the Food Diary.
-              </Text>
+              </AppText>
               <View style={styles.dayStack}>
                 {review.dayReviews.map((day) => {
                   const ratio =
@@ -823,40 +827,41 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
                       : 0;
 
                   return (
-                    <View key={day.dateKey} style={styles.dayRow}>
+                    <AppCard key={day.dateKey} variant="compact" style={styles.dayRow}>
                       <View style={styles.dayDate}>
-                        <Text style={styles.dayName}>
+                        <AppText color="coral" style={styles.dayName} variant="label">
                           {day.date.toLocaleDateString(undefined, {
                             weekday: "short",
                           })}
-                        </Text>
-                        <Text style={styles.dayNumber}>
+                        </AppText>
+                        <AppText color="secondary" style={styles.dayNumber} variant="label">
                           {day.date.toLocaleDateString(undefined, {
                             month: "short",
                             day: "numeric",
                           })}
-                        </Text>
+                        </AppText>
                       </View>
                       <View style={styles.dayBody}>
                         <View style={styles.rowBetween}>
-                          <Text style={styles.dayCalories}>
+                          <NumericText style={styles.dayCalories} variant="numberCalorieRow">
                             {formatFoodNumber(day.calories, " kcal")}
-                          </Text>
-                          <Text
+                          </NumericText>
+                          <AppText
                             style={[
                               styles.completionPill,
                               day.isComplete && styles.completionPillDone,
                             ]}
+                            variant="micro"
                           >
                             {day.isComplete ? "Complete" : "Open"}
-                          </Text>
+                          </AppText>
                         </View>
-                        <Text style={styles.dayMeta}>
+                        <NumericText color="secondary" style={styles.dayMeta} variant="numberMacroRow">
                           {day.target != null
                             ? `${formatFoodNumber(day.target, " kcal")} target`
                             : "No target set"}{" "}
                           | {day.entryCount} entries
-                        </Text>
+                        </NumericText>
                         <View style={styles.smallProgressTrack}>
                           <View
                             style={[
@@ -866,42 +871,46 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
                           />
                         </View>
                       </View>
-                    </View>
+                    </AppCard>
                   );
                 })}
               </View>
-            </View>
+            </AppCard>
 
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Most repeated foods</Text>
-              <Text style={styles.cardText}>
+            <AppCard style={styles.card}>
+              <AppText style={styles.cardTitle} variant="cardTitle">
+                Most repeated foods
+              </AppText>
+              <AppText color="secondary" style={styles.cardText} variant="bodySmall">
                 Foods are ranked by how many times they appeared in this week's diary.
-              </Text>
+              </AppText>
 
               {review.repeatedFoods.length === 0 ? (
-                <Text style={styles.emptyText}>
+                <AppText color="secondary" style={styles.emptyText} variant="bodySmall">
                   No foods logged this week yet.
-                </Text>
+                </AppText>
               ) : (
                 <View style={styles.foodStack}>
                   {review.repeatedFoods.map((food, index) => (
-                    <View key={food.key} style={styles.foodRow}>
+                    <AppCard key={food.key} variant="compact" style={styles.foodRow}>
                       <View style={styles.rankPill}>
-                        <Text style={styles.rankText}>{index + 1}</Text>
+                        <NumericText color={appColors.actionPrimaryPressed} style={styles.rankText} variant="numberChartAxis">
+                          {index + 1}
+                        </NumericText>
                       </View>
                       <View style={styles.foodCopy}>
-                        <Text style={styles.foodName} numberOfLines={1}>
+                        <AppText style={styles.foodName} numberOfLines={1} variant="bodySmallStrong">
                           {food.name}
-                        </Text>
-                        <Text style={styles.foodMeta}>
+                        </AppText>
+                        <NumericText color="secondary" style={styles.foodMeta} variant="numberMacroRow">
                           {food.count}x | {formatFoodNumber(food.calories, " kcal")} total
-                        </Text>
+                        </NumericText>
                       </View>
-                    </View>
+                    </AppCard>
                   ))}
                 </View>
               )}
-            </View>
+            </AppCard>
           </>
         )}
       </ScrollView>
@@ -915,197 +924,121 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
-    paddingHorizontal: 20,
-  },
-  orbTop: {
-    position: "absolute",
-    top: -82,
-    right: -58,
-    width: 220,
-    height: 220,
-    borderRadius: 999,
-    backgroundColor: appColors.brand800,
-  },
-  orbBottom: {
-    position: "absolute",
-    left: -82,
-    bottom: -96,
-    width: 250,
-    height: 250,
-    borderRadius: 999,
-    backgroundColor: appColors.success700,
+    paddingHorizontal: appSpacing.gutter,
   },
   heroCard: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    marginBottom: 14,
+    marginBottom: appSpacing.sm,
   },
   heroTopRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: 14,
+    gap: appSpacing.sm,
   },
   heroIcon: {
     width: 46,
     height: 46,
-    borderRadius: 999,
+    borderRadius: appRadius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.brand800,
+    backgroundColor: appSurfaces.ghost,
   },
   nextActionCard: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    padding: 20,
-    borderWidth: 1,
     borderColor: appColors.brand500,
-    marginBottom: 14,
+    marginBottom: appSpacing.sm,
   },
   nextActionTitle: {
-    ...appTypography.displayCard,
-    color: appColors.textPrimary,
   },
   nextActionIcon: {
     width: 46,
     height: 46,
-    borderRadius: 999,
+    borderRadius: appRadius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.brand800,
+    backgroundColor: appSurfaces.ghost,
   },
   nextActionStats: {
     flexDirection: "row",
-    gap: 10,
-    marginTop: 18,
+    gap: appSpacing.xs,
+    marginTop: appSpacing.md,
   },
   nextActionStat: {
     flex: 1,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceField,
-    padding: 12,
+    backgroundColor: appSurfaces.soft,
   },
   nextActionStatValue: {
-    color: appColors.textPrimary,
-    fontSize: 14,
-    lineHeight: 19,
-    fontWeight: "700",
+    textAlign: "left",
   },
   nextActionButtonRow: {
     flexDirection: "row",
-    gap: 10,
-    marginTop: 10,
+    gap: appSpacing.xs,
+    marginTop: appSpacing.xs,
+  },
+  nextActionPrimaryButton: {
+    marginTop: appSpacing.md,
   },
   nextActionButton: {
     flex: 1,
-    marginTop: 0,
   },
   nextActionNote: {
-    ...appTypography.bodySmall,
-    color: appColors.textSecondary,
-    marginTop: 12,
+    marginTop: appSpacing.sm,
   },
   eyebrow: {
     alignSelf: "flex-start",
-    ...appTypography.label,
-    color: appColors.textSecondary,
-    backgroundColor: appColors.surfaceGhost,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 9999,
-    marginBottom: 12,
+    backgroundColor: appSurfaces.ghost,
+    paddingHorizontal: appSpacing.sm,
+    paddingVertical: 6,
+    borderRadius: appRadius.pill,
+    marginBottom: appSpacing.sm,
   },
   heroTitle: {
-    ...appTypography.displayCard,
-    color: appColors.textPrimary,
   },
   heroSummary: {
-    ...appTypography.bodyStrong,
-    color: appColors.textPrimary,
-    marginTop: 18,
+    textAlign: "left",
+    marginTop: appSpacing.md,
   },
   heroMetrics: {
     flexDirection: "row",
-    gap: 10,
-    marginTop: 18,
+    gap: appSpacing.xs,
+    marginTop: appSpacing.md,
   },
   metricCard: {
     flex: 1,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceField,
-    padding: 12,
+    backgroundColor: appSurfaces.soft,
   },
   metricGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
-    marginBottom: 14,
+    gap: appSpacing.sm,
+    marginBottom: appSpacing.sm,
   },
   metricLabel: {
-    ...appTypography.label,
-    color: appColors.textMuted,
-    marginBottom: 8,
+    marginBottom: appSpacing.xs,
   },
   metricValue: {
-    color: appColors.textPrimary,
-    fontSize: 18,
-    fontWeight: "600",
+    textAlign: "left",
   },
   bigValue: {
-    color: appColors.textPrimary,
-    fontSize: 24,
-    lineHeight: 30,
-    fontWeight: "600",
-    letterSpacing: -0.24,
+    textAlign: "left",
   },
   insightCard: {
     flexGrow: 1,
     flexBasis: "47%",
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
   },
   insightCardFull: {
     width: "100%",
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
   },
   card: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    marginBottom: 14,
+    marginBottom: appSpacing.sm,
   },
   loadingCard: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    marginBottom: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
+    marginBottom: appSpacing.sm,
   },
   cardTitle: {
-    ...appTypography.title,
-    color: appColors.textPrimary,
-    marginBottom: 6,
+    marginBottom: appSpacing.xxs,
   },
   cardText: {
-    ...appTypography.bodySmall,
-    color: appColors.textSecondary,
-    marginTop: 6,
+    marginTop: appSpacing.xxs,
   },
   copyColumn: {
     flex: 1,
@@ -1114,71 +1047,59 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
+    gap: appSpacing.sm,
   },
   iconValueRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: appSpacing.xs,
   },
   progressTrack: {
     height: 8,
-    borderRadius: 999,
+    borderRadius: appRadius.pill,
     backgroundColor: appColors.surfaceGhost,
     overflow: "hidden",
-    marginTop: 18,
+    marginTop: appSpacing.md,
   },
   progressFill: {
     height: "100%",
-    borderRadius: 999,
+    borderRadius: appRadius.pill,
     backgroundColor: appColors.success600,
   },
   dayStack: {
-    gap: 12,
-    marginTop: 14,
+    gap: appSpacing.sm,
+    marginTop: appSpacing.sm,
   },
   dayRow: {
     flexDirection: "row",
-    gap: 12,
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceField
+    gap: appSpacing.sm,
+    backgroundColor: appSurfaces.soft,
   },
   dayDate: {
     width: 58,
   },
   dayName: {
-    ...appTypography.label,
-    color: appColors.brand300,
   },
   dayNumber: {
-    color: appColors.textSecondary,
-    fontSize: 12,
-    marginTop: 2,
+    marginTop: appSpacing.xxs,
   },
   dayBody: {
     flex: 1,
   },
   dayCalories: {
-    color: appColors.textPrimary,
-    fontSize: 16,
-    fontWeight: "600",
+    textAlign: "left",
   },
   dayMeta: {
-    color: appColors.textSecondary,
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 4,
+    textAlign: "left",
+    marginTop: appSpacing.xxs,
   },
   completionPill: {
     overflow: "hidden",
-    borderRadius: 999,
-    paddingHorizontal: 10,
+    borderRadius: appRadius.pill,
+    paddingHorizontal: appSpacing.xs,
     paddingVertical: 4,
     color: appColors.textMuted,
     backgroundColor: appColors.surfaceGhost,
-    fontSize: 11,
-    fontWeight: "800",
   },
   completionPillDone: {
     color: appColors.white,
@@ -1186,102 +1107,51 @@ const styles = StyleSheet.create({
   },
   smallProgressTrack: {
     height: 5,
-    borderRadius: 999,
+    borderRadius: appRadius.pill,
     backgroundColor: appColors.surfaceGhost,
     overflow: "hidden",
-    marginTop: 10,
+    marginTop: appSpacing.xs,
   },
   smallProgressFill: {
     height: "100%",
-    borderRadius: 999,
+    borderRadius: appRadius.pill,
     backgroundColor: appColors.brand500,
   },
   foodStack: {
-    gap: 10,
-    marginTop: 14,
+    gap: appSpacing.xs,
+    marginTop: appSpacing.sm,
   },
   foodRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceField
+    gap: appSpacing.sm,
+    backgroundColor: appSurfaces.soft,
   },
   rankPill: {
     width: 30,
     height: 30,
-    borderRadius: 999,
+    borderRadius: appRadius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.brand800,
+    backgroundColor: appColors.actionPrimarySoft,
   },
   rankText: {
-    color: appColors.brand300,
-    fontSize: 12,
-    fontWeight: "800",
+    textAlign: "center",
   },
   foodCopy: {
     flex: 1,
   },
   foodName: {
-    color: appColors.textPrimary,
-    fontSize: 14,
-    fontWeight: "700",
   },
   foodMeta: {
-    color: appColors.textSecondary,
-    fontSize: 12,
-    marginTop: 3,
+    textAlign: "left",
+    marginTop: appSpacing.xxs,
   },
   emptyText: {
-    color: appColors.textSecondary,
-    fontSize: 13,
-    lineHeight: 20,
-    marginTop: 14,
+    marginTop: appSpacing.sm,
   },
-  secondaryButton: {
-    marginTop: 16,
-    borderRadius: 999,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    backgroundColor: appColors.surfaceGhost,
-  },
-  primaryButton: {
-    marginTop: 16,
-    borderRadius: 999,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: appColors.brand700,
-  },
-  primaryButtonText: {
-    color: appColors.white,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  secondaryButtonText: {
-    color: appColors.textPrimary,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  dismissButton: {
-    backgroundColor: appColors.dangerSurface,
-    borderColor: appColors.danger600,
-  },
-  dismissButtonText: {
-    color: appColors.danger700,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonPressed: {
-    opacity: 0.9,
+  cardButton: {
+    marginTop: appSpacing.md,
   },
 });
 

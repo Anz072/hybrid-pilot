@@ -132,6 +132,9 @@ const CreateCustomFoodScreen = () => {
   const [formError, setFormError] = React.useState<string | null>(null);
   const bypassUnsavedGuardRef = React.useRef(false);
   const initialDraftSignatureRef = React.useRef<string | null>(null);
+  // Synchronous lock: state-based disabling applies only after a re-render, so
+  // a fast double-tap could otherwise save twice.
+  const savingRef = React.useRef(false);
   const saving = saveMode != null;
 
   const user = useAppSelector((state) => state.user.currentUser);
@@ -432,6 +435,10 @@ const CreateCustomFoodScreen = () => {
 
   const handleSave = React.useCallback(
     async (mode: CustomMealSaveMode = "save") => {
+      if (savingRef.current) {
+        return;
+      }
+
       if (!user) {
         Alert.alert(
           "No account found",
@@ -467,6 +474,8 @@ const CreateCustomFoodScreen = () => {
         );
         return;
       }
+
+      savingRef.current = true;
 
       try {
         setSaveMode(mode);
@@ -515,6 +524,7 @@ const CreateCustomFoodScreen = () => {
           error instanceof Error ? error.message : "Please try again.",
         );
       } finally {
+        savingRef.current = false;
         setSaveMode(null);
       }
     },
@@ -895,26 +905,6 @@ const styles = StyleSheet.create({
     ...sharedStyleValues.content,
     paddingBottom: 36,
   },
-  bgOrbTop: {
-    position: "absolute",
-    top: -90,
-    right: -70,
-    width: 250,
-    height: 250,
-    borderRadius: 999,
-    backgroundColor: appColors.brand800,
-    opacity: 0.38,
-  },
-  bgOrbBottom: {
-    position: "absolute",
-    bottom: -120,
-    left: -90,
-    width: 280,
-    height: 280,
-    borderRadius: 999,
-    backgroundColor: appColors.success700,
-    opacity: 0.34,
-  },
   heroCard: sharedStyleValues.card,
   heroHeaderCopy: {
     marginBottom: 10,
@@ -934,7 +924,7 @@ const styles = StyleSheet.create({
   previewValue: {
     color: appColors.white,
     fontSize: 20,
-    fontWeight: "900",
+    fontWeight: "600",
     marginBottom: 2,
   },
   previewText: {
@@ -996,7 +986,7 @@ const styles = StyleSheet.create({
   inlineQuietButtonText: {
     color: appColors.brand500,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   optionalPanel: {
     borderRadius: 8,
@@ -1029,7 +1019,7 @@ const styles = StyleSheet.create({
   presetChipText: {
     color: appColors.brand500,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   unitPill: {
     ...sharedStyleValues.unitPillRound,

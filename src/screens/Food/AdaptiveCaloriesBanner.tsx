@@ -109,14 +109,14 @@ const styles = StyleSheet.create({
   eyebrow: {
     color: appColors.brand700,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "600",
     letterSpacing: 0.4,
     marginBottom: 4,
   },
   title: {
     color: appColors.textPrimary,
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "600",
   },
   confidencePill: {
     alignSelf: "flex-start",
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   confidenceText: {
     color: appColors.slate900,
     fontSize: 11,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   body: {
     color: appColors.textSecondary,
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   reviewDate: {
     color: appColors.brand700,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "600",
     marginBottom: 14,
   },
   actionRow: {
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
   reviewButtonText: {
     color: appColors.white,
     fontSize: 13,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   dismissButton: {
     width: 42,

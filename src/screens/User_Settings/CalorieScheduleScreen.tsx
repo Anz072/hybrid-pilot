@@ -1,10 +1,8 @@
 import React from "react";
 import {
   Alert,
-  Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import { MinusIcon, PlusIcon } from "phosphor-react-native";
@@ -21,6 +19,8 @@ import {
 import { DB } from "../../store/DB";
 import { useAppSelector } from "../../store/hooks";
 import { appColors } from "../../theme/colors";
+import { AppButton, AppCard, AppText, ErrorState, IconButton, LoadingState, NumericText } from "../../components/ui";
+import { appBorders, appRadius, appSpacing, appSurfaces } from "../../theme/tokens";
 import CalorieBudgetChart from "./CalorieBudgetChart";
 import SettingsStackHeader from "./SettingsStackHeader";
 import { supersedeOpenAdaptiveRecommendationForUser } from "./adaptiveCaloriesActions";
@@ -55,17 +55,25 @@ const CalorieScheduleScreen = ({ navigation }: Props) => {
     EMPTY_OVERRIDES,
   );
   const [saving, setSaving] = React.useState(false);
+  const [contextLoading, setContextLoading] = React.useState(true);
+  const [contextError, setContextError] = React.useState<string | null>(null);
 
   const loadSettings = React.useCallback(async () => {
     if (!user) {
+      setContextLoading(false);
       return;
     }
+
+    setContextLoading(true);
+    setContextError(null);
 
     try {
       const settings = await DB.getUserSettings(user.externalId);
       setOverrides(coerceOverrides(settings?.dailyCalorieOverrides));
     } catch {
-      setOverrides(EMPTY_OVERRIDES);
+      setContextError("Could not load the calorie schedule. Check your connection and try again.");
+    } finally {
+      setContextLoading(false);
     }
   }, [user]);
 
@@ -150,49 +158,63 @@ const CalorieScheduleScreen = ({ navigation }: Props) => {
         />
 
         {!user ? (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>No active user</Text>
-            <Text style={styles.cardText}>
+          <AppCard style={styles.card}>
+            <AppText variant="cardTitle">No active user</AppText>
+            <AppText color="secondary" variant="bodySmall">
               Sign in to your account first before editing the calorie schedule.
-            </Text>
-          </View>
+            </AppText>
+          </AppCard>
         ) : (
           <>
-            <View style={{marginBottom: 8}}>
-              <Text style={styles.cardTitle}>Base daily target</Text>
-              <Text style={styles.baseValue}>
+            <View style={styles.baseBlock}>
+              <AppText variant="cardTitle">Base daily target</AppText>
+              <NumericText color="coral" style={styles.baseValue} variant="numberCalorieHero">
                 {baseCalories != null ? `${baseCalories} kcal` : "--"}
-              </Text>
+              </NumericText>
             </View>
 
-            <CalorieBudgetChart
-              highlightDate={new Date()}
-              subtitle={
-                weeklyBudget != null
-                  ? `Weekly budget: ${Math.round(weeklyBudget)} kcal`
-                  : "Weekly budget preview"
-              }
-              title="Weekly budget"
-              values={weeklyValues}
-            />
+            {contextError ? (
+              <ErrorState
+                title="Could not load schedule"
+                message={contextError}
+                action={
+                  <AppButton label="Try again" onPress={() => void loadSettings()} size="sm" />
+                }
+                style={styles.card}
+              />
+            ) : contextLoading ? (
+              <LoadingState
+                title="Loading settings"
+                message="Fetching your daily calorie overrides."
+                style={styles.card}
+              />
+            ) : (
+              <>
+                <CalorieBudgetChart
+                  highlightDate={new Date()}
+                  subtitle={
+                    weeklyBudget != null
+                      ? `Weekly budget: ${Math.round(weeklyBudget)} kcal`
+                      : "Weekly budget preview"
+                  }
+                  title="Weekly budget"
+                  values={weeklyValues}
+                />
 
-            <View style={styles.card}>
+                <AppCard style={styles.card}>
               <View style={styles.headerRow}>
                 <View>
-                  <Text style={styles.cardTitle}>Overrides</Text>
-                  <Text style={styles.cardText}>
+                  <AppText variant="cardTitle">Overrides</AppText>
+                  <AppText color="secondary" variant="bodySmall">
                     Raise or lower a specific day by 50 kcal
-                  </Text>
+                  </AppText>
                 </View>
-                <Pressable
+                <AppButton
                   onPress={() => setOverrides(EMPTY_OVERRIDES)}
-                  style={({ pressed }) => [
-                    styles.clearButton,
-                    pressed && styles.buttonPressed,
-                  ]}
-                >
-                  <Text style={styles.clearButtonText}>Clear all</Text>
-                </Pressable>
+                  label="Clear all"
+                  size="sm"
+                  variant="ghost"
+                />
               </View>
 
               <View style={styles.dayStack}>
@@ -201,80 +223,68 @@ const CalorieScheduleScreen = ({ navigation }: Props) => {
                   const effectiveCalories = override ?? baseCalories ?? null;
 
                   return (
-                    <View key={dayName} style={styles.dayCard}>
+                    <AppCard key={dayName} style={styles.dayCard} variant="soft">
                       <View style={styles.dayCopy}>
-                        <Text style={styles.dayTitle}>{dayName}</Text>
-                        <Text style={styles.daySubtitle}>
+                        <AppText variant="bodySmallStrong">{dayName}</AppText>
+                        <AppText color="secondary" variant="metadata">
                           {override != null ? "Override" : "Using base target"}
-                        </Text>
+                        </AppText>
                       </View>
 
                       <View style={styles.dayControls}>
-                        <Pressable
+                        <IconButton
+                          accessibilityLabel={`Decrease ${dayName} calories`}
                           onPress={() => adjustOverride(index, -CALORIE_TARGET_STEP)}
-                          style={({ pressed }) => [
-                            styles.adjustButton,
-                            pressed && styles.buttonPressed,
-                          ]}
                         >
                           <MinusIcon
                             size={16}
                             color={appColors.brand700}
                             weight="bold"
                           />
-                        </Pressable>
+                        </IconButton>
 
                         <View style={styles.dayValueWrap}>
-                          <Text style={styles.dayValue}>
+                          <NumericText align="center" variant="numberCalorieHero">
                             {effectiveCalories != null
                               ? `${effectiveCalories}`
                               : "--"}
-                          </Text>
-                          <Text style={styles.dayUnit}>kcal</Text>
+                          </NumericText>
+                          <AppText align="center" color="secondary" variant="eyebrow">kcal</AppText>
                         </View>
 
-                        <Pressable
+                        <IconButton
+                          accessibilityLabel={`Increase ${dayName} calories`}
                           onPress={() => adjustOverride(index, CALORIE_TARGET_STEP)}
-                          style={({ pressed }) => [
-                            styles.adjustButton,
-                            pressed && styles.buttonPressed,
-                          ]}
                         >
                           <PlusIcon
                             size={16}
                             color={appColors.brand700}
                             weight="bold"
                           />
-                        </Pressable>
+                        </IconButton>
                       </View>
 
-                      <Pressable
+                      <AppButton
                         onPress={() => setOverrideAtIndex(index, null)}
-                        style={({ pressed }) => [
-                          styles.resetDayButton,
-                          pressed && styles.buttonPressed,
-                        ]}
-                      >
-                        <Text style={styles.resetDayButtonText}>Reset day</Text>
-                      </Pressable>
-                    </View>
+                        label="Reset day"
+                        size="sm"
+                        style={styles.resetDayButton}
+                        variant="secondary"
+                      />
+                    </AppCard>
                   );
                 })}
               </View>
 
-              <Pressable
+              <AppButton
                 onPress={() => void handleSave()}
                 disabled={saving}
-                style={({ pressed }) => [
-                  styles.primaryButton,
-                  pressed && !saving && styles.buttonPressed,
-                ]}
-              >
-                <Text style={styles.primaryButtonText}>
-                  {saving ? "Saving..." : "Save daily schedule"}
-                </Text>
-              </Pressable>
-            </View>
+                label={saving ? "Saving..." : "Save daily schedule"}
+                style={styles.saveButton}
+              />
+                </AppCard>
+              </>
+            )}
           </>
         )}
       </ScrollView>
@@ -288,162 +298,59 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
-    paddingHorizontal: 20,
-  },
-  orbTop: {
-    position: "absolute",
-    top: -82,
-    right: -54,
-    width: 190,
-    height: 190,
-    borderRadius: 999,
-    backgroundColor: appColors.brand800,
-  },
-  orbBottom: {
-    position: "absolute",
-    left: -74,
-    bottom: -88,
-    width: 220,
-    height: 220,
-    borderRadius: 999,
-    backgroundColor: appColors.success700,
+    paddingHorizontal: appSpacing.gutter,
   },
   card: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    padding: 18,
-    marginTop: 14,
+    marginTop: appSpacing.md,
   },
-  cardTitle: {
-    color: appColors.slate800,
-    fontSize: 17,
-    fontWeight: "800",
-    marginBottom: 6,
-  },
-  cardText: {
-    color: appColors.slate600,
-    fontSize: 13,
-    lineHeight: 19,
+  baseBlock: {
+    marginBottom: appSpacing.xs,
   },
   baseValue: {
-    color: appColors.brand700,
-    fontSize: 30,
-    lineHeight: 34,
-    fontWeight: "800",
-    marginBottom: 8,
+    marginTop: appSpacing.xs,
+    marginBottom: appSpacing.xs,
   },
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    gap: 12,
-    marginBottom: 16,
-  },
-  clearButton: {
-    borderRadius: 999,
-    backgroundColor: appColors.brand800,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-  },
-  clearButtonText: {
-    color: appColors.brand700,
-    fontSize: 12,
-    fontWeight: "800",
+    gap: appSpacing.sm,
+    marginBottom: appSpacing.md,
   },
   dayStack: {
-    gap: 10,
+    gap: appSpacing.xs,
   },
   dayCard: {
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceField,
-    padding: 14,
-    gap: 12,
+    gap: appSpacing.sm,
   },
   dayCopy: {
     flexDirection: "row",
     justifyContent: "space-between",
-    gap: 12,
-  },
-  dayTitle: {
-    color: appColors.slate800,
-    fontSize: 15,
-    fontWeight: "800",
-  },
-  daySubtitle: {
-    color: appColors.slate600,
-    fontSize: 12,
-    fontWeight: "700",
+    gap: appSpacing.sm,
   },
   dayControls: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
-  },
-  adjustButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: appColors.white,
-    borderWidth: 1,
-    borderColor: appColors.slate200,
+    gap: appSpacing.sm,
   },
   dayValueWrap: {
     flex: 1,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceRaised,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    borderRadius: appRadius.md,
+    backgroundColor: appSurfaces.card,
+    borderWidth: appBorders.width,
+    borderColor: appBorders.soft,
+    paddingVertical: appSpacing.xs,
+    paddingHorizontal: appSpacing.sm,
     alignItems: "center",
     justifyContent: "center",
-  },
-  dayValue: {
-    color: appColors.slate800,
-    fontSize: 22,
-    lineHeight: 26,
-    fontWeight: "800",
-  },
-  dayUnit: {
-    color: appColors.slate600,
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.7,
   },
   resetDayButton: {
     alignSelf: "flex-start",
-    borderRadius: 999,
-    backgroundColor: appColors.white,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderWidth: 1,
-    borderColor: appColors.slate200,
   },
-  resetDayButtonText: {
-    color: appColors.slate700,
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  primaryButton: {
-    marginTop: 16,
-    borderRadius: 999,
-    backgroundColor: appColors.brand700,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  primaryButtonText: {
-    color: appColors.white,
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  buttonPressed: {
-    opacity: 0.92,
+  saveButton: {
+    marginTop: appSpacing.md,
   },
 });
 
 export default CalorieScheduleScreen;
-

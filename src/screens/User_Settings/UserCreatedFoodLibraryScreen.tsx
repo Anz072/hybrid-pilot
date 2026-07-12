@@ -28,6 +28,7 @@ import type { DBFoodItem } from "../../store/DB_TYPES";
 import { useAppSelector } from "../../store/hooks";
 import { appColors } from "../../theme/colors";
 import { appTypography } from "../../theme/typography";
+import { appBorders, appRadius, appSpacing, appStates, appSurfaces } from "../../theme/tokens";
 import {
   buildFoodLoggedAt,
   formatFoodDateKey,
@@ -444,25 +445,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
-    paddingHorizontal: 20,
-  },
-  orbTop: {
-    position: "absolute",
-    top: -78,
-    right: -54,
-    width: 200,
-    height: 200,
-    borderRadius: 999,
-    backgroundColor: appColors.brand800,
-  },
-  orbBottom: {
-    position: "absolute",
-    left: -70,
-    bottom: -92,
-    width: 230,
-    height: 230,
-    borderRadius: 999,
-    backgroundColor: appColors.success700,
+    paddingHorizontal: appSpacing.gutter,
   },
   centerState: {
     flex: 1,
@@ -472,21 +455,21 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     flexDirection: "row",
-    gap: 12,
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 16,
+    gap: appSpacing.sm,
+    backgroundColor: appSurfaces.card,
+    borderRadius: appRadius.md,
+    borderWidth: appBorders.width,
+    borderColor: appBorders.soft,
+    padding: appSpacing.md,
     marginBottom: 14,
   },
   summaryIconWrap: {
     width: 40,
     height: 40,
-    borderRadius: 999,
+    borderRadius: appRadius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.surfaceField
+    backgroundColor: appSurfaces.soft,
   },
   summaryCopy: {
     flex: 1,
@@ -506,11 +489,11 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    backgroundColor: appColors.surfaceGhost,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
+    borderTopLeftRadius: appRadius.md,
+    borderTopRightRadius: appRadius.md,
+    backgroundColor: appSurfaces.ghost,
+    borderWidth: appBorders.width,
+    borderColor: appBorders.soft,
     borderBottomWidth: 0,
   },
   headerCell: {
@@ -521,24 +504,24 @@ const styles = StyleSheet.create({
     color: appColors.textSecondary,
   },
   row: {
-    backgroundColor: appColors.surfaceCard,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderColor: appColors.borderSoft,
+    backgroundColor: appSurfaces.card,
+    borderLeftWidth: appBorders.width,
+    borderRightWidth: appBorders.width,
+    borderColor: appBorders.soft,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
   rowFirst: {
-    borderTopWidth: 1,
+    borderTopWidth: appBorders.width,
   },
   rowLast: {
-    borderBottomWidth: 1,
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 8,
-    marginBottom: 16,
+    borderBottomWidth: appBorders.width,
+    borderBottomLeftRadius: appRadius.md,
+    borderBottomRightRadius: appRadius.md,
+    marginBottom: appSpacing.md,
   },
   rowPressed: {
-    opacity: 0.92,
+    opacity: appStates.pressedOpacity,
   },
   rowMain: {
     flexDirection: "row",
@@ -565,13 +548,13 @@ const styles = StyleSheet.create({
   primaryText: {
     ...appTypography.body,
     color: appColors.textPrimary,
-    fontWeight: "700",
+    fontWeight: "600",
     marginBottom: 2,
   },
   primaryMetaText: {
     ...appTypography.bodySmall,
     color: appColors.textPrimary,
-    fontWeight: "700",
+    fontWeight: "600",
     marginBottom: 2,
   },
   secondaryText: {
@@ -590,23 +573,23 @@ const styles = StyleSheet.create({
   },
   statusChip: {
     alignSelf: "flex-start",
-    borderRadius: 999,
-    borderWidth: 1,
+    borderRadius: appRadius.pill,
+    borderWidth: appBorders.width,
     paddingHorizontal: 9,
     paddingVertical: 4,
     marginBottom: 4,
   },
   statusChipPublic: {
-    backgroundColor: appColors.surfaceGhost,
-    borderColor: appColors.borderStrong,
+    backgroundColor: appSurfaces.ghost,
+    borderColor: appBorders.strong,
   },
   statusChipPrivate: {
-    backgroundColor: appColors.surfaceGhost,
-    borderColor: appColors.borderSoft,
+    backgroundColor: appSurfaces.ghost,
+    borderColor: appBorders.soft,
   },
   statusChipText: {
     fontSize: 10,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   statusChipTextPublic: {
     color: appColors.brand500,
@@ -617,12 +600,12 @@ const styles = StyleSheet.create({
   emptyCard: {
     alignItems: "center",
     gap: 10,
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 24,
-    marginTop: 12,
+    backgroundColor: appSurfaces.card,
+    borderRadius: appRadius.md,
+    borderWidth: appBorders.width,
+    borderColor: appBorders.soft,
+    padding: appSpacing.xl,
+    marginTop: appSpacing.sm,
   },
   emptyTitle: {
     ...appTypography.displayCard,
@@ -638,9 +621,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 20,
     right: 20,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceCard,
-    borderWidth: 1,
+    borderRadius: appRadius.md,
+    backgroundColor: appSurfaces.card,
+    borderWidth: appBorders.width,
     borderColor: appColors.dangerText,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -651,4 +634,3 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 });
-

@@ -683,7 +683,7 @@ export const styles = StyleSheet.create({
   manualModeTitle: {
     color: appColors.slate50,
     fontSize: 22,
-    fontWeight: "900",
+    fontWeight: "600",
     textAlign: "center",
   },
   manualModeText: {
@@ -695,7 +695,7 @@ export const styles = StyleSheet.create({
   fallbackTitle: {
     color: appColors.slate50,
     fontSize: 22,
-    fontWeight: "900",
+    fontWeight: "600",
   },
   fallbackText: {
     color: appColors.slate300,
@@ -716,7 +716,7 @@ export const styles = StyleSheet.create({
   permissionTitle: {
     color: appColors.slate50,
     fontSize: 22,
-    fontWeight: "900",
+    fontWeight: "600",
   },
   permissionText: {
     color: appColors.slate300,
@@ -734,7 +734,7 @@ export const styles = StyleSheet.create({
   permissionButtonText: {
     color: appColors.white,
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
@@ -781,7 +781,7 @@ export const styles = StyleSheet.create({
   modeButtonText: {
     color: appColors.slate300,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   modeButtonTextActive: {
     color: appColors.white,
@@ -797,7 +797,7 @@ export const styles = StyleSheet.create({
   headerBadgeText: {
     color: appColors.slate50,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "600",
     letterSpacing: 0.6,
     textTransform: "uppercase",
   },
@@ -812,7 +812,7 @@ export const styles = StyleSheet.create({
   backendBadgeText: {
     color: appColors.brand300,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   closeButton: {
     width: 42,
@@ -862,7 +862,7 @@ export const styles = StyleSheet.create({
   footerTitle: {
     color: appColors.slate50,
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "600",
     marginBottom: 6,
   },
   footerText: {
@@ -884,13 +884,13 @@ export const styles = StyleSheet.create({
     padding: 16,
   },
   manualCardFocused: {
-    backgroundColor: "rgba(254, 249, 243, 0.08)",
+    backgroundColor: appColors.surfaceGhost,
     borderColor: appColors.brand500,
   },
   manualTitle: {
     color: appColors.slate50,
     fontSize: 16,
-    fontWeight: "900",
+    fontWeight: "600",
     marginBottom: 4,
   },
   manualText: {
@@ -912,7 +912,7 @@ export const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceOverlay,
     color: appColors.slate50,
     fontSize: 15,
-    fontWeight: "800",
+    fontWeight: "600",
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
@@ -933,7 +933,7 @@ export const styles = StyleSheet.create({
   manualButtonText: {
     color: appColors.white,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "600",
   },
   manualError: {
     color: appColors.dangerText,
@@ -963,7 +963,7 @@ export const styles = StyleSheet.create({
   lookupTitle: {
     color: appColors.white,
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "600",
     marginBottom: 2,
   },
   lookupText: {
@@ -989,14 +989,14 @@ export const styles = StyleSheet.create({
   modalTitle: {
     color: appColors.gray900,
     fontSize: 20,
-    fontWeight: "900",
+    fontWeight: "600",
     marginBottom: 10,
   },
   modalValue: {
     color: appColors.brand500,
     fontSize: 18,
     lineHeight: 24,
-    fontWeight: "800",
+    fontWeight: "600",
     textAlign: "center",
     marginBottom: 18,
   },
@@ -1012,7 +1012,7 @@ export const styles = StyleSheet.create({
   modalButtonText: {
     color: appColors.white,
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   buttonPressed: {
     opacity: 0.9,

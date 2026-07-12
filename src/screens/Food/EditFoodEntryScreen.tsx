@@ -4,7 +4,6 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import {
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -18,11 +17,11 @@ import {
   ClockIcon,
   ForkKnifeIcon,
   PencilSimpleIcon,
-  TrashIcon,
 } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
+import { LoadingState } from "../../components/ui";
 import { DB } from "../../store/DB";
 import type { DBFoodItem, DBUserFoodLogEntry } from "../../store/DB_TYPES";
 import { useAppSelector } from "../../store/hooks";
@@ -35,6 +34,7 @@ import {
   formatFoodMacro,
   formatFoodServing,
   formatFoodShortDate,
+  getFoodQuantityFactor,
   normalizePositiveFoodInput,
 } from "./foodUtils";
 import {
@@ -77,6 +77,9 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
   const [formError, setFormError] = React.useState<string | null>(null);
   const bypassUnsavedGuardRef = React.useRef(false);
   const initialDraftSignatureRef = React.useRef<string | null>(null);
+  // Synchronous lock: `saving` state disables the button only after a re-render,
+  // so a fast double-tap could otherwise submit twice.
+  const savingRef = React.useRef(false);
 
   const buildDraftSignature = React.useCallback(
     (quantityInput: string, mealInput: string, loggedAtInput: string) =>
@@ -229,7 +232,7 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
   );
 
   const handleSave = React.useCallback(async () => {
-    if (!entry) {
+    if (!entry || savingRef.current) {
       return;
     }
 
@@ -237,6 +240,8 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
       setFormError("Enter a positive amount before saving.");
       return;
     }
+
+    savingRef.current = true;
 
     try {
       setFormError(null);
@@ -249,7 +254,12 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
       });
       bypassUnsavedGuardRef.current = true;
       navigation.goBack();
+    } catch {
+      setFormError(
+        "Could not save the changes. Check your connection and try again.",
+      );
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }, [entry, loggedAtDate, mealTypeValue, navigation, quantity]);
@@ -266,9 +276,16 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
         style: "destructive",
         onPress: () => {
           void (async () => {
-            await DB.deleteUserFoodLog(entry.id);
-            bypassUnsavedGuardRef.current = true;
-            navigation.goBack();
+            try {
+              await DB.deleteUserFoodLog(entry.id);
+              bypassUnsavedGuardRef.current = true;
+              navigation.goBack();
+            } catch {
+              Alert.alert(
+                "Could not delete entry",
+                "Check your connection and try again.",
+              );
+            }
           })();
         },
       },
@@ -282,8 +299,8 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
       return 0;
     }
 
-    return entry && entry.servingSize > 0 ? quantity / entry.servingSize : 1;
-  }, [entry, food, quantity]);
+    return getFoodQuantityFactor(food, quantity);
+  }, [food, quantity]);
 
   if (loading) {
     return (
@@ -295,10 +312,11 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
             subtitle="Loading your saved food..."
             onBack={() => navigation.goBack()}
           />
-          <View style={styles.centerCard}>
-            <ActivityIndicator size="small" color={appColors.brand700} />
-            <Text style={styles.centerText}>Preparing the editor.</Text>
-          </View>
+          <LoadingState
+            title="Loading entry"
+            message="Preparing the editor."
+            style={styles.centerCard}
+          />
         </View>
       </View>
     );
@@ -491,7 +509,6 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
               pressed && styles.cardPressed,
             ]}
           >
-            <TrashIcon size={16} color={appColors.danger700} weight="bold" />
             <Text style={styles.secondaryButtonText}>Delete entry</Text>
           </Pressable>
 
@@ -525,30 +542,12 @@ const styles = StyleSheet.create({
   title: {
     color: appColors.textPrimary,
     fontSize: 24,
-    fontWeight: "900",
+    fontWeight: "500",
     marginTop: 16,
     marginBottom: 12,
   },
   content: {
     paddingHorizontal: 18,
-  },
-  bgOrbTop: {
-    position: "absolute",
-    top: -90,
-    right: -70,
-    width: 250,
-    height: 250,
-    borderRadius: 999,
-    backgroundColor: appColors.brand800,
-  },
-  bgOrbBottom: {
-    position: "absolute",
-    bottom: -120,
-    left: -90,
-    width: 280,
-    height: 280,
-    borderRadius: 999,
-    backgroundColor: appColors.success700,
   },
   centerCard: sharedStyleValues.centerCard,
   centerText: sharedStyleValues.centerText,
@@ -560,11 +559,14 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: sharedStyleValues.primaryButtonText,
   secondaryButton: {
-    ...sharedStyleValues.buttonBase,
-    ...sharedStyleValues.buttonWithIcon,
-    ...sharedStyleValues.outlineButton,
-    ...sharedStyleValues.dangerButton,
-    backgroundColor: appColors.surfaceCard,
+    minHeight: 44,
+    alignSelf: "center",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: "transparent",
+    borderWidth: 0,
   },
   secondaryButtonText: sharedStyleValues.dangerButtonText,
   disabled: sharedStyleValues.disabled,

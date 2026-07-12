@@ -1,9 +1,7 @@
 import React from "react";
 import {
   Alert,
-  Pressable,
   StyleSheet,
-  Text,
   TextInput,
   View,
 } from "react-native";
@@ -21,6 +19,9 @@ import type { MoreParamList } from "../../navigation/MoreNavigator";
 import { DB } from "../../store/DB";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { appColors } from "../../theme/colors";
+import { AppButton, AppCard, AppText, ErrorState, IconButton, LoadingState, NumericText } from "../../components/ui";
+import { appBorders, appRadius, appSpacing, appSurfaces } from "../../theme/tokens";
+import { appTypography } from "../../theme/typography";
 import CalorieBudgetChart from "./CalorieBudgetChart";
 import SettingsStackHeader from "./SettingsStackHeader";
 import {
@@ -60,6 +61,8 @@ const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
   const [settings, setSettings] = React.useState<Awaited<
     ReturnType<typeof DB.getUserSettings>
   > | null>(null);
+  const [contextLoading, setContextLoading] = React.useState(true);
+  const [contextError, setContextError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     setInputValue(user?.calorieAllowance != null ? String(user.calorieAllowance) : "");
@@ -67,16 +70,26 @@ const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
 
   const loadContext = React.useCallback(async () => {
     if (!user) {
+      setContextLoading(false);
       return;
     }
 
-    const [nextSettings, nextAutoPlan] = await Promise.all([
-      DB.getUserSettings(user.externalId),
-      buildAutomaticFuelPlanSnapshot(user),
-    ]);
+    setContextLoading(true);
+    setContextError(null);
 
-    setSettings(nextSettings);
-    setAutoPlanCalories(nextAutoPlan?.calories ?? null);
+    try {
+      const [nextSettings, nextAutoPlan] = await Promise.all([
+        DB.getUserSettings(user.externalId),
+        buildAutomaticFuelPlanSnapshot(user),
+      ]);
+
+      setSettings(nextSettings);
+      setAutoPlanCalories(nextAutoPlan?.calories ?? null);
+    } catch {
+      setContextError("Could not build the calorie preview. Check your connection and try again.");
+    } finally {
+      setContextLoading(false);
+    }
   }, [user]);
 
   React.useEffect(() => {
@@ -196,34 +209,31 @@ const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
         />
 
         {!user ? (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>No active user</Text>
-            <Text style={styles.cardText}>
+          <AppCard style={styles.card}>
+            <AppText variant="cardTitle">No active user</AppText>
+            <AppText color="secondary" variant="bodySmall">
               Sign in to your account first before editing nutrition settings.
-            </Text>
-          </View>
+            </AppText>
+          </AppCard>
         ) : (
           <>
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Daily target</Text>
-              <Text style={styles.cardText}>
+            <AppCard style={styles.card}>
+              <AppText variant="cardTitle">Daily target</AppText>
+              <AppText color="secondary" variant="bodySmall">
                 Manual changes also rescale your macro targets to stay aligned with the new calorie budget.
-              </Text>
+              </AppText>
 
               <View style={styles.inputRow}>
-                <Pressable
+                <IconButton
+                  accessibilityLabel="Decrease calorie target"
                   onPress={() => applyInputDelta(-CALORIE_TARGET_STEP)}
-                  style={({ pressed }) => [
-                    styles.adjustButton,
-                    pressed && styles.adjustButtonPressed,
-                  ]}
                 >
                   <MinusIcon
                     size={18}
                     color={appColors.brand700}
                     weight="bold"
                   />
-                </Pressable>
+                </IconButton>
 
                 <View style={styles.inputCard}>
                   <TextInput
@@ -232,78 +242,84 @@ const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
                     style={styles.input}
                     value={inputValue}
                   />
-                  <Text style={styles.inputUnit}>kcal / day</Text>
+                  <AppText color="muted" variant="eyebrow">kcal / day</AppText>
                 </View>
 
-                <Pressable
+                <IconButton
+                  accessibilityLabel="Increase calorie target"
                   onPress={() => applyInputDelta(CALORIE_TARGET_STEP)}
-                  style={({ pressed }) => [
-                    styles.adjustButton,
-                    pressed && styles.adjustButtonPressed,
-                  ]}
                 >
                   <PlusIcon
                     size={18}
                     color={appColors.brand700}
                     weight="bold"
                   />
-                </Pressable>
+                </IconButton>
               </View>
 
-              <View style={styles.statRow}>
-                <View style={styles.statCard}>
-                  <Text style={styles.statLabel}>Current base</Text>
-                  <Text style={styles.statValue}>
-                    {user.calorieAllowance != null
-                      ? `${user.calorieAllowance} kcal`
-                      : "--"}
-                  </Text>
+              {contextError ? (
+                <ErrorState
+                  title="Could not build preview"
+                  message={contextError}
+                  action={
+                    <AppButton label="Try again" onPress={() => void loadContext()} size="sm" />
+                  }
+                  style={styles.previewState}
+                />
+              ) : contextLoading ? (
+                <LoadingState
+                  title="Building preview"
+                  message="Loading your settings and automatic target."
+                  style={styles.previewState}
+                />
+              ) : (
+                <View style={styles.statRow}>
+                  <AppCard style={styles.statCard} variant="soft">
+                    <AppText color="secondary" variant="eyebrow">Current base</AppText>
+                    <NumericText variant="numberMacroSummary">
+                      {user.calorieAllowance != null
+                        ? `${user.calorieAllowance} kcal`
+                        : "--"}
+                    </NumericText>
+                  </AppCard>
+                  <AppCard style={styles.statCard} variant="soft">
+                    <AppText color="secondary" variant="eyebrow">Automatic target</AppText>
+                    <NumericText variant="numberMacroSummary">
+                      {autoPlanCalories != null ? `${autoPlanCalories} kcal` : "--"}
+                    </NumericText>
+                  </AppCard>
                 </View>
-                <View style={styles.statCard}>
-                  <Text style={styles.statLabel}>Automatic target</Text>
-                  <Text style={styles.statValue}>
-                    {autoPlanCalories != null ? `${autoPlanCalories} kcal` : "--"}
-                  </Text>
-                </View>
-              </View>
+              )}
 
               <View style={styles.actionRow}>
-                <Pressable
+                <AppButton
                   onPress={() => void handleSave()}
                   disabled={saving}
-                  style={({ pressed }) => [
-                    styles.primaryButton,
-                    pressed && !saving && styles.adjustButtonPressed,
-                  ]}
-                >
-                  <Text style={styles.primaryButtonText}>
-                    {saving ? "Saving..." : "Save manual target"}
-                  </Text>
-                </Pressable>
+                  label={saving ? "Saving..." : "Save manual target"}
+                  style={styles.actionButton}
+                />
 
-                <Pressable
+                <AppButton
                   onPress={() => void handleResetAutomatic()}
                   disabled={saving}
-                  style={({ pressed }) => [
-                    styles.secondaryButton,
-                    pressed && !saving && styles.adjustButtonPressed,
-                  ]}
-                >
-                  <Text style={styles.secondaryButtonText}>Use automatic</Text>
-                </Pressable>
+                  label="Use automatic"
+                  variant="secondary"
+                />
               </View>
-            </View>
+            </AppCard>
 
-            <CalorieBudgetChart
-              highlightDate={new Date()}
-              subtitle={
-                weeklyBudget != null
-                  ? `Weekly budget: ${Math.round(weeklyBudget)} kcal`
-                  : "Weekly budget preview"
-              }
-              title="Weekly preview"
-              values={weeklyValues}
-            />
+            {!contextLoading && !contextError ? (
+              <CalorieBudgetChart
+                highlightDate={new Date()}
+                subtitle={
+                  weeklyBudget != null
+                    ? `Weekly budget: ${Math.round(weeklyBudget)} kcal`
+                    : "Weekly budget preview"
+                }
+                title="Weekly preview"
+                values={weeklyValues}
+              />
+            ) : null}
           </>
         )}
       </KeyboardAwareScrollView>
@@ -317,143 +333,53 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
-    paddingHorizontal: 20,
-  },
-  orbTop: {
-    position: "absolute",
-    top: -78,
-    right: -54,
-    width: 200,
-    height: 200,
-    borderRadius: 999,
-    backgroundColor: appColors.brand800,
-  },
-  orbBottom: {
-    position: "absolute",
-    left: -68,
-    bottom: -94,
-    width: 220,
-    height: 220,
-    borderRadius: 999,
-    backgroundColor: appColors.success700,
+    paddingHorizontal: appSpacing.gutter,
   },
   card: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: appColors.slate200,
-    marginBottom: 14,
-  },
-  cardTitle: {
-    color: appColors.slate800,
-    fontSize: 17,
-    fontWeight: "800",
-    marginBottom: 6,
-  },
-  cardText: {
-    color: appColors.slate600,
-    fontSize: 13,
-    lineHeight: 19,
+    marginBottom: appSpacing.md,
   },
   inputRow: {
-    marginTop: 16,
+    marginTop: appSpacing.md,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-  },
-  adjustButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: appColors.white,
-    borderWidth: 1,
-    borderColor: appColors.slate200,
-  },
-  adjustButtonPressed: {
-    opacity: 0.9,
+    gap: appSpacing.sm,
   },
   inputCard: {
     flex: 1,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceField,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    borderRadius: appRadius.md,
+    backgroundColor: appSurfaces.soft,
+    borderWidth: appBorders.width,
+    borderColor: appBorders.strong,
+    paddingHorizontal: appSpacing.md,
+    paddingVertical: appSpacing.sm,
   },
   input: {
-    color: appColors.slate800,
-    fontSize: 34,
-    lineHeight: 38,
-    fontWeight: "800",
+    color: appColors.textPrimary,
     padding: 0,
-  },
-  inputUnit: {
-    marginTop: 6,
-    color: appColors.slate500,
-    fontSize: 12,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
+    ...appTypography.numberCalorieHero,
+    fontVariant: ["tabular-nums"],
   },
   statRow: {
-    marginTop: 16,
+    marginTop: appSpacing.md,
     flexDirection: "row",
-    gap: 12,
+    gap: appSpacing.sm,
+  },
+  previewState: {
+    marginTop: appSpacing.md,
   },
   statCard: {
     flex: 1,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceField,
-    padding: 14,
-  },
-  statLabel: {
-    color: appColors.slate500,
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-    marginBottom: 8,
-  },
-  statValue: {
-    color: appColors.slate800,
-    fontSize: 18,
-    fontWeight: "800",
+    gap: appSpacing.xs,
   },
   actionRow: {
-    marginTop: 16,
+    marginTop: appSpacing.md,
     flexDirection: "row",
-    gap: 10,
-  },
-  primaryButton: {
     flex: 1,
-    borderRadius: 999,
-    backgroundColor: appColors.brand700,
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-    alignItems: "center",
-    justifyContent: "center",
+    gap: appSpacing.xs,
   },
-  primaryButtonText: {
-    color: appColors.white,
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  secondaryButton: {
-    borderRadius: 999,
-    backgroundColor: appColors.brand800,
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  secondaryButtonText: {
-    color: appColors.brand700,
-    fontSize: 13,
-    fontWeight: "800",
-  },
+  actionButton: {
+    flex: 1,
+  }
 });
 
 export default CalorieAllowanceSettingsScreen;
-

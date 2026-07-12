@@ -7,17 +7,13 @@ import {
   Keyboard,
   Modal,
   Platform,
-  Pressable,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowLeftIcon, ClockIcon, PencilSimpleIcon } from "phosphor-react-native";
 import type { DBWeightEntry } from "../../store/DB_TYPES";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
-import OnboardingPrimaryButton from "../Onboarding/OnboardingPrimaryButton";
 import {
   getZoneOffsetMinutes,
   parseLocalizedWeight,
@@ -31,6 +27,16 @@ import {
 } from "../../preferences/displayPreferences";
 import { useDisplayPreferences } from "../../preferences/usePreferences";
 import { appColors } from "../../theme/colors";
+import {
+  AppButton,
+  AppCard,
+  AppInput,
+  AppText,
+  IconButton,
+  InteractiveCard,
+} from "../../components/ui";
+import { appBorders, appRadius, appSpacing, appSurfaces } from "../../theme/tokens";
+import { appTypography } from "../../theme/typography";
 
 export type WeightEntryDraft = {
   valueOriginal: number;
@@ -201,17 +207,12 @@ const WeightEntryModal = ({
     >
       <View style={styles.container}>
         <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-          <Pressable
+          <IconButton
             onPress={handleRequestClose}
-            hitSlop={8}
-            style={({ pressed }) => [
-              styles.closeButton,
-              pressed && styles.closeButtonPressed,
-            ]}
             accessibilityLabel="Go back"
           >
             <ArrowLeftIcon size={18} color={appColors.textPrimary} weight="bold" />
-          </Pressable>
+          </IconButton>
         </View>
 
         <KeyboardAwareScrollView
@@ -221,15 +222,15 @@ const WeightEntryModal = ({
           ]}
           focusedInputBottomOffset={132}
         >
-          <View style={styles.card}>
+          <AppCard style={styles.card}>
             <View>
-              <Text style={styles.heroTitle}>
+              <AppText style={styles.heroTitle} variant="sectionTitleLarge">
                 {mode === "create" ? "Log weight" : "Update weight entry"}
-              </Text>
+              </AppText>
             </View>
-            <Text style={styles.label}>Weight</Text>
             <View style={styles.weightRow}>
-              <TextInput
+              <AppInput
+                label="Weight"
                 value={value}
                 onChangeText={setValue}
                 keyboardType="decimal-pad"
@@ -237,55 +238,51 @@ const WeightEntryModal = ({
                 blurOnSubmit
                 onSubmitEditing={Keyboard.dismiss}
                 placeholder={weightUnit === "lb" ? "181.5" : "82.4"}
-                placeholderTextColor={appColors.slate400}
                 style={styles.weightInput}
+                containerStyle={styles.weightInputContainer}
                 accessibilityLabel={`Weight in ${weightUnit === "lb" ? "pounds" : "kilograms"}`}
               />
               <View style={styles.unitPill}>
-                <Text style={styles.unitText}>{weightUnitLabel(weightUnit)}</Text>
+                <AppText style={styles.unitText} variant="bodyStrong">{weightUnitLabel(weightUnit)}</AppText>
               </View>
             </View>
 
-            <Text style={styles.label}>Measured at</Text>
+            <AppText color="muted" style={styles.label} variant="eyebrow">Measured at</AppText>
             <View style={styles.dateRow}>
-              <Pressable
+              <InteractiveCard
                 onPress={() => setShowDatePicker((current) => !current)}
-                style={({ pressed }) => [
-                  styles.dateButton,
-                  pressed && styles.dateButtonPressed,
-                ]}
+                style={styles.dateButton}
                 accessibilityLabel="Select measurement date"
+                variant="compact"
               >
                 <ClockIcon
                   size={16}
                   color={appColors.textPrimary}
                   weight="bold"
                 />
-                <Text style={styles.dateButtonText}>
+                <AppText style={styles.dateButtonText} variant="bodySmallStrong">
                   {measuredAtDate.toLocaleDateString(undefined, {
                     month: "short",
                     day: "numeric",
                     year: "numeric",
                   })}
-                </Text>
-              </Pressable>
-              <Pressable
+                </AppText>
+              </InteractiveCard>
+              <InteractiveCard
                 onPress={() => setShowTimePicker((current) => !current)}
-                style={({ pressed }) => [
-                  styles.dateButton,
-                  pressed && styles.dateButtonPressed,
-                ]}
+                style={styles.dateButton}
                 accessibilityLabel="Select measurement time"
+                variant="compact"
               >
                 <ClockIcon
                   size={16}
                   color={appColors.textPrimary}
                   weight="bold"
                 />
-                <Text style={styles.dateButtonText}>
+                <AppText style={styles.dateButtonText} variant="bodySmallStrong">
                   {formatTimeOfDay(measuredAtDate, timeFormat)}
-                </Text>
-              </Pressable>
+                </AppText>
+              </InteractiveCard>
             </View>
             {showDatePicker ? (
               <DateTimePicker
@@ -305,41 +302,33 @@ const WeightEntryModal = ({
               />
             ) : null}
 
-            <Text style={styles.label}>Notes</Text>
-            <TextInput
+            <AppInput
+              label="Notes"
               value={notes}
               onChangeText={setNotes}
               placeholder="Optional notes"
-              placeholderTextColor={appColors.slate400}
               style={styles.notesInput}
               multiline
               accessibilityLabel="Entry notes"
             />
-          </View>
+          </AppCard>
 
-          {/* <OnboardingPrimaryButton label="Save" onPress={handleSave} /> */}
-          <Pressable
+          <AppButton
             onPress={() => void handleSave()}
             disabled={saving}
-            style={({ pressed }) => [
-              styles.primaryButton,
-              saving && styles.disabled,
-              pressed && !saving && styles.cardPressed,
-            ]}
-          >
-            <PencilSimpleIcon size={16} color={appColors.white} weight="bold" />
-            <Text style={styles.primaryButtonText}>
-              {saving
+            icon={<PencilSimpleIcon size={16} color={appColors.white} weight="bold" />}
+            label={
+              saving
                 ? mode === "edit"
                   ? "Saving..."
                   : "Logging..."
                 : mode === "edit"
                   ? "Save changes"
-                  : "Log weight"}
-            </Text>
-          </Pressable>
+                  : "Log weight"
+            }
+          />
           {mode === "edit" && onDelete ? (
-            <Pressable
+            <AppButton
               onPress={() =>
                 Alert.alert(
                   "Delete entry?",
@@ -350,13 +339,10 @@ const WeightEntryModal = ({
                   ],
                 )
               }
-              style={({ pressed }) => [
-                styles.deleteButton,
-                pressed && styles.deleteButtonPressed,
-              ]}
-            >
-              <Text style={styles.deleteText}>Delete entry</Text>
-            </Pressable>
+              label="Delete entry"
+              variant="danger"
+              style={styles.deleteButton}
+            />
           ) : null}
         </KeyboardAwareScrollView>
       </View>
@@ -367,167 +353,80 @@ const WeightEntryModal = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: appColors.surfaceCanvas,
-  },
-  primaryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderRadius: 9999,
-    backgroundColor: appColors.brand700,
-    minHeight: 48,
-    paddingVertical: 14,
-  },
-  primaryButtonText: {
-    color: appColors.white,
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  disabled: {
-    opacity: 0.58,
-  },
-  cardPressed: {
-    opacity: 0.9,
+    backgroundColor: appSurfaces.canvas,
   },
   header: {
-    paddingHorizontal: 20,
-    paddingBottom: 12,
+    paddingHorizontal: appSpacing.gutter,
+    paddingBottom: appSpacing.sm,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  eyebrow: {
-    alignSelf: "flex-start",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    color: appColors.success700,
-    backgroundColor: appColors.success700,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    marginBottom: 10,
-  },
   heroTitle: {
-    color: appColors.textPrimary,
-    fontSize: 22,
-    fontWeight: "500",
-    marginBottom: 4,
-  },
-  closeButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: appColors.surfaceGhost,
-    borderColor: appColors.surfaceGhostStrong,
-  },
-  closeButtonPressed: {
-    opacity: 0.9,
+    marginBottom: appSpacing.xs,
   },
   content: {
-    paddingHorizontal: 20,
-    gap: 14,
+    paddingHorizontal: appSpacing.gutter,
+    gap: appSpacing.md,
   },
   card: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 16,
+    gap: appSpacing.sm,
   },
   label: {
-    color: appColors.textMuted,
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-    marginBottom: 6,
-    marginTop: 12,
+    marginTop: appSpacing.xs,
   },
   weightRow: {
     flexDirection: "row",
-    gap: 10,
-    alignItems: "center",
+    gap: appSpacing.sm,
+    alignItems: "flex-end",
+  },
+  weightInputContainer: {
+    flex: 1,
   },
   weightInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    fontSize: 22,
-    fontWeight: "800",
-    color: appColors.textPrimary,
-    backgroundColor: appColors.surfaceField,
+    ...appTypography.numberWeightEntry,
+    minHeight: 50,
+    textAlign: "left",
   },
   unitPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 16,
-    borderRadius: 9999,
-    backgroundColor: appColors.surfaceGhost,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
+    minHeight: 50,
+    minWidth: 60,
+    paddingHorizontal: appSpacing.md,
+    borderRadius: appRadius.md,
+    backgroundColor: appSurfaces.ghost,
+    borderWidth: appBorders.width,
+    borderColor: appBorders.soft,
+    alignItems: "center",
+    justifyContent: "center",
   },
   unitText: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: appColors.textPrimary,
+    textTransform: "uppercase",
   },
   dateRow: {
     flexDirection: "row",
-    gap: 10,
+    gap: appSpacing.sm,
+    flexWrap: "wrap",
   },
   dateButton: {
     flex: 1,
+    minWidth: 130,
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    backgroundColor: appColors.surfaceField,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    borderRadius: 8,
-  },
-  dateButtonPressed: {
-    opacity: 0.9,
+    gap: appSpacing.xs,
+    paddingHorizontal: appSpacing.sm,
   },
   dateButtonText: {
-    color: appColors.textPrimary,
-    fontSize: 14,
-    fontWeight: "700",
+    flexShrink: 1,
   },
   notesInput: {
     minHeight: 96,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
     textAlignVertical: "top",
-    color: appColors.textPrimary,
-    fontSize: 15,
-    backgroundColor: appColors.surfaceField,
   },
   deleteButton: {
-    marginTop: 18,
-    alignItems: "center",
-    paddingVertical: 14,
-  },
-  deleteButtonPressed: {
-    opacity: 0.85,
-  },
-  deleteText: {
-    color: appColors.danger700,
-    fontSize: 15,
-    fontWeight: "800",
+    alignSelf: "center",
+    marginTop: appSpacing.xs,
   },
 });
 
 export default WeightEntryModal;
-

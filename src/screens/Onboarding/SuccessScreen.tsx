@@ -1,289 +1,157 @@
 import React from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { StyleSheet, View } from "react-native";
 import { CheckCircleIcon, ForkKnifeIcon } from "phosphor-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { OnboardingParamList } from "../../navigation/onboardingTypes";
+import { AppCard, AppText, NumericText, SuccessState } from "../../components/ui";
 import { getGoalStrategyRateLabel } from "../../engine/goalStrategy";
+import type { OnboardingParamList } from "../../navigation/onboardingTypes";
+import { appColors } from "../../theme/colors";
+import { appBorders, appRadius, appSpacing, appSurfaces } from "../../theme/tokens";
 import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
+import OnboardingStepScreen, { onboardingStepProgress } from "./OnboardingStepScreen";
 import {
   formatActivitySummary,
   formatProteinFocusSummary,
   formatTrainingSummary,
 } from "./onboardingSummary";
-import { appColors } from "../../theme/colors";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "Success"> & {
   onFinish: () => void;
 };
 
 const SuccessScreen = ({ onFinish, route }: Props) => {
-  const insets = useSafeAreaInsets();
   const goalRateLabel = getGoalStrategyRateLabel(
     route.params.onboarding.goal,
     route.params.onboarding.goalStrategy,
   );
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 },
-      ]}
-      contentInsetAdjustmentBehavior="automatic"
-      showsVerticalScrollIndicator={false}
+    <OnboardingStepScreen
+      centered
+      progress={onboardingStepProgress(10)}
+      stepLabel="Ready"
+      subtitle="We built your starting targets from your goal, activity, training profile, and protein focus. You can refine them later as your progress comes in."
+      title="Your plan is live"
     >
-      <View style={styles.badge}>
-        <CheckCircleIcon size={34} color={appColors.success600} weight="fill" />
-      </View>
+      <SuccessState
+        icon={<CheckCircleIcon size={32} color={appColors.statusSuccess} weight="fill" />}
+        style={styles.successState}
+        title="Ready"
+      />
 
-      <Text style={styles.eyebrow}>Ready</Text>
-      <Text style={styles.title}>Your plan is live</Text>
-      <Text style={styles.subtitle}>
-        We built your starting targets from your goal, activity, training
-        profile, and protein focus. You can refine them later as your progress
-        comes in.
-      </Text>
-
-      <View style={styles.highlightCard}>
+      <AppCard style={styles.highlightCard}>
         <View style={styles.highlightHeader}>
-          <ForkKnifeIcon size={22} color={appColors.success700} weight="fill" />
-          <Text style={styles.highlightTitle}>Starting Targets</Text>
+          <ForkKnifeIcon size={22} color={appColors.statusSuccess} weight="fill" />
+          <AppText variant="cardTitle">Starting Targets</AppText>
         </View>
         {goalRateLabel ? (
-          <View style={styles.pacePill}>
-            <Text style={styles.pacePillText}>{goalRateLabel}</Text>
-          </View>
+          <AppText color="coral" style={styles.paceText} variant="eyebrow">
+            {goalRateLabel}
+          </AppText>
         ) : null}
         <View style={styles.metricGrid}>
-          <View style={styles.metricTile}>
-            <Text style={styles.metricTileLabel}>Calories</Text>
-            <Text style={styles.metricTileValue}>
-              {route.params.onboarding.fuelPlan.calories}
-            </Text>
-            <Text style={styles.metricTileUnit}>kcal</Text>
-          </View>
-          <View style={styles.metricTile}>
-            <Text style={styles.metricTileLabel}>Protein</Text>
-            <Text style={styles.metricTileValue}>
-              {route.params.onboarding.fuelPlan.protein}
-            </Text>
-            <Text style={styles.metricTileUnit}>g</Text>
-          </View>
-          <View style={styles.metricTile}>
-            <Text style={styles.metricTileLabel}>Carbs</Text>
-            <Text style={styles.metricTileValue}>
-              {route.params.onboarding.fuelPlan.carbs}
-            </Text>
-            <Text style={styles.metricTileUnit}>g</Text>
-          </View>
-          <View style={styles.metricTile}>
-            <Text style={styles.metricTileLabel}>Fats</Text>
-            <Text style={styles.metricTileValue}>
-              {route.params.onboarding.fuelPlan.fats}
-            </Text>
-            <Text style={styles.metricTileUnit}>g</Text>
-          </View>
+          {[
+            ["Calories", route.params.onboarding.fuelPlan.calories, "kcal"],
+            ["Protein", route.params.onboarding.fuelPlan.protein, "g"],
+            ["Carbs", route.params.onboarding.fuelPlan.carbs, "g"],
+            ["Fats", route.params.onboarding.fuelPlan.fats, "g"],
+          ].map(([label, value, unit]) => (
+            <View key={label} style={styles.metricTile}>
+              <AppText color="muted" variant="eyebrow">
+                {label}
+              </AppText>
+              <NumericText variant="numberMacroSummary">
+                {value}
+              </NumericText>
+              <AppText color="secondary" variant="label">
+                {unit}
+              </AppText>
+            </View>
+          ))}
         </View>
-      </View>
+      </AppCard>
 
-      <View style={styles.card}>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Activity</Text>
-          <Text style={styles.detailValue}>
-            {formatActivitySummary(route.params.onboarding.activity)}
-          </Text>
-        </View>
-        <View style={styles.divider} />
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Training</Text>
-          <Text style={styles.detailValue}>
-            {formatTrainingSummary(route.params.onboarding.training)}
-          </Text>
-        </View>
-        <View style={styles.divider} />
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Protein focus</Text>
-          <Text style={styles.detailValue}>
-            {formatProteinFocusSummary(route.params.onboarding.proteinFocus)}
-          </Text>
-        </View>
-      </View>
+      <AppCard style={styles.detailCard} variant="soft">
+        {[
+          ["Activity", formatActivitySummary(route.params.onboarding.activity)],
+          ["Training", formatTrainingSummary(route.params.onboarding.training)],
+          [
+            "Protein focus",
+            formatProteinFocusSummary(route.params.onboarding.proteinFocus),
+          ],
+        ].map(([label, value], index) => (
+          <View key={label}>
+            {index > 0 ? <View style={styles.divider} /> : null}
+            <View style={styles.detailRow}>
+              <AppText color="muted" variant="eyebrow">
+                {label}
+              </AppText>
+              <AppText color="secondary" variant="bodyStrong">
+                {value}
+              </AppText>
+            </View>
+          </View>
+        ))}
+      </AppCard>
 
       <OnboardingPrimaryButton
         label="Start Tracking"
-        style={styles.button}
         onPress={onFinish}
+        style={styles.button}
       />
-    </ScrollView>
+    </OnboardingStepScreen>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: appColors.surfaceCanvas,
-  },
-  content: {
-    paddingHorizontal: 22,
-    flexGrow: 1,
-  },
-  bgOrbTop: {
-    position: "absolute",
-    top: -60,
-    right: -46,
-    width: 180,
-    height: 180,
-    borderRadius: 999,
-    backgroundColor: appColors.success700,
-  },
-  bgOrbBottom: {
-    position: "absolute",
-    bottom: -82,
-    left: -58,
-    width: 220,
-    height: 220,
-    borderRadius: 999,
-    backgroundColor: appColors.success700,
-  },
-  badge: {
-    width: 68,
-    height: 68,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: appColors.brand700,
-    backgroundColor: appColors.brand700,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 14,
-  },
-  eyebrow: {
-    alignSelf: "flex-start",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    color: appColors.success700,
-    backgroundColor: appColors.success700,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    marginBottom: 12,
-  },
-  title: {
-    fontSize: 34,
-    lineHeight: 40,
-    fontWeight: "800",
-    color: appColors.textPrimary,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: appColors.slate600,
-    marginBottom: 18,
+  successState: {
+    padding: appSpacing.md,
+    marginBottom: appSpacing.md,
   },
   highlightCard: {
-    backgroundColor: appColors.surfaceCanvasAlt,
-    borderRadius: 8,
-    padding: 16,
-    borderWidth: 1,
-    marginBottom: 16,
+    gap: appSpacing.sm,
+    marginBottom: appSpacing.md,
   },
   highlightHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
+    gap: appSpacing.xs,
   },
-  highlightTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: appColors.textPrimary,
-  },
-  pacePill: {
+  paceText: {
     alignSelf: "flex-start",
-    backgroundColor: appColors.brand800,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 14,
-  },
-  pacePillText: {
-    color: appColors.brand700,
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 0.4,
-    textTransform: "uppercase",
+    backgroundColor: appColors.actionPrimarySoft,
+    borderRadius: appRadius.pill,
+    paddingHorizontal: appSpacing.sm,
+    paddingVertical: appSpacing.xs,
   },
   metricGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: appSpacing.xs,
   },
   metricTile: {
     width: "47%",
-    backgroundColor: appColors.slate900,
-    borderRadius: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: appColors.slate200,
+    borderRadius: appRadius.md,
+    borderWidth: appBorders.width,
+    borderColor: appColors.borderSoft,
+    backgroundColor: appSurfaces.soft,
+    padding: appSpacing.sm,
+    gap: appSpacing.xxs,
   },
-  metricTileLabel: {
-    color: appColors.slate500,
-    fontSize: 12,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-    marginBottom: 6,
-  },
-  metricTileValue: {
-    color: appColors.slate100,
-    fontSize: 24,
-    fontWeight: "900",
-    lineHeight: 28,
-  },
-  metricTileUnit: {
-    color: appColors.slate600,
-    fontSize: 12,
-    fontWeight: "700",
-    marginTop: 2,
-  },
-  card: {
-    backgroundColor: appColors.slate900,
-    borderRadius: 8,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: appColors.slate200,
-    marginBottom: 18,
+  detailCard: {
+    marginBottom: appSpacing.md,
   },
   detailRow: {
-    gap: 6,
-  },
-  detailLabel: {
-    color: appColors.slate500,
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-  },
-  detailValue: {
-    color: appColors.slate100,
-    fontSize: 16,
-    fontWeight: "800",
-    lineHeight: 22,
+    gap: appSpacing.xxs,
   },
   divider: {
     height: 1,
-    backgroundColor: appColors.slate200,
-    marginVertical: 12,
+    backgroundColor: appColors.borderSoft,
+    marginVertical: appSpacing.sm,
   },
   button: {
-    marginTop: 4,
+    marginTop: appSpacing.xs,
   },
 });
 
 export default SuccessScreen;
-

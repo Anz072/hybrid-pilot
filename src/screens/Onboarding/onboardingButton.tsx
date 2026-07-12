@@ -1,19 +1,19 @@
-import { View, StyleSheet, Pressable, Text } from "react-native";
-import { appColors } from "../../theme/colors";
+import React from "react";
+import { OptionCard } from "../../components/ui";
 
 export type OnboardingButtonProps = {
+  borderColor?: string;
+  dataToSend: any;
+  icon?: React.ReactNode;
   label: string;
+  navigation?: {
+    navigate?: (...args: any[]) => void;
+    push?: (...args: any[]) => void;
+  };
+  navGoal: string;
   subtitle: string;
   value: string;
   valueKey?: string;
-  borderColor: string;
-  navigation?: {
-    push?: (...args: any[]) => void;
-    navigate?: (...args: any[]) => void;
-  };
-  navGoal: string;
-  dataToSend: any;
-  icon?: any;
 };
 
 const OnboardingButton = (props: OnboardingButtonProps) => {
@@ -22,73 +22,18 @@ const OnboardingButton = (props: OnboardingButtonProps) => {
     : props.dataToSend;
 
   return (
-    <Pressable
+    <OptionCard
+      icon={props.icon}
       onPress={() =>
         props.navigation?.push
           ? props.navigation.push(props.navGoal, params)
           : props.navigation?.navigate?.(props.navGoal, params)
       }
-      style={({ pressed }) => [
-        styles.option2,
-        pressed && styles.optionPressed,
-        {
-          borderColor: props.borderColor,
-        },
-      ]}
-    >
-      <View style={styles.button}>
-        <View style={{ maxWidth: "80%" }}>
-          <Text style={styles.optionText2}>{props.label}</Text>
-          <Text style={styles.optionSubtext2}>{props.subtitle}</Text>
-        </View>
-        <View
-          style={{ flex: 1, justifyContent: "center", alignItems: "flex-end" }}
-        >
-          {props.icon && <View style={styles.iconBadge}>{props.icon}</View>}
-        </View>
-      </View>
-    </Pressable>
+      showCheck={false}
+      subtitle={props.subtitle}
+      title={props.label}
+    />
   );
 };
-
-const styles = StyleSheet.create({
-  button: {
-    flexDirection: "row",
-    maxWidth: "100%",
-  },
-  optionPressed: {
-    transform: [{ scale: 0.99 }],
-    opacity: 0.95,
-  },
-  iconBadge: {
-    width: 48,
-    height: 48,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  optionText2: {
-    fontSize: 20,
-    letterSpacing: 0.8,
-    fontWeight: "800",
-    color: appColors.textPrimary,
-    marginBottom: 3,
-    marginTop: 4,
-  },
-  optionSubtext2: {
-    fontSize: 13,
-    color: appColors.slate500,
-    lineHeight: 18,
-  },
-  option2: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: appColors.surfaceCanvasAlt,
-    borderColor: appColors.slate200,
-    borderRadius: 8,
-    paddingVertical: 18,
-    paddingHorizontal: 24,
-    borderWidth: 1,
-  },
-});
 
 export default OnboardingButton;

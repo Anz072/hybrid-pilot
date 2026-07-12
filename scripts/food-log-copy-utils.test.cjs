@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const {
+  buildFoodLogDuplicateKey,
   getFoodLogCopyPreview,
   getFoodLogEntriesToCopy,
 } = require("../src/store/foodLogCopyUtils.ts");
@@ -30,6 +31,16 @@ const baseEntry = (overrides = {}) => ({
   isEnergyManuallySet: false,
   quickAddName: null,
   ...overrides,
+});
+
+test("copy duplicate keys preserve timestamp seconds", () => {
+  const first = baseEntry({ loggedAt: "2026-05-16T07:30:01.000Z" });
+  const second = baseEntry({ loggedAt: "2026-05-17T07:30:02.000Z" });
+
+  assert.notEqual(
+    buildFoodLogDuplicateKey(first),
+    buildFoodLogDuplicateKey(second),
+  );
 });
 
 test("copy preview skips exact duplicate entries", () => {

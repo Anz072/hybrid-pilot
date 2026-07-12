@@ -1,9 +1,11 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import type { KeyboardTypeOptions } from "react-native";
+import { ArrowLeftIcon } from "phosphor-react-native";
 import { appColors } from "../../theme/colors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { sharedStyleValues } from "../../theme/sharedStyles";
+import { NumericText } from "../../components/ui";
 
 export type FoodEntryFormPill = {
   key: string;
@@ -135,6 +137,21 @@ const FoodEntryForm = ({
     <>
       <View style={[styles.cardX, { marginTop: insets.top + 14 }]}>
         <View style={styles.heroHeaderRow}>
+          <Pressable
+            accessibilityLabel="Go back"
+            hitSlop={8}
+            onPress={onBack}
+            style={({ pressed }) => [
+              styles.backButton,
+              pressed && styles.cardPressed,
+            ]}
+          >
+            <ArrowLeftIcon
+              size={18}
+              color={appColors.textPrimary}
+              weight="bold"
+            />
+          </Pressable>
           <View style={styles.heroHeaderCopy}>
             <Text style={styles.heroEyebrow}>{heroEyebrow}</Text>
             <Text style={styles.heroTitle}>{heroTitle}</Text>
@@ -214,7 +231,12 @@ const FoodEntryForm = ({
           {nutritionItems.map((item) => (
             <View key={item.label} style={styles.nutritionCell}>
               <Text style={styles.nutritionLabel}>{item.label}</Text>
-              <Text style={styles.nutritionValue}>{item.value}</Text>
+              <NumericText
+                variant="numberMacroSummary"
+                style={styles.nutritionValue}
+              >
+                {item.value}
+              </NumericText>
             </View>
           ))}
         </View>
@@ -261,7 +283,6 @@ const FoodEntryForm = ({
 };
 
 const styles = StyleSheet.create({
-  heroCard: sharedStyleValues.cardCompact,
   heroHeaderRow: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -271,6 +292,17 @@ const styles = StyleSheet.create({
   },
   heroHeaderCopy: {
     flex: 1,
+    minWidth: 0,
+  },
+  backButton: {
+    width: 38,
+    height: 38,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 999,
+    backgroundColor: appColors.surfaceGhost,
+    borderWidth: 1,
+    borderColor: appColors.surfaceGhostStrong,
   },
   heroEyebrow: sharedStyleValues.eyebrow,
   heroTitle: sharedStyleValues.heroTitle,
@@ -293,7 +325,7 @@ const styles = StyleSheet.create({
   heroActionText: {
     color: appColors.brand500,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   heroActionTextActive: {
     color: appColors.white,
@@ -301,31 +333,16 @@ const styles = StyleSheet.create({
   pillRow: sharedStyleValues.pillRow,
   pill: sharedStyleValues.pill,
   pillText: sharedStyleValues.pillText,
-  previewStrip: {
-    borderRadius: 8,
-    backgroundColor: appColors.brand700,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-  },
-  previewValue: {
-    color: appColors.white,
-    fontSize: 20,
-    fontWeight: "900",
-    marginBottom: 2,
-  },
-  previewText: {
-    color: appColors.brand300,
-    fontSize: 12,
-    lineHeight: 16,
-  },
   cardX: sharedStyleValues.cardCompact,
   card: sharedStyleValues.cardCompact,
   sectionTitle: sharedStyleValues.sectionTitle,
-  sectionSubtitle: sharedStyleValues.sectionSubtitle,
   fieldLabel: sharedStyleValues.fieldLabel,
   fieldLabelSpacing: sharedStyleValues.fieldLabelSpacing,
   inputRow: sharedStyleValues.inputRow,
-  input: sharedStyleValues.inputCompact,
+  input: {
+    ...sharedStyleValues.inputCompact,
+    fontVariant: ["tabular-nums"],
+  },
   unitPill: sharedStyleValues.unitPill,
   unitText: sharedStyleValues.unitText,
   slotRow: {
@@ -350,9 +367,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   slotLabel: {
-    color: appColors.slate300,
+    color: appColors.textSecondary,
     fontSize: 11,
-    fontWeight: "800",
+    fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 0.6,
     marginBottom: 2,
@@ -360,31 +377,32 @@ const styles = StyleSheet.create({
   slotValue: {
     color: appColors.textPrimary,
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "600",
   },
   slotAction: {
     color: appColors.brand500,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "500",
   },
   slotTrailing: {
     color: appColors.brand500,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "500",
   },
   formError: {
     color: appColors.danger700,
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "500",
     lineHeight: 17,
     marginTop: 10,
   },
   nutritionGrid: sharedStyleValues.nutritionGrid,
   nutritionCell: sharedStyleValues.nutritionCell,
   nutritionLabel: {
-    color: appColors.slate600,
-    fontSize: 8,
-    fontWeight: "800",
+    color: appColors.textSecondary,
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: "500",
     textTransform: "uppercase",
     letterSpacing: 0.6,
     marginBottom: 2,
@@ -413,4 +431,3 @@ const styles = StyleSheet.create({
 });
 
 export default FoodEntryForm;
-

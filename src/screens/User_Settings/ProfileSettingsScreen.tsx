@@ -3,11 +3,8 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -27,6 +24,8 @@ import {
 } from "../../preferences/displayPreferences";
 import { useDisplayPreferences } from "../../preferences/usePreferences";
 import { appColors } from "../../theme/colors";
+import { AppButton, AppCard, AppInput, AppText, Chip } from "../../components/ui";
+import { appSpacing } from "../../theme/tokens";
 import SettingsStackHeader from "./SettingsStackHeader";
 import { saveUserProfileChanges } from "./userSettingsActions";
 import { signOutSupabaseSession } from "../../API/supabase/auth";
@@ -271,46 +270,46 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
           />
 
           {!user ? (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>No active user</Text>
-              <Text style={styles.cardText}>
+            <AppCard style={styles.card}>
+              <AppText variant="cardTitle">No active user</AppText>
+              <AppText color="secondary" variant="bodySmall">
                 Sign in to your account first before editing profile details.
-              </Text>
-            </View>
+              </AppText>
+            </AppCard>
           ) : (
             <>
-              <View style={styles.card}>
-                <Text style={styles.cardTitle}>Account & sync</Text>
-                <Text style={styles.accountValue}>{user.email ?? "No email"}</Text>
+              <AppCard style={styles.card}>
+                <AppText variant="cardTitle">Account & sync</AppText>
+                <AppText color="coral" style={styles.accountValue} variant="sectionTitleLarge">
+                  {user.email ?? "No email"}
+                </AppText>
                 <View style={styles.syncRow}>
                   <View
                     style={[
                       styles.syncDot,
                       user.provider === "local"
                         ? styles.syncDotLocal
-                        : styles.syncDotOnline,
+                      : styles.syncDotOnline,
                     ]}
                   />
-                  <Text style={styles.syncText}>
+                  <AppText color="secondary" style={styles.syncText} variant="bodySmall">
                     {user.provider === "local"
                       ? "Local device account — data stays on this device and is not synced."
                       : "Signed in — your diary, weights, and settings sync to your account."}
-                  </Text>
+                  </AppText>
                 </View>
-              </View>
+              </AppCard>
 
-              <View style={styles.card}>
-                <Text style={styles.sectionTitle}>Profile details</Text>
-                <Text style={styles.sectionText}>
+              <AppCard style={styles.card}>
+                <AppText variant="cardTitle">Profile details</AppText>
+                <AppText color="secondary" style={styles.sectionText} variant="bodySmall">
                   Keep these fields current so your recommendations stay aligned
                   with your body data.
-                </Text>
+                </AppText>
 
-                <Text style={styles.fieldLabel}>Display name</Text>
-                <TextInput
-                  style={styles.textInput}
+                <AppInput
+                  label="Display name"
                   placeholder="Your name"
-                  placeholderTextColor={appColors.slate200}
                   value={displayName}
                   onChangeText={(value) => {
                     setDisplayName(value);
@@ -318,13 +317,10 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
                   }}
                 />
 
-                <Text style={[styles.fieldLabel, styles.fieldSpacing]}>
-                  Birthdate
-                </Text>
-                <TextInput
-                  style={styles.textInput}
+                <AppInput
+                  containerStyle={styles.fieldSpacing}
+                  label="Birthdate"
                   placeholder="YYYY-MM-DD"
-                  placeholderTextColor={appColors.slate200}
                   value={birthdateValue}
                   onChangeText={(value) => {
                     setBirthdateValue(value);
@@ -334,15 +330,14 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
                   keyboardType="numbers-and-punctuation"
                 />
 
-                <Text style={[styles.fieldLabel, styles.fieldSpacing]}>
+                <AppText color="secondary" style={styles.heightLabel} variant="eyebrow">
                   Height
-                </Text>
+                </AppText>
                 {heightUnit === "ft_in" ? (
                   <View style={styles.inlineInputRow}>
-                    <TextInput
-                      style={[styles.textInput, styles.inlineInput]}
+                    <AppInput
+                      containerStyle={styles.inlineInput}
                       placeholder="5"
-                      placeholderTextColor={appColors.slate200}
                       value={feetValue}
                       onChangeText={(value) =>
                         handleFeetInchesChange(value, inchesValue)
@@ -350,12 +345,11 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
                       keyboardType="number-pad"
                     />
                     <View style={styles.unitPill}>
-                      <Text style={styles.unitPillText}>ft</Text>
+                      <AppText color="coral" variant="label">ft</AppText>
                     </View>
-                    <TextInput
-                      style={[styles.textInput, styles.inlineInput]}
+                    <AppInput
+                      containerStyle={styles.inlineInput}
                       placeholder="10"
-                      placeholderTextColor={appColors.slate200}
                       value={inchesValue}
                       onChangeText={(value) =>
                         handleFeetInchesChange(feetValue, value)
@@ -363,15 +357,14 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
                       keyboardType="number-pad"
                     />
                     <View style={styles.unitPill}>
-                      <Text style={styles.unitPillText}>in</Text>
+                      <AppText color="coral" variant="label">in</AppText>
                     </View>
                   </View>
                 ) : (
                   <View style={styles.inlineInputRow}>
-                    <TextInput
-                      style={[styles.textInput, styles.inlineInput]}
+                    <AppInput
+                      containerStyle={styles.inlineInput}
                       placeholder="170"
-                      placeholderTextColor={appColors.slate200}
                       value={heightValue}
                       onChangeText={(value) => {
                         setHeightValue(value);
@@ -380,88 +373,61 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
                       keyboardType="decimal-pad"
                     />
                     <View style={styles.unitPill}>
-                      <Text style={styles.unitPillText}>cm</Text>
+                      <AppText color="coral" variant="label">cm</AppText>
                     </View>
                   </View>
                 )}
 
-                <Text style={[styles.fieldLabel, styles.fieldSpacing]}>
+                <AppText color="secondary" style={styles.fieldSpacing} variant="eyebrow">
                   Sex profile
-                </Text>
+                </AppText>
                 <View style={styles.optionRow}>
                   {GENDER_OPTIONS.map((option) => {
                     const selected = selectedGender === option.value;
 
                     return (
-                      <Pressable
+                      <Chip
                         key={option.label}
                         onPress={() => {
                           setSelectedGender(option.value);
                           setStatusMessage(null);
                         }}
-                        style={({ pressed }) => [
-                          styles.optionChip,
-                          selected && styles.optionChipSelected,
-                          pressed && styles.buttonPressed,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.optionChipText,
-                            selected && styles.optionChipTextSelected,
-                          ]}
-                        >
-                          {option.label}
-                        </Text>
-                      </Pressable>
+                        label={option.label}
+                        selected={selected}
+                      />
                     );
                   })}
                 </View>
 
-                <Pressable
+                <AppButton
                   onPress={() => {
                     void handleSave();
                   }}
                   disabled={saving || !hasChanges}
-                  style={({ pressed }) => [
-                    styles.primaryButton,
-                    (saving || !hasChanges) && styles.disabled,
-                    pressed && !saving && hasChanges && styles.buttonPressed,
-                  ]}
-                >
-                  <Text style={styles.primaryButtonText}>
-                    {saving ? "Saving..." : "Save profile"}
-                  </Text>
-                </Pressable>
+                  label={saving ? "Saving..." : "Save profile"}
+                  style={styles.primaryButton}
+                />
 
-                <Text style={styles.helperText}>
+                <AppText color="secondary" style={styles.helperText} variant="metadata">
                   {statusMessage ??
                     "Birthdate, height, and sex profile affect calorie planning and micronutrient targets."}
-                </Text>
-              </View>
+                </AppText>
+              </AppCard>
 
-              <View style={styles.card}>
-                <Text style={styles.sectionTitle}>Session</Text>
-                <Text style={styles.sectionText}>
+              <AppCard style={styles.card}>
+                <AppText variant="cardTitle">Session</AppText>
+                <AppText color="secondary" style={styles.sectionText} variant="bodySmall">
                   Signing out keeps your synced data safe and brings you back to
                   the login screen.
-                </Text>
+                </AppText>
 
-                <Pressable
+                <AppButton
                   onPress={handleSignOut}
                   disabled={signingOut}
-                  style={({ pressed }) => [
-                    styles.secondaryButton,
-                    styles.signOutButton,
-                    signingOut && styles.disabled,
-                    pressed && !signingOut && styles.buttonPressed,
-                  ]}
-                >
-                  <Text style={styles.signOutButtonText}>
-                    {signingOut ? "Signing out..." : "Sign out"}
-                  </Text>
-                </Pressable>
-              </View>
+                  label={signingOut ? "Signing out..." : "Sign out"}
+                  variant="danger"
+                />
+              </AppCard>
             </>
           )}
         </ScrollView>
@@ -476,57 +442,19 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
-    paddingHorizontal: 20,
-  },
-  orbTop: {
-    position: "absolute",
-    top: -82,
-    right: -54,
-    width: 190,
-    height: 190,
-    borderRadius: 999,
-    backgroundColor: appColors.brand800,
-  },
-  orbBottom: {
-    position: "absolute",
-    left: -74,
-    bottom: -88,
-    width: 220,
-    height: 220,
-    borderRadius: 999,
-    backgroundColor: appColors.success700,
+    paddingHorizontal: appSpacing.gutter,
   },
   card: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: appColors.slate200,
-    marginBottom: 14,
-  },
-  cardTitle: {
-    color: appColors.slate800,
-    fontSize: 17,
-    fontWeight: "800",
-    marginBottom: 6,
-  },
-  cardText: {
-    color: appColors.slate200,
-    fontSize: 13,
-    lineHeight: 19,
+    marginBottom: appSpacing.md,
   },
   accountValue: {
-    color: appColors.brand700,
-    fontSize: 24,
-    lineHeight: 28,
-    fontWeight: "800",
-    marginBottom: 8,
+    marginBottom: appSpacing.xs,
   },
   syncRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 8,
-    marginTop: 2,
+    gap: appSpacing.xs,
+    marginTop: appSpacing.xxs,
   },
   syncDot: {
     width: 8,
@@ -542,130 +470,41 @@ const styles = StyleSheet.create({
   },
   syncText: {
     flex: 1,
-    color: appColors.slate600,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  sectionTitle: {
-    color: appColors.slate800,
-    fontSize: 18,
-    fontWeight: "800",
-    marginBottom: 6,
   },
   sectionText: {
-    color: appColors.slate600,
-    fontSize: 13,
-    lineHeight: 19,
-    marginBottom: 14,
-  },
-  fieldLabel: {
-    color: appColors.slate800,
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.7,
-    marginBottom: 6,
+    marginBottom: appSpacing.md,
   },
   fieldSpacing: {
-    marginTop: 12,
+    marginTop: appSpacing.sm,
   },
-  textInput: {
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceRaised,
-    borderWidth: 1,
-    borderColor: appColors.slate100,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    color: appColors.slate600,
-    fontSize: 14,
-    fontWeight: "700",
+  heightLabel: {
+    marginTop: appSpacing.sm,
+    marginBottom: 6,
   },
   inlineInputRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: appSpacing.xs,
   },
   inlineInput: {
     flex: 1,
   },
   unitPill: {
     borderRadius: 999,
-    backgroundColor: appColors.brand800,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  unitPillText: {
-    color: appColors.brand700,
-    fontSize: 12,
-    fontWeight: "800",
+    backgroundColor: appColors.actionPrimarySoft,
+    paddingHorizontal: appSpacing.sm,
+    paddingVertical: appSpacing.xs,
   },
   optionRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
-  },
-  optionChip: {
-    borderRadius: 999,
-    backgroundColor: appColors.surfaceRaised,
-    borderWidth: 1,
-    borderColor: appColors.slate100,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  optionChipSelected: {
-    backgroundColor: appColors.brand800,
-    borderColor: appColors.brand500,
-  },
-  optionChipText: {
-    color: appColors.slate800,
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  optionChipTextSelected: {
-    color: appColors.brand700,
+    gap: appSpacing.xs,
   },
   primaryButton: {
-    marginTop: 18,
-    borderRadius: 999,
-    backgroundColor: appColors.brand700,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  primaryButtonText: {
-    color: appColors.white,
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  secondaryButton: {
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderWidth: 1,
-  },
-  signOutButton: {
-    backgroundColor: appColors.dangerSurface,
-    borderColor: appColors.danger600,
-  },
-  signOutButtonText: {
-    color: appColors.danger700,
-    fontSize: 13,
-    fontWeight: "800",
+    marginTop: appSpacing.gutter,
   },
   helperText: {
-    color: appColors.slate200,
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 12,
-  },
-  buttonPressed: {
-    opacity: 0.92,
-  },
-  disabled: {
-    opacity: 0.6,
+    marginTop: appSpacing.sm,
   },
 });
 

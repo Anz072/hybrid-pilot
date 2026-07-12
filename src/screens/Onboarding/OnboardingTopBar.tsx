@@ -1,69 +1,88 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { ArrowLeftIcon } from "phosphor-react-native";
+import { AppText, IconButton } from "../../components/ui";
 import { appColors } from "../../theme/colors";
+import { appRadius, appSpacing, appSurfaces } from "../../theme/tokens";
 
 type OnboardingTopBarProps = {
   onBack?: () => void;
+  progress?: number;
   stepLabel?: string;
 };
 
 const OnboardingTopBar = ({
   onBack,
+  progress,
   stepLabel,
 }: OnboardingTopBarProps) => {
+  const clampedProgress =
+    typeof progress === "number" ? Math.min(1, Math.max(0, progress)) : null;
+
   return (
-    <View style={styles.row}>
-      {onBack ? (
-        <Pressable
-          onPress={onBack}
-          style={({ pressed }) => [
-            styles.backButton,
-            pressed && styles.backButtonPressed,
-          ]}
+    <View style={styles.wrap}>
+      <View style={styles.row}>
+        {onBack ? (
+          <IconButton accessibilityLabel="Go back" onPress={onBack}>
+            <ArrowLeftIcon size={20} color={appColors.textPrimary} weight="bold" />
+          </IconButton>
+        ) : (
+          <View style={styles.placeholder} />
+        )}
+        {stepLabel ? (
+          <AppText color="secondary" variant="eyebrow">
+            {stepLabel}
+          </AppText>
+        ) : null}
+      </View>
+      {clampedProgress !== null ? (
+        <View
+          accessibilityRole="progressbar"
+          accessibilityValue={{
+            max: 100,
+            min: 0,
+            now: Math.round(clampedProgress * 100),
+          }}
+          style={styles.progressTrack}
         >
-          <ArrowLeftIcon size={16} color={appColors.slate900} weight="bold" />
-          <Text style={styles.backText}>Back</Text>
-        </Pressable>
-      ) : (
-        <View />
-      )}
-      {stepLabel ? <Text style={styles.stepLabel}>{stepLabel}</Text> : null}
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${Math.round(clampedProgress * 100)}%` },
+            ]}
+          />
+        </View>
+      ) : null}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  wrap: {
+    gap: appSpacing.sm,
+    marginBottom: appSpacing.xl,
+  },
   row: {
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 18,
+    gap: appSpacing.md,
   },
-  backButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: appColors.white,
-    borderColor: appColors.slate300,
+  placeholder: {
+    width: 44,
+    height: 44,
   },
-  backButtonPressed: {
-    opacity: 0.9,
+  progressTrack: {
+    height: 6,
+    borderRadius: appRadius.pill,
+    backgroundColor: appSurfaces.soft,
+    overflow: "hidden",
   },
-  backText: {
-    color: appColors.slate900,
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  stepLabel: {
-    color: appColors.slate500,
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
+  progressFill: {
+    height: "100%",
+    borderRadius: appRadius.pill,
+    backgroundColor: appColors.actionPrimary,
   },
 });
 

@@ -1,19 +1,21 @@
 import React from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { StyleSheet, View } from "react-native";
 import { ForkKnifeIcon } from "phosphor-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { Pie, PolarChart } from "victory-native";
+import { AppCard, AppText, Chip, NumericText } from "../../components/ui";
+import { getGoalStrategyRateLabel } from "../../engine/goalStrategy";
+import { getAgeFromBirthdateValue } from "../../helpers";
 import type {
   OnboardingParamList,
   OnboardingProfile,
 } from "../../navigation/onboardingTypes";
-import { Pie, PolarChart } from "victory-native";
-import { getGoalStrategyRateLabel } from "../../engine/goalStrategy";
-import { getAgeFromBirthdateValue } from "../../helpers";
+import { appColors } from "../../theme/colors";
+import { appSpacing } from "../../theme/tokens";
 import { buildFuelPlan } from "./initialCalculations";
 import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
 import OnboardingReviewCard from "./OnboardingReviewCard";
-import OnboardingTopBar from "./OnboardingTopBar";
+import OnboardingStepScreen, { onboardingStepProgress } from "./OnboardingStepScreen";
 import {
   formatActivitySummary,
   formatBodySummary,
@@ -21,48 +23,46 @@ import {
   formatProteinFocusSummary,
   formatTrainingSummary,
 } from "./onboardingSummary";
-import { appColors } from "../../theme/colors";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "FuelPlan">;
 
 type MacroChartDatum = {
-  label: string;
-  value: number;
   color: string;
   grams: number;
+  label: string;
+  value: number;
 };
 
 const FuelPlanScreen = ({ navigation, route }: Props) => {
-  const insets = useSafeAreaInsets();
   const {
+    activity,
+    bodyData,
     goal,
     goalStrategy,
-    bodyData,
-    activity,
-    training,
     proteinFocus,
+    training,
   } = route.params;
   const age = getAgeFromBirthdateValue(bodyData.birthdate) ?? 25;
   const fuelPlan = buildFuelPlan({
-    heightCm: bodyData.heightCm,
-    weightKg: bodyData.weightKg,
-    sex: bodyData.sex,
-    age,
     activity,
+    age,
     goal,
     goalStrategy,
+    heightCm: bodyData.heightCm,
     proteinFocus,
+    sex: bodyData.sex,
+    weightKg: bodyData.weightKg,
   });
   const goalRateLabel = getGoalStrategyRateLabel(goal, goalStrategy);
 
   const onboarding: OnboardingProfile = {
+    activity,
+    bodyData,
+    fuelPlan,
     goal,
     goalStrategy,
-    bodyData,
-    activity,
-    training,
     proteinFocus,
-    fuelPlan,
+    training,
   };
 
   const macroChartData = React.useMemo<MacroChartDatum[]>(
@@ -70,19 +70,19 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
       {
         label: "Protein",
         value: Math.max(1, fuelPlan.protein * 4),
-        color: appColors.slate800,
+        color: appColors.protein,
         grams: fuelPlan.protein,
       },
       {
         label: "Carbs",
         value: Math.max(1, fuelPlan.carbs * 4),
-        color: appColors.success700,
+        color: appColors.carbs,
         grams: fuelPlan.carbs,
       },
       {
         label: "Fats",
         value: Math.max(1, fuelPlan.fats * 9),
-        color: appColors.brand500,
+        color: appColors.fat,
         grams: fuelPlan.fats,
       },
     ],
@@ -90,28 +90,17 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
   );
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 },
-      ]}
-      contentInsetAdjustmentBehavior="automatic"
-      showsVerticalScrollIndicator={false}
+    <OnboardingStepScreen
+      eyebrow="Fuel Strategy"
+      headerAccessory={<ForkKnifeIcon size={24} color={appColors.statusSuccess} weight="fill" />}
+      onBack={() => navigation.goBack()}
+      progress={onboardingStepProgress(8)}
+      stepLabel="Fuel Plan"
+      subtitle="Auto-generated from your body data, activity, goals, and protein bias."
+      title="Initial plan"
     >
-      <OnboardingTopBar onBack={() => navigation.goBack()} stepLabel="Fuel Plan" />
-      <Text style={styles.eyebrow}>Fuel Strategy</Text>
-      <View style={styles.titleRow}>
-        <ForkKnifeIcon size={26} color={appColors.success700} weight="fill" />
-        <Text style={styles.title}>Initial Plan</Text>
-      </View>
-      <Text style={styles.subtitle}>
-        Auto-generated from your body data, activity, goals, and protein bias.
-      </Text>
       {goalRateLabel ? (
-        <View style={styles.pacePill}>
-          <Text style={styles.pacePillText}>{goalRateLabel}</Text>
-        </View>
+        <Chip label={goalRateLabel} selected style={styles.pacePill} />
       ) : null}
 
       <OnboardingReviewCard
@@ -174,21 +163,27 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
         ]}
       />
 
-      <View style={styles.chartCard}>
-        <Text style={styles.chartTitle}>Macro Split</Text>
+      <AppCard style={styles.chartCard}>
+        <AppText align="center" color="secondary" variant="cardTitle">
+          Macro Split
+        </AppText>
         <View style={styles.chartWrap}>
           <PolarChart
+            colorKey="color"
             data={macroChartData}
             labelKey="label"
             valueKey="value"
-            colorKey="color"
           >
             <Pie.Chart innerRadius="65%" />
           </PolarChart>
 
-          <View style={styles.chartCenter} pointerEvents="none">
-            <Text style={styles.chartCenterValue}>{fuelPlan.calories}</Text>
-            <Text style={styles.chartCenterLabel}>kcal</Text>
+          <View pointerEvents="none" style={styles.chartCenter}>
+            <NumericText variant="numberCalorieHero">
+              {fuelPlan.calories}
+            </NumericText>
+            <AppText color="muted" variant="eyebrow">
+              kcal
+            </AppText>
           </View>
         </View>
         <View style={styles.legendRow}>
@@ -197,138 +192,53 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
               <View
                 style={[styles.legendSwatch, { backgroundColor: item.color }]}
               />
-              <Text
-                style={styles.legendText}
-              >{`${item.label} ${item.grams}g`}</Text>
+              <AppText color="secondary" variant="label">
+                {item.label} {item.grams}g
+              </AppText>
             </View>
           ))}
         </View>
-      </View>
+      </AppCard>
 
-      <View style={styles.card}>
-        <View style={styles.metricRow}>
-          <Text style={styles.metricLabel}>Daily calories</Text>
-          <Text style={styles.metricValue}>{fuelPlan.calories} kcal</Text>
-        </View>
-        <View style={styles.metricRow}>
-          <Text style={styles.metricLabel}>Protein</Text>
-          <Text style={styles.metricValue}>{fuelPlan.protein} g</Text>
-        </View>
-        <View style={styles.metricRow}>
-          <Text style={styles.metricLabel}>Protein focus</Text>
-          <Text style={styles.metricValue}>
-            {formatProteinFocusSummary(proteinFocus)}
-          </Text>
-        </View>
-        <View style={styles.metricRow}>
-          <Text style={styles.metricLabel}>Carbs</Text>
-          <Text style={styles.metricValue}>{fuelPlan.carbs} g</Text>
-        </View>
-        <View style={styles.metricRow}>
-          <Text style={styles.metricLabel}>Fats</Text>
-          <Text style={styles.metricValue}>{fuelPlan.fats} g</Text>
-        </View>
-      </View>
+      <AppCard style={styles.metricsCard} variant="soft">
+        {[
+          ["Daily calories", `${fuelPlan.calories} kcal`],
+          ["Protein", `${fuelPlan.protein} g`],
+          ["Protein focus", formatProteinFocusSummary(proteinFocus)],
+          ["Carbs", `${fuelPlan.carbs} g`],
+          ["Fats", `${fuelPlan.fats} g`],
+        ].map(([label, value]) => (
+          <View key={label} style={styles.metricRow}>
+            <AppText color="secondary" variant="bodySmall">
+              {label}
+            </AppText>
+            <NumericText variant="numberMacroRow">
+              {value}
+            </NumericText>
+          </View>
+        ))}
+      </AppCard>
+
       <OnboardingPrimaryButton
         label="Looks good"
-        style={styles.primaryButton}
         onPress={() => navigation.push("Account", { onboarding })}
+        style={styles.primaryButton}
       />
-      <Text style={styles.helper}>
+      <AppText align="center" color="secondary" style={styles.helper} variant="metadata">
         Use this as a starting point and review progress after 2-3 consistent weeks.
-      </Text>
-    </ScrollView>
+      </AppText>
+    </OnboardingStepScreen>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: appColors.surfaceCanvas,
-  },
-  content: {
-    paddingHorizontal: 22,
-    flexGrow: 1,
-  },
-  eyebrow: {
-    alignSelf: "flex-start",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    color: appColors.slate100,
-    backgroundColor: appColors.success700,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    marginBottom: 12,
-  },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 8,
-  },
-  title: {
-    flex: 1,
-    fontSize: 30,
-    fontWeight: "800",
-    color: appColors.textPrimary,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: appColors.slate600,
-    marginBottom: 10,
-  },
   pacePill: {
     alignSelf: "flex-start",
-    backgroundColor: appColors.brand800,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 16,
-  },
-  pacePillText: {
-    color: appColors.brand700,
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 0.4,
-    textTransform: "uppercase",
-  },
-  card: {
-    backgroundColor: appColors.surfaceCanvasAlt,
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 14,
-    gap: 8,
-  },
-  metricRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  metricLabel: {
-    fontSize: 14,
-    color: appColors.slate600,
-    fontWeight: "700",
-  },
-  metricValue: {
-    fontSize: 15,
-    color: appColors.slate600,
-    fontWeight: "800",
+    marginBottom: appSpacing.md,
   },
   chartCard: {
-    backgroundColor: appColors.surfaceCanvasAlt,
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 18,
-  },
-  chartTitle: {
-    color: appColors.slate600,
-    fontWeight: "800",
-    fontSize: 16,
-    textAlign: "center",
-    marginBottom: 20,
+    gap: appSpacing.md,
+    marginBottom: appSpacing.md,
   },
   chartWrap: {
     height: 180,
@@ -343,52 +253,38 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  chartCenterValue: {
-    fontSize: 24,
-    fontWeight: "900",
-    color: appColors.slate100,
-    lineHeight: 28,
-  },
-  chartCenterLabel: {
-    marginTop: 2,
-    fontSize: 12,
-    fontWeight: "700",
-    color: appColors.slate500,
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-  },
   legendRow: {
-    marginTop: 8,
     flexDirection: "row",
-    justifyContent: "center",
     flexWrap: "wrap",
-    gap: 12,
+    justifyContent: "center",
+    gap: appSpacing.sm,
   },
   legendItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: appSpacing.xs,
   },
   legendSwatch: {
     width: 10,
     height: 10,
     borderRadius: 999,
   },
-  legendText: {
-    fontSize: 12,
-    color: appColors.slate600,
-    fontWeight: "700",
+  metricsCard: {
+    gap: appSpacing.xs,
+    marginBottom: appSpacing.md,
+  },
+  metricRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: appSpacing.sm,
   },
   primaryButton: {
-    marginTop: 20,
+    marginTop: appSpacing.xs,
   },
   helper: {
-    marginTop: 10,
-    color: appColors.slate600,
-    textAlign: "center",
-    fontSize: 13,
+    marginTop: appSpacing.sm,
   },
 });
 
 export default FuelPlanScreen;
-

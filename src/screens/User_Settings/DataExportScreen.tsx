@@ -2,12 +2,9 @@ import React from "react";
 import {
   ActivityIndicator,
   Alert,
-  Pressable,
   ScrollView,
   Share,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -24,6 +21,8 @@ import { useAppSelector } from "../../store/hooks";
 import type { DBUserFoodLogEntry, DBWeightEntry } from "../../store/DB_TYPES";
 import { formatFoodDateKey } from "../Food/foodUtils";
 import { appColors } from "../../theme/colors";
+import { AppButton, AppCard, AppInput, AppText, InteractiveCard } from "../../components/ui";
+import { appBorders, appRadius, appSpacing, appStates, appSurfaces } from "../../theme/tokens";
 import SettingsStackHeader from "./SettingsStackHeader";
 import {
   buildBackup,
@@ -202,8 +201,8 @@ const DataExportScreen = ({ navigation }: Props) => {
           title="Export & backup"
         />
 
-        <Text style={styles.sectionTitle}>Export</Text>
-        <View style={styles.card}>
+        <AppText style={styles.sectionTitle} variant="sectionTitle">Export</AppText>
+        <AppCard style={styles.card}>
           <ExportRow
             icon={<ScalesIcon size={20} color={appColors.brand700} weight="fill" />}
             title="Weights (CSV)"
@@ -226,43 +225,40 @@ const DataExportScreen = ({ navigation }: Props) => {
             onPress={exportBackup}
             last
           />
-        </View>
+        </AppCard>
 
-        <Text style={styles.sectionTitle}>Restore</Text>
-        <View style={styles.card}>
-          <Text style={styles.restoreHint}>
+        <AppText style={styles.sectionTitle} variant="sectionTitle">Restore</AppText>
+        <AppCard style={styles.card}>
+          <AppText color="secondary" style={styles.restoreHint} variant="bodySmall">
             Paste the contents of a Dribsnis backup (JSON) to restore your weight
             history onto this account.
-          </Text>
-          <TextInput
+          </AppText>
+          <AppInput
+            containerStyle={styles.importInputWrap}
+            label="Backup JSON"
+            multiline
+            numberOfLines={5}
             style={styles.importInput}
             value={importText}
             onChangeText={setImportText}
             placeholder="Paste backup JSON here"
-            placeholderTextColor={appColors.textMuted}
-            multiline
             autoCapitalize="none"
             autoCorrect={false}
           />
-          <Pressable
+          <AppButton
             onPress={onImport}
             disabled={busy != null || !importText.trim()}
-            style={({ pressed }) => [
-              styles.importButton,
-              (busy != null || !importText.trim()) && styles.importButtonDisabled,
-              pressed && styles.pressed,
-            ]}
-          >
-            {busy === "import" ? (
-              <ActivityIndicator color={appColors.white} size="small" />
-            ) : (
-              <>
+            icon={
+              busy === "import" ? (
+                <ActivityIndicator color={appColors.white} size="small" />
+              ) : (
                 <UploadSimpleIcon size={18} color={appColors.white} weight="bold" />
-                <Text style={styles.importButtonText}>Restore backup</Text>
-              </>
-            )}
-          </Pressable>
-        </View>
+              )
+            }
+            label={busy === "import" ? "Restoring..." : "Restore backup"}
+            style={styles.importButton}
+          />
+        </AppCard>
       </ScrollView>
     </View>
   );
@@ -278,26 +274,25 @@ type ExportRowProps = {
 };
 
 const ExportRow = ({ icon, title, description, busy, onPress, last }: ExportRowProps) => (
-  <Pressable
+  <InteractiveCard
     onPress={onPress}
     disabled={busy}
-    style={({ pressed }) => [
-      styles.exportRow,
-      !last && styles.exportRowDivider,
-      pressed && styles.pressed,
-    ]}
+    style={[styles.exportRow, !last && styles.exportRowDivider]}
+    variant="compact"
   >
     <View style={styles.exportIcon}>{icon}</View>
     <View style={styles.exportCopy}>
-      <Text style={styles.exportTitle}>{title}</Text>
-      <Text style={styles.exportDescription}>{description}</Text>
+      <AppText variant="bodySmallStrong">{title}</AppText>
+      <AppText color="secondary" style={styles.exportDescription} variant="metadata">
+        {description}
+      </AppText>
     </View>
     {busy ? (
       <ActivityIndicator color={appColors.brand700} size="small" />
     ) : (
       <DownloadSimpleIcon size={18} color={appColors.textMuted} />
     )}
-  </Pressable>
+  </InteractiveCard>
 );
 
 const styles = StyleSheet.create({
@@ -306,97 +301,53 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
-    paddingHorizontal: 20,
+    paddingHorizontal: appSpacing.gutter,
   },
   sectionTitle: {
-    color: appColors.textPrimary,
-    fontSize: 18,
-    fontWeight: "800",
-    marginTop: 6,
-    marginBottom: 10,
+    marginTop: appSpacing.xs,
+    marginBottom: appSpacing.xs,
   },
   card: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 8,
-    marginBottom: 18,
+    gap: appSpacing.xs,
+    marginBottom: appSpacing.gutter,
   },
   exportRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 14,
+    gap: appSpacing.sm,
   },
   exportRowDivider: {
-    borderBottomWidth: 1,
-    borderBottomColor: appColors.borderSoft,
+    borderBottomWidth: appBorders.width,
+    borderBottomColor: appBorders.soft,
   },
   exportIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 999,
+    width: 44,
+    height: 44,
+    borderRadius: appRadius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.brand800,
+    backgroundColor: appColors.actionPrimarySoft,
   },
   exportCopy: {
     flex: 1,
   },
-  exportTitle: {
-    color: appColors.textPrimary,
-    fontSize: 15,
-    fontWeight: "700",
-  },
   exportDescription: {
-    color: appColors.textSecondary,
-    fontSize: 12,
-    lineHeight: 16,
-    marginTop: 2,
+    marginTop: appSpacing.xxs,
   },
   restoreHint: {
-    color: appColors.textSecondary,
-    fontSize: 13,
-    lineHeight: 19,
-    paddingHorizontal: 8,
-    paddingTop: 6,
-    marginBottom: 10,
+    marginBottom: appSpacing.xs,
+  },
+  importInputWrap: {
+    marginHorizontal: appSpacing.xxs,
   },
   importInput: {
     minHeight: 96,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    backgroundColor: appColors.surfaceField,
-    color: appColors.textPrimary,
-    padding: 12,
-    fontSize: 13,
     textAlignVertical: "top",
-    marginHorizontal: 4,
+    backgroundColor: appSurfaces.soft,
   },
   importButton: {
-    marginTop: 12,
-    marginHorizontal: 4,
-    minHeight: 48,
-    borderRadius: 999,
-    backgroundColor: appColors.brand700,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  importButtonDisabled: {
-    opacity: 0.5,
-  },
-  importButtonText: {
-    color: appColors.white,
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  pressed: {
-    opacity: 0.9,
+    marginTop: appSpacing.sm,
+    marginHorizontal: appSpacing.xxs,
   },
 });
 

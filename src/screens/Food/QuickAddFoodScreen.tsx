@@ -23,6 +23,7 @@ import type {
 } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
+import { LoadingState } from "../../components/ui";
 import { ArrowLeftIcon, FireIcon, PencilSimpleIcon } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
@@ -71,6 +72,9 @@ const QuickAddFoodScreen = () => {
   const user = useAppSelector((state) => state.user.currentUser);
   const [loading, setLoading] = React.useState(Boolean(route.params.entryId));
   const [saving, setSaving] = React.useState(false);
+  // Synchronous lock: `saving` state disables the button only after a re-render,
+  // so a fast double-tap could otherwise submit twice.
+  const savingRef = React.useRef(false);
   const [entry, setEntry] = React.useState<DBUserFoodLogEntry | null>(null);
   const [energyValue, setEnergyValue] = React.useState("");
   const [proteinValue, setProteinValue] = React.useState("");
@@ -321,6 +325,10 @@ const QuickAddFoodScreen = () => {
   );
 
   const handleSave = React.useCallback(async () => {
+    if (savingRef.current) {
+      return;
+    }
+
     if (!user) {
       Alert.alert(
         "No account found",
@@ -333,6 +341,8 @@ const QuickAddFoodScreen = () => {
       setFormError("Enter a valid energy value before saving.");
       return;
     }
+
+    savingRef.current = true;
 
     try {
       setFormError(null);
@@ -372,6 +382,7 @@ const QuickAddFoodScreen = () => {
     } catch {
       Alert.alert("Could not save quick add", "Please try again.");
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }, [
@@ -415,9 +426,11 @@ const QuickAddFoodScreen = () => {
             subtitle="Preparing your quick add..."
             onBack={() => navigation.goBack()}
           />
-          <View style={styles.card}>
-            <Text style={styles.helperText}>Loading...</Text>
-          </View>
+          <LoadingState
+            title="Loading entry"
+            message="Preparing your quick add."
+            style={styles.card}
+          />
         </View>
       </View>
     );
@@ -664,27 +677,6 @@ const QuickAddFoodScreen = () => {
 const styles = StyleSheet.create({
   screen: sharedStyleValues.screen,
   content: sharedStyleValues.content,
-  bgOrbTop: {
-    position: "absolute",
-    top: -90,
-    right: -70,
-    width: 250,
-    height: 250,
-    borderRadius: 999,
-    backgroundColor: appColors.brand800,
-    opacity: 0.38,
-  },
-  bgOrbBottom: {
-    position: "absolute",
-    bottom: -120,
-    left: -90,
-    width: 280,
-    height: 280,
-    borderRadius: 999,
-    backgroundColor: appColors.success700,
-    opacity: 0.34,
-  },
-  heroCard: sharedStyleValues.card,
   heroHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -701,66 +693,15 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceGhost,
     borderColor: appColors.surfaceGhostStrong,
   },
-  heroHeaderCopy: {
-    flex: 1,
-  },
-  heroEyebrow: sharedStyleValues.eyebrow,
   heroTitle: {
     ...sharedStyleValues.heroTitleLarge,
     marginBottom: 4,
-  },
-  heroMeta: sharedStyleValues.metaText,
-  heroPill: {
-    ...sharedStyleValues.pill,
-    gap: 0,
-  },
-  heroPillText: sharedStyleValues.pillText,
-  heroPillsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 12,
-  },
-  contextPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: appColors.surfaceGhost,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-  },
-  contextPillText: sharedStyleValues.contextPillText,
-  contextPillAction: {
-    color: appColors.brand300,
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  previewStrip: {
-    borderRadius: 8,
-    backgroundColor: appColors.brand700,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-  },
-  previewValue: {
-    color: appColors.white,
-    fontSize: 22,
-    fontWeight: "900",
-    marginBottom: 2,
-  },
-  previewText: {
-    color: appColors.brand300,
-    fontSize: 12,
-    lineHeight: 16,
   },
   card: sharedStyleValues.card,
   sectionTitle: {
     ...sharedStyleValues.sectionTitle,
     marginBottom: 10,
   },
-  sectionSubtitle: sharedStyleValues.sectionSubtitle,
   energyLabelContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -769,9 +710,6 @@ const styles = StyleSheet.create({
   fieldLabel: {
     ...sharedStyleValues.fieldLabel,
     marginBottom: 8,
-  },
-  fieldSpacing: {
-    marginTop: 16,
   },
   energyRow: {
     flexDirection: "row",
@@ -783,7 +721,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: appColors.brand700,
     fontSize: 20,
-    fontWeight: "800",
+    fontWeight: "600",
+    fontVariant: ["tabular-nums"],
   },
   unitPill: {
     ...sharedStyleValues.unitPillRound,
@@ -811,7 +750,7 @@ const styles = StyleSheet.create({
   inlineQuietButtonText: {
     color: appColors.brand500,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "500",
   },
   presetRow: {
     flexDirection: "row",
@@ -829,7 +768,8 @@ const styles = StyleSheet.create({
   presetChipText: {
     color: appColors.brand500,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "500",
+    fontVariant: ["tabular-nums"],
   },
   macroGrid: {
     flexDirection: "row",
@@ -849,28 +789,18 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceField,
     paddingHorizontal: 12,
   },
-  nutrientInputWrapWide: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceField,
-    paddingHorizontal: 12,
-  },
   nutrientInput: {
     flex: 1,
     paddingVertical: 11,
     color: appColors.textPrimary,
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "500",
+    fontVariant: ["tabular-nums"],
   },
   nutrientUnit: {
     color: appColors.brand500,
     fontSize: 13,
-    fontWeight: "800",
+    fontWeight: "500",
   },
   textInput: sharedStyleValues.input,
   optionalPanel: {
@@ -890,7 +820,7 @@ const styles = StyleSheet.create({
   formError: {
     color: appColors.danger700,
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "500",
     lineHeight: 17,
     marginTop: 12,
   },

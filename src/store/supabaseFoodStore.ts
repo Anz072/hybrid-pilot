@@ -3,6 +3,10 @@ import {
   requireSupabaseSessionUser,
 } from "../API/supabase/client";
 import { shouldUseExpoGoDevLocalStore } from "../dev/expoGoDevAuth";
+import {
+  assertValidFoodLogQuantity,
+  getFoodResolvedServing as getResolvedServing,
+} from "../engine/nutrition";
 import type {
   AddFoodItemInput,
   AddQuickAddFoodLogInput,
@@ -80,7 +84,7 @@ import {
   getCachedDiaryDayStatus,
   listCachedDiaryDayStatusesBetween,
   markCachedFoodLogEntryDeleted,
-  markCachedFoodLogEntryError,
+  restoreCachedFoodLogEntry,
   replaceCachedFavoriteFoodIds,
   replaceCachedFoodLogEntriesBetween,
   replaceCachedFoodLogEntriesForDate,
@@ -153,6 +157,10 @@ type SupabaseCustomRecipeRow = {
   is_public: boolean | null;
   created_at: string | null;
   updated_at: string | null;
+};
+
+type FoodLogEntriesReadOptions = {
+  forceRefresh?: boolean;
 };
 
 type SupabaseRecipeIngredientRow = {
@@ -309,27 +317,6 @@ const parseStringArray = (value: unknown): string[] => {
   return [];
 };
 
-const getResolvedServing = (
-  food: Pick<DBFoodItem, "nutritionBasis" | "servingSizeValue" | "servingSizeUnit">,
-) => {
-  if (food.servingSizeValue != null && food.servingSizeValue > 0) {
-    return {
-      value: food.servingSizeValue,
-      unit: food.servingSizeUnit?.trim() || "g",
-    };
-  }
-
-  if (food.nutritionBasis === "100ml") {
-    return { value: 100, unit: "ml" };
-  }
-
-  if (food.nutritionBasis === "100g") {
-    return { value: 100, unit: "g" };
-  }
-
-  return { value: 1, unit: "serving" };
-};
-
 const roundTo = (value: number, places = 3) => {
   const factor = 10 ** places;
   return Math.round(value * factor) / factor;
@@ -360,6 +347,14 @@ const buildSupabaseSearchTokens = (value: string) =>
     .map((token) => token.trim())
     .filter((token) => token.length >= 2)
     .slice(0, 6);
+
+// Negative ids mark optimistic cache rows that have no server id yet; the
+// sequence suffix keeps two writes in the same millisecond from colliding.
+let pendingFoodLogIdSequence = 0;
+const nextPendingFoodLogCacheId = () => {
+  pendingFoodLogIdSequence = (pendingFoodLogIdSequence + 1) % 1000;
+  return -(Date.now() * 1000 + pendingFoodLogIdSequence);
+};
 
 const toSyntheticRecipeFoodId = (recipeId: number) => -Math.abs(recipeId);
 const fromSyntheticRecipeFoodId = (foodId: number) => Math.abs(foodId);
@@ -2775,6 +2770,7 @@ export const deleteUserCustomMeal = async (mealId: number): Promise<void> => {
 export const addUserFoodLog = async (
   input: AddUserFoodLogInput,
 ): Promise<void> => {
+  assertValidFoodLogQuantity(input.quantityG);
   const authUserId = await resolveSupabaseUserId(input.userExternalId);
 
   if (!authUserId) {
@@ -2818,7 +2814,7 @@ export const addUserFoodLog = async (
     is_energy_manually_set: false,
     metadata: buildEntrySnapshotMetadata(food),
   };
-  const pendingId = -Date.now();
+  const pendingId = nextPendingFoodLogCacheId();
   await upsertCachedFoodLogEntries(
     input.userExternalId,
     [
@@ -2841,7 +2837,9 @@ export const addUserFoodLog = async (
     .single();
 
   if (error) {
-    await markCachedFoodLogEntryError(pendingId, error);
+    // Roll back the optimistic row: a failed add must leave no trace in the
+    // diary, otherwise totals keep counting an entry that was never saved.
+    await deleteCachedFoodLogEntry(pendingId, input.userExternalId);
     throw error;
   }
 
@@ -2865,7 +2863,7 @@ export const addQuickAddFoodLog = async (
   const supabase = getSupabaseClient();
   const displayName = normalizeOptionalText(input.name) ?? "Quick Add";
   const loggedAt = input.loggedAt ?? new Date().toISOString();
-  const pendingId = -Date.now();
+  const pendingId = nextPendingFoodLogCacheId();
   await upsertCachedFoodLogEntries(
     input.userExternalId,
     [
@@ -2907,7 +2905,7 @@ export const addQuickAddFoodLog = async (
     .single();
 
   if (error) {
-    await markCachedFoodLogEntryError(pendingId, error);
+    await deleteCachedFoodLogEntry(pendingId, input.userExternalId);
     throw error;
   }
 
@@ -2924,6 +2922,7 @@ export const addQuickAddFoodLog = async (
 export const updateUserFoodLog = async (
   input: UpdateUserFoodLogInput,
 ): Promise<void> => {
+  assertValidFoodLogQuantity(input.quantityG);
   const authUserId = await resolveSupabaseUserId();
 
   if (!authUserId) {
@@ -3040,7 +3039,9 @@ export const deleteUserFoodLog = async (id: number): Promise<void> => {
     .eq("id", id);
 
   if (error) {
-    await markCachedFoodLogEntryError(id, error);
+    // The server still has the entry; un-hide the cached row so local and
+    // remote state don't silently diverge.
+    await restoreCachedFoodLogEntry(id, authUserId);
     throw error;
   }
 
@@ -3084,6 +3085,7 @@ export const getUserFoodLogEntriesBetween = async (
   userExternalId: string,
   startDate: string,
   endDate: string,
+  options: FoodLogEntriesReadOptions = {},
 ): Promise<DBUserFoodLogEntry[]> => {
   const authUserId = await resolveSupabaseUserId(userExternalId);
 
@@ -3096,7 +3098,7 @@ export const getUserFoodLogEntriesBetween = async (
     startDate,
     endDate,
   );
-  if (cached.length > 0) {
+  if (!options.forceRefresh && cached.length > 0) {
     void (async () => {
       const supabase = getSupabaseClient();
       const { data, error } = await supabase
@@ -3500,13 +3502,21 @@ export const copyFoodLogsFromDate = async (
   if (rowsToInsert.length > 0) {
     const insertResult = await supabase
       .from(SUPABASE_FOOD_ENTRIES_TABLE)
-      .insert(rowsToInsert);
+      .insert(rowsToInsert)
+      .select("*");
     if (insertResult.error) {
       throw insertResult.error;
     }
 
     copiedCount = rowsToInsert.length;
+    await upsertCachedFoodLogEntries(
+      userExternalId,
+      ((insertResult.data as SupabaseUserFoodEntryRow[]) ?? []).map(
+        toDbFoodLogEntry,
+      ),
+    );
     await clearCompletedDiaryDayIfNeeded(authUserId, toDate);
+    await cacheDiaryDayIncomplete(userExternalId, toDate);
   }
 
   return {

@@ -1,9 +1,7 @@
 import React from "react";
 import {
-  Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -15,6 +13,8 @@ import {
 } from "../../preferences/displayPreferences";
 import { useDisplayPreferences } from "../../preferences/usePreferences";
 import { appColors } from "../../theme/colors";
+import { AppCard, AppText, SegmentedControl } from "../../components/ui";
+import { appSpacing } from "../../theme/tokens";
 import SettingsStackHeader from "./SettingsStackHeader";
 
 type Props = NativeStackScreenProps<MoreParamList, "PreferencesScreen">;
@@ -40,47 +40,13 @@ const PreferenceRow = <T extends string>({
   options,
   onChange,
 }: PreferenceRowProps<T>) => (
-  <View style={styles.card}>
-    <Text style={styles.cardTitle}>{title}</Text>
-    <Text style={styles.cardText}>{description}</Text>
-    <View style={styles.segmented}>
-      {options.map((option) => {
-        const selected = option.value === value;
-        return (
-          <Pressable
-            key={option.value}
-            onPress={() => onChange(option.value)}
-            accessibilityRole="button"
-            accessibilityState={{ selected }}
-            style={({ pressed }) => [
-              styles.segment,
-              selected && styles.segmentSelected,
-              pressed && !selected && styles.segmentPressed,
-            ]}
-          >
-            <Text
-              style={[
-                styles.segmentLabel,
-                selected && styles.segmentLabelSelected,
-              ]}
-            >
-              {option.label}
-            </Text>
-            {option.hint ? (
-              <Text
-                style={[
-                  styles.segmentHint,
-                  selected && styles.segmentHintSelected,
-                ]}
-              >
-                {option.hint}
-              </Text>
-            ) : null}
-          </Pressable>
-        );
-      })}
-    </View>
-  </View>
+  <AppCard style={styles.card}>
+    <AppText variant="cardTitle">{title}</AppText>
+    <AppText color="secondary" style={styles.cardText} variant="bodySmall">
+      {description}
+    </AppText>
+    <SegmentedControl options={options} onChange={onChange} value={value} />
+  </AppCard>
 );
 
 const PreferencesScreen = ({ navigation }: Props) => {
@@ -144,7 +110,9 @@ const PreferencesScreen = ({ navigation }: Props) => {
           onChange={(timeFormat) => update({ timeFormat })}
         />
 
-        <Text style={styles.footnote}>Changes save automatically.</Text>
+        <AppText align="center" color="muted" style={styles.footnote} variant="metadata">
+          Changes save automatically.
+        </AppText>
       </ScrollView>
     </View>
   );
@@ -156,71 +124,16 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
-    paddingHorizontal: 20,
+    paddingHorizontal: appSpacing.gutter,
   },
   card: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: appColors.slate200,
-    marginBottom: 14,
-  },
-  cardTitle: {
-    color: appColors.slate800,
-    fontSize: 17,
-    fontWeight: "800",
-    marginBottom: 6,
+    marginBottom: appSpacing.md,
   },
   cardText: {
-    color: appColors.slate600,
-    fontSize: 13,
-    lineHeight: 19,
-    marginBottom: 14,
-  },
-  segmented: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  segment: {
-    flex: 1,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceField,
-    borderWidth: 1,
-    borderColor: appColors.slate200,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    alignItems: "center",
-    gap: 2,
-  },
-  segmentSelected: {
-    backgroundColor: appColors.brand700,
-    borderColor: appColors.brand700,
-  },
-  segmentPressed: {
-    opacity: 0.9,
-  },
-  segmentLabel: {
-    color: appColors.slate800,
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  segmentLabelSelected: {
-    color: appColors.white,
-  },
-  segmentHint: {
-    color: appColors.slate500,
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  segmentHintSelected: {
-    color: appColors.white,
+    marginBottom: appSpacing.md,
   },
   footnote: {
-    color: appColors.slate500,
-    fontSize: 12,
-    textAlign: "center",
-    marginTop: 4,
+    marginTop: appSpacing.xxs,
   },
 });
 

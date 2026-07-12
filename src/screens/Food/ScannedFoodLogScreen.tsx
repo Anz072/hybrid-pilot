@@ -3,7 +3,6 @@ import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import {
-  ActivityIndicator,
   Alert,
   Platform,
   Pressable,
@@ -22,6 +21,7 @@ import type {
 } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
+import { LoadingState } from "../../components/ui";
 import {
   BarcodeIcon,
   CalendarIcon,
@@ -43,8 +43,10 @@ import {
   formatFoodShortDate,
   formatFoodSourceLabel,
   getFoodDefaultLogAmount,
+  getFoodQuantityFactor,
   getFoodResolvedServing,
   normalizePositiveFoodInput,
+  scaleFoodNutritionForQuantity,
   type FoodNutritionTotals,
 } from "./foodUtils";
 import { resolveFoodLogContext } from "./foodLogContext";
@@ -66,11 +68,6 @@ type ScannedFoodNav = CompositeNavigationProp<
   NativeStackNavigationProp<RootStackParamList>
 >;
 
-const roundTo = (value: number, places = 1) => {
-  const factor = 10 ** places;
-  return Math.round(value * factor) / factor;
-};
-
 const parseQuantity = (value: string): number =>
   Number(value.trim().replace(",", "."));
 
@@ -82,15 +79,7 @@ const buildPreview = (
     return null;
   }
 
-  const serving = getFoodResolvedServing(food);
-  const factor = serving.value > 0 ? quantity / serving.value : 1;
-
-  return {
-    calories: roundTo((food.calories ?? 0) * factor, 0),
-    proteinG: roundTo((food.proteinG ?? 0) * factor),
-    carbsG: roundTo((food.carbsG ?? 0) * factor),
-    fatG: roundTo((food.fatG ?? 0) * factor),
-  };
+  return scaleFoodNutritionForQuantity(food, quantity);
 };
 
 const ScannedFoodLogScreen = () => {
@@ -122,6 +111,9 @@ const ScannedFoodLogScreen = () => {
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
+  // Synchronous lock: `saving` state disables the button only after a re-render,
+  // so a fast double-tap could otherwise log the food twice.
+  const savingRef = React.useRef(false);
   const foodLogContext = React.useMemo(
     () =>
       resolveFoodLogContext({
@@ -182,12 +174,12 @@ const ScannedFoodLogScreen = () => {
   );
   const canFavoriteFood = food != null && food.source !== "recipe";
   const micronutrientFactor = React.useMemo(() => {
-    if (!serving || !Number.isFinite(quantity) || quantity <= 0) {
+    if (!food || !Number.isFinite(quantity) || quantity <= 0) {
       return 0;
     }
 
-    return serving.value > 0 ? quantity / serving.value : 1;
-  }, [quantity, serving]);
+    return getFoodQuantityFactor(food, quantity);
+  }, [food, quantity]);
   const handleQuantityBlur = React.useCallback(() => {
     if (!food) {
       return;
@@ -300,6 +292,10 @@ const ScannedFoodLogScreen = () => {
   }, [canFavoriteFood, food, isFavorite, user]);
 
   const saveLog = React.useCallback(async () => {
+    if (savingRef.current) {
+      return;
+    }
+
     if (!user || !food) {
       Alert.alert(
         "No account found",
@@ -313,6 +309,8 @@ const ScannedFoodLogScreen = () => {
       return;
     }
 
+    savingRef.current = true;
+
     try {
       setFormError(null);
       setSaving(true);
@@ -325,7 +323,15 @@ const ScannedFoodLogScreen = () => {
         mealType: labelValue.trim() || null,
       });
       closeAfterSave();
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Please try logging this food again.";
+      setFormError(message);
+      Alert.alert("Could not log food", message);
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }, [closeAfterSave, date, food, labelValue, loggedAtDate, quantity, user]);
@@ -344,10 +350,11 @@ const ScannedFoodLogScreen = () => {
             }
             onBack={() => navigation.goBack()}
           />
-          <View style={styles.centerCard}>
-            <ActivityIndicator size="small" color={appColors.brand700} />
-            <Text style={styles.centerText}>Preparing the log screen.</Text>
-          </View>
+          <LoadingState
+            title="Loading food"
+            message="Preparing the log screen."
+            style={styles.centerCard}
+          />
         </View>
       </View>
     );
@@ -550,30 +557,12 @@ const styles = StyleSheet.create({
   title: {
     color: appColors.textPrimary,
     fontSize: 24,
-    fontWeight: "900",
+    fontWeight: "500",
     marginTop: 16,
     marginBottom: 12,
   },
   content: {
     paddingHorizontal: 18,
-  },
-  bgOrbTop: {
-    position: "absolute",
-    top: -90,
-    right: -70,
-    width: 250,
-    height: 250,
-    borderRadius: 999,
-    backgroundColor: appColors.brand800,
-  },
-  bgOrbBottom: {
-    position: "absolute",
-    bottom: -120,
-    left: -90,
-    width: 280,
-    height: 280,
-    borderRadius: 999,
-    backgroundColor: appColors.success700,
   },
   centerCard: sharedStyleValues.centerCard,
   centerText: sharedStyleValues.centerText,

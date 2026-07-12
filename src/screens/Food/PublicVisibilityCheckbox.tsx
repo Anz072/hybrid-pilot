@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
   title: {
     color: appColors.textPrimary,
     fontSize: 15,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   titleChecked:{
     color: appColors.slate100
@@ -90,4 +90,3 @@ const styles = StyleSheet.create({
 });
 
 export default PublicVisibilityCheckbox;
-

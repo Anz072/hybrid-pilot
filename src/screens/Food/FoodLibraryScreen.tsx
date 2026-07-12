@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
   panelTitle: {
     color: appColors.slate900,
     fontSize: 18,
-    fontWeight: "800",
+    fontWeight: "600",
     marginBottom: 4,
   },
   panelMeta: {

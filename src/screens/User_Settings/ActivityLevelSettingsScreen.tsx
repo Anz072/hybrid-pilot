@@ -1,13 +1,11 @@
 import React from "react";
 import {
   Alert,
-  Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
-import { CheckIcon, GaugeIcon, TargetIcon } from "phosphor-react-native";
+import { GaugeIcon, TargetIcon } from "phosphor-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -24,6 +22,8 @@ import type { MoreParamList } from "../../navigation/MoreNavigator";
 import { DB } from "../../store/DB";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { appColors } from "../../theme/colors";
+import { AppButton, AppCard, AppText, ErrorState, LoadingState, NumericText, OptionCard } from "../../components/ui";
+import { appSpacing } from "../../theme/tokens";
 import CalorieBudgetChart from "./CalorieBudgetChart";
 import SettingsStackHeader from "./SettingsStackHeader";
 import {
@@ -69,6 +69,8 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
     ReturnType<typeof DB.getUserSettings>
   > | null>(null);
   const [saving, setSaving] = React.useState(false);
+  const [contextLoading, setContextLoading] = React.useState(true);
+  const [contextError, setContextError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     setSelectedActivity((user?.activityLevel as ActivityLevel | null) ?? null);
@@ -77,16 +79,26 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
 
   const loadContext = React.useCallback(async () => {
     if (!user) {
+      setContextLoading(false);
       return;
     }
 
-    const [nextWeightKg, nextSettings] = await Promise.all([
-      getLatestUserWeightKg(user.externalId),
-      DB.getUserSettings(user.externalId),
-    ]);
+    setContextLoading(true);
+    setContextError(null);
 
-    setLatestWeightKg(nextWeightKg);
-    setSettings(nextSettings);
+    try {
+      const [nextWeightKg, nextSettings] = await Promise.all([
+        getLatestUserWeightKg(user.externalId),
+        DB.getUserSettings(user.externalId),
+      ]);
+
+      setLatestWeightKg(nextWeightKg);
+      setSettings(nextSettings);
+    } catch {
+      setContextError("Could not build the goal preview. Check your connection and try again.");
+    } finally {
+      setContextLoading(false);
+    }
   }, [user]);
 
   React.useEffect(() => {
@@ -180,26 +192,26 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
         />
 
         {!user ? (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>No active user</Text>
-            <Text style={styles.cardText}>
+          <AppCard style={styles.card}>
+            <AppText variant="cardTitle">No active user</AppText>
+            <AppText color="secondary" variant="bodySmall">
               Sign in to your account first before editing your goal settings.
-            </Text>
-          </View>
+            </AppText>
+          </AppCard>
         ) : (
           <>
-            <View style={styles.card}>
+            <AppCard style={styles.card}>
               <View style={styles.summaryRow}>
                 <View style={styles.summaryCopy}>
-                  <Text style={styles.cardTitle}>Current plan</Text>
-                  <Text style={styles.cardText}>
+                  <AppText variant="cardTitle">Current plan</AppText>
+                  <AppText color="secondary" variant="bodySmall">
                     {formatGoalLabel(user.goal)} /{" "}
                     {formatGoalStrategyMeta(
                       user.goal,
                       resolveGoalStrategy(user.goal, user.goalStrategy),
                     )}{" "}
                     / {formatActivityLevelLabel(user.activityLevel)}
-                  </Text>
+                  </AppText>
                 </View>
                 <View style={styles.metricPill}>
                   <GaugeIcon
@@ -207,37 +219,37 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
                     color={appColors.brand700}
                     weight="fill"
                   />
-                  <Text style={styles.metricPillText}>
-                    {previewPlan?.calories ?? user.calorieAllowance ?? "--"}{" "}
+                  <NumericText color="coral" variant="numberTrendDelta">
+                    {contextLoading ? "..." : previewPlan?.calories ?? user.calorieAllowance ?? "--"}{" "}
                     kcal
-                  </Text>
+                  </NumericText>
                 </View>
               </View>
 
               <View style={styles.previewGrid}>
-                <View style={styles.previewStat}>
-                  <Text style={styles.previewLabel}>Goal</Text>
-                  <Text style={styles.previewValue}>
+                <AppCard style={styles.previewStat} variant="soft">
+                  <AppText color="secondary" variant="eyebrow">Goal</AppText>
+                  <AppText variant="bodySmallStrong">
                     {formatGoalLabel(selectedGoal)}
-                  </Text>
-                </View>
-                <View style={styles.previewStat}>
-                  <Text style={styles.previewLabel}>Activity</Text>
-                  <Text style={styles.previewValue}>
+                  </AppText>
+                </AppCard>
+                <AppCard style={styles.previewStat} variant="soft">
+                  <AppText color="secondary" variant="eyebrow">Activity</AppText>
+                  <AppText variant="bodySmallStrong">
                     {formatActivityLevelLabel(selectedActivity)}
-                  </Text>
-                </View>
+                  </AppText>
+                </AppCard>
               </View>
-            </View>
+            </AppCard>
 
-            <View style={styles.card}>
+            <AppCard style={styles.card}>
               <View style={styles.sectionHeader}>
                 <TargetIcon
                   size={18}
                   color={appColors.brand700}
                   weight="fill"
                 />
-                <Text style={styles.sectionTitle}>Goal</Text>
+                <AppText variant="cardTitle">Goal</AppText>
               </View>
 
               <View style={styles.optionStack}>
@@ -256,57 +268,27 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
                       : null;
 
                   return (
-                    <Pressable
+                    <OptionCard
                       key={option.value}
                       onPress={() => setSelectedGoal(option.value)}
-                      style={({ pressed }) => [
-                        styles.optionCard,
-                        selected && styles.optionCardSelected,
-                        pressed && styles.optionCardPressed,
-                      ]}
-                    >
-                      <View style={styles.optionCopy}>
-                        <Text
-                          style={[
-                            styles.optionTitle,
-                            selected && styles.optionTitleSelected,
-                          ]}
-                        >
-                          {option.label}
-                        </Text>
-                        <Text style={styles.optionText}>
-                          {option.description}
-                        </Text>
-                      </View>
-                      <View style={styles.optionMeta}>
-                        <Text style={styles.optionCalories}>
-                          {optionPlan?.calories ?? "--"} kcal
-                        </Text>
-                        <View
-                          style={[
-                            styles.checkBadge,
-                            selected && styles.checkBadgeSelected,
-                          ]}
-                        >
-                          {selected ? (
-                            <CheckIcon
-                              size={14}
-                              color={appColors.slate800}
-                              weight="bold"
-                            />
-                          ) : null}
-                        </View>
-                      </View>
-                    </Pressable>
+                      selected={selected}
+                      subtitle={option.description}
+                      title={option.label}
+                      trailing={
+                        <NumericText color="coral" variant="numberTrendDelta">
+                          {contextLoading ? "..." : optionPlan?.calories ?? "--"} kcal
+                        </NumericText>
+                      }
+                    />
                   );
                 })}
               </View>
-            </View>
+            </AppCard>
 
-            <View style={styles.card}>
+            <AppCard style={styles.card}>
               <View style={styles.sectionHeader}>
                 <GaugeIcon size={18} color={appColors.brand700} weight="fill" />
-                <Text style={styles.sectionTitle}>Activity baseline</Text>
+                <AppText variant="cardTitle">Activity baseline</AppText>
               </View>
 
               <View style={styles.optionStack}>
@@ -325,69 +307,57 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
                       : null;
 
                   return (
-                    <Pressable
+                    <OptionCard
                       key={option.value}
                       onPress={() => setSelectedActivity(option.value)}
-                      style={({ pressed }) => [
-                        styles.optionCard,
-                        selected && styles.optionCardSelected,
-                        pressed && styles.optionCardPressed,
-                      ]}
-                    >
-                      <View style={styles.optionCopy}>
-                        <Text style={styles.optionTitle}>{option.label}</Text>
-                        <Text style={styles.optionText}>
-                          {option.description}
-                        </Text>
-                      </View>
-                      <View style={styles.optionMeta}>
-                        <Text style={styles.optionCalories}>
-                          {optionPlan?.calories ?? "--"} kcal
-                        </Text>
-                        <View
-                          style={[
-                            styles.checkBadge,
-                            selected && styles.checkBadgeSelected,
-                          ]}
-                        >
-                          {selected ? (
-                            <CheckIcon
-                              size={14}
-                              color={appColors.white}
-                              weight="bold"
-                            />
-                          ) : null}
-                        </View>
-                      </View>
-                    </Pressable>
+                      selected={selected}
+                      subtitle={option.description}
+                      title={option.label}
+                      trailing={
+                        <NumericText color="coral" variant="numberTrendDelta">
+                          {contextLoading ? "..." : optionPlan?.calories ?? "--"} kcal
+                        </NumericText>
+                      }
+                    />
                   );
                 })}
               </View>
 
-              <Pressable
+              <AppButton
                 onPress={() => void handleSave()}
                 disabled={saving || !selectedActivity || !selectedGoal}
-                style={({ pressed }) => [
-                  styles.primaryButton,
-                  pressed && !saving && styles.optionCardPressed,
-                ]}
-              >
-                <Text style={styles.primaryButtonText}>
-                  {saving ? "Saving..." : "Save goal + activity"}
-                </Text>
-              </Pressable>
-            </View>
+                label={saving ? "Saving..." : "Save goal + activity"}
+                style={styles.saveButton}
+              />
+            </AppCard>
 
-            <CalorieBudgetChart
-              highlightDate={new Date()}
-              subtitle={
-                weeklyBudget != null
-                  ? `Projected weekly budget: ${Math.round(weeklyBudget)} kcal`
-                  : "Projected weekly budget"
-              }
-              title="Automatic plan preview"
-              values={weeklyValues}
-            />
+            {contextError ? (
+              <ErrorState
+                title="Could not build preview"
+                message={contextError}
+                action={
+                  <AppButton label="Try again" onPress={() => void loadContext()} size="sm" />
+                }
+                style={styles.card}
+              />
+            ) : contextLoading ? (
+              <LoadingState
+                title="Building preview"
+                message="Loading your latest weight and settings."
+                style={styles.card}
+              />
+            ) : (
+              <CalorieBudgetChart
+                highlightDate={new Date()}
+                subtitle={
+                  weeklyBudget != null
+                    ? `Projected weekly budget: ${Math.round(weeklyBudget)} kcal`
+                    : "Projected weekly budget"
+                }
+                title="Automatic plan preview"
+                values={weeklyValues}
+              />
+            )}
           </>
         )}
       </ScrollView>
@@ -401,177 +371,49 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
-    paddingHorizontal: 20,
-  },
-  orbTop: {
-    position: "absolute",
-    top: -82,
-    right: -52,
-    width: 190,
-    height: 190,
-    borderRadius: 999,
-    backgroundColor: appColors.brand800,
-  },
-  orbBottom: {
-    position: "absolute",
-    left: -74,
-    bottom: -88,
-    width: 220,
-    height: 220,
-    borderRadius: 999,
-    backgroundColor: appColors.success700,
+    paddingHorizontal: appSpacing.gutter,
   },
   card: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: appColors.slate200,
-    marginBottom: 14,
+    marginBottom: appSpacing.md,
   },
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    gap: 12,
-    marginBottom: 16,
+    gap: appSpacing.sm,
+    marginBottom: appSpacing.md,
   },
   summaryCopy: {
     flex: 1,
   },
-  cardTitle: {
-    color: appColors.slate800,
-    fontSize: 17,
-    fontWeight: "800",
-    marginBottom: 4,
-  },
-  cardText: {
-    color: appColors.slate200,
-    fontSize: 13,
-    lineHeight: 18,
-  },
   metricPill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: appSpacing.xxs,
     borderRadius: 999,
-    backgroundColor: appColors.brand800,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-  },
-  metricPillText: {
-    color: appColors.brand700,
-    fontSize: 12,
-    fontWeight: "800",
+    backgroundColor: appColors.actionPrimarySoft,
+    paddingHorizontal: appSpacing.sm,
+    paddingVertical: appSpacing.xs,
   },
   previewGrid: {
     flexDirection: "row",
-    gap: 12,
+    gap: appSpacing.sm,
   },
   previewStat: {
     flex: 1,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceField,
-    padding: 14,
-  },
-  previewLabel: {
-    color: appColors.slate600,
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-    marginBottom: 8,
-  },
-  previewValue: {
-    color: appColors.slate800,
-    fontSize: 15,
-    lineHeight: 20,
-    fontWeight: "800",
+    gap: appSpacing.xs,
   },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    color: appColors.slate800,
-    fontSize: 18,
-    fontWeight: "800",
+    gap: appSpacing.xs,
+    marginBottom: appSpacing.md,
   },
   optionStack: {
-    gap: 10,
+    gap: appSpacing.xs,
   },
-  optionCard: {
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceRaised,
-    padding: 14,
-    flexDirection: "row",
-    gap: 12,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: appColors.slate100,
-  },
-  optionCardSelected: {
-    borderColor: appColors.brand500,
-    backgroundColor: appColors.brand800,
-  },
-  optionCardPressed: {
-    opacity: 0.92,
-  },
-  optionCopy: {
-    flex: 1,
-  },
-  optionTitle: {
-    color: appColors.slate800,
-    fontSize: 16,
-    fontWeight: "800",
-    marginBottom: 4,
-  },
-  optionTitleSelected: {
-    color: appColors.white,
-  },
-  optionText: {
-    color: appColors.slate600,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  optionMeta: {
-    alignItems: "flex-end",
-    gap: 8,
-  },
-  optionCalories: {
-    color: appColors.brand700,
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  checkBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: appColors.white,
-    borderWidth: 1,
-    borderColor: appColors.slate300,
-  },
-  checkBadgeSelected: {
-    backgroundColor: appColors.brand700,
-    borderColor: appColors.brand700,
-  },
-  primaryButton: {
-    marginTop: 16,
-    borderRadius: 999,
-    backgroundColor: appColors.brand700,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  primaryButtonText: {
-    color: appColors.white,
-    fontSize: 13,
-    fontWeight: "800",
+  saveButton: {
+    marginTop: appSpacing.md,
   },
 });
 

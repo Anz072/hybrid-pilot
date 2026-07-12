@@ -1,4 +1,5 @@
 import { getDb, initDb } from "../storage/sqlite";
+import { getFoodResolvedServing as getResolvedServing } from "../engine/nutrition";
 import {
   FOOD_NUTRIENT_COLUMNS,
   getFoodItemById,
@@ -38,27 +39,6 @@ const normalizeOptionalText = (value?: string | null) => {
 
 const parseBoolean = (value: unknown): boolean =>
   value === true || value === 1 || value === "1";
-
-const getResolvedServing = (
-  food: Pick<DBFoodItem, "nutritionBasis" | "servingSizeValue" | "servingSizeUnit">,
-) => {
-  if (food.servingSizeValue != null && food.servingSizeValue > 0) {
-    return {
-      value: food.servingSizeValue,
-      unit: food.servingSizeUnit?.trim() || "g",
-    };
-  }
-
-  if (food.nutritionBasis === "100ml") {
-    return { value: 100, unit: "ml" };
-  }
-
-  if (food.nutritionBasis === "100g") {
-    return { value: 100, unit: "g" };
-  }
-
-  return { value: 1, unit: "serving" };
-};
 
 const parseRecipeBuildMethod = (value: unknown): RecipeBuildMethod => {
   if (value === "link" || value === "ai") {

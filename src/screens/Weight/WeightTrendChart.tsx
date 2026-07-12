@@ -1,9 +1,7 @@
 import React from "react";
 import {
   LayoutChangeEvent,
-  Pressable,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import Svg, {
@@ -21,6 +19,9 @@ import {
   type WeightRangeKey,
 } from "./weightUtils";
 import { appColors } from "../../theme/colors";
+import { AppText, NumericText, SegmentedControl } from "../../components/ui";
+import { appBorders, appRadius, appSpacing, appSurfaces } from "../../theme/tokens";
+import { appTypography } from "../../theme/typography";
 
 type WeightTrendChartProps = {
   entries: DBWeightEntry[];
@@ -44,14 +45,18 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 const TREND_LINE_COLOR = appColors.brand600;
 const TREND_HALO_COLOR = appColors.brand700;
-const DAILY_LINE_COLOR = appColors.slate300;
-const DAILY_POINT_STROKE = appColors.slate400;
+const DAILY_LINE_COLOR = appColors.textMuted;
+const DAILY_POINT_STROKE = appColors.textSecondary;
 const DAILY_POINT_FILL = appColors.white;
 const CURRENT_POINT_FILL = appColors.brand600;
 const GRID_COLOR = appColors.borderSoft;
 const AXIS_TEXT_COLOR = appColors.textMuted;
-const GOAL_BAND_FILL = appColors.borderSoft;
+const GOAL_BAND_FILL = appColors.actionPrimarySoft;
 const GOAL_LINE_COLOR = appColors.brand400;
+const RANGE_OPTIONS = WEIGHT_RANGE_LABELS.map((item) => ({
+  label: item,
+  value: item,
+}));
 
 const buildLinePath = (points: Array<{ x: number; y: number }>): string =>
   points
@@ -352,15 +357,19 @@ const WeightTrendChart = ({
     <View style={styles.card}>
       <View style={styles.metaRow}>
         <View style={styles.metaCopy}>
-          <Text style={styles.periodLabel}>{periodLabel}</Text>
+          <AppText color="secondary" style={styles.periodLabel} variant="bodySmallStrong">
+            {periodLabel}
+          </AppText>
           {helperText !== "" && (
-            <Text style={styles.helperText}>{helperText}</Text>
+            <AppText color="muted" style={styles.helperText} variant="label">
+              {helperText}
+            </AppText>
           )}
         </View>
         <View style={styles.logsPill}>
-          <Text style={styles.logsPillText}>
+          <NumericText color="muted" style={styles.logsPillText} variant="numberTrendDelta">
             {latestEntry ? `${sortedEntries.length} logs` : "No logs"}
-          </Text>
+          </NumericText>
         </View>
       </View>
 
@@ -504,8 +513,8 @@ const WeightTrendChart = ({
                   x={tick.x}
                   y={CHART_HEIGHT - 8}
                   fill={AXIS_TEXT_COLOR}
-                  fontSize="10.5"
-                  fontWeight="600"
+                  fontSize={appTypography.numberChartAxis.fontSize}
+                  fontWeight={appTypography.numberChartAxis.fontWeight}
                   textAnchor="middle"
                 >
                   {tick.label}
@@ -518,8 +527,8 @@ const WeightTrendChart = ({
                   x={chartWidth - 6}
                   y={tick.y + 4}
                   fill={AXIS_TEXT_COLOR}
-                  fontSize="10.5"
-                  fontWeight="600"
+                  fontSize={appTypography.numberChartAxis.fontSize}
+                  fontWeight={appTypography.numberChartAxis.fontWeight}
                   textAnchor="end"
                 >
                   {tick.label}
@@ -530,32 +539,12 @@ const WeightTrendChart = ({
         </Svg>
       </View>
 
-      <View style={styles.rangeRail}>
-        {WEIGHT_RANGE_LABELS.map((item) => {
-          const selected = item === range;
-
-          return (
-            <Pressable
-              key={item}
-              onPress={() => onChangeRange(item)}
-              style={({ pressed }) => [
-                styles.segment,
-                selected && styles.segmentActive,
-                pressed && styles.segmentPressed,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.segmentText,
-                  selected && styles.segmentTextActive,
-                ]}
-              >
-                {item}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <SegmentedControl
+        onChange={onChangeRange}
+        options={RANGE_OPTIONS}
+        style={styles.rangeRail}
+        value={range}
+      />
 
       <View style={styles.legendCard}>
         <View style={styles.legendItem}>
@@ -563,13 +552,17 @@ const WeightTrendChart = ({
             <View style={styles.dailyLegendLine} />
             <View style={styles.dailyLegendDot} />
           </View>
-          <Text style={styles.legendText}>Scale Weight</Text>
+          <AppText color="secondary" style={styles.legendText} variant="metadata">
+            Scale Weight
+          </AppText>
         </View>
         <View style={styles.legendItem}>
           <View style={styles.legendGraphic}>
             <View style={styles.trendLegendLine} />
           </View>
-          <Text style={styles.legendText}>Trend Weight</Text>
+          <AppText color="secondary" style={styles.legendText} variant="metadata">
+            Trend Weight
+          </AppText>
         </View>
       </View>
     </View>
@@ -578,100 +571,61 @@ const WeightTrendChart = ({
 
 const styles = StyleSheet.create({
   card: {
-    marginTop: 12,
-    paddingHorizontal: 3,
+    marginTop: appSpacing.sm,
   },
   metaRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 12,
+    gap: appSpacing.sm,
+    marginBottom: appSpacing.sm,
   },
   metaCopy: {
     flex: 1,
   },
   periodLabel: {
-    color: appColors.textSecondary,
-    fontSize: 14,
-    fontWeight: "700",
-    marginBottom: 4,
+    marginBottom: appSpacing.xxs,
   },
   helperText: {
-    color: appColors.textMuted,
-    fontSize: 12,
-    lineHeight: 17,
+    flexShrink: 1,
   },
   logsPill: {
-    borderRadius: 999,
-    backgroundColor: appColors.surfaceFieldAlt,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: appRadius.pill,
+    backgroundColor: appSurfaces.soft,
+    paddingHorizontal: appSpacing.sm,
+    paddingVertical: appSpacing.xs,
   },
   logsPillText: {
-    color: appColors.textMuted,
-    fontSize: 12,
-    fontWeight: "700",
+    textAlign: "left",
   },
   chartFrame: {
-    backgroundColor: appColors.surfaceCanvas,
+    backgroundColor: appSurfaces.canvas,
     overflow: "hidden",
-    borderColor: appColors.surfaceCardAlt,
-    paddingVertical: 6,
+    borderRadius: appRadius.md,
+    borderWidth: appBorders.width,
+    borderColor: appBorders.soft,
+    paddingVertical: appSpacing.xs,
   },
   rangeRail: {
-    marginTop: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-    borderRadius: 999,
-    backgroundColor: appColors.borderSoft,
-    padding: 6,
-  },
-  segment: {
-    flex: 1,
-    minWidth: 0,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 999,
-    paddingVertical: 11,
-    paddingHorizontal: 8,
-  },
-  segmentActive: {
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.16,
-    shadowRadius: 10,
-    backgroundColor: appColors.brand600
-  },
-  segmentPressed: {
-    opacity: 0.92,
-  },
-  segmentText: {
-    color: appColors.textMuted,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  segmentTextActive: {
-    color: appColors.textPrimary
+    marginTop: appSpacing.md,
   },
   legendCard: {
-    marginTop: 14,
+    marginTop: appSpacing.md,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 18,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceCardAlt,
-    paddingHorizontal: 16,
-    paddingVertical: 15,
-    borderWidth: 1,
-    borderColor: appColors.surfaceCardAlt,
+    gap: appSpacing.lg,
+    borderRadius: appRadius.md,
+    backgroundColor: appSurfaces.soft,
+    paddingHorizontal: appSpacing.md,
+    paddingVertical: appSpacing.sm,
+    borderWidth: appBorders.width,
+    borderColor: appBorders.soft,
   },
   legendItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: appSpacing.xs,
   },
   legendGraphic: {
     width: 24,
@@ -682,13 +636,13 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: 18,
     height: 2,
-    borderRadius: 999,
+    borderRadius: appRadius.pill,
     backgroundColor: DAILY_LINE_COLOR,
   },
   dailyLegendDot: {
     width: 6,
     height: 6,
-    borderRadius: 999,
+    borderRadius: appRadius.pill,
     backgroundColor: appColors.white,
     borderWidth: 1.5,
     borderColor: DAILY_POINT_STROKE,
@@ -696,15 +650,12 @@ const styles = StyleSheet.create({
   trendLegendLine: {
     width: 18,
     height: 3,
-    borderRadius: 999,
+    borderRadius: appRadius.pill,
     backgroundColor: TREND_LINE_COLOR,
   },
   legendText: {
-    color: appColors.textSecondary,
-    fontSize: 13,
-    fontWeight: "700",
+    flexShrink: 1,
   },
 });
 
 export default WeightTrendChart;
-

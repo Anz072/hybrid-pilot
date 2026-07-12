@@ -37,6 +37,8 @@ import { useDisplayPreferences } from "../../preferences/usePreferences";
 import { weightUnitLabel } from "../../preferences/displayPreferences";
 import { appColors } from "../../theme/colors";
 import { appTypography } from "../../theme/typography";
+import { appBorders, appRadius, appSpacing, appStates, appSurfaces } from "../../theme/tokens";
+import { AppButton, ErrorState, LoadingState } from "../../components/ui";
 import CalorieBudgetChart from "./CalorieBudgetChart";
 import { seedDeveloperTestData } from "./testDataSeeder";
 import {
@@ -110,6 +112,8 @@ const MoreScreen = () => {
   > | null>(null);
   const [adaptiveRecommendationReady, setAdaptiveRecommendationReady] =
     React.useState(false);
+  const [settingsLoading, setSettingsLoading] = React.useState(true);
+  const [settingsError, setSettingsError] = React.useState<string | null>(null);
   const [isSeedingTestData, setIsSeedingTestData] = React.useState(false);
   const weekDates = React.useMemo(() => buildCurrentWeekDates(new Date()), []);
 
@@ -117,8 +121,12 @@ const MoreScreen = () => {
     if (!user) {
       setSettings(null);
       setAdaptiveRecommendationReady(false);
+      setSettingsLoading(false);
       return;
     }
+
+    setSettingsLoading(true);
+    setSettingsError(null);
 
     try {
       const [nextSettings, nextRecommendation] = await Promise.all([
@@ -130,6 +138,9 @@ const MoreScreen = () => {
     } catch {
       setSettings(null);
       setAdaptiveRecommendationReady(false);
+      setSettingsError("Could not load settings context. Check your connection and try again.");
+    } finally {
+      setSettingsLoading(false);
     }
   }, [user]);
 
@@ -229,13 +240,21 @@ const MoreScreen = () => {
             <View style={styles.metricCard}>
               <Text style={styles.metricLabel}>Avg Daily Target</Text>
               <Text style={styles.metricValue}>
-                {weeklyBudget != null ? `${Math.round(weeklyBudget / 7)} kcal` : "--"}
+                {settingsLoading
+                  ? "..."
+                  : weeklyBudget != null
+                    ? `${Math.round(weeklyBudget / 7)} kcal`
+                    : "--"}
               </Text>
             </View>
             <View style={styles.metricCard}>
               <Text style={styles.metricLabel}>Weekly Budget</Text>
               <Text style={styles.metricValue}>
-                {weeklyBudget != null ? `${Math.round(weeklyBudget)} kcal` : "--"}
+                {settingsLoading
+                  ? "..."
+                  : weeklyBudget != null
+                    ? `${Math.round(weeklyBudget)} kcal`
+                    : "--"}
               </Text>
             </View>
             <View style={styles.metricCard}>
@@ -247,11 +266,28 @@ const MoreScreen = () => {
           </View>
         </View>
 
-        <CalorieBudgetChart
-          highlightDate={new Date()}
-          title="Weekly budget preview"
-          values={weeklyValues}
-        />
+        {settingsError ? (
+          <ErrorState
+            title="Could not load settings"
+            message={settingsError}
+            action={
+              <AppButton label="Try again" onPress={() => void loadSettings()} size="sm" />
+            }
+            style={styles.stateBlock}
+          />
+        ) : settingsLoading ? (
+          <LoadingState
+            title="Loading settings"
+            message="Fetching calorie schedule and review state."
+            style={styles.stateBlock}
+          />
+        ) : (
+          <CalorieBudgetChart
+            highlightDate={new Date()}
+            title="Weekly budget preview"
+            values={weeklyValues}
+          />
+        )}
 
         <Text style={styles.sectionTitle}>Reviews / Automation</Text>
         <View style={styles.sectionCard}>
@@ -278,7 +314,9 @@ const MoreScreen = () => {
             onPress={() => navigation.navigate("AdaptiveCaloriesSettingsScreen")}
             title="Adaptive calories"
             value={
-              settings?.adaptiveCaloriesEnabled
+              settingsLoading
+                ? "..."
+                : settings?.adaptiveCaloriesEnabled
                 ? adaptiveRecommendationReady
                   ? "Review ready"
                   : "On"
@@ -384,7 +422,9 @@ const MoreScreen = () => {
             onPress={() => navigation.navigate("CalorieScheduleScreen")}
             title="Daily calorie schedule"
             value={
-              settings?.dailyCalorieOverrides?.some((item) => item != null)
+              settingsLoading
+                ? "..."
+                : settings?.dailyCalorieOverrides?.some((item) => item != null)
                 ? "Custom"
                 : "Base only"
             }
@@ -489,43 +529,25 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
-    paddingHorizontal: 20,
-  },
-  orbTop: {
-    position: "absolute",
-    top: -78,
-    right: -54,
-    width: 200,
-    height: 200,
-    borderRadius: 999,
-    backgroundColor: appColors.brand800,
-  },
-  orbBottom: {
-    position: "absolute",
-    left: -70,
-    bottom: -92,
-    width: 230,
-    height: 230,
-    borderRadius: 999,
-    backgroundColor: appColors.success700,
+    paddingHorizontal: appSpacing.gutter,
   },
   heroCard: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    marginBottom: 14,
+    backgroundColor: appSurfaces.card,
+    borderRadius: appRadius.md,
+    padding: appSpacing.lg,
+    borderWidth: appBorders.width,
+    borderColor: appBorders.soft,
+    marginBottom: appSpacing.md,
   },
   eyebrow: {
     alignSelf: "flex-start",
     ...appTypography.label,
     color: appColors.textSecondary,
-    backgroundColor: appColors.surfaceGhost,
-    paddingHorizontal: 12,
+    backgroundColor: appSurfaces.ghost,
+    paddingHorizontal: appSpacing.sm,
     paddingVertical: 7,
-    borderRadius: 9999,
-    marginBottom: 12,
+    borderRadius: appRadius.pill,
+    marginBottom: appSpacing.sm,
   },
   heroTitle: {
     ...appTypography.displaySection,
@@ -533,14 +555,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   heroMetrics: {
-    marginTop: 18,
+    marginTop: appSpacing.gutter,
     flexDirection: "row",
-    gap: 10,
+    gap: appSpacing.xs,
   },
   metricCard: {
     flex: 1,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceField,
+    borderRadius: appRadius.md,
+    backgroundColor: appSurfaces.soft,
     padding: 14,
   },
   metricLabel: {
@@ -555,44 +577,45 @@ const styles = StyleSheet.create({
   },
   metricValueSmall: {
     color: appColors.textPrimary,
-    fontSize: 14,
-    lineHeight: 18,
-    fontWeight: "800",
+    ...appTypography.bodySmallStrong,
   },
   sectionTitle: {
     color: appColors.textPrimary,
     fontSize: 20,
     fontWeight: "500",
-    marginTop: 18,
-    marginBottom: 10,
+    marginTop: appSpacing.gutter,
+    marginBottom: appSpacing.xs,
+  },
+  stateBlock: {
+    marginBottom: appSpacing.md,
   },
   sectionCard: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
+    backgroundColor: appSurfaces.card,
+    borderRadius: appRadius.md,
+    borderWidth: appBorders.width,
+    borderColor: appBorders.soft,
     overflow: "hidden",
   },
   actionRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: appSpacing.sm,
     minHeight: 64,
-    paddingHorizontal: 16,
+    paddingHorizontal: appSpacing.md,
     paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: appColors.borderSoft,
+    borderBottomWidth: appBorders.width,
+    borderBottomColor: appBorders.soft,
   },
   actionRowPressed: {
-    opacity: 0.94,
+    opacity: appStates.pressedOpacity,
   },
   actionIcon: {
     width: 40,
     height: 40,
-    borderRadius: 999,
+    borderRadius: appRadius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.brand800,
+    backgroundColor: appColors.actionPrimarySoft,
   },
   actionCopy: {
     flex: 1,
@@ -610,9 +633,8 @@ const styles = StyleSheet.create({
     maxWidth: "38%",
   },
   actionValue: {
-    color: appColors.brand700,
-    fontSize: 12,
-    fontWeight: "800",
+    color: appColors.actionPrimary,
+    ...appTypography.label,
     textAlign: "right",
     flexShrink: 1,
   },

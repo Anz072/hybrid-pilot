@@ -1,152 +1,80 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { BarbellIcon, RocketLaunchIcon } from "phosphor-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { AppButton } from "../../components/ui";
 import type { OnboardingParamList } from "../../navigation/onboardingTypes";
-import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
 import { appColors } from "../../theme/colors";
+import { appBorders, appRadius, appSpacing, appSurfaces } from "../../theme/tokens";
+import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
+import OnboardingStepScreen, { onboardingStepProgress } from "./OnboardingStepScreen";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "Welcome">;
 
-const WelcomeScreen = ({ navigation }: Props) => {
-  return (
-    <View style={styles.container}>
+const WelcomeScreen = ({ navigation }: Props) => (
+  <OnboardingStepScreen
+    centered
+    eyebrow="Nutrition + Training"
+    headerAccessory={
       <View style={styles.heroRow}>
         <View style={styles.heroIconBadge}>
-          <RocketLaunchIcon size={24} color={appColors.brand500} weight="fill" />
+          <RocketLaunchIcon size={24} color={appColors.actionPrimary} weight="fill" />
         </View>
         <View style={styles.heroIconBadgeMuted}>
-          <BarbellIcon size={20} color={appColors.slate900} weight="fill" />
+          <BarbellIcon size={20} color={appColors.textPrimary} weight="fill" />
         </View>
       </View>
-
-      <Text style={styles.eyebrow}>Nutrition + Training</Text>
-      <Text style={styles.title}>Dribsnis</Text>
-      <Text style={styles.subtitle}>
-        Build your plan in under a minute and get tailored calories, macros, and
-        progress tracking.
-      </Text>
-
+    }
+    progress={onboardingStepProgress(1)}
+    stepLabel="Welcome"
+    subtitle="Build your plan in under a minute and get tailored calories, macros, and progress tracking."
+    title="Dribsnis"
+  >
+    <View style={styles.actions}>
       <OnboardingPrimaryButton
         label="Get Started"
         onPress={() => navigation.navigate("Goal")}
-        style={styles.primaryButton}
       />
-
-      <Pressable
-        style={({ pressed }) => [
-          styles.secondaryButton,
-          pressed && styles.secondaryButtonPressed,
-        ]}
+      <AppButton
+        label="I already have an account"
         onPress={() => navigation.navigate("Login")}
-      >
-        <Text style={styles.secondaryButtonText}>
-          I already have an account
-        </Text>
-      </Pressable>
+        variant="secondary"
+      />
     </View>
-  );
-};
+  </OnboardingStepScreen>
+);
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 56,
-    paddingBottom: 30,
-    justifyContent: "center",
-    backgroundColor: appColors.surfaceCanvas,
-  },
-  bgOrbTop: {
-    position: "absolute",
-    top: -80,
-    right: -50,
-    width: 210,
-    height: 210,
-    borderRadius: 999,
-    backgroundColor: appColors.brand800,
-  },
-  bgOrbBottom: {
-    position: "absolute",
-    bottom: -90,
-    left: -70,
-    width: 240,
-    height: 240,
-    borderRadius: 999,
-    backgroundColor: appColors.brand800,
-  },
   heroRow: {
     flexDirection: "row",
-    gap: 10,
-    marginBottom: 16,
     alignItems: "center",
     justifyContent: "center",
+    gap: appSpacing.sm,
+    marginBottom: appSpacing.xs,
   },
   heroIconBadge: {
-    width: 46,
-    height: 46,
-    borderRadius: 999,
-    backgroundColor: appColors.brand800,
-    borderWidth: 1,
-    borderColor: appColors.brand700,
+    width: 48,
+    height: 48,
+    borderRadius: appRadius.pill,
+    backgroundColor: appColors.actionPrimarySoft,
+    borderWidth: appBorders.width,
+    borderColor: appColors.actionPrimaryBorder,
     alignItems: "center",
     justifyContent: "center",
   },
   heroIconBadgeMuted: {
-    width: 40,
-    height: 40,
-    borderRadius: 999,
-    backgroundColor: appColors.slate100,
-    borderWidth: 1,
-    borderColor: appColors.slate300,
+    width: 44,
+    height: 44,
+    borderRadius: appRadius.pill,
+    backgroundColor: appSurfaces.soft,
+    borderWidth: appBorders.width,
+    borderColor: appColors.borderSoft,
     alignItems: "center",
     justifyContent: "center",
   },
-  eyebrow: {
-    alignSelf: "center",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    color: appColors.brand500,
-    backgroundColor: appColors.brand800,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    marginBottom: 14,
-  },
-  title: {
-    fontSize: 40,
-    lineHeight: 44,
-    fontWeight: "800",
-    color: appColors.textPrimary,
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  subtitle: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: appColors.slate600,
-    marginBottom: 24,
-    textAlign: "center",
-    paddingHorizontal: 4,
-  },
-  primaryButton: {
-    marginBottom: 16,
-  },
-  secondaryButton: {
-    paddingVertical: 11,
-    alignItems: "center",
-    borderRadius: 8,
-  },
-  secondaryButtonPressed: {
-    backgroundColor: appColors.slate100,
-  },
-  secondaryButtonText: {
-    color: appColors.slate700,
-    fontWeight: "600",
+  actions: {
+    gap: appSpacing.sm,
   },
 });
 
 export default WelcomeScreen;
-

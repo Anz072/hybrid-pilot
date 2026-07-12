@@ -512,6 +512,21 @@ export const upsertCachedFoodLogEntries = async (
   }
 };
 
+// Optimistic rows normally live only for the duration of one write. Anything
+// still 'pending' after this long is a leftover from a kill mid-write, and
+// 'error' rows are legacy ghosts from before failed writes rolled back; both
+// may be replaced by authoritative server data.
+const STALE_OPTIMISTIC_ENTRY_MS = 2 * 60 * 1000;
+
+const buildReplaceableCacheCondition = () => ({
+  clause: `(
+      sync_status = 'synced'
+      OR sync_status = 'error'
+      OR (sync_status = 'pending' AND cached_at <= ?)
+    )`,
+  cutoffIso: new Date(Date.now() - STALE_OPTIMISTIC_ENTRY_MS).toISOString(),
+});
+
 export const replaceCachedFoodLogEntriesForDate = async (
   userExternalId: string,
   date: string,
@@ -519,15 +534,17 @@ export const replaceCachedFoodLogEntriesForDate = async (
 ): Promise<void> => {
   await initDb();
   const db = await getDb();
+  const replaceable = buildReplaceableCacheCondition();
   await db.runAsync(
     `
     DELETE FROM cached_food_entries
     WHERE user_external_id = ?
       AND date = ?
-      AND sync_status = 'synced'
+      AND ${replaceable.clause}
     `,
     userExternalId,
     date,
+    replaceable.cutoffIso,
   );
   await upsertCachedFoodLogEntries(userExternalId, entries, "synced");
 };
@@ -540,17 +557,19 @@ export const replaceCachedFoodLogEntriesBetween = async (
 ): Promise<void> => {
   await initDb();
   const db = await getDb();
+  const replaceable = buildReplaceableCacheCondition();
   await db.runAsync(
     `
     DELETE FROM cached_food_entries
     WHERE user_external_id = ?
       AND date >= ?
       AND date <= ?
-      AND sync_status = 'synced'
+      AND ${replaceable.clause}
     `,
     userExternalId,
     startDate,
     endDate,
+    replaceable.cutoffIso,
   );
   await upsertCachedFoodLogEntries(userExternalId, entries, "synced");
 };
@@ -689,20 +708,24 @@ export const deleteCachedFoodLogEntry = async (
   );
 };
 
-export const markCachedFoodLogEntryError = async (
+// Roll back an optimistic delete: the server still has the row, so the cached
+// copy must become visible again instead of silently diverging.
+export const restoreCachedFoodLogEntry = async (
   id: number,
-  error: unknown,
+  userExternalId?: string | null,
 ): Promise<void> => {
   await initDb();
   const db = await getDb();
   await db.runAsync(
     `
     UPDATE cached_food_entries
-    SET sync_status = 'error', sync_error = ?
+    SET deleted_at = NULL, sync_status = 'synced', sync_error = NULL
     WHERE id = ?
+      AND (? IS NULL OR user_external_id = ?)
     `,
-    error instanceof Error ? error.message : String(error),
     id,
+    userExternalId ?? null,
+    userExternalId ?? null,
   );
 };
 

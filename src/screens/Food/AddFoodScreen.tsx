@@ -919,7 +919,7 @@ const AddFoodScreen = () => {
                 </Text>
               </View>
             ) : null}
-            <Text style={styles.slate300} numberOfLines={1}>
+            <Text style={styles.supportingMeta} numberOfLines={1}>
               {food.brand ? `${food.brand} | ` : ""}
               {defaultAmount}
             </Text>
@@ -1468,7 +1468,7 @@ const styles = StyleSheet.create({
     moreTitle: {
     color: appColors.textPrimary,
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "600",
     marginBottom: 4,
   },
   moreText: {
@@ -1494,7 +1494,7 @@ const styles = StyleSheet.create({
   morePillText: {
     color: appColors.slate900,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   searchModeRow: {
     width: "100%",
@@ -1522,7 +1522,7 @@ const styles = StyleSheet.create({
   searchModeText: {
     color: appColors.brand500,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   searchModeTextActive: {
     color: appColors.white,
@@ -1531,7 +1531,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     color: appColors.brand500,
     fontSize: 11,
-    fontWeight: "800",
+    fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 0.7,
     marginBottom: 4,
@@ -1557,7 +1557,7 @@ const styles = StyleSheet.create({
   contextPillText: {
     color: appColors.brand500,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   heroTitle: {
     color: appColors.textPrimary,
@@ -1659,7 +1659,7 @@ const styles = StyleSheet.create({
   scanButtonText: {
     color: appColors.white,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   searchHint: {
     color: appColors.textSecondary,
@@ -1680,7 +1680,7 @@ const styles = StyleSheet.create({
   searchNoticeText: {
     color: appColors.warning700,
     fontSize: 11,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   recentSearchRow: {
     flexDirection: "row",
@@ -1692,7 +1692,7 @@ const styles = StyleSheet.create({
   recentSearchLabel: {
     color: appColors.textMuted,
     fontSize: 11,
-    fontWeight: "800",
+    fontWeight: "600",
     textTransform: "uppercase",
   },
   recentSearchChip: {
@@ -1706,7 +1706,7 @@ const styles = StyleSheet.create({
   recentSearchChipText: {
     color: appColors.textPrimary,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   sectionCard: {
     backgroundColor: appColors.surfaceCard,
@@ -1736,7 +1736,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: appColors.textPrimary,
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "600",
     marginBottom: 2,
   },
   sectionSubtitle: {
@@ -1757,7 +1757,7 @@ const styles = StyleSheet.create({
   countPillText: {
     color: appColors.brand500,
     fontSize: 11,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   sectionStack: {
     marginTop: 10,
@@ -1785,7 +1785,7 @@ const styles = StyleSheet.create({
   togglePillText: {
     color: appColors.brand500,
     fontSize: 11,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   togglePillTextExpanded: {
     color: appColors.brand300,
@@ -1803,6 +1803,8 @@ const styles = StyleSheet.create({
   },
   foodBody: {
     flex: 1,
+    minHeight: 44,
+    justifyContent: "center",
   },
   foodTopRow: {
     flexDirection: "row",
@@ -1833,7 +1835,7 @@ const styles = StyleSheet.create({
   foodBadgeText: {
     color: appColors.brand500,
     fontSize: 10,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   ownershipChip: {
     borderRadius: 999,
@@ -1851,7 +1853,7 @@ const styles = StyleSheet.create({
   },
   ownershipChipText: {
     fontSize: 10,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   ownershipChipTextOwned: {
     color: appColors.brand700,
@@ -1863,7 +1865,8 @@ const styles = StyleSheet.create({
     color: appColors.textPrimary,
     fontSize: 15,
     lineHeight: 20,
-    fontWeight: "900",
+    fontWeight: "600",
+    fontVariant: ["tabular-nums"],
     minWidth: 76,
     textAlign: "right",
   },
@@ -1872,9 +1875,9 @@ const styles = StyleSheet.create({
     color: appColors.textPrimary,
     fontSize: 15,
     lineHeight: 20,
-    fontWeight: "900",
+    fontWeight: "600",
   },
-  slate300: {
+  supportingMeta: {
     color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 16,
@@ -1883,7 +1886,8 @@ const styles = StyleSheet.create({
   foodMacroText: {
     color: appColors.brand500,
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: "500",
+    fontVariant: ["tabular-nums"],
   },
   foodActionColumn: {
     justifyContent: "center",
@@ -1897,8 +1901,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    backgroundColor: appColors.surfaceGhost,
+    borderColor: appColors.borderSoft,
+    backgroundColor: appColors.surfaceCard,
   },
   secondaryAction: {
     minWidth: 62,
@@ -1932,12 +1936,12 @@ const styles = StyleSheet.create({
   publicPillText: {
     color: appColors.textSecondary,
     fontSize: 10,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   secondaryActionText: {
     color: appColors.brand500,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   secondaryActionTextActive: {
     color: appColors.white,
@@ -1963,22 +1967,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 999,
-    backgroundColor: appColors.brand700,
+    backgroundColor: appColors.actionPrimary,
     gap: 5,
     paddingHorizontal: 12,
   },
   quickLogText: {
     color: appColors.white,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "500",
   },
   primaryActionLoading: {
-    opacity: 0.8,
+    opacity: 0.56,
   },
   primaryActionText: {
     color: appColors.white,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   cardPressed: {
     opacity: 0.9,

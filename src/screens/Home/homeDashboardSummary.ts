@@ -101,6 +101,7 @@ export const loadHomeDashboardSummary = async (
   const todaySnapshot = await loadNutritionSnapshot(
     user.externalId,
     buildRecentDateKeys(1, todayDate),
+    { forceRefresh: true },
   );
   const summary = await buildSummaryFromSnapshot({
     todayDate,

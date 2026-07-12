@@ -4,33 +4,31 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   StyleSheet,
-  Text,
-  TextInput,
-  View,
 } from "react-native";
-import { useAppDispatch } from "../../store/hooks";
-import { setCurrentUser } from "../../store/userSlice";
-import { appColors } from "../../theme/colors";
-import { appTypography } from "../../theme/typography";
+import {
+  AppButton,
+  AppCard,
+  AppInput,
+  AppText,
+} from "../../components/ui";
+import {
+  signInWithEmailPassword,
+  upsertSupabaseAuthUserAccount,
+} from "../../API/supabase/auth";
 import {
   getSupabaseConfigError,
   isSupabaseConfigured,
 } from "../../API/supabase/client";
-import {
-  signInWithEmailPassword,
-  signUpWithEmailPassword,
-  upsertSupabaseAuthUserAccount,
-} from "../../API/supabase/auth";
+import { useAppDispatch } from "../../store/hooks";
+import { setCurrentUser } from "../../store/userSlice";
+import { appColors } from "../../theme/colors";
+import { appSpacing, appSurfaces } from "../../theme/tokens";
 
 type LoginScreenProps = {
   onAuthenticated?: () => void | Promise<void>;
   onBackToOnboarding?: () => void;
 };
-
-type AuthMode = "signIn" | "register";
-type SubmissionMode = AuthMode | null;
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 
@@ -49,13 +47,10 @@ const LoginScreen = ({
   onBackToOnboarding,
 }: LoginScreenProps) => {
   const dispatch = useAppDispatch();
-  const [authMode, setAuthMode] = React.useState<AuthMode>("signIn");
-  const [displayName, setDisplayName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
-  const [submitting, setSubmitting] = React.useState<SubmissionMode>(null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
-  const isSubmitting = submitting !== null;
 
   const finishWithUser = React.useCallback(
     async (user: Awaited<ReturnType<typeof upsertSupabaseAuthUserAccount>>) => {
@@ -70,7 +65,7 @@ const LoginScreen = ({
       return;
     }
 
-    setSubmitting("signIn");
+    setIsSubmitting(true);
     setErrorMessage(null);
 
     try {
@@ -101,204 +96,72 @@ const LoginScreen = ({
       setErrorMessage(message);
       Alert.alert("Sign-in failed", message);
     } finally {
-      setSubmitting(null);
+      setIsSubmitting(false);
     }
   }, [email, finishWithUser, isSubmitting, password]);
-
-  const handleEmailRegistration = React.useCallback(async () => {
-    if (isSubmitting) {
-      return;
-    }
-
-    setSubmitting("register");
-    setErrorMessage(null);
-
-    try {
-      if (!isSupabaseConfigured()) {
-        throw new Error(getSupabaseConfigError());
-      }
-
-      const normalizedEmail = normalizeEmail(email);
-      validateEmailPassword(normalizedEmail, password);
-      const resolvedDisplayName =
-        displayName.trim() || normalizedEmail.split("@")[0] || "Dribsnis User";
-
-      const result = await signUpWithEmailPassword({
-        displayName: resolvedDisplayName,
-        email: normalizedEmail,
-        password,
-      });
-
-      if (result.needsEmailConfirmation || !result.session?.user) {
-        const message =
-          "Check your email to confirm the account, then sign in here.";
-        setErrorMessage(message);
-        Alert.alert("Check your email", message);
-        return;
-      }
-
-      const user = await upsertSupabaseAuthUserAccount(result.session.user, {
-        allowCreate: true,
-      });
-      await finishWithUser(user);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Could not create account.";
-
-      setErrorMessage(message);
-      Alert.alert("Account creation failed", message);
-    } finally {
-      setSubmitting(null);
-    }
-  }, [displayName, email, finishWithUser, isSubmitting, password]);
-
-  const handlePrimaryAction = React.useCallback(() => {
-    if (authMode === "register") {
-      void handleEmailRegistration();
-      return;
-    }
-
-    void handleEmailSignIn();
-  }, [authMode, handleEmailRegistration, handleEmailSignIn]);
-
-  const primaryLabel =
-    authMode === "register"
-      ? submitting === "register"
-        ? "Creating account..."
-        : "Create account"
-      : submitting === "signIn"
-        ? "Signing in..."
-        : "Sign in";
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={styles.screen}
     >
-      <View style={styles.card}>
-        <Text style={styles.title}>
-          {authMode === "register" ? "Create account" : "Sign in"}
-        </Text>
-        <Text style={styles.body}>
-          Use your email and password to keep your food, weight, and nutrition
-          profile synced.
-        </Text>
+      <AppCard style={styles.card}>
+        <AppText align="center" variant="sectionTitleLarge">
+          Sign in
+        </AppText>
+        <AppText align="center" color="secondary" variant="bodySmall">
+          Sign in to an account created after completing your nutrition profile.
+        </AppText>
 
-        <View style={styles.modeSwitcher}>
-          {(["signIn", "register"] as const).map((mode) => {
-            const selected = authMode === mode;
-
-            return (
-              <Pressable
-                key={mode}
-                disabled={isSubmitting}
-                onPress={() => {
-                  setAuthMode(mode);
-                  setErrorMessage(null);
-                }}
-                style={({ pressed }) => [
-                  styles.modeTab,
-                  selected && styles.modeTabSelected,
-                  pressed && !isSubmitting && styles.pressed,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.modeTabText,
-                    selected && styles.modeTabTextSelected,
-                  ]}
-                >
-                  {mode === "signIn" ? "Sign in" : "Register"}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {authMode === "register" ? (
-          <>
-            <Text style={styles.inputLabel}>Name</Text>
-            <TextInput
-              value={displayName}
-              onChangeText={setDisplayName}
-              editable={!isSubmitting}
-              placeholder="Your name"
-              placeholderTextColor={appColors.textMuted}
-              style={styles.input}
-              textContentType="name"
-              returnKeyType="next"
-            />
-          </>
-        ) : null}
-
-        <Text style={styles.inputLabel}>Email</Text>
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          editable={!isSubmitting}
+        <AppInput
           autoCapitalize="none"
           autoCorrect={false}
+          editable={!isSubmitting}
           keyboardType="email-address"
+          label="Email"
+          onChangeText={setEmail}
           placeholder="you@example.com"
-          placeholderTextColor={appColors.textMuted}
-          style={styles.input}
-          textContentType="emailAddress"
           returnKeyType="next"
+          textContentType="emailAddress"
+          value={email}
         />
 
-        <Text style={styles.inputLabel}>Password</Text>
-        <TextInput
-          value={password}
-          onChangeText={setPassword}
-          editable={!isSubmitting}
+        <AppInput
           autoCapitalize="none"
           autoCorrect={false}
-          secureTextEntry
+          editable={!isSubmitting}
+          label="Password"
+          onChangeText={setPassword}
+          onSubmitEditing={() => void handleEmailSignIn()}
           placeholder="Minimum 6 characters"
-          placeholderTextColor={appColors.textMuted}
-          style={styles.input}
-          textContentType={authMode === "register" ? "newPassword" : "password"}
           returnKeyType="done"
-          onSubmitEditing={handlePrimaryAction}
+          secureTextEntry
+          textContentType="password"
+          value={password}
         />
 
-        <Pressable
-          onPress={handlePrimaryAction}
+        <AppButton
           disabled={isSubmitting}
-          style={({ pressed }) => [
-            styles.button,
-            isSubmitting && styles.buttonDisabled,
-            pressed && !isSubmitting && styles.pressed,
-          ]}
-        >
-          {submitting === authMode ? (
-            <ActivityIndicator color={appColors.slate900} />
-          ) : null}
-          <Text style={styles.buttonText}>{primaryLabel}</Text>
-        </Pressable>
+          icon={isSubmitting ? <ActivityIndicator color={appColors.white} /> : undefined}
+          label={isSubmitting ? "Signing in..." : "Sign in"}
+          onPress={() => void handleEmailSignIn()}
+        />
 
         {onBackToOnboarding ? (
-          <Pressable
-            onPress={() => {
-              onBackToOnboarding();
-            }}
+          <AppButton
             disabled={isSubmitting}
-            style={({ pressed }) => [
-              styles.createAccountButton,
-              isSubmitting && styles.buttonDisabled,
-              pressed && !isSubmitting && styles.pressed,
-            ]}
-          >
-            <Text style={styles.createAccountButtonText}>
-              Set up nutrition profile
-            </Text>
-          </Pressable>
+            label="Create an account"
+            onPress={onBackToOnboarding}
+            variant="secondary"
+          />
         ) : null}
 
         {errorMessage ? (
-          <Text style={styles.errorText}>{errorMessage}</Text>
+          <AppText color="error" variant="bodySmall">
+            {errorMessage}
+          </AppText>
         ) : null}
-      </View>
+      </AppCard>
     </KeyboardAvoidingView>
   );
 };
@@ -307,113 +170,11 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     justifyContent: "center",
-    padding: 24,
-    backgroundColor: appColors.surfaceCanvas,
+    padding: appSpacing.gutter,
+    backgroundColor: appSurfaces.canvas,
   },
   card: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 22,
-  },
-  title: {
-    ...appTypography.displaySection,
-    color: appColors.textPrimary,
-    fontSize: 24,
-    textAlign: "center",
-    marginBottom: 10,
-  },
-  body: {
-    ...appTypography.bodySmall,
-    color: appColors.textSecondary,
-    textAlign: "center",
-    marginBottom: 18,
-  },
-  modeSwitcher: {
-    flexDirection: "row",
-    backgroundColor: appColors.surfaceRaised,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 4,
-    marginBottom: 8,
-  },
-  modeTab: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 6,
-    paddingVertical: 10,
-  },
-  modeTabSelected: {
-    backgroundColor: appColors.surfaceCard,
-  },
-  modeTabText: {
-    ...appTypography.label,
-    color: appColors.textSecondary,
-  },
-  modeTabTextSelected: {
-    color: appColors.textPrimary,
-  },
-  inputLabel: {
-    ...appTypography.label,
-    color: appColors.textSecondary,
-    marginBottom: 6,
-    marginTop: 10,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    backgroundColor: appColors.surfaceField,
-    color: appColors.textPrimary,
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  button: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    borderRadius: 9999,
-    backgroundColor: appColors.slate50,
-    paddingHorizontal: 24,
-    paddingVertical: 15,
-    marginTop: 18,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    ...appTypography.button,
-    color: appColors.slate900,
-  },
-  createAccountButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    borderRadius: 9999,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    marginTop: 10,
-  },
-  createAccountButtonText: {
-    ...appTypography.button,
-    color: appColors.textPrimary,
-  },
-  errorText: {
-    ...appTypography.bodySmall,
-    color: appColors.dangerText,
-    marginTop: 14,
-  },
-  pressed: {
-    opacity: 0.85,
+    gap: appSpacing.md,
   },
 });
 

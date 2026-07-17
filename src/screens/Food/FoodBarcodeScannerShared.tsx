@@ -22,6 +22,7 @@ export type FoodBarcodeScannerModalProps = {
   visible: boolean;
   onClose: () => void;
   onFoodResolved?: (result: ScannedFoodLookupResult) => void;
+  onFoodNotFound?: (barcode: string) => void;
 };
 
 export type ScannedFoodLookupResult = {
@@ -166,6 +167,9 @@ export const useBarcodeDebugScanner = (
   const [scannedCode, setScannedCode] = React.useState<string | null>(null);
   const [modalVisible, setModalVisible] = React.useState(false);
   const [locked, setLocked] = React.useState(false);
+  const [notFoundBarcode, setNotFoundBarcode] = React.useState<string | null>(
+    null,
+  );
 
   const lockRef = React.useRef(false);
   const unlockTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(
@@ -188,6 +192,7 @@ export const useBarcodeDebugScanner = (
     clearUnlockTimer();
     unlockScanner();
     setScannedCode(null);
+    setNotFoundBarcode(null);
     setModalVisible(false);
   }, [clearUnlockTimer, unlockScanner]);
 
@@ -227,6 +232,7 @@ export const useBarcodeDebugScanner = (
       lockRef.current = true;
       setLocked(true);
       setScannedCode(nextValue);
+      setNotFoundBarcode(null);
 
       const resolveFood = (result: ScannedFoodLookupResult) => {
         if (onFoodResolved) {
@@ -255,6 +261,7 @@ export const useBarcodeDebugScanner = (
 
         if (cachedLookup?.status === "miss") {
           setScannedCode(`No food found for barcode ${nextValue}.`);
+          setNotFoundBarcode(nextValue);
           setModalVisible(true);
           return true;
         }
@@ -281,6 +288,7 @@ export const useBarcodeDebugScanner = (
         if (!foodData.valid || !foodData.foodItem) {
           await DB.saveCachedBarcodeMiss(nextValue);
           setScannedCode(`No food found for barcode ${nextValue}.`);
+          setNotFoundBarcode(nextValue);
           setModalVisible(true);
           return true;
         }
@@ -307,6 +315,7 @@ export const useBarcodeDebugScanner = (
 
   const dismissResultModal = React.useCallback(() => {
     setModalVisible(false);
+    setNotFoundBarcode(null);
     clearUnlockTimer();
     unlockTimeoutRef.current = setTimeout(() => {
       unlockScanner();
@@ -317,6 +326,7 @@ export const useBarcodeDebugScanner = (
     dismissResultModal,
     locked,
     modalVisible,
+    notFoundBarcode,
     registerScan,
     resetScannerState,
     scannedCode,
@@ -329,6 +339,8 @@ type FoodBarcodeScannerScaffoldProps = FoodBarcodeScannerModalProps & {
   isPreparing: boolean;
   locked: boolean;
   modalVisible: boolean;
+  notFoundBarcode?: string | null;
+  onCreateFoodFromBarcode?: (barcode: string) => void;
   onFinderLayout: (layout: LayoutRectangle) => void;
   onManualBarcodeSubmit: (barcode: string) => Promise<boolean> | boolean;
   onRequestPermission: () => void | Promise<void>;
@@ -344,6 +356,8 @@ export const FoodBarcodeScannerScaffold = ({
   isPreparing,
   locked,
   modalVisible,
+  notFoundBarcode,
+  onCreateFoodFromBarcode,
   onFinderLayout,
   onManualBarcodeSubmit,
   onRequestPermission,
@@ -642,6 +656,18 @@ export const FoodBarcodeScannerScaffold = ({
               <Text style={styles.modalValue}>
                 {scannedCode ?? "No barcode value found"}
               </Text>
+              {notFoundBarcode && onCreateFoodFromBarcode ? (
+                <Pressable
+                  onPress={() => onCreateFoodFromBarcode(notFoundBarcode)}
+                  style={({ pressed }) => [
+                    styles.modalButton,
+                    styles.modalPrimaryButton,
+                    pressed && styles.buttonPressed,
+                  ]}
+                >
+                  <Text style={styles.modalButtonText}>Create this food</Text>
+                </Pressable>
+              ) : null}
               <Pressable
                 onPress={onDismissResultModal}
                 style={({ pressed }) => [
@@ -1008,6 +1034,11 @@ export const styles = StyleSheet.create({
     backgroundColor: appColors.gray900,
     paddingHorizontal: 16,
     paddingVertical: 12,
+  },
+  modalPrimaryButton: {
+    backgroundColor: appColors.brand500,
+    alignSelf: "stretch",
+    marginBottom: 10,
   },
   modalButtonText: {
     color: appColors.white,

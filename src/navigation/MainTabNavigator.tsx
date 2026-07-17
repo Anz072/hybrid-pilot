@@ -27,6 +27,7 @@ import type { RootStackParamList } from "./AppNavigator";
 import {
   BarcodeIcon,
   BowlFoodIcon,
+  CarrotIcon,
   CookingPotIcon,
   DotsThreeIcon,
   ForkKnifeIcon,
@@ -87,10 +88,16 @@ type Shortcut =
   | "weight"
   | "quick_add"
   | "recipe"
-  | "custom_meal";
+  | "custom_meal"
+  | "custom_food";
 
 const PRIMARY_SHORTCUTS: Shortcut[] = ["barcode", "quick_add", "weight"];
-const SECONDARY_SHORTCUTS: Shortcut[] = ["search", "recipe", "custom_meal"];
+const SECONDARY_SHORTCUTS: Shortcut[] = [
+  "search",
+  "recipe",
+  "custom_meal",
+  "custom_food",
+];
 const SHORTCUT_LABELS: Record<Shortcut, string> = {
   barcode: "Scan",
   quick_add: "Quick Add",
@@ -98,6 +105,7 @@ const SHORTCUT_LABELS: Record<Shortcut, string> = {
   search: "Search",
   recipe: "Recipe",
   custom_meal: "Custom Meal",
+  custom_food: "Create Food",
 };
 
 const isShortcut = (value: string): value is Shortcut =>
@@ -108,6 +116,7 @@ const isShortcut = (value: string): value is Shortcut =>
     "quick_add",
     "recipe",
     "custom_meal",
+    "custom_food",
   ].includes(value);
 
 const ShortcutPlaceholderScreen = () => (
@@ -231,6 +240,10 @@ const MainTabNavigator = () => {
         case "custom_meal":
           openFoodScreen("CreateCustomFood");
           return;
+
+        case "custom_food":
+          openFoodScreen("CreateFoodItem");
+          return;
       }
     },
     [closeShortcuts, rememberShortcut, rootNavigation],
@@ -301,6 +314,23 @@ const MainTabNavigator = () => {
     [rootNavigation],
   );
 
+  const handleShortcutScannedFoodNotFound = React.useCallback(
+    (barcode: string) => {
+      const now = new Date();
+      const date = formatFoodDateKey(now);
+      const foodLogContext = resolveFoodLogContext({ date });
+
+      setBarcodeModalScannerVisible(false);
+      rootNavigation.dispatch(
+        StackActions.push("CreateFoodItem", {
+          ...toFoodLogRouteParams(foodLogContext),
+          barcode,
+        }),
+      );
+    },
+    [rootNavigation],
+  );
+
   const renderShortcutIcon = (shortcut: Shortcut, size = 26) => {
     switch (shortcut) {
       case "barcode":
@@ -319,6 +349,8 @@ const MainTabNavigator = () => {
         return <CookingPotIcon size={size} color={appColors.textPrimary} />;
       case "custom_meal":
         return <BowlFoodIcon size={size} color={appColors.textPrimary} />;
+      case "custom_food":
+        return <CarrotIcon size={size} color={appColors.textPrimary} />;
       case "search":
       default:
         return (
@@ -571,6 +603,7 @@ const MainTabNavigator = () => {
         visible={barcodeModalScannerVisible}
         onClose={() => setBarcodeModalScannerVisible(false)}
         onFoodResolved={handleShortcutScannedFoodResolved}
+        onFoodNotFound={handleShortcutScannedFoodNotFound}
       />
     </View>
   );

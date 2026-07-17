@@ -688,11 +688,29 @@ const AddFoodScreen = () => {
     [foodLogRouteParams, navigation],
   );
 
+  const handleScannedFoodNotFound = useCallback(
+    (barcode: string) => {
+      setScannerVisible(false);
+      navigation.navigate("CreateFoodItem", {
+        ...foodLogRouteParams,
+        barcode,
+      });
+    },
+    [foodLogRouteParams, navigation],
+  );
+
   const openCreateCustomMeal = useCallback(() => {
     navigation.navigate("CreateCustomFood", {
       ...foodLogRouteParams,
     });
   }, [foodLogRouteParams, navigation]);
+
+  const openCreateFoodItem = useCallback(() => {
+    navigation.navigate("CreateFoodItem", {
+      ...foodLogRouteParams,
+      prefillName: query.trim() || null,
+    });
+  }, [foodLogRouteParams, navigation, query]);
 
   const openQuickAddFood = useCallback(() => {
     navigation.navigate("QuickAddFood", {
@@ -1329,15 +1347,15 @@ const AddFoodScreen = () => {
           ) : activeResults.length === 0 ? (
             renderSection(
               "Results",
-              "Try another search or create your own custom meal.",
+              "Try another search or create the food yourself.",
               activeResults,
               "No foods matched that search yet.",
               {
                 emptyCta: {
-                  onPress: openCreateCustomMeal,
+                  onPress: openCreateFoodItem,
                   pillText: "New",
-                  title: "Create custom meal",
-                  text: `Build a reusable meal for ${resolvedContextLabel}.`,
+                  title: "Create food",
+                  text: `Save "${query.trim()}" with its label nutrition and log it for ${resolvedContextLabel}.`,
                 },
               },
             )
@@ -1419,6 +1437,7 @@ const AddFoodScreen = () => {
         visible={scannerVisible}
         onClose={() => setScannerVisible(false)}
         onFoodResolved={handleScannedFoodResolved}
+        onFoodNotFound={handleScannedFoodNotFound}
       />
     </View>
   );

@@ -15,6 +15,7 @@ const FoodBarcodeScannerModal = ({
   visible,
   onClose,
   onFoodResolved,
+  onFoodNotFound,
 }: FoodBarcodeScannerModalProps) => {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanWindow, setScanWindow] = React.useState<LayoutRectangle | null>(
@@ -25,10 +26,19 @@ const FoodBarcodeScannerModal = ({
     dismissResultModal,
     locked,
     modalVisible,
+    notFoundBarcode,
     registerScan,
     resetScannerState,
     scannedCode,
   } = useBarcodeDebugScanner(visible, onFoodResolved);
+
+  const handleCreateFoodFromBarcode = React.useCallback(
+    (barcode: string) => {
+      resetScannerState();
+      onFoodNotFound?.(barcode);
+    },
+    [onFoodNotFound, resetScannerState],
+  );
 
   const handleCloseScanner = () => {
     resetScannerState();
@@ -120,6 +130,10 @@ const FoodBarcodeScannerModal = ({
       isPreparing={permission === null}
       locked={locked}
       modalVisible={modalVisible}
+      notFoundBarcode={notFoundBarcode}
+      onCreateFoodFromBarcode={
+        onFoodNotFound ? handleCreateFoodFromBarcode : undefined
+      }
       onDismissResultModal={dismissResultModal}
       onFinderLayout={setScanWindow}
       onManualBarcodeSubmit={handleManualBarcodeSubmit}

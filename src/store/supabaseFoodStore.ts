@@ -1673,7 +1673,21 @@ export const saveFoodItem = async (input: SaveFoodItemInput): Promise<number> =>
   const authUserId = await resolveSupabaseUserId();
 
   if (!authUserId) {
-    return saveFoodItemLocal(input);
+    const localId = await saveFoodItemLocal(input);
+    // Overwrite any cached barcode miss so a rescan finds the saved food,
+    // matching the authenticated branch below. Best-effort: the food is
+    // already persisted, so a cache failure must not fail the save.
+    if (input.barcode?.trim()) {
+      try {
+        const savedLocalFood = await getFoodItemByIdLocal(localId);
+        if (savedLocalFood?.barcode) {
+          await saveCachedBarcodeHit(savedLocalFood.barcode, savedLocalFood);
+        }
+      } catch {
+        // A stale miss entry only delays rescan resolution; ignore.
+      }
+    }
+    return localId;
   }
 
   validateFoodItemInput(input);

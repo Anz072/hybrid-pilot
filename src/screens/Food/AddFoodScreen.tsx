@@ -17,12 +17,12 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   ArrowLeftIcon,
   BarcodeIcon,
-  CookingPotIcon,
-  ForkKnifeIcon,
+  CaretRightIcon,
   LightningIcon,
   MagnifyingGlassIcon,
   PencilSimpleIcon,
   StarIcon,
+  WarningCircleIcon,
   XIcon,
 } from "phosphor-react-native";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
@@ -50,6 +50,8 @@ import {
   saveFoodRecentSearches,
 } from "../../storage/localStore";
 import { appColors } from "../../theme/colors";
+import { appBorders, appRadius, appSpacing, appStates } from "../../theme/tokens";
+import { AppText, IconButton, SectionHeader, SegmentedControl } from "../../components/ui";
 import {
   fromDbFoodItem,
   searchFoodResults,
@@ -91,7 +93,6 @@ type LibraryResultSection = {
 type RenderSectionOptions = {
   emptyCta?: {
     onPress: () => void;
-    pillText: string;
     text: string;
     title: string;
   };
@@ -116,15 +117,15 @@ const SEARCH_RESULT_CATEGORY_META: Record<
 > = {
   custom_foods: {
     title: "Custom Foods",
-    subtitle: "Saved by you.",
+    subtitle: "Foods you've saved",
   },
   common_foods: {
     title: "Common Foods",
-    subtitle: "Generic matches.",
+    subtitle: "Everyday staples",
   },
   branded_foods: {
     title: "Branded Foods",
-    subtitle: "Packaged matches.",
+    subtitle: "Packaged products",
   },
 };
 
@@ -238,7 +239,7 @@ const getMealIdFromResult = (
   return Number.isFinite(payloadMealId) ? payloadMealId : null;
 };
 
-const getLibraryBadgeLabel = (
+const getLibrarySourceLabel = (
   food: Pick<SearchFoodResult, "source" | "sourceId" | "rawPayload">,
 ) => {
   if (isCustomMealResult(food)) {
@@ -336,6 +337,7 @@ const AddFoodScreen = () => {
     () => initialStaticListsRef.current?.user ?? null,
   );
   const [query, setQuery] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
   const [results, setResults] = useState<SearchFoodResult[]>([]);
   const [recent, setRecent] = useState<DBFoodItem[]>(
     () => initialStaticListsRef.current?.recent ?? [],
@@ -896,10 +898,19 @@ const AddFoodScreen = () => {
       isLibraryItem && isOwnedLibraryResult(food, user?.externalId);
     const isQuickLogging = quickLoggingKeys.has(food.key);
     const defaultAmount = formatFoodItemServing(food);
-    const sourceLabel = getLibraryBadgeLabel(food);
+    const sourceLabel = getLibrarySourceLabel(food);
+
+    const metaText = [
+      sourceLabel,
+      isLibraryItem ? (isOwnedLibraryItem ? "Yours" : "Public") : null,
+      food.brand || null,
+      defaultAmount,
+    ]
+      .filter(Boolean)
+      .join(" · ");
 
     return (
-      <View key={food.key} style={styles.foodCard}>
+      <View key={food.key} style={styles.foodRow}>
         <Pressable
           style={styles.foodBody}
           onPress={() => void openFoodEditor(food)}
@@ -912,39 +923,12 @@ const AddFoodScreen = () => {
               {formatFoodNumber(food.calories, " kcal")}
             </Text>
           </View>
-          <View style={styles.foodMetaRow}>
-            <View style={styles.foodBadge}>
-              <Text style={styles.foodBadgeText}>{sourceLabel}</Text>
-            </View>
-            {isLibraryItem ? (
-              <View
-                style={[
-                  styles.ownershipChip,
-                  isOwnedLibraryItem
-                    ? styles.ownershipChipOwned
-                    : styles.ownershipChipPublic,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.ownershipChipText,
-                    isOwnedLibraryItem
-                      ? styles.ownershipChipTextOwned
-                      : styles.ownershipChipTextPublic,
-                  ]}
-                >
-                  {isOwnedLibraryItem ? "Yours" : "Public"}
-                </Text>
-              </View>
-            ) : null}
-            <Text style={styles.supportingMeta} numberOfLines={1}>
-              {food.brand ? `${food.brand} | ` : ""}
-              {defaultAmount}
-            </Text>
-          </View>
+          <Text style={styles.supportingMeta} numberOfLines={1}>
+            {metaText}
+          </Text>
           <Text style={styles.foodMacroText}>
-            {formatFoodMacro(food.proteinG, "P")} |{" "}
-            {formatFoodMacro(food.carbsG, "C")} |{" "}
+            {formatFoodMacro(food.proteinG, "P")} ·{" "}
+            {formatFoodMacro(food.carbsG, "C")} ·{" "}
             {formatFoodMacro(food.fatG, "F")}
           </Text>
         </Pressable>
@@ -955,14 +939,15 @@ const AddFoodScreen = () => {
                 isRecipe ? openRecipeEditor(food) : openCustomMealEditor(food)
               }
               accessibilityLabel={`Edit ${food.name}`}
+              hitSlop={8}
               style={({ pressed }) => [
-                styles.iconAction,
+                styles.secondaryIconAction,
                 pressed && styles.cardPressed,
               ]}
             >
               <PencilSimpleIcon
-                size={18}
-                color={appColors.brand500}
+                size={16}
+                color={appColors.textMuted}
                 weight="bold"
               />
             </Pressable>
@@ -972,15 +957,15 @@ const AddFoodScreen = () => {
               accessibilityLabel={
                 isFavorite ? `Remove ${food.name} bookmark` : `Save ${food.name}`
               }
+              hitSlop={8}
               style={({ pressed }) => [
-                styles.iconAction,
-                isFavorite && styles.secondaryActionActive,
+                styles.secondaryIconAction,
                 pressed && styles.cardPressed,
               ]}
             >
               <StarIcon
-                size={18}
-                color={isFavorite ? appColors.white : appColors.brand500}
+                size={16}
+                color={isFavorite ? appColors.actionPrimary : appColors.textMuted}
                 weight={isFavorite ? "fill" : "bold"}
               />
             </Pressable>
@@ -1032,56 +1017,42 @@ const AddFoodScreen = () => {
     options?: RenderSectionOptions,
   ) => {
     const shouldShowEmptyCta = Boolean(options?.emptyCta) && items.length === 0;
-
-    const headerContent = (
-      <View style={styles.sectionHeaderRow}>
-        <View style={styles.sectionHeaderCopy}>
-          <Text style={styles.sectionTitle}>{title}</Text>
-          <Text style={styles.sectionSubtitle}>{subtitle}</Text>
-        </View>
-        <View style={styles.sectionHeaderMeta}>
-          {items.length > 0 ? (
-            <View style={styles.countPill}>
-              <Text style={styles.countPillText}>{items.length}</Text>
-            </View>
-          ) : null}
-        </View>
-      </View>
-    );
+    const headerSubtitle =
+      items.length > 0 ? `${subtitle} · ${items.length}` : subtitle;
 
     return (
       <View style={styles.sectionCard}>
-        {headerContent}
+        <SectionHeader subtitle={headerSubtitle} title={title} />
         <View style={styles.sectionStack}>
           {options?.loading ? (
             renderSkeletonRows()
           ) : items.length === 0 ? (
             <>
-              <Text style={styles.emptyText}>{emptyText}</Text>
+              <AppText color="secondary" variant="bodySmall">
+                {emptyText}
+              </AppText>
               {shouldShowEmptyCta ? (
-                <View>
-                  <Pressable
-                    onPress={options?.emptyCta?.onPress}
-                    style={({ pressed }) => [
-                      styles.moreRow,
-                      pressed && styles.cardPressed,
-                    ]}
-                  >
-                    <View style={styles.moreCopy}>
-                      <Text style={styles.moreTitle}>
-                        {options?.emptyCta?.title}
-                      </Text>
-                      <Text style={styles.moreText}>
-                        {options?.emptyCta?.text}
-                      </Text>
-                    </View>
-                    <View style={styles.morePill}>
-                      <Text style={styles.morePillText}>
-                        {options?.emptyCta?.pillText}
-                      </Text>
-                    </View>
-                  </Pressable>
-                </View>
+                <Pressable
+                  onPress={options?.emptyCta?.onPress}
+                  style={({ pressed }) => [
+                    styles.moreRow,
+                    pressed && styles.cardPressed,
+                  ]}
+                >
+                  <View style={styles.moreCopy}>
+                    <AppText variant="cardTitle">
+                      {options?.emptyCta?.title}
+                    </AppText>
+                    <AppText color="secondary" variant="bodySmall">
+                      {options?.emptyCta?.text}
+                    </AppText>
+                  </View>
+                  <CaretRightIcon
+                    size={18}
+                    color={appColors.textMuted}
+                    weight="bold"
+                  />
+                </Pressable>
               ) : null}
             </>
           ) : (
@@ -1096,6 +1067,27 @@ const AddFoodScreen = () => {
       </View>
     );
   };
+
+  const searchHint =
+    searchMode === "recipes"
+      ? query.trim()
+        ? isSearching
+          ? "Searching recipes..."
+          : null
+        : "Saved and public recipes."
+      : searchMode === "custom_meals"
+        ? query.trim()
+          ? isSearching
+            ? "Searching meals..."
+            : null
+          : "Saved and public meals."
+        : query.trim()
+          ? isSearching
+            ? "Searching foods..."
+            : activeResults.length > 0
+              ? null
+              : "No matches yet."
+          : "Frequent foods ready to log.";
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top + 14 }]}>
@@ -1121,88 +1113,14 @@ const AddFoodScreen = () => {
               />
             </Pressable>
           </View>
-          <View style={styles.searchModeRow}>
-            <Pressable
-              onPress={() => setSearchMode("all")}
-              accessibilityLabel="Search all foods"
-              style={({ pressed }) => [
-                styles.searchModePill,
-                searchMode === "all" && styles.searchModePillActive,
-                pressed && styles.cardPressed,
-              ]}
-            >
-              <MagnifyingGlassIcon
-                size={15}
-                color={searchMode === "all" ? appColors.white : appColors.brand500}
-                weight="bold"
-              />
-              <Text
-                style={[
-                  styles.searchModeText,
-                  searchMode === "all" && styles.searchModeTextActive,
-                ]}
-              >
-                Foods
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => setSearchMode("recipes")}
-              accessibilityLabel="Search recipes"
-              style={({ pressed }) => [
-                styles.searchModePill,
-                searchMode === "recipes" && styles.searchModePillActive,
-                pressed && styles.cardPressed,
-              ]}
-            >
-              <CookingPotIcon
-                size={14}
-                color={
-                  searchMode === "recipes"
-                    ? appColors.white
-                    : appColors.brand500
-                }
-                weight="fill"
-              />
-              <Text
-                style={[
-                styles.searchModeText,
-                  searchMode === "recipes" && styles.searchModeTextActive,
-                ]}
-              >
-                Recipes
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => setSearchMode("custom_meals")}
-              accessibilityLabel="Search custom meals"
-              style={({ pressed }) => [
-                styles.searchModePill,
-                searchMode === "custom_meals" && styles.searchModePillActive,
-                pressed && styles.cardPressed,
-              ]}
-            >
-              <ForkKnifeIcon
-                size={14}
-                color={
-                  searchMode === "custom_meals"
-                    ? appColors.white
-                    : appColors.brand500
-                }
-                weight="fill"
-              />
-              <Text
-                style={[
-                  styles.searchModeText,
-                  searchMode === "custom_meals" && styles.searchModeTextActive,
-                ]}
-              >
-                Meals
-              </Text>
-            </Pressable>
-          </View>
           <FoodLogContextBar context={foodLogContext} />
           <View style={styles.searchRow}>
-            <View style={styles.searchInputWrap}>
+            <View
+              style={[
+                styles.searchInputWrap,
+                searchFocused && styles.searchInputWrapFocused,
+              ]}
+            >
               <MagnifyingGlassIcon
                 size={18}
                 color={appColors.textMuted}
@@ -1213,6 +1131,8 @@ const AddFoodScreen = () => {
                 placeholderTextColor={appColors.textMuted}
                 value={query}
                 onChangeText={setQuery}
+                onBlur={() => setSearchFocused(false)}
+                onFocus={() => setSearchFocused(true)}
                 style={styles.searchInput}
                 returnKeyType="search"
               />
@@ -1231,40 +1151,34 @@ const AddFoodScreen = () => {
               ) : null}
             </View>
             {shouldShowScanner ? (
-              <Pressable
+              <IconButton
+                accessibilityLabel="Scan a barcode"
                 onPress={() => setScannerVisible(true)}
-                style={({ pressed }) => [
-                  styles.scanButton,
-                  pressed && styles.cardPressed,
-                ]}
               >
-                <BarcodeIcon size={20} color={appColors.white} weight="bold" />
-              </Pressable>
+                <BarcodeIcon size={20} color={appColors.textPrimary} weight="bold" />
+              </IconButton>
             ) : null}
           </View>
-          <Text style={styles.searchHint}>
-            {searchMode === "recipes"
-              ? query.trim()
-                ? isSearching
-                  ? "Searching recipes..."
-                  : `${activeResults.length} recipes`
-                : "Saved and public recipes."
-              : searchMode === "custom_meals"
-                ? query.trim()
-                  ? isSearching
-                    ? "Searching meals..."
-                    : `${activeResults.length} meals`
-                  : "Saved and public meals."
-              : query.trim()
-                ? isSearching
-                  ? "Searching foods..."
-                  : activeResults.length > 0
-                    ? `${activeResults.length} results`
-                    : "No matches yet."
-                : "Frequent foods ready to log."}
-          </Text>
+          <SegmentedControl
+            onChange={setSearchMode}
+            options={[
+              { label: "Foods", value: "all" },
+              { label: "Recipes", value: "recipes" },
+              { label: "Meals", value: "custom_meals" },
+            ]}
+            style={styles.searchModeRow}
+            value={searchMode}
+          />
+          {searchHint ? (
+            <Text style={styles.searchHint}>{searchHint}</Text>
+          ) : null}
           {query.trim() && isUsingLocalSearchOnly && searchMode === "all" ? (
             <View style={styles.searchNotice}>
+              <WarningCircleIcon
+                size={14}
+                color={appColors.statusWarning}
+                weight="fill"
+              />
               <Text style={styles.searchNoticeText}>
                 Showing saved foods only. Remote search is unavailable.
               </Text>
@@ -1315,7 +1229,6 @@ const AddFoodScreen = () => {
                   ? {
                       emptyCta: {
                         onPress: openCreateCustomMeal,
-                        pillText: "New",
                         title: "Create custom meal",
                         text: `Build a reusable meal for ${resolvedContextLabel}.`,
                       },
@@ -1339,7 +1252,7 @@ const AddFoodScreen = () => {
           ) : isSearching && activeResults.length === 0 ? (
             renderSection(
               "Results",
-              "Searching foods and nutrition databases.",
+              "Searching your foods and the nutrition database",
               activeResults,
               "",
               { loading: true },
@@ -1353,7 +1266,6 @@ const AddFoodScreen = () => {
               {
                 emptyCta: {
                   onPress: openCreateFoodItem,
-                  pillText: "New",
                   title: "Create food",
                   text: `Save "${query.trim()}" with its label nutrition and log it for ${resolvedContextLabel}.`,
                 },
@@ -1397,13 +1309,11 @@ const AddFoodScreen = () => {
                           searchMode === "recipes"
                             ? {
                                 onPress: openCreateRecipe,
-                                pillText: "Recipe",
                                 title: "Create recipe",
                                 text: `Save a recipe for ${resolvedContextLabel}.`,
                               }
                             : {
                                 onPress: openCreateCustomMeal,
-                                pillText: "New",
                                 title: "Create custom meal",
                                 text: `Build a reusable meal for ${resolvedContextLabel}.`,
                               },
@@ -1423,7 +1333,6 @@ const AddFoodScreen = () => {
             {
               emptyCta: {
                 onPress: openQuickAddFood,
-                pillText: "Quick",
                 title: "Quick add",
                 text: `Log calories and macros for ${resolvedContextLabel}.`,
               },
@@ -1449,16 +1358,11 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
-    paddingHorizontal: 18,
+    paddingHorizontal: appSpacing.gutter,
     paddingBottom: 36,
     paddingTop: 2,
   },
   heroCard: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 16,
     marginBottom: 16,
   },
   headerRow: {
@@ -1467,151 +1371,20 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   backButton: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 999,
-    backgroundColor: appColors.surfaceGhost,
-    borderColor: appColors.surfaceGhostStrong,
+    backgroundColor: appColors.surfaceField,
+    borderWidth: appBorders.width,
+    borderColor: appBorders.soft,
   },
-  heroHeaderRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    marginBottom: 10,
-  },
-  heroHeaderCopy: {
+  moreCopy: {
     flex: 1,
-  },
-    moreTitle: {
-    color: appColors.textPrimary,
-    fontSize: 15,
-    fontWeight: "600",
-    marginBottom: 4,
-  },
-  moreText: {
-    color: appColors.textSecondary,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  morePill: {
-    borderRadius: 9999,
-    backgroundColor: appColors.slate50,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  heroActionRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 12,
-  },
-   moreCopy: {
-    flex: 1,
-  },
-  morePillText: {
-    color: appColors.slate900,
-    fontSize: 12,
-    fontWeight: "600",
   },
   searchModeRow: {
-    width: "100%",
-    flexDirection: "row",
-    gap: 6,
-    marginBottom: 12,
-  },
-  searchModePill: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: appColors.surfaceField,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    borderRadius: 999,
-    minHeight: 44,
-    paddingVertical: 9,
-  },
-  searchModePillActive: {
-    backgroundColor: appColors.brand700,
-    borderColor: appColors.brand700,
-  },
-  searchModeText: {
-    color: appColors.brand500,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  searchModeTextActive: {
-    color: appColors.white,
-  },
-  heroEyebrow: {
-    alignSelf: "flex-start",
-    color: appColors.brand500,
-    fontSize: 11,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.7,
-    marginBottom: 4,
-  },
-  contextRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flexWrap: "wrap",
-    marginBottom: 12,
-  },
-  contextPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: appColors.surfaceGhost,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-  },
-  contextPillText: {
-    color: appColors.brand500,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  heroTitle: {
-    color: appColors.textPrimary,
-    fontSize: 22,
-    fontWeight: "500",
-    marginBottom: 4,
-  },
-  heroText: {
-    color: appColors.textSecondary,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  heroAction: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    borderRadius: 9999,
-    backgroundColor: appColors.surfaceGhost,
-    borderWidth: 2,
-    borderColor: appColors.surfaceGhostStrong,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-  },
-  heroActionPrimary: {
-    backgroundColor: appColors.brand700,
-    borderColor: appColors.brand700,
-  },
-  heroActionText: {
-    color: appColors.textPrimary,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  heroActionTextPrimary: {
-    color: appColors.white,
+    marginTop: 12,
   },
   searchRow: {
     flexDirection: "row",
@@ -1624,18 +1397,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    borderRadius: 8,
+    borderColor: "transparent",
+    borderRadius: appRadius.md,
     backgroundColor: appColors.surfaceField,
     paddingLeft: 12,
     paddingRight: 8,
   },
+  searchInputWrapFocused: {
+    borderColor: appStates.focusBorder,
+  },
   searchInput: {
     flex: 1,
-    paddingVertical: 11,
+    paddingVertical: appSpacing.sm,
     color: appColors.textPrimary,
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: 15,
+    fontWeight: "500",
   },
   clearSearchButton: {
     width: 34,
@@ -1649,36 +1425,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceCardAlt,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 14,
-  },
-  moreRowAccent: {
-    backgroundColor: appColors.surfaceGhost,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-  },
-  selectedSlotRow: {
-    backgroundColor: appColors.surfaceCardAlt,
-    borderColor: appColors.borderStrong,
-  },
-  scanButton: {
-    minWidth: 50,
-    flexDirection: "row",
-    gap: 6,
-    borderRadius: 9999,
-    backgroundColor: appColors.brand700,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-  },
-  scanButtonText: {
-    color: appColors.white,
-    fontSize: 12,
-    fontWeight: "600",
+    borderRadius: appRadius.md,
+    backgroundColor: appColors.surfaceField,
+    padding: appSpacing.sm,
   },
   searchHint: {
     color: appColors.textSecondary,
@@ -1687,19 +1436,20 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   searchNotice: {
-    alignSelf: "flex-start",
-    borderRadius: 999,
-    backgroundColor: appColors.warningSurface,
-    borderWidth: 1,
-    borderColor: appColors.warning600,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    marginTop: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: appSpacing.xs,
+    borderRadius: appRadius.md,
+    backgroundColor: appColors.surfaceField,
+    paddingHorizontal: appSpacing.sm,
+    paddingVertical: appSpacing.xs,
+    marginTop: appSpacing.xs,
   },
   searchNoticeText: {
-    color: appColors.warning700,
-    fontSize: 11,
-    fontWeight: "600",
+    flex: 1,
+    color: appColors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
   },
   recentSearchRow: {
     flexDirection: "row",
@@ -1717,107 +1467,29 @@ const styles = StyleSheet.create({
   recentSearchChip: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: appColors.borderStrong,
+    borderColor: appBorders.soft,
     backgroundColor: appColors.surfaceField,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   recentSearchChipText: {
-    color: appColors.textPrimary,
+    color: appColors.textSecondary,
     fontSize: 12,
     fontWeight: "600",
   },
   sectionCard: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 14,
-    marginBottom: 16,
-  },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  sectionHeaderButton: {
-    borderRadius: 8,
-  },
-  sectionHeaderCopy: {
-    flex: 1,
-  },
-  sectionHeaderMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  sectionTitle: {
-    color: appColors.textPrimary,
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 2,
-  },
-  sectionSubtitle: {
-    color: appColors.textSecondary,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  countPill: {
-    minWidth: 28,
-    borderRadius: 999,
-    backgroundColor: appColors.surfaceGhost,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    alignItems: "center",
-  },
-  countPillText: {
-    color: appColors.brand500,
-    fontSize: 11,
-    fontWeight: "600",
+    marginBottom: 20,
   },
   sectionStack: {
     marginTop: 10,
     gap: 8,
   },
-  emptyText: {
-    color: appColors.textSecondary,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  togglePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    borderRadius: 999,
-    backgroundColor: appColors.surfaceField,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  togglePillExpanded: {
-    backgroundColor: appColors.surfaceGhost,
-  },
-  togglePillText: {
-    color: appColors.brand500,
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  togglePillTextExpanded: {
-    color: appColors.brand300,
-  },
-  foodCard: {
+  foodRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceCardAlt,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    paddingHorizontal: 12,
+    borderBottomWidth: appBorders.width,
+    borderBottomColor: appBorders.soft,
     paddingVertical: 12,
   },
   foodBody: {
@@ -1831,54 +1503,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 8,
     marginBottom: 7,
-  },
-  foodMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-    marginBottom: 5,
-  },
-  foodBadgeRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-  foodBadge: {
-    borderRadius: 999,
-    backgroundColor: appColors.surfaceGhost,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    paddingHorizontal: 7,
-    paddingVertical: 4,
-  },
-  foodBadgeText: {
-    color: appColors.brand500,
-    fontSize: 10,
-    fontWeight: "600",
-  },
-  ownershipChip: {
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 7,
-    paddingVertical: 4,
-  },
-  ownershipChipOwned: {
-    backgroundColor: appColors.brand800,
-    borderColor: appColors.brand500,
-  },
-  ownershipChipPublic: {
-    backgroundColor: appColors.surfaceGhost,
-    borderColor: appColors.borderStrong,
-  },
-  ownershipChipText: {
-    fontSize: 10,
-    fontWeight: "600",
-  },
-  ownershipChipTextOwned: {
-    color: appColors.brand700,
-  },
-  ownershipChipTextPublic: {
-    color: appColors.textSecondary,
   },
   foodCalories: {
     color: appColors.textPrimary,
@@ -1903,7 +1527,7 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   foodMacroText: {
-    color: appColors.brand500,
+    color: appColors.textSecondary,
     fontSize: 11,
     fontWeight: "500",
     fontVariant: ["tabular-nums"],
@@ -1913,71 +1537,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  iconAction: {
-    width: 44,
-    height: 44,
+  secondaryIconAction: {
+    width: 32,
+    height: 32,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    backgroundColor: appColors.surfaceCard,
-  },
-  secondaryAction: {
-    minWidth: 62,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    backgroundColor: appColors.surfaceGhost,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-  secondaryActionActive: {
-    backgroundColor: appColors.success700,
-  },
-  secondaryActionMuted: {
-    backgroundColor: appColors.surfaceField,
-    borderColor: appColors.borderSoft,
-  },
-  publicPill: {
-    minWidth: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    backgroundColor: appColors.surfaceField,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-  },
-  publicPillText: {
-    color: appColors.textSecondary,
-    fontSize: 10,
-    fontWeight: "600",
-  },
-  secondaryActionText: {
-    color: appColors.brand500,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  secondaryActionTextActive: {
-    color: appColors.white,
-  },
-  secondaryActionTextMuted: {
-    color: appColors.textSecondary,
-  },
-  primaryAction: {
-    minWidth: 62,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 9999,
-    backgroundColor: appColors.brand700,
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
   },
   quickLogAction: {
     minWidth: 70,
@@ -1998,11 +1562,6 @@ const styles = StyleSheet.create({
   primaryActionLoading: {
     opacity: 0.56,
   },
-  primaryActionText: {
-    color: appColors.white,
-    fontSize: 12,
-    fontWeight: "600",
-  },
   cardPressed: {
     opacity: 0.9,
   },
@@ -2013,7 +1572,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     backgroundColor: appColors.surfaceCardAlt,
     borderWidth: 1,
     borderColor: appColors.borderSoft,

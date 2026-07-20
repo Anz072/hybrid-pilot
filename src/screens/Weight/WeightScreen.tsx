@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   CalendarIcon,
   CaretDownIcon,
+  CaretRightIcon,
   CaretUpIcon,
   ChartLineIcon,
   PencilSimpleIcon,
@@ -89,7 +90,6 @@ type SnackbarState = {
 type InsightCardProps = {
   title: string;
   value: string;
-  detail: string;
   explanation: string;
 };
 
@@ -344,11 +344,6 @@ const WeightScreen = ({
         : [{ title: "", key: "history", data: historyEntries }],
     [hideHistory, historyEntries],
   );
-  const collapsedHistoryText =
-    historyEntries.length > 0
-      ? `History is hidden. Expand to browse ${historyEntries.length} daily check-ins. Saving again on the same day replaces the earlier entry.`
-      : "History is hidden. Log your first weight entry to build a timeline.";
-
   const consistencyPerWeek = React.useMemo(() => {
     const recent = filterEntriesByRange(activeEntries, "1M");
     if (recent.length === 0) {
@@ -802,12 +797,10 @@ const WeightScreen = ({
         deltaVsTrend != null
           ? `${deltaVsTrend > 0 ? "+" : ""}${formatWeight(deltaVsTrend, weightUnit)}`
           : "Need more data",
-      detail:
-        monthlyAverage != null
-          ? `30d avg ${formatWeight(monthlyAverage, weightUnit)} · ${trendConfidenceText}`
-          : "We need more recent check-ins to compare your pace.",
       explanation:
-        `The trend compares your latest weigh-in against your recent 7-day average so day-to-day fluctuations feel less noisy. ${trendConfidenceText}.`,
+        monthlyAverage != null
+          ? `Your 30-day average is ${formatWeight(monthlyAverage, weightUnit)}. The trend compares your latest weigh-in with the recent 7-day average. ${trendConfidenceText}.`
+          : "We need more recent check-ins to compare your latest weigh-in with the 7-day average.",
     },
     {
       title: "Consistency",
@@ -815,7 +808,6 @@ const WeightScreen = ({
         consistencyPerWeek != null
           ? `${consistencyPerWeek.toFixed(1)}/week`
           : "Need more data",
-      detail: "Entries per week over the last month.",
       explanation:
         "Consistency is calculated from the number of active entries logged in the last month, scaled to entries per week.",
     },
@@ -825,7 +817,6 @@ const WeightScreen = ({
         volatility != null
           ? `+/- ${formatWeight(volatility, weightUnit)}`
           : "Need more data",
-      detail: "Lower is steadier. Daily fluctuations are still normal.",
       explanation:
         "Volatility uses the spread of your recent weigh-ins. It helps separate normal noise from a more stable trend.",
     },
@@ -857,7 +848,6 @@ const WeightScreen = ({
   const renderInsightCard = ({
     title,
     value,
-    detail,
     explanation,
   }: InsightCardProps) =>
     (() => {
@@ -869,55 +859,31 @@ const WeightScreen = ({
           onPress={() => toggleInsightCard(title)}
           accessibilityState={{ expanded }}
           style={[
-            styles.insightCard,
-            expanded && styles.insightCardExpanded,
+            styles.insightRow,
+            expanded && styles.insightRowExpanded,
           ]}
           variant="compact"
         >
           <View style={styles.insightTopRow}>
-            <View style={styles.insightHeaderCopy}>
-              <AppText color="secondary" style={styles.insightTitle} variant="eyebrow">
-                {title}
-              </AppText>
-              <AppText color="secondary" style={styles.insightDetail} variant="metadata">
-                {detail}
-              </AppText>
-            </View>
+            <AppText color="secondary" style={styles.insightTitle} variant="eyebrow">
+              {title}
+            </AppText>
             <View style={styles.insightMetaSide}>
-              <NumericText style={styles.insightValue} variant="numberWeightEntry">
-                {value}
-              </NumericText>
-              <View
-                style={[
-                  styles.insightToggleChip,
-                  expanded && styles.insightToggleChipExpanded,
-                ]}
-              >
-                <AppText
-                  style={[
-                    styles.insightToggleText,
-                    expanded && styles.insightToggleTextExpanded,
-                  ]}
-                  variant="label"
-                >
-                  {expanded ? "Hide" : "Open"}
-                </AppText>
-                {expanded ? (
-                  <CaretUpIcon size={14} color={appColors.textSecondary} weight="bold" />
-                ) : (
-                  <CaretDownIcon size={14} color={appColors.textMuted} weight="bold" />
-                )}
+              <View style={styles.insightValueChip}>
+                <NumericText style={styles.insightValue} variant="numberTrendDelta">
+                  {value}
+                </NumericText>
               </View>
+              {expanded ? (
+                <CaretUpIcon size={16} color={appColors.textSecondary} weight="bold" />
+              ) : (
+                <CaretDownIcon size={16} color={appColors.textMuted} weight="bold" />
+              )}
             </View>
           </View>
 
-          <View style={styles.insightAccentLine} />
-
           {expanded ? (
             <View style={styles.insightExpandedBody}>
-              <AppText color="muted" style={styles.insightExpandedLabel} variant="eyebrow">
-                How calculated
-              </AppText>
               <AppText color="secondary" style={styles.insightExpandedText} variant="metadata">
                 {explanation}
               </AppText>
@@ -945,7 +911,8 @@ const WeightScreen = ({
           style={styles.logWeightButton}
         />
       </View>
-      <AppCard variant="hero" style={styles.heroCard}>
+      <View style={styles.heroSection}>
+        <View style={styles.heroOpeningRule} />
         <View style={styles.heroCurrentBlock}>
           <AppText color="muted" style={styles.heroStatLabel} variant="eyebrow">
             Current
@@ -987,8 +954,8 @@ const WeightScreen = ({
               Goal
             </AppText>
             <View style={styles.heroGoalLine}>
-              <TargetIcon size={14} color={appColors.actionPrimaryPressed} weight="bold" />
-              <AppText color={appColors.actionPrimaryPressed} style={styles.heroInfoGoalText} variant="bodySmallStrong">
+              <TargetIcon size={14} color={appColors.textSecondary} weight="bold" />
+              <AppText style={styles.heroInfoGoalText} variant="bodySmallStrong">
                 {goalChipText}
               </AppText>
             </View>
@@ -1004,7 +971,7 @@ const WeightScreen = ({
           range={range}
           onChangeRange={setRange}
         />
-      </AppCard>
+      </View>
 
       <InteractiveCard
         onPress={openGoalModal}
@@ -1019,9 +986,8 @@ const WeightScreen = ({
               {goalSummaryText}
             </AppText>
           </View>
-          <View style={[styles.pill, styles.goalLauncherPill]}>
-            <TargetIcon size={14} color={appColors.textPrimary} weight="bold" />
-            <AppText style={styles.pillText} variant="label">{goalLauncherLabel}</AppText>
+          <View style={styles.sectionToggle}>
+            <CaretRightIcon size={18} color={appColors.textMuted} weight="bold" />
           </View>
         </View>
 
@@ -1053,55 +1019,51 @@ const WeightScreen = ({
         ) : null}
       </InteractiveCard>
 
-      <InteractiveCard
-        onPress={() => setHideInsights((current) => !current)}
-        style={[styles.card, styles.sectionCard]}
-      >
-        <View style={styles.sectionHeaderRow}>
-          <View style={styles.flexOne}>
+      <View style={styles.ledgerSection}>
+        <InteractiveCard
+          onPress={() => {
+            animateQuickLayout();
+            setHideInsights((current) => !current);
+          }}
+          accessibilityState={{ expanded: !hideInsights }}
+          style={styles.ledgerSectionHeader}
+          variant="compact"
+        >
+          <View style={styles.sectionHeaderRow}>
             <AppText style={styles.dashboardSectionTitle} variant="sectionTitle">
               Insights & Data
             </AppText>
-            <AppText color="muted" style={styles.sectionCaption} variant="metadata">
-              Trend, consistency, and volatility. Tap to expand.
-            </AppText>
+            <View style={styles.ledgerToggle}>
+              {hideInsights ? (
+                <CaretDownIcon size={18} color={appColors.textMuted} weight="bold" />
+              ) : (
+                <CaretUpIcon size={18} color={appColors.textMuted} weight="bold" />
+              )}
+            </View>
           </View>
-          <View style={styles.sectionToggle}>
-            {hideInsights ? (
-              <CaretDownIcon size={18} color={appColors.textMuted} weight="bold" />
-            ) : (
-              <CaretUpIcon size={18} color={appColors.textMuted} weight="bold" />
-            )}
-          </View>
-        </View>
+        </InteractiveCard>
         {!hideInsights && (
-          <View style={styles.stack}>
+          <View>
             {insightCards.map((item) => renderInsightCard(item))}
           </View>
         )}
-      </InteractiveCard>
+      </View>
 
-      <AppCard style={styles.card}>
+      <View style={styles.historySection}>
         <InteractiveCard
           onPress={() => {
             animateQuickLayout();
             setHideHistory((current) => !current);
           }}
-          style={styles.historyHeaderButton}
+          accessibilityState={{ expanded: !hideHistory }}
+          style={styles.ledgerSectionHeader}
           variant="compact"
         >
           <View style={styles.sectionHeaderRow}>
-            <View style={styles.flexOne}>
-              <AppText style={styles.dashboardSectionTitle} variant="sectionTitle">
-                History
-              </AppText>
-              <AppText color="muted" style={styles.sectionCaption} variant="metadata">
-                {historyEntries.length > 0
-                  ? `${historyEntries.length} daily check-ins. New saves on the same day replace the earlier entry.`
-                  : "Your weight history will appear here once you log an entry."}
-              </AppText>
-            </View>
-            <View style={styles.sectionToggle}>
+            <AppText style={styles.dashboardSectionTitle} variant="sectionTitle">
+              History
+            </AppText>
+            <View style={styles.ledgerToggle}>
               {hideHistory ? (
                 <CaretDownIcon size={18} color={appColors.textMuted} weight="bold" />
               ) : (
@@ -1110,13 +1072,7 @@ const WeightScreen = ({
             </View>
           </View>
         </InteractiveCard>
-
-        {hideHistory ? (
-          <AppText color="muted" style={styles.collapsedSectionText} variant="metadata">
-            {collapsedHistoryText}
-          </AppText>
-        ) : null}
-      </AppCard>
+      </View>
     </View>
   );
 
@@ -1243,26 +1199,18 @@ const WeightScreen = ({
                     <AppText style={styles.historySourceText} numberOfLines={1} variant="label">
                       {sourceLabel}
                     </AppText>
-                    <View
-                      style={[
-                        styles.statusChip,
-                        item.syncStatus === "error" && styles.statusChipWarning,
-                        item.syncStatus === "synced" && styles.statusChipSynced,
-                      ]}
+                    <AppText
+                      color={
+                        item.syncStatus === "error"
+                          ? "error"
+                          : item.syncStatus === "synced"
+                            ? "success"
+                            : "muted"
+                      }
+                      variant="micro"
                     >
-                      <AppText
-                        style={[
-                          styles.statusChipText,
-                          item.syncStatus === "error" &&
-                            styles.statusChipTextWarning,
-                          item.syncStatus === "synced" &&
-                            styles.statusChipTextSynced,
-                        ]}
-                        variant="micro"
-                      >
-                        {statusLabel}
-                      </AppText>
-                    </View>
+                      {statusLabel}
+                    </AppText>
                   </View>
 
                   <View style={styles.historyActionColumn}>
@@ -1334,8 +1282,8 @@ const WeightScreen = ({
             ]}
           >
             <AppCard style={styles.card}>
-              <View style={styles.rowBetween}>
-                <View style={styles.flexOne}>
+              <View style={styles.goalHeader}>
+                <View>
                   <AppText style={styles.sectionTitle} variant="sectionTitle">
                     Goal details
                   </AppText>
@@ -1343,18 +1291,16 @@ const WeightScreen = ({
                     Set a target to add a goal line and progress band to the
                     chart.
                   </AppText>
-                </View>
-                {goal ? (
-                  <View style={[styles.pill, styles.goalBandPill]}>
-                    <NumericText color={appColors.actionPrimaryPressed} style={styles.goalBandText} variant="numberTrendDelta">
+                  {goal ? (
+                    <NumericText color="secondary" style={styles.goalBandMeta} variant="numberTrendDelta">
                       Band +/-{" "}
                       {formatWeight(
                         goal.goalBandKg ?? DEFAULT_GOAL_BAND_KG,
                         weightUnit,
                       )}
                     </NumericText>
-                  </View>
-                ) : null}
+                  ) : null}
+                </View>
               </View>
 
               <View style={styles.inputRow}>
@@ -1519,9 +1465,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: appSpacing.sm,
   },
-  heroCard: {
+  heroSection: {
     marginBottom: appSpacing.lg,
-    padding: appSpacing.lg,
+  },
+  heroOpeningRule: {
+    width: 44,
+    height: appBorders.ruleWidth,
+    backgroundColor: appBorders.rule,
+    marginBottom: appSpacing.sm,
   },
   heroStatLabel: {
     marginBottom: appSpacing.xxs,
@@ -1557,11 +1508,6 @@ const styles = StyleSheet.create({
   heroSupportPanel: {
     flex: 1,
     minWidth: 132,
-    borderRadius: appRadius.lg,
-    borderWidth: appBorders.width,
-    borderColor: appBorders.soft,
-    backgroundColor: appSurfaces.soft,
-    padding: appSpacing.md,
   },
   heroSupportValueRow: {
     minHeight: 28,
@@ -1587,24 +1533,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     alignSelf: "flex-start",
-    color: appColors.statusSuccess,
-    backgroundColor: appColors.statusSuccessSoft,
-    paddingHorizontal: appSpacing.sm,
-    paddingVertical: 6,
-    borderRadius: appRadius.pill,
     marginBottom: appSpacing.xs,
-  },
-  pill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: appSpacing.xs,
-    borderRadius: appRadius.pill,
-    backgroundColor: appSurfaces.soft,
-    paddingHorizontal: appSpacing.sm,
-    paddingVertical: 9,
-  },
-  pillText: {
-    flexShrink: 1,
   },
   header: {
     minHeight: 52,
@@ -1630,16 +1559,11 @@ const styles = StyleSheet.create({
   subtleText: {
     marginTop: appSpacing.xxs,
   },
-  sectionCaption: {
-    marginTop: appSpacing.xxs,
+  goalHeader: {
+    marginBottom: appSpacing.md,
   },
-  goalBandPill: {
-    backgroundColor: appColors.actionPrimarySoft,
-  },
-  goalLauncherPill: {
-    alignSelf: "flex-start",
-  },
-  goalBandText: {
+  goalBandMeta: {
+    marginTop: appSpacing.xs,
     textAlign: "left",
   },
   sectionTitle: {
@@ -1719,9 +1643,6 @@ const styles = StyleSheet.create({
   panelText: {
     flexShrink: 1,
   },
-  stack: {
-    gap: appSpacing.sm,
-  },
   emptyCard: {
     marginHorizontal: appSpacing.gutter,
     marginTop: appSpacing.xs,
@@ -1744,14 +1665,8 @@ const styles = StyleSheet.create({
     marginTop: appSpacing.xs,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: appSurfaces.ghost,
-    borderWidth: appBorders.width,
-    borderBottomWidth: 0,
-    borderColor: appBorders.soft,
-    borderTopLeftRadius: appRadius.lg,
-    borderTopRightRadius: appRadius.lg,
-    paddingHorizontal: 14,
-    paddingVertical: appSpacing.sm,
+    paddingHorizontal: appSpacing.sm,
+    paddingBottom: appSpacing.xs,
   },
   historyHeaderCell: {
     justifyContent: "center",
@@ -1761,26 +1676,20 @@ const styles = StyleSheet.create({
   },
   historyRow: {
     marginHorizontal: appSpacing.gutter,
-    borderRadius: appRadius.none,
-    backgroundColor: appSurfaces.card,
-    borderLeftWidth: appBorders.width,
-    borderRightWidth: appBorders.width,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderColor: appBorders.soft,
-    paddingHorizontal: 14,
+    backgroundColor: "transparent",
+    borderWidth: 0,
+    borderRadius: 0,
+    borderBottomWidth: appBorders.width,
+    borderBottomColor: appBorders.soft,
+    paddingHorizontal: appSpacing.sm,
     paddingVertical: appSpacing.sm,
   },
-  historyRowFirst: {
-    borderTopWidth: appBorders.width,
-  },
+  historyRowFirst: {},
   historyRowLast: {
-    borderBottomWidth: appBorders.width,
-    borderBottomLeftRadius: appRadius.lg,
-    borderBottomRightRadius: appRadius.lg,
+    borderBottomWidth: 0,
   },
   historyRowActive: {
     backgroundColor: appStates.selectedFill,
-    borderColor: appStates.selectedBorder,
   },
   historyRowMain: {
     flexDirection: "row",
@@ -1834,29 +1743,6 @@ const styles = StyleSheet.create({
   historyNoteText: {
     flex: 1,
   },
-  statusChip: {
-    borderRadius: appRadius.pill,
-    backgroundColor: appSurfaces.ghost,
-    paddingHorizontal: appSpacing.xs,
-    paddingVertical: appSpacing.xxs,
-  },
-  statusChipWarning: {
-    backgroundColor: appColors.warningSurfaceStrong,
-  },
-  statusChipSynced: {
-    backgroundColor: appSurfaces.soft,
-    borderWidth: appBorders.width,
-    borderColor: appBorders.soft,
-  },
-  statusChipText: {
-    color: appColors.textSecondary,
-  },
-  statusChipTextWarning: {
-    color: appColors.warning700,
-  },
-  statusChipTextSynced: {
-    color: appColors.success700,
-  },
   historyInlineWarning: {
     flexDirection: "row",
     alignItems: "center",
@@ -1893,9 +1779,9 @@ const styles = StyleSheet.create({
     left: appSpacing.gutter,
     right: appSpacing.gutter,
     borderRadius: appRadius.md,
-    backgroundColor: appColors.surfaceRaised,
+    backgroundColor: appColors.surfaceInverse,
     paddingHorizontal: appSpacing.md,
-    paddingVertical: 14,
+    paddingVertical: appSpacing.sm,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -1903,88 +1789,84 @@ const styles = StyleSheet.create({
   },
   snackbarText: {
     flex: 1,
-    color: appColors.white,
+    color: appColors.textInverse,
   },
   snackbarAction: {
     minHeight: 44,
   },
-  insightCard: {
-    backgroundColor: appSurfaces.soft,
+  ledgerSection: {
+    marginBottom: appSpacing.lg,
   },
-  insightCardExpanded: {
-    backgroundColor: appStates.selectedFill,
-    borderColor: appStates.selectedBorder,
+  historySection: {
+    marginBottom: appSpacing.none,
+  },
+  ledgerSectionHeader: {
+    minHeight: 52,
+    borderWidth: 0,
+    borderRadius: 0,
+    borderBottomWidth: appBorders.width,
+    borderBottomColor: appBorders.strong,
+    backgroundColor: "transparent",
+    paddingHorizontal: appSpacing.sm,
+    paddingVertical: appSpacing.xs,
+  },
+  ledgerToggle: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  insightRow: {
+    minHeight: 52,
+    borderWidth: 0,
+    borderRadius: 0,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: appBorders.soft,
+    backgroundColor: "transparent",
+    paddingHorizontal: appSpacing.sm,
+    paddingVertical: appSpacing.sm,
+  },
+  insightRowExpanded: {
+    backgroundColor: appSurfaces.ghost,
   },
   insightTopRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "space-between",
     gap: appSpacing.sm,
   },
-  insightHeaderCopy: {
-    flex: 1,
-  },
   insightMetaSide: {
-    alignItems: "flex-end",
+    flexDirection: "row",
+    alignItems: "center",
     gap: appSpacing.xs,
   },
   insightTitle: {
-    marginBottom: appSpacing.xxs,
+    flex: 1,
+  },
+  insightValueChip: {
+    borderRadius: appRadius.pill,
+    backgroundColor: appSurfaces.soft,
+    paddingHorizontal: appSpacing.sm,
+    paddingVertical: appSpacing.xxs,
   },
   insightValue: {
     color: appColors.textPrimary,
-  },
-  insightDetail: {
-    flexShrink: 1,
-  },
-  insightAccentLine: {
-    width: 38,
-    height: 3,
-    borderRadius: appRadius.pill,
-    backgroundColor: appColors.brand400,
-    marginTop: appSpacing.sm,
-    marginBottom: 2,
-  },
-  insightToggleChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderRadius: appRadius.pill,
-    paddingHorizontal: appSpacing.sm,
-    paddingVertical: 6,
-    backgroundColor: appSurfaces.ghost,
-    borderWidth: appBorders.width,
-    borderColor: appBorders.strong,
-  },
-  insightToggleChipExpanded: {
-    backgroundColor: appSurfaces.card,
-    borderColor: appBorders.soft,
-  },
-  insightToggleText: {
-    color: appColors.textMuted,
-  },
-  insightToggleTextExpanded: {
-    color: appColors.textSecondary,
   },
   insightExpandedBody: {
     marginTop: appSpacing.sm,
     paddingTop: appSpacing.sm,
     borderTopWidth: appBorders.width,
     borderTopColor: appBorders.soft,
-    gap: 6,
-  },
-  insightExpandedLabel: {
-    flexShrink: 1,
   },
   insightExpandedText: {
     flexShrink: 1,
   },
   sectionHeaderRow: {
+    flex: 1,
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "space-between",
     gap: appSpacing.sm,
-    marginBottom: appSpacing.xs,
   },
   sectionToggle: {
     width: 44,
@@ -1994,17 +1876,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: appSurfaces.ghost,
   },
-  collapsedSectionText: {
-    marginTop: appSpacing.xs,
-  },
   goalCard: {},
-  sectionCard: {},
-  historyHeaderButton: {
-    borderWidth: 0,
-    backgroundColor: "transparent",
-    paddingHorizontal: appSpacing.none,
-    paddingVertical: appSpacing.none,
-  },
 });
 
 export default WeightScreen;

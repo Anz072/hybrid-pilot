@@ -23,9 +23,6 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import { LoadingState } from "../../components/ui";
 import {
-  BarcodeIcon,
-  CalendarIcon,
-  CheckCircleIcon,
   ClockIcon,
   StarIcon,
 } from "phosphor-react-native";
@@ -198,48 +195,8 @@ const ScannedFoodLogScreen = () => {
     () => formatFoodShortDate(date),
     [date],
   );
-  const statusLabel =
-    scanStatus === "created" ? "Added to library" : "Found in library";
   const screenEyebrow = isScannedFlow ? "Barcode" : "Food";
   const screenTitle = isScannedFlow ? "Add scanned food" : "Review food";
-  const screenSubtitle = `${screenDateLabel} | ${loggedTime}`;
-  const heroPills = React.useMemo(() => {
-    const pills = [];
-
-    if (isScannedFlow) {
-      pills.push({
-        key: "status",
-        label: statusLabel,
-        icon: (
-          <CheckCircleIcon
-            size={14}
-            color={appColors.brand500}
-            weight="fill"
-          />
-        ),
-      });
-    }
-
-    pills.push({
-      key: "date",
-      label: formatFoodShortDate(date),
-      icon: (
-        <CalendarIcon size={14} color={appColors.brand500} weight="bold" />
-      ),
-    });
-
-    if (barcode) {
-      pills.push({
-        key: "barcode",
-        label: barcode,
-        icon: (
-          <BarcodeIcon size={14} color={appColors.brand500} weight="bold" />
-        ),
-      });
-    }
-
-    return pills;
-  }, [barcode, date, isScannedFlow, statusLabel]);
 
   const handleTimeChange = React.useCallback(
     (event: DateTimePickerEvent, nextDate?: Date) => {
@@ -388,6 +345,20 @@ const ScannedFoodLogScreen = () => {
     );
   }
 
+  const heroMeta = [
+    food.brand || null,
+    formatFoodSourceLabel(food.source),
+    `Serving ${formatFoodNumber(serving.value, ` ${serving.unit}`)}`,
+    isScannedFlow
+      ? scanStatus === "created"
+        ? "Added to library"
+        : "Found in library"
+      : null,
+    barcode ? `Barcode ${barcode}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <View style={styles.screen}>
       <KeyboardAwareScrollView
@@ -401,14 +372,11 @@ const ScannedFoodLogScreen = () => {
         <FoodEntryForm
           headerEyebrow={screenEyebrow}
           headerTitle={screenTitle}
-          headerSubtitle={screenSubtitle}
+          headerSubtitle={screenDateLabel}
           onBack={() => navigation.goBack()}
           heroEyebrow={isScannedFlow ? "Quick Review" : "Food Review"}
           heroTitle={food.name}
-          heroMeta={`${food.brand ? `${food.brand} | ` : ""}${formatFoodSourceLabel(
-            food.source,
-          )} | Serving ${formatFoodNumber(serving.value, ` ${serving.unit}`)}`}
-          heroPills={heroPills}
+          heroMeta={heroMeta}
           heroAction={
             canFavoriteFood
               ? {
@@ -432,10 +400,10 @@ const ScannedFoodLogScreen = () => {
           }
           previewSummaryText={
             preview
-              ? `${formatFoodMacro(preview.proteinG, "P")} | ${formatFoodMacro(
+              ? `${formatFoodMacro(preview.proteinG, "P")} · ${formatFoodMacro(
                   preview.carbsG,
                   "C",
-                )} | ${formatFoodMacro(preview.fatG, "F")}`
+                )} · ${formatFoodMacro(preview.fatG, "F")}`
               : "Enter an amount to preview nutrition"
           }
           amountKeyboardType="decimal-pad"
@@ -562,10 +530,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   content: {
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
   },
   centerCard: sharedStyleValues.centerCard,
-  centerText: sharedStyleValues.centerText,
   stickyFooter: sharedStyleValues.footer,
   stickyPrimaryButton: {
     ...sharedStyleValues.buttonBase,

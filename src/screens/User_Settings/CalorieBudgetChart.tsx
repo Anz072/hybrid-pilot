@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     borderRadius: appRadius.md,
     backgroundColor: appSurfaces.soft,
     paddingHorizontal: appSpacing.sm,
-    paddingVertical: 14,
+    paddingVertical: 16,
   },
   barRail: {
     flexDirection: "row",

@@ -10,7 +10,7 @@ import {
 import { MagnifyingGlassIcon } from "phosphor-react-native";
 import { appColors } from "../../theme/colors";
 import { appTypography } from "../../theme/typography";
-import { appBorders, appRadius, appSpacing, appSurfaces } from "../../theme/tokens";
+import { appBorders, appRadius, appSpacing, appStates, appSurfaces } from "../../theme/tokens";
 import { AppText } from "./AppText";
 
 type AppInputProps = TextInputProps & {
@@ -23,32 +23,47 @@ export const AppInput = ({
   containerStyle,
   error,
   label,
+  onBlur,
+  onFocus,
   placeholderTextColor = appColors.textMuted,
   style,
   ...props
-}: AppInputProps) => (
-  <View style={[styles.container, containerStyle]}>
-    {label ? (
-      <AppText color="secondary" style={styles.label} variant="eyebrow">
-        {label}
-      </AppText>
-    ) : null}
-    <TextInput
-      placeholderTextColor={placeholderTextColor}
-      {...props}
-      style={[
-        styles.input,
-        error ? styles.inputError : null,
-        style,
-      ]}
-    />
-    {error ? (
-      <AppText color="error" style={styles.error} variant="metadata">
-        {error}
-      </AppText>
-    ) : null}
-  </View>
-);
+}: AppInputProps) => {
+  const [focused, setFocused] = React.useState(false);
+
+  return (
+    <View style={[styles.container, containerStyle]}>
+      {label ? (
+        <AppText color="secondary" style={styles.label} variant="eyebrow">
+          {label}
+        </AppText>
+      ) : null}
+      <TextInput
+        placeholderTextColor={placeholderTextColor}
+        {...props}
+        onBlur={(event) => {
+          setFocused(false);
+          onBlur?.(event);
+        }}
+        onFocus={(event) => {
+          setFocused(true);
+          onFocus?.(event);
+        }}
+        style={[
+          styles.input,
+          focused ? styles.inputFocused : null,
+          error ? styles.inputError : null,
+          style,
+        ]}
+      />
+      {error ? (
+        <AppText color="error" style={styles.error} variant="metadata">
+          {error}
+        </AppText>
+      ) : null}
+    </View>
+  );
+};
 
 type SearchInputProps = Omit<AppInputProps, "label"> & {
   label?: string;
@@ -57,29 +72,43 @@ type SearchInputProps = Omit<AppInputProps, "label"> & {
 export const SearchInput = ({
   containerStyle,
   label = "Search",
+  onBlur,
+  onFocus,
   placeholder = "Search foods",
   placeholderTextColor = appColors.textMuted,
   style,
   ...props
-}: SearchInputProps) => (
-  <View style={[styles.container, containerStyle]}>
-    {label ? (
-      <AppText color="secondary" style={styles.label} variant="eyebrow">
-        {label}
-      </AppText>
-    ) : null}
-    <View style={styles.searchWrap}>
-      <MagnifyingGlassIcon size={20} color={appColors.textMuted} weight="bold" />
-      <TextInput
-        placeholder={placeholder}
-        placeholderTextColor={placeholderTextColor}
-        returnKeyType="search"
-        {...props}
-        style={[styles.searchInput, style]}
-      />
+}: SearchInputProps) => {
+  const [focused, setFocused] = React.useState(false);
+
+  return (
+    <View style={[styles.container, containerStyle]}>
+      {label ? (
+        <AppText color="secondary" style={styles.label} variant="eyebrow">
+          {label}
+        </AppText>
+      ) : null}
+      <View style={[styles.searchWrap, focused ? styles.inputFocused : null]}>
+        <MagnifyingGlassIcon size={20} color={appColors.textMuted} weight="bold" />
+        <TextInput
+          placeholder={placeholder}
+          placeholderTextColor={placeholderTextColor}
+          returnKeyType="search"
+          {...props}
+          onBlur={(event) => {
+            setFocused(false);
+            onBlur?.(event);
+          }}
+          onFocus={(event) => {
+            setFocused(true);
+            onFocus?.(event);
+          }}
+          style={[styles.searchInput, style]}
+        />
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -88,27 +117,32 @@ const styles = StyleSheet.create({
   label: {
     marginBottom: 0,
   },
+  // Editorial fields are soft fills — the border rests transparent and only
+  // appears to signal focus or an error, without a layout jump.
   input: {
     minHeight: 48,
-    borderRadius: appRadius.sm,
+    borderRadius: appRadius.md,
     borderWidth: appBorders.width,
-    borderColor: appBorders.strong,
+    borderColor: "transparent",
     backgroundColor: appSurfaces.soft,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingVertical: 12,
     color: appColors.textPrimary,
     ...appTypography.body,
+  },
+  inputFocused: {
+    borderColor: appStates.focusBorder,
   },
   inputError: {
     borderColor: appColors.statusError,
   },
   searchWrap: {
     minHeight: 52,
-    borderRadius: appRadius.sm,
+    borderRadius: appRadius.md,
     borderWidth: appBorders.width,
-    borderColor: appBorders.strong,
+    borderColor: "transparent",
     backgroundColor: appSurfaces.soft,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     flexDirection: "row",
     alignItems: "center",
     gap: appSpacing.xs,

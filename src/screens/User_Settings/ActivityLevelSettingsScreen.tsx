@@ -213,17 +213,15 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
                     / {formatActivityLevelLabel(user.activityLevel)}
                   </AppText>
                 </View>
-                <View style={styles.metricPill}>
-                  <GaugeIcon
-                    size={16}
-                    color={appColors.brand700}
-                    weight="fill"
-                  />
-                  <NumericText color="coral" variant="numberTrendDelta">
-                    {contextLoading ? "..." : previewPlan?.calories ?? user.calorieAllowance ?? "--"}{" "}
-                    kcal
-                  </NumericText>
-                </View>
+                <NumericText
+                  align="right"
+                  numberOfLines={1}
+                  style={styles.metricValue}
+                  variant="numberTrendDelta"
+                >
+                  {contextLoading ? "..." : previewPlan?.calories ?? user.calorieAllowance ?? "--"}{" "}
+                  kcal
+                </NumericText>
               </View>
 
               <View style={styles.previewGrid}>
@@ -386,14 +384,8 @@ const styles = StyleSheet.create({
   summaryCopy: {
     flex: 1,
   },
-  metricPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: appSpacing.xxs,
-    borderRadius: 999,
-    backgroundColor: appColors.actionPrimarySoft,
-    paddingHorizontal: appSpacing.sm,
-    paddingVertical: appSpacing.xs,
+  metricValue: {
+    flexShrink: 0,
   },
   previewGrid: {
     flexDirection: "row",

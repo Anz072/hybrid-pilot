@@ -44,12 +44,21 @@ import {
   AppButton,
   AppCard,
   AppText,
+  CoachNote,
   ErrorState,
   LoadingState,
   NumericText,
   ScreenHeader,
 } from "../../components/ui";
-import { appRadius, appSpacing, appSurfaces } from "../../theme/tokens";
+import { appBorders, appRadius, appSpacing, appSurfaces } from "../../theme/tokens";
+import {
+  finishDiaryTrace,
+  markDiaryUseful,
+  measureDiaryRequest,
+  measureDiaryStep,
+  startDiaryTrace,
+  type DiaryPerfTrace,
+} from "../../performance/diaryPerformance";
 
 type Props = NativeStackScreenProps<MoreParamList, "WeeklyReviewScreen">;
 
@@ -298,6 +307,16 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
     null,
   );
   const [nextActionNote, setNextActionNote] = React.useState<string | null>(null);
+  const activePerfTraceRef = React.useRef<DiaryPerfTrace | null>(null);
+  const hasMeasuredWeeklyReviewRef = React.useRef(false);
+
+  React.useEffect(
+    () => () => {
+      finishDiaryTrace(activePerfTraceRef.current, "obsolete");
+      activePerfTraceRef.current = null;
+    },
+    [],
+  );
 
   const loadReview = React.useCallback(
     async (options?: {
@@ -317,6 +336,14 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
       );
       const startDate = formatFoodDateKey(weekDates[0]);
       const endDate = formatFoodDateKey(weekDates[weekDates.length - 1]);
+      finishDiaryTrace(activePerfTraceRef.current, "obsolete");
+      const perfTrace = startDiaryTrace({
+        reason: "weekly-review",
+        fromDate: startDate,
+        toDate: endDate,
+        visit: hasMeasuredWeeklyReviewRef.current ? "repeat" : "first",
+      });
+      activePerfTraceRef.current = perfTrace;
 
       if (options?.refreshing) {
         setRefreshing(true);
@@ -334,34 +361,70 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
           proposedRecommendation,
           latestRecommendation,
         ] = await Promise.all([
-          DB.getUserSettings(user.externalId),
-          DB.getUserFoodLogEntriesBetween(user.externalId, startDate, endDate),
-          DB.listDiaryDayStatusesBetween(user.externalId, startDate, endDate),
-          DB.listWeightEntriesBetween(user.externalId, startDate, endDate),
-          DB.getLatestAdaptiveCalorieRecommendation(user.externalId, "proposed"),
-          DB.getLatestAdaptiveCalorieRecommendation(user.externalId),
+          measureDiaryRequest(perfTrace, "settings", "logical", () =>
+            DB.getUserSettings(user.externalId, perfTrace),
+          ),
+          measureDiaryRequest(perfTrace, "week-entries", "logical", () =>
+            DB.getUserFoodLogEntriesBetween(
+              user.externalId,
+              startDate,
+              endDate,
+              { perfTrace },
+            ),
+          ),
+          measureDiaryRequest(perfTrace, "week-statuses", "logical", () =>
+            DB.listDiaryDayStatusesBetween(
+              user.externalId,
+              startDate,
+              endDate,
+              perfTrace,
+            ),
+          ),
+          measureDiaryRequest(perfTrace, "weight-entries", "logical", () =>
+            DB.listWeightEntriesBetween(user.externalId, startDate, endDate),
+          ),
+          measureDiaryRequest(perfTrace, "adaptive-proposed", "logical", () =>
+            DB.getLatestAdaptiveCalorieRecommendation(
+              user.externalId,
+              "proposed",
+            ),
+          ),
+          measureDiaryRequest(perfTrace, "adaptive-latest", "logical", () =>
+            DB.getLatestAdaptiveCalorieRecommendation(user.externalId),
+          ),
         ]);
 
-        const dayReviews = buildDayReviews({
-          diaryStatuses,
-          entries,
-          settings,
-          userBaseCalories:
-            options?.userBaseCaloriesOverride ?? user.calorieAllowance,
-          weekDates,
-        });
-        setReview({
-          adaptiveRecommendation: proposedRecommendation ?? latestRecommendation,
-          dayReviews,
-          entries,
-          proposedRecommendation,
-          repeatedFoods: buildRepeatedFoods(entries),
-          reviewDates,
-          settings,
-          weekDates,
-          weightEntries,
-        });
+        await measureDiaryStep(
+          perfTrace,
+          "weekly-review.transform-and-commit",
+          () => {
+            const dayReviews = buildDayReviews({
+              diaryStatuses,
+              entries,
+              settings,
+              userBaseCalories:
+                options?.userBaseCaloriesOverride ?? user.calorieAllowance,
+              weekDates,
+            });
+            setReview({
+              adaptiveRecommendation:
+                proposedRecommendation ?? latestRecommendation,
+              dayReviews,
+              entries,
+              proposedRecommendation,
+              repeatedFoods: buildRepeatedFoods(entries),
+              reviewDates,
+              settings,
+              weekDates,
+              weightEntries,
+            });
+          },
+        );
       } catch (error) {
+        finishDiaryTrace(perfTrace, "failed");
+        if (activePerfTraceRef.current?.id === perfTrace.id) {
+          activePerfTraceRef.current = null;
+        }
         setLoadError(
           error instanceof Error
             ? error.message
@@ -370,6 +433,20 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
       } finally {
         setLoading(false);
         setRefreshing(false);
+        if (
+          activePerfTraceRef.current?.id === perfTrace.id &&
+          !perfTrace.finished
+        ) {
+          requestAnimationFrame(() => {
+            if (activePerfTraceRef.current?.id !== perfTrace.id) {
+              return;
+            }
+            markDiaryUseful(perfTrace);
+            finishDiaryTrace(perfTrace, "success");
+            activePerfTraceRef.current = null;
+            hasMeasuredWeeklyReviewRef.current = true;
+          });
+        }
       }
     },
     [user],
@@ -538,7 +615,7 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => void loadReview({ refreshing: true })}
-            tintColor={appColors.brand500}
+            tintColor={appColors.slate900}
           />
         }
         showsVerticalScrollIndicator={false}
@@ -546,6 +623,7 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
         <ScreenHeader
           eyebrow="Check-in"
           onBack={() => navigation.goBack()}
+          safeTop={false}
           subtitle="Your weekly check-in: intake vs target, weight movement, completion quality, and the adaptive calorie decision — all in one place."
           title="Weekly check-in"
         />
@@ -579,55 +657,37 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
           />
         ) : (
           <>
-            <AppCard style={styles.nextActionCard}>
-              <View style={styles.rowBetween}>
-                <View style={styles.copyColumn}>
-                  <AppText color="secondary" style={styles.eyebrow} variant="eyebrow">
-                    Next action
-                  </AppText>
-                  <AppText style={styles.nextActionTitle} variant="sectionTitleLarge">
-                    {nextActionTitle}
-                  </AppText>
-                  <AppText color="secondary" style={styles.cardText} variant="bodySmall">
-                    {nextActionText}
-                  </AppText>
-                </View>
-                <View style={styles.nextActionIcon}>
-                  <LightningIcon
-                    size={24}
-                    color={
-                      hasOpenProposal ? appColors.warning300 : appColors.brand300
-                    }
-                    weight="fill"
-                  />
-                </View>
-              </View>
+            <View style={styles.nextActionCard}>
+              <CoachNote
+                eyebrow="Next action"
+                message={`${nextActionTitle}. ${nextActionText}`}
+              />
 
               <View style={styles.nextActionStats}>
-                <AppCard variant="compact" style={styles.nextActionStat}>
+                <View style={styles.nextActionStat}>
                   <AppText color="muted" style={styles.metricLabel} variant="label">
                     Calories vs target
                   </AppText>
                   <NumericText style={styles.nextActionStatValue} variant="numberTrendDelta">
                     {calorieDelta != null ? formatSignedCalories(calorieDelta) : "--"}
                   </NumericText>
-                </AppCard>
-                <AppCard variant="compact" style={styles.nextActionStat}>
+                </View>
+                <View style={styles.nextActionStat}>
                   <AppText color="muted" style={styles.metricLabel} variant="label">
                     Weight trend
                   </AppText>
                   <NumericText style={styles.nextActionStatValue} variant="numberTrendDelta">
                     {weightTrendLabel}
                   </NumericText>
-                </AppCard>
-                <AppCard variant="compact" style={styles.nextActionStat}>
+                </View>
+                <View style={styles.nextActionStat}>
                   <AppText color="muted" style={styles.metricLabel} variant="label">
                     Completion quality
                   </AppText>
                   <NumericText style={styles.nextActionStatValue} variant="numberTrendDelta">
                     {completionQualityLabel}
                   </NumericText>
-                </AppCard>
+                </View>
               </View>
 
               {hasOpenProposal ? (
@@ -670,7 +730,7 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
                   {nextActionNote}
                 </AppText>
               ) : null}
-            </AppCard>
+            </View>
 
             <AppCard variant="hero" style={styles.heroCard}>
               <View style={styles.heroTopRow}>
@@ -685,26 +745,32 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
                 <View style={styles.heroIcon}>
                   <CalendarCheckIcon
                     size={24}
-                    color={appColors.brand300}
+                    color={appColors.textSecondary}
                     weight="fill"
                   />
                 </View>
               </View>
 
-              <NumericText style={styles.heroSummary} variant="numberCalorieRow">
+              <View style={styles.heroValueRow}>
+                <NumericText adjustsFontSizeToFit numberOfLines={1} variant="numberDisplay">
+                  {calorieDelta != null
+                    ? formatSignedCalories(calorieDelta)
+                    : averageCalories != null
+                      ? formatFoodNumber(averageCalories, " kcal")
+                      : "--"}
+                </NumericText>
+                <AppText color="secondary" style={styles.heroValueLabel} variant="label">
+                  {calorieDelta != null ? "vs daily target" : "average intake"}
+                </AppText>
+              </View>
+              <AppText color="secondary" style={styles.heroSummary} variant="bodySmall">
                 {averageCalories != null
-                  ? `${formatFoodNumber(
-                      averageCalories,
-                      " kcal",
-                    )} average intake`
+                  ? `${formatFoodNumber(averageCalories, " kcal")} average intake`
                   : "No logged intake yet"}
                 {averageTarget != null
                   ? ` vs ${formatFoodNumber(averageTarget, " kcal")} target`
                   : ""}
-                {calorieDelta != null
-                  ? ` (${formatSignedCalories(calorieDelta)})`
-                  : ""}
-              </NumericText>
+              </AppText>
 
               <View style={styles.heroMetrics}>
                 <AppCard variant="compact" style={styles.metricCard}>
@@ -748,7 +814,7 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
                 <AppText color="muted" style={styles.metricLabel} variant="label">
                   Calories vs target
                 </AppText>
-                <NumericText style={styles.bigValue} variant="numberCalorieHero">
+                <NumericText style={styles.bigValue} variant="numberMacroSummary">
                   {calorieDelta != null ? formatSignedCalories(calorieDelta) : "--"}
                 </NumericText>
                 <AppText color="secondary" style={styles.cardText} variant="bodySmall">
@@ -761,8 +827,8 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
                   Weight trend
                 </AppText>
                 <View style={styles.iconValueRow}>
-                  <TrendUpIcon size={18} color={appColors.brand300} weight="bold" />
-                  <NumericText style={styles.bigValue} variant="numberWeightEntry">
+                  <TrendUpIcon size={18} color={appColors.textSecondary} weight="bold" />
+                  <NumericText style={styles.bigValue} variant="numberMacroSummary">
                     {weightTrend.delta != null
                       ? formatSignedWeightDelta(weightTrend.delta, weightUnit)
                       : weightTrend.last
@@ -788,7 +854,7 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
                     <AppText color="muted" style={styles.metricLabel} variant="label">
                       Adaptive recommendation
                     </AppText>
-                    <AppText style={styles.bigValue} variant="sectionTitleLarge">
+                    <AppText style={styles.bigValue} variant="cardTitle">
                       {adaptiveStatus}
                     </AppText>
                     <AppText color="secondary" style={styles.cardText} variant="bodySmall">
@@ -799,8 +865,8 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
                     size={24}
                     color={
                       review.proposedRecommendation
-                        ? appColors.warning300
-                        : appColors.brand300
+                        ? appColors.statusWarning
+                        : appColors.textMuted
                     }
                     weight="fill"
                   />
@@ -820,16 +886,22 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
                 Completion comes from days you explicitly marked complete in the Food Diary.
               </AppText>
               <View style={styles.dayStack}>
-                {review.dayReviews.map((day) => {
+                {review.dayReviews.map((day, index) => {
                   const ratio =
                     day.target != null && day.target > 0
                       ? clampRatio(day.calories / day.target)
                       : 0;
 
                   return (
-                    <AppCard key={day.dateKey} variant="compact" style={styles.dayRow}>
+                    <View
+                      key={day.dateKey}
+                      style={[
+                        styles.dayRow,
+                        index < review.dayReviews.length - 1 && styles.dayRowDivider,
+                      ]}
+                    >
                       <View style={styles.dayDate}>
-                        <AppText color="coral" style={styles.dayName} variant="label">
+                        <AppText style={styles.dayName} variant="label">
                           {day.date.toLocaleDateString(undefined, {
                             weekday: "short",
                           })}
@@ -847,10 +919,7 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
                             {formatFoodNumber(day.calories, " kcal")}
                           </NumericText>
                           <AppText
-                            style={[
-                              styles.completionPill,
-                              day.isComplete && styles.completionPillDone,
-                            ]}
+                            color={day.isComplete ? "success" : "muted"}
                             variant="micro"
                           >
                             {day.isComplete ? "Complete" : "Open"}
@@ -860,7 +929,7 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
                           {day.target != null
                             ? `${formatFoodNumber(day.target, " kcal")} target`
                             : "No target set"}{" "}
-                          | {day.entryCount} entries
+                          · {day.entryCount} entries
                         </NumericText>
                         <View style={styles.smallProgressTrack}>
                           <View
@@ -871,7 +940,7 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
                           />
                         </View>
                       </View>
-                    </AppCard>
+                    </View>
                   );
                 })}
               </View>
@@ -892,21 +961,25 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
               ) : (
                 <View style={styles.foodStack}>
                   {review.repeatedFoods.map((food, index) => (
-                    <AppCard key={food.key} variant="compact" style={styles.foodRow}>
-                      <View style={styles.rankPill}>
-                        <NumericText color={appColors.actionPrimaryPressed} style={styles.rankText} variant="numberChartAxis">
-                          {index + 1}
-                        </NumericText>
-                      </View>
+                    <View
+                      key={food.key}
+                      style={[
+                        styles.foodRow,
+                        index < review.repeatedFoods.length - 1 && styles.foodRowDivider,
+                      ]}
+                    >
+                      <NumericText color="secondary" style={styles.rankText} variant="numberChartAxis">
+                        {index + 1}
+                      </NumericText>
                       <View style={styles.foodCopy}>
                         <AppText style={styles.foodName} numberOfLines={1} variant="bodySmallStrong">
                           {food.name}
                         </AppText>
                         <NumericText color="secondary" style={styles.foodMeta} variant="numberMacroRow">
-                          {food.count}x | {formatFoodNumber(food.calories, " kcal")} total
+                          {food.count}x · {formatFoodNumber(food.calories, " kcal")} total
                         </NumericText>
                       </View>
-                    </AppCard>
+                    </View>
                   ))}
                 </View>
               )}
@@ -927,7 +1000,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: appSpacing.gutter,
   },
   heroCard: {
-    marginBottom: appSpacing.sm,
+    marginBottom: appSpacing.md,
   },
   heroTopRow: {
     flexDirection: "row",
@@ -941,21 +1014,13 @@ const styles = StyleSheet.create({
     borderRadius: appRadius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appSurfaces.ghost,
+    backgroundColor: appSurfaces.soft,
   },
   nextActionCard: {
-    borderColor: appColors.brand500,
-    marginBottom: appSpacing.sm,
-  },
-  nextActionTitle: {
-  },
-  nextActionIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: appRadius.pill,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: appSurfaces.ghost,
+    backgroundColor: appSurfaces.soft,
+    borderRadius: appRadius.lg,
+    padding: appSpacing.md,
+    marginBottom: appSpacing.md,
   },
   nextActionStats: {
     flexDirection: "row",
@@ -964,7 +1029,6 @@ const styles = StyleSheet.create({
   },
   nextActionStat: {
     flex: 1,
-    backgroundColor: appSurfaces.soft,
   },
   nextActionStatValue: {
     textAlign: "left",
@@ -985,17 +1049,21 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     alignSelf: "flex-start",
-    backgroundColor: appSurfaces.ghost,
-    paddingHorizontal: appSpacing.sm,
-    paddingVertical: 6,
-    borderRadius: appRadius.pill,
-    marginBottom: appSpacing.sm,
+    marginBottom: appSpacing.xs,
   },
   heroTitle: {
   },
-  heroSummary: {
-    textAlign: "left",
+  heroValueRow: {
+    alignItems: "baseline",
+    flexDirection: "row",
+    flexWrap: "wrap",
     marginTop: appSpacing.md,
+  },
+  heroValueLabel: {
+    marginLeft: appSpacing.xxs,
+  },
+  heroSummary: {
+    marginTop: appSpacing.xxs,
   },
   heroMetrics: {
     flexDirection: "row",
@@ -1010,7 +1078,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: appSpacing.sm,
-    marginBottom: appSpacing.sm,
+    marginBottom: appSpacing.md,
   },
   metricLabel: {
     marginBottom: appSpacing.xs,
@@ -1029,7 +1097,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   card: {
-    marginBottom: appSpacing.sm,
+    marginBottom: appSpacing.md,
   },
   loadingCard: {
     marginBottom: appSpacing.sm,
@@ -1057,7 +1125,7 @@ const styles = StyleSheet.create({
   progressTrack: {
     height: 8,
     borderRadius: appRadius.pill,
-    backgroundColor: appColors.surfaceGhost,
+    backgroundColor: appColors.surfaceFieldAlt,
     overflow: "hidden",
     marginTop: appSpacing.md,
   },
@@ -1073,7 +1141,11 @@ const styles = StyleSheet.create({
   dayRow: {
     flexDirection: "row",
     gap: appSpacing.sm,
-    backgroundColor: appSurfaces.soft,
+    paddingVertical: appSpacing.sm,
+  },
+  dayRowDivider: {
+    borderBottomWidth: appBorders.width,
+    borderBottomColor: appBorders.soft,
   },
   dayDate: {
     width: 58,
@@ -1093,29 +1165,17 @@ const styles = StyleSheet.create({
     textAlign: "left",
     marginTop: appSpacing.xxs,
   },
-  completionPill: {
-    overflow: "hidden",
-    borderRadius: appRadius.pill,
-    paddingHorizontal: appSpacing.xs,
-    paddingVertical: 4,
-    color: appColors.textMuted,
-    backgroundColor: appColors.surfaceGhost,
-  },
-  completionPillDone: {
-    color: appColors.white,
-    backgroundColor: appColors.success700,
-  },
   smallProgressTrack: {
     height: 5,
     borderRadius: appRadius.pill,
-    backgroundColor: appColors.surfaceGhost,
+    backgroundColor: appColors.surfaceFieldAlt,
     overflow: "hidden",
     marginTop: appSpacing.xs,
   },
   smallProgressFill: {
     height: "100%",
     borderRadius: appRadius.pill,
-    backgroundColor: appColors.brand500,
+    backgroundColor: appColors.calories,
   },
   foodStack: {
     gap: appSpacing.xs,
@@ -1125,18 +1185,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: appSpacing.sm,
-    backgroundColor: appSurfaces.soft,
+    paddingVertical: appSpacing.sm,
   },
-  rankPill: {
-    width: 30,
-    height: 30,
-    borderRadius: appRadius.pill,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: appColors.actionPrimarySoft,
+  foodRowDivider: {
+    borderBottomWidth: appBorders.width,
+    borderBottomColor: appBorders.soft,
   },
   rankText: {
-    textAlign: "center",
+    width: 20,
+    textAlign: "left",
   },
   foodCopy: {
     flex: 1,

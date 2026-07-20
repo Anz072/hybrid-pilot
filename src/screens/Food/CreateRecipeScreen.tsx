@@ -43,10 +43,11 @@ import type {
 } from "../../store/DB_TYPES";
 import { useAppSelector } from "../../store/hooks";
 import { appColors } from "../../theme/colors";
+import { appRadius, appSpacing } from "../../theme/tokens";
 import { sharedStyleValues } from "../../theme/sharedStyles";
 import FoodBarcodeScannerModal from "./FoodBarcodeScannerModal";
-import FoodLogContextBar from "./FoodLogContextBar";
 import FoodScreenHeader from "./FoodScreenHeader";
+import MealBucketSelect, { getInitialMealBucket } from "./MealBucketSelect";
 import PublicVisibilityCheckbox from "./PublicVisibilityCheckbox";
 import type { ScannedFoodLookupResult } from "./FoodBarcodeScannerShared";
 import {
@@ -56,6 +57,7 @@ import {
   formatFoodSourceLabel,
   getFoodResolvedServing,
   getQuantityScaleFactor,
+  MEAL_SLOT_LABELS,
   normalizePositiveFoodInput,
 } from "./foodUtils";
 import { resolveFoodLogContext } from "./foodLogContext";
@@ -84,7 +86,6 @@ type RecipeMethodOption = {
   title: string;
   description: string;
   available: boolean;
-  badge: string;
 };
 
 const RECIPE_METHODS: RecipeMethodOption[] = [
@@ -93,21 +94,18 @@ const RECIPE_METHODS: RecipeMethodOption[] = [
     title: "Build from scratch",
     description: "Manually enter ingredients and preparation steps.",
     available: true,
-    badge: "Ready",
   },
   // {
   //   value: "link",
   //   title: "Import from link",
   //   description: "Paste a recipe URL and convert it into a saved recipe later.",
   //   available: false,
-  //   badge: "Soon",
   // },
   // {
   //   value: "ai",
   //   title: "Import with AI",
   //   description: "Turn text or photos into recipe ingredients in a later update.",
   //   available: false,
-  //   badge: "Soon",
   // },
 ];
 
@@ -234,6 +232,9 @@ const CreateRecipeScreen = () => {
   const [saveMode, setSaveMode] = React.useState<RecipeSaveMode | null>(null);
   const [deleting, setDeleting] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [selectedMeal, setSelectedMeal] = React.useState(() =>
+    getInitialMealBucket(route.params.mealType),
+  );
   const bypassUnsavedGuardRef = React.useRef(false);
   const initialDraftSignatureRef = React.useRef<string | null>(null);
   // Synchronous lock: state-based disabling applies only after a re-render, so
@@ -832,7 +833,7 @@ const CreateRecipeScreen = () => {
             date: route.params.date,
             loggedAt: resolvedLoggedAt,
             quantityG: 1,
-            mealType: foodLogContext.mealType,
+            mealType: MEAL_SLOT_LABELS[selectedMeal],
           });
         }
 
@@ -865,7 +866,7 @@ const CreateRecipeScreen = () => {
       recipeName,
       prepTimeValue,
       route.params.date,
-      foodLogContext.mealType,
+      selectedMeal,
       steps,
       user,
     ],
@@ -927,10 +928,17 @@ const CreateRecipeScreen = () => {
           <FoodScreenHeader
             eyebrow="Recipe"
             title={isEditing ? "Edit recipe" : "Create recipe"}
-            subtitle={isEditing ? "Library item" : foodLogContext.subtitle}
+            subtitle={foodLogContext.dateLabel}
             onBack={() => navigation.goBack()}
           />
-          {!isEditing ? <FoodLogContextBar context={foodLogContext} /> : null}
+          {!isEditing ? (
+            <MealBucketSelect
+              disabled={saving || deleting}
+              onChange={setSelectedMeal}
+              style={styles.mealBucketSelect}
+              value={selectedMeal}
+            />
+          ) : null}
 
           {loadingRecipe ? (
             <View style={styles.card}>
@@ -963,11 +971,6 @@ const CreateRecipeScreen = () => {
                     : `Build a saved recipe for ${resolvedContextLabel}, then save it for later or save and add one serving right away.`}
                 </Text>
               </View>
-              {isEditing ? (
-                <View style={styles.contextPill}>
-                  <Text style={styles.contextPillText}>Edit</Text>
-                </View>
-              ) : null}
             </View>
 
             <Text style={styles.sectionTitle}>Details</Text>
@@ -1146,8 +1149,8 @@ const CreateRecipeScreen = () => {
                         </Text>
                       </View>
                       <Text style={styles.resultMeta} numberOfLines={1}>
-                        {result.brand ? `${result.brand} | ` : ""}
-                        {formatFoodSourceLabel(result.source)} |{" "}
+                        {result.brand ? `${result.brand} · ` : ""}
+                        {formatFoodSourceLabel(result.source)} ·{" "}
                         {formatFoodItemServing(result)}
                       </Text>
                     </View>
@@ -1222,9 +1225,9 @@ const CreateRecipeScreen = () => {
                                 ellipsizeMode="tail"
                               >
                                 {ingredient.food.brand
-                                  ? `${ingredient.food.brand} | `
+                                  ? `${ingredient.food.brand} · `
                                   : ""}
-                                {formatFoodSourceLabel(ingredient.food.source)} |{" "}
+                                {formatFoodSourceLabel(ingredient.food.source)} ·{" "}
                                 {formatFoodItemServing(ingredient.food)}
                               </Text>
                             </View>
@@ -1236,16 +1239,16 @@ const CreateRecipeScreen = () => {
                           </View>
 
                           <Text style={styles.ingredientPreviewText}>
-                            {`${formatFoodNumber(amount, ` ${serving.unit}`)} | ${formatFoodNumber(
+                            {`${formatFoodNumber(amount, ` ${serving.unit}`)} · ${formatFoodNumber(
                               calories,
                               " kcal",
-                            )} | ${formatFoodMacro(
+                            )} · ${formatFoodMacro(
                               protein,
                               "P",
-                            )} | ${formatFoodMacro(
+                            )} · ${formatFoodMacro(
                               carbs,
                               "C",
-                            )} | ${formatFoodMacro(fat, "F")}`}
+                            )} · ${formatFoodMacro(fat, "F")}`}
                           </Text>
                         </Pressable>
 
@@ -1525,7 +1528,6 @@ const CreateRecipeScreen = () => {
 const styles = StyleSheet.create({
   screen: sharedStyleValues.screen,
   content: sharedStyleValues.content,
-  heroCard: sharedStyleValues.card,
   heroHeaderCopy: {
     flex: 1,
   },
@@ -1542,52 +1544,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   heroMeta: sharedStyleValues.metaText,
-  heroPillsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 12,
-  },
-  contextPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: appColors.surfaceGhost,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-  },
-  contextPillText: sharedStyleValues.contextPillText,
-  previewStrip: {
-    borderRadius: 8,
-    backgroundColor: appColors.brand700,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-  },
-  previewValue: {
-    color: appColors.white,
-    fontSize: 22,
-    fontWeight: "600",
-    marginBottom: 2,
-  },
-  previewText: {
-    color: appColors.brand300,
-    fontSize: 12,
-    lineHeight: 16,
-    marginBottom: 2,
-  },
-  previewSubtext: {
-    color: appColors.brand300,
-    fontSize: 12,
-    lineHeight: 16,
-  },
   card: sharedStyleValues.card,
+  mealBucketSelect: {
+    marginBottom: appSpacing.md,
+  },
   sectionTitle: {
-    color: appColors.textPrimary,
-    fontSize: 20,
-    fontWeight: "500",
+    ...sharedStyleValues.sectionTitle,
     marginBottom: 12,
   },
   sectionSubtitle: {
@@ -1595,79 +1557,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
     marginBottom: 10,
-  },
-  methodStack: {
-    gap: 10,
-  },
-  methodCard: {
-    flexDirection: "row",
-    gap: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    backgroundColor: appColors.surfaceField,
-    padding: 14,
-  },
-  methodCardSelected: {
-    backgroundColor: appColors.brand700,
-    borderColor: appColors.brand700,
-  },
-  methodCardDisabled: {
-    opacity: 0.8,
-  },
-  methodIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: appColors.surfaceGhost,
-  },
-  methodCopy: {
-    flex: 1,
-  },
-  methodTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-    marginBottom: 4,
-  },
-  methodTitle: {
-    color: appColors.textPrimary,
-    fontSize: 14,
-    fontWeight: "600",
-    flex: 1,
-  },
-  methodTitleSelected: {
-    color: appColors.white,
-  },
-  methodDescription: {
-    color: appColors.textSecondary,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  methodDescriptionSelected: {
-    color: appColors.brand300,
-  },
-  methodBadge: {
-    borderRadius: 999,
-    backgroundColor: appColors.surfaceGhost,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-  },
-  methodBadgeSelected: {
-    backgroundColor: appColors.brand500,
-  },
-  methodBadgeText: {
-    color: appColors.brand700,
-    fontSize: 10,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  methodBadgeTextSelected: {
-    color: appColors.white,
   },
   fieldLabel: sharedStyleValues.fieldLabel,
   fieldSpacing: {
@@ -1686,15 +1575,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    borderRadius: 8,
+    borderColor: "transparent",
+    borderRadius: 10,
     backgroundColor: appColors.surfaceField,
     paddingLeft: 12,
     paddingRight: 10,
   },
   searchInput: {
     flex: 1,
-    paddingVertical: 11,
+    paddingVertical: 12,
     color: appColors.textPrimary,
     fontSize: 14,
     fontWeight: "700",
@@ -1713,12 +1602,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    borderRadius: 8,
+    borderRadius: 10,
     backgroundColor: appColors.surfaceCardAlt,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
     paddingHorizontal: 12,
-    paddingVertical: 11,
+    paddingVertical: 12,
   },
   searchResultCopy: {
     flex: 1,
@@ -1732,7 +1621,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   resultCalories: {
-    color: appColors.brand700,
+    color: appColors.textPrimary,
     fontSize: 11,
     fontWeight: "600",
   },
@@ -1744,7 +1633,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   resultMeta: {
-    color: appColors.slate300,
+    color: appColors.textMuted,
     fontSize: 11,
     lineHeight: 15,
   },
@@ -1752,15 +1641,15 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 999,
-    backgroundColor: appColors.brand700,
+    backgroundColor: appColors.actionPrimary,
     alignItems: "center",
     justifyContent: "center",
   },
   scanButton: {
     width: 44,
     height: 44,
-    borderRadius: 8,
-    backgroundColor: appColors.brand700,
+    borderRadius: 10,
+    backgroundColor: appColors.actionPrimary,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1768,7 +1657,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   ingredientCard: {
-    borderRadius: 8,
+    borderRadius: 10,
     backgroundColor: appColors.surfaceCardAlt,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
@@ -1814,7 +1703,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   ingredientAmountLabel: {
-    color: appColors.slate300,
+    color: appColors.textMuted,
     fontSize: 10,
     fontWeight: "600",
     textTransform: "uppercase",
@@ -1829,7 +1718,7 @@ const styles = StyleSheet.create({
   },
   ingredientAmountInput: {
     paddingHorizontal: 10,
-    paddingVertical: 9,
+    paddingVertical: 8,
     fontSize: 13,
   },
   ingredientAmountUnitPill: {
@@ -1857,7 +1746,7 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     marginTop: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     backgroundColor: appColors.surfaceCardAlt,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
@@ -1878,7 +1767,7 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   metricValue: {
-    color: appColors.brand700,
+    color: appColors.textPrimary,
     fontSize: 12,
     lineHeight: 17,
     fontWeight: "600",
@@ -1910,9 +1799,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   stepCard: {
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: appColors.borderStrong,
+    borderColor: appColors.borderSoft,
     backgroundColor: appColors.surfaceField,
     padding: 12,
   },
@@ -1950,9 +1839,9 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.surfaceGhost,
+    backgroundColor: appColors.surfaceField,
     borderWidth: 1,
-    borderColor: appColors.borderStrong,
+    borderColor: appColors.borderSoft,
   },
   iconButtonPrimary: {
     width: 34,
@@ -1960,11 +1849,11 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.brand700,
+    backgroundColor: appColors.actionPrimary,
   },
   deleteSwipe: {
     width: 96,
-    borderRadius: 8,
+    borderRadius: 10,
     backgroundColor: appColors.danger700,
     alignItems: "center",
     justifyContent: "center",

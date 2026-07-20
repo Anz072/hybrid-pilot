@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowLeftIcon } from "phosphor-react-native";
 import { appColors } from "../../theme/colors";
 import { appTypography } from "../../theme/typography";
-import { appRadius, appSpacing, appSurfaces } from "../../theme/tokens";
+import { appSpacing, appSurfaces } from "../../theme/tokens";
 import { IconButton } from "./AppButton";
 import { AppText } from "./AppText";
 
@@ -121,11 +121,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     alignSelf: "flex-start",
-    backgroundColor: appSurfaces.ghost,
-    paddingHorizontal: appSpacing.sm,
-    paddingVertical: 7,
-    borderRadius: appRadius.pill,
-    marginBottom: appSpacing.sm,
+    marginBottom: appSpacing.xs,
   },
   title: {
     color: appColors.textPrimary,

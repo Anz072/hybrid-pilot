@@ -687,7 +687,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     borderRadius: appRadius.md,
     backgroundColor: appSurfaces.soft,
-    padding: 14,
+    padding: 16,
   },
   historyTitle: {
     ...appTypography.bodySmallStrong,

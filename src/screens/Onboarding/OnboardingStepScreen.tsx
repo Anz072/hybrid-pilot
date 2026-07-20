@@ -70,7 +70,7 @@ const OnboardingStepScreen = ({
           {headerAccessory}
           {eyebrow ? (
             <AppText
-              color="coral"
+              color="secondary"
               style={centered ? styles.centeredEyebrow : styles.eyebrow}
               variant="eyebrow"
             >
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: appSpacing.gutter,
     paddingTop: appSpacing.sm,
-    backgroundColor: appColors.surfaceCard,
+    backgroundColor: appSurfaces.canvas,
     borderTopWidth: 1,
     borderTopColor: appColors.borderSoft,
   },

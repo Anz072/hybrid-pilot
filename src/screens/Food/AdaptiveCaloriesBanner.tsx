@@ -1,8 +1,15 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { CaretRightIcon, XIcon } from "phosphor-react-native";
+import { View, StyleSheet } from "react-native";
+import { XIcon } from "phosphor-react-native";
 import type { DBAdaptiveCalorieRecommendation } from "../../store/DB_TYPES";
 import { appColors } from "../../theme/colors";
+import {
+  appBorders,
+  appRadius,
+  appSpacing,
+  appSurfaces,
+} from "../../theme/tokens";
+import { AppButton, CoachNote, IconButton } from "../../components/ui";
 import { ADAPTIVE_RECALCULATION_INTERVAL_MS } from "../User_Settings/adaptiveCaloriesActions";
 
 type AdaptiveCaloriesBannerProps = {
@@ -27,7 +34,7 @@ const formatNextReviewLabel = (createdAt: string) => {
     weekday: "short",
     month: "short",
     day: "numeric",
-  })}`;
+  })}.`;
 };
 
 const AdaptiveCaloriesBanner = ({
@@ -36,145 +43,56 @@ const AdaptiveCaloriesBanner = ({
   onReview,
 }: AdaptiveCaloriesBannerProps) => {
   const currentBaseCalories = recommendation.currentBaseCalories;
+  const bodyText =
+    currentBaseCalories != null
+      ? `Current base target ${currentBaseCalories} kcal/day. Suggested target ${recommendation.recommendedBaseCalories} kcal/day (${formatDelta(
+          recommendation.recommendedDelta,
+        )}).`
+      : `Suggested base target ${recommendation.recommendedBaseCalories} kcal/day based on your recent complete diary days and weight trend.`;
+  const message = `${bodyText} Confidence: ${recommendation.confidence}. ${formatNextReviewLabel(recommendation.createdAt)}`;
 
   return (
-    <View style={styles.card}>
-      <View style={styles.headerRow}>
-        <View>
-          <Text style={styles.eyebrow}>Adaptive Calories</Text>
-          <Text style={styles.title}>A new target is ready to review</Text>
+    <CoachNote
+      action={
+        <View style={styles.actionRow}>
+          <AppButton
+            accessibilityLabel="Review adaptive calorie recommendation"
+            label="Review"
+            onPress={onReview}
+            size="sm"
+          />
+          {onDismiss ? (
+            <IconButton
+              accessibilityLabel="Close adaptive calorie recommendation"
+              onPress={onDismiss}
+            >
+              <XIcon size={16} color={appColors.textPrimary} weight="bold" />
+            </IconButton>
+          ) : null}
         </View>
-        <View style={styles.confidencePill}>
-          <Text style={styles.confidenceText}>
-            {recommendation.confidence.toUpperCase()}
-          </Text>
-        </View>
-      </View>
-
-      <Text style={styles.body}>
-        {currentBaseCalories != null
-          ? `Current base target ${currentBaseCalories} kcal/day. Suggested target ${recommendation.recommendedBaseCalories} kcal/day (${formatDelta(
-              recommendation.recommendedDelta,
-            )}).`
-          : `Suggested base target ${recommendation.recommendedBaseCalories} kcal/day based on your recent complete diary days and weight trend.`}
-      </Text>
-      <Text style={styles.reviewDate}>
-        {formatNextReviewLabel(recommendation.createdAt)}
-      </Text>
-
-      <View style={styles.actionRow}>
-        <Pressable
-          onPress={onReview}
-          accessibilityLabel="Review adaptive calorie recommendation"
-          style={({ pressed }) => [
-            styles.reviewButton,
-            pressed && styles.reviewButtonPressed,
-          ]}
-        >
-          <Text style={styles.reviewButtonText}>Review</Text>
-          <CaretRightIcon size={15} color={appColors.white} weight="bold" />
-        </Pressable>
-        {onDismiss ? (
-          <Pressable
-            onPress={onDismiss}
-            accessibilityLabel="Close adaptive calorie recommendation"
-            style={({ pressed }) => [
-              styles.dismissButton,
-              pressed && styles.reviewButtonPressed,
-            ]}
-          >
-            <XIcon size={16} color={appColors.textPrimary} weight="bold" />
-          </Pressable>
-        ) : null}
-      </View>
-    </View>
+      }
+      eyebrow="Adaptive calories"
+      message={message}
+      messageVariant="bodySmall"
+      style={styles.card}
+    />
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: appColors.surfaceCard,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 16,
-    marginBottom: 16,
-  },
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 10,
-  },
-  eyebrow: {
-    color: appColors.brand700,
-    fontSize: 12,
-    fontWeight: "600",
-    letterSpacing: 0.4,
-    marginBottom: 4,
-  },
-  title: {
-    color: appColors.textPrimary,
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  confidencePill: {
-    alignSelf: "flex-start",
-    borderRadius: 9999,
-    backgroundColor: appColors.slate50,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  confidenceText: {
-    color: appColors.slate900,
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  body: {
-    color: appColors.textSecondary,
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  reviewDate: {
-    color: appColors.brand700,
-    fontSize: 12,
-    fontWeight: "600",
-    marginBottom: 14,
+    backgroundColor: appSurfaces.soft,
+    borderRadius: appRadius.md,
+    borderWidth: 0,
+    borderLeftWidth: appBorders.ruleWidth,
+    borderLeftColor: appColors.actionPrimary,
+    padding: appSpacing.md,
+    marginBottom: appSpacing.md,
   },
   actionRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  reviewButton: {
-    flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    alignSelf: "flex-start",
-    borderRadius: 9999,
-    backgroundColor: appColors.brand700,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  reviewButtonPressed: {
-    opacity: 0.9,
-  },
-  reviewButtonText: {
-    color: appColors.white,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  dismissButton: {
-    width: 42,
-    height: 42,
-    alignItems: "center",
-    justifyContent: "center",
-    alignSelf: "flex-start",
-    borderRadius: 9999,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    backgroundColor: appColors.surfaceGhost,
+    gap: appSpacing.sm,
   },
 });
 

@@ -1,4 +1,5 @@
 import type { NutritionBasis, SaveFoodItemInput } from "../../store/DB_TYPES";
+import { normalizeBarcodeValue, validateBarcode } from "./barcode";
 
 export const parseLocalizedNumber = (value: string): number =>
   Number(value.trim().replace(",", "."));
@@ -82,11 +83,18 @@ export const buildCustomFoodItemInput = (
     return { error: "Optional nutrients must be zero or positive numbers." };
   }
 
+  const normalizedBarcode = normalizeBarcodeValue(draft.barcode);
+  if (normalizedBarcode && !validateBarcode(normalizedBarcode)) {
+    return {
+      error: "Enter a valid EAN, UPC, or GTIN barcode, or leave it empty.",
+    };
+  }
+
   return {
     input: {
       source: "custom",
       sourceId: null,
-      barcode: draft.barcode?.trim() || null,
+      barcode: normalizedBarcode,
       name: trimmedName,
       brand: draft.brand.trim() || null,
       imageUrl: null,

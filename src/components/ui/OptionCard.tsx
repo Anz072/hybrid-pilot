@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { CheckIcon } from "phosphor-react-native";
 import { appColors } from "../../theme/colors";
-import { appBorders, appRadius, appSpacing, appStates, appSurfaces } from "../../theme/tokens";
+import { appBorders, appRadius, appSpacing, appStates } from "../../theme/tokens";
 import { AppText } from "./AppText";
 
 type OptionCardProps = Omit<PressableProps, "children" | "style"> & {
@@ -22,6 +22,7 @@ type OptionCardProps = Omit<PressableProps, "children" | "style"> & {
   trailing?: React.ReactNode;
 };
 
+/** A selectable row — not a boxed card. Selection is shown with a fill and a checkmark. */
 export const OptionCard = ({
   disabled,
   icon,
@@ -47,10 +48,10 @@ export const OptionCard = ({
     ]}
   >
     <View style={styles.content}>
-      {icon ? <View style={[styles.iconBadge, selected && styles.iconBadgeSelected]}>{icon}</View> : null}
+      {icon ? <View style={styles.iconWrap}>{icon}</View> : null}
       <View style={styles.copy}>
         <AppText
-          color={selected ? appColors.actionPrimaryPressed : "primary"}
+          color={selected ? "coral" : "primary"}
           variant="cardTitle"
         >
           {title}
@@ -74,15 +75,12 @@ export const OptionCard = ({
 const styles = StyleSheet.create({
   card: {
     minHeight: 64,
-    borderRadius: appRadius.md,
-    borderWidth: appBorders.width,
-    borderColor: appBorders.soft,
-    backgroundColor: appSurfaces.card,
-    paddingHorizontal: appSpacing.md,
+    borderBottomWidth: appBorders.width,
+    borderBottomColor: appBorders.soft,
     paddingVertical: appSpacing.sm,
+    paddingHorizontal: appSpacing.sm,
   },
   selectedCard: {
-    borderColor: appStates.selectedBorder,
     backgroundColor: appStates.selectedFill,
   },
   disabled: {
@@ -90,7 +88,6 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: appStates.pressedOpacity,
-    transform: [{ scale: appStates.pressedScale }],
   },
   content: {
     flexDirection: "row",
@@ -101,33 +98,23 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: appSpacing.xxs,
   },
-  iconBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: appRadius.pill,
+  iconWrap: {
+    width: 28,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appSurfaces.soft,
-    borderWidth: appBorders.width,
-    borderColor: appBorders.soft,
-  },
-  iconBadgeSelected: {
-    backgroundColor: appSurfaces.card,
-    borderColor: appColors.actionPrimaryBorder,
   },
   trailing: {
     alignItems: "flex-end",
     justifyContent: "center",
   },
   check: {
-    width: 24,
-    height: 24,
+    width: 22,
+    height: 22,
     borderRadius: appRadius.pill,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: appBorders.width,
     borderColor: appBorders.strong,
-    backgroundColor: appSurfaces.card,
   },
   checkSelected: {
     backgroundColor: appColors.actionPrimary,

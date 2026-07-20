@@ -21,6 +21,7 @@ import {
   type MealSlot,
 } from "./foodUtils";
 import { appColors } from "../../theme/colors";
+import { appBorders, appRadius, appSpacing } from "../../theme/tokens";
 
 type FoodDiaryQuickAddsProps = {
   favoriteFoods: FoodDiaryFavoriteFood[];
@@ -52,11 +53,11 @@ const QuickPickCard = ({
         {food.name}
       </Text>
       <Text style={styles.favoriteMeta}>
-        {Math.round(food.calories)} kcal |{" "}
+        {Math.round(food.calories)} kcal ·{" "}
         {formatFoodServing(food.servingSize, food.servingUnit)}
       </Text>
       <Text style={styles.favoriteMeta}>
-        {food.proteinG.toFixed(0)}P | {food.carbsG.toFixed(0)}C |{" "}
+        {food.proteinG.toFixed(0)}P · {food.carbsG.toFixed(0)}C ·{" "}
         {food.fatG.toFixed(0)}F
       </Text>
     </>
@@ -103,7 +104,7 @@ const QuickPickCard = ({
         >
           <PencilSimpleIcon
             size={16}
-            color={appColors.brand500}
+            color={appColors.textSecondary}
             weight="bold"
           />
         </Pressable>
@@ -207,12 +208,7 @@ const FoodDiaryQuickAdds = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: appColors.surfaceField,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 12,
-    marginBottom: 18,
+    marginBottom: appSpacing.md,
   },
   sectionTitle: {
     color: appColors.textSecondary,
@@ -244,22 +240,19 @@ const styles = StyleSheet.create({
     paddingRight: 12,
   },
   favoriteCard: {
-    width: 202,
-    borderRadius: 8,
+    width: 180,
+    borderRadius: appRadius.md,
+    borderWidth: appBorders.width,
+    borderColor: appBorders.soft,
     backgroundColor: appColors.surfaceCard,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 14,
+    padding: appSpacing.sm,
   },
   reviewCard: {
-    width: 168,
     minHeight: 96,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
     justifyContent: "flex-start",
   },
   favoriteEyebrow: {
-    color: appColors.brand500,
+    color: appColors.textMuted,
     fontSize: 11,
     fontWeight: "600",
     textTransform: "uppercase",
@@ -281,13 +274,13 @@ const styles = StyleSheet.create({
   favoriteButton: {
     flex: 1,
     height: 44,
-    borderRadius: 999,
-    backgroundColor: appColors.brand700,
+    borderRadius: appRadius.md,
+    backgroundColor: appColors.actionPrimary,
     flexDirection: "row",
     gap: 6,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 10,
+    marginTop: appSpacing.sm,
   },
   favoriteButtonText: {
     color: appColors.white,
@@ -302,12 +295,10 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 999,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    backgroundColor: appColors.surfaceGhost,
+    backgroundColor: appColors.surfaceField,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 10,
+    marginTop: appSpacing.sm,
   },
   cardPressed: {
     opacity: 0.9,

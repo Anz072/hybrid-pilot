@@ -5,7 +5,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { AppButton } from "../../components/ui";
 import type { OnboardingParamList } from "../../navigation/onboardingTypes";
 import { appColors } from "../../theme/colors";
-import { appBorders, appRadius, appSpacing, appSurfaces } from "../../theme/tokens";
+import { appSpacing } from "../../theme/tokens";
 import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
 import OnboardingStepScreen, { onboardingStepProgress } from "./OnboardingStepScreen";
 
@@ -17,12 +17,8 @@ const WelcomeScreen = ({ navigation }: Props) => (
     eyebrow="Nutrition + Training"
     headerAccessory={
       <View style={styles.heroRow}>
-        <View style={styles.heroIconBadge}>
-          <RocketLaunchIcon size={24} color={appColors.actionPrimary} weight="fill" />
-        </View>
-        <View style={styles.heroIconBadgeMuted}>
-          <BarbellIcon size={20} color={appColors.textPrimary} weight="fill" />
-        </View>
+        <RocketLaunchIcon size={28} color={appColors.actionPrimary} weight="fill" />
+        <BarbellIcon size={24} color={appColors.textPrimary} weight="fill" />
       </View>
     }
     progress={onboardingStepProgress(1)}
@@ -51,26 +47,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: appSpacing.sm,
     marginBottom: appSpacing.xs,
-  },
-  heroIconBadge: {
-    width: 48,
-    height: 48,
-    borderRadius: appRadius.pill,
-    backgroundColor: appColors.actionPrimarySoft,
-    borderWidth: appBorders.width,
-    borderColor: appColors.actionPrimaryBorder,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  heroIconBadgeMuted: {
-    width: 44,
-    height: 44,
-    borderRadius: appRadius.pill,
-    backgroundColor: appSurfaces.soft,
-    borderWidth: appBorders.width,
-    borderColor: appColors.borderSoft,
-    alignItems: "center",
-    justifyContent: "center",
   },
   actions: {
     gap: appSpacing.sm,

@@ -345,25 +345,16 @@ const UserCreatedFoodLibraryScreen = ({ kind }: { kind: LibraryKind }) => {
                 </View>
 
                 <View style={[styles.rowCell, styles.stateColumn]}>
-                  <View
+                  <Text
                     style={[
-                      styles.statusChip,
+                      styles.statusText,
                       item.isPublic
-                        ? styles.statusChipPublic
-                        : styles.statusChipPrivate,
+                        ? styles.statusTextPublic
+                        : styles.statusTextPrivate,
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.statusChipText,
-                        item.isPublic
-                          ? styles.statusChipTextPublic
-                          : styles.statusChipTextPrivate,
-                      ]}
-                    >
-                      {item.isPublic ? "Public" : "Private"}
-                    </Text>
-                  </View>
+                    {item.isPublic ? "Public" : "Private"}
+                  </Text>
                   <Text numberOfLines={1} style={styles.secondaryText}>
                     Editable
                   </Text>
@@ -487,7 +478,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingVertical: 10,
     borderTopLeftRadius: appRadius.md,
     borderTopRightRadius: appRadius.md,
@@ -508,7 +499,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: appBorders.width,
     borderRightWidth: appBorders.width,
     borderColor: appBorders.soft,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingVertical: 12,
   },
   rowFirst: {
@@ -571,30 +562,14 @@ const styles = StyleSheet.create({
     ...appTypography.bodySmall,
     color: appColors.textSecondary,
   },
-  statusChip: {
-    alignSelf: "flex-start",
-    borderRadius: appRadius.pill,
-    borderWidth: appBorders.width,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+  statusText: {
+    ...appTypography.bodySmallStrong,
     marginBottom: 4,
   },
-  statusChipPublic: {
-    backgroundColor: appSurfaces.ghost,
-    borderColor: appBorders.strong,
-  },
-  statusChipPrivate: {
-    backgroundColor: appSurfaces.ghost,
-    borderColor: appBorders.soft,
-  },
-  statusChipText: {
-    fontSize: 10,
-    fontWeight: "600",
-  },
-  statusChipTextPublic: {
+  statusTextPublic: {
     color: appColors.brand500,
   },
-  statusChipTextPrivate: {
+  statusTextPrivate: {
     color: appColors.textSecondary,
   },
   emptyCard: {
@@ -625,7 +600,7 @@ const styles = StyleSheet.create({
     backgroundColor: appSurfaces.card,
     borderWidth: appBorders.width,
     borderColor: appColors.dangerText,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingVertical: 10,
   },
   inlineErrorText: {

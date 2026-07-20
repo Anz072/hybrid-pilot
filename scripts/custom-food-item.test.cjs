@@ -29,7 +29,7 @@ test("custom food build produces a per-100g catalog payload", () => {
   const result = buildCustomFoodItemInput({
     ...validDraft,
     brand: "  Fage  ",
-    barcode: " 4770123456789 ",
+    barcode: " 4770123456782 ",
   });
 
   assert.equal(result.error, undefined);
@@ -37,7 +37,7 @@ test("custom food build produces a per-100g catalog payload", () => {
   assert.equal(result.input.sourceId, null);
   assert.equal(result.input.name, "Greek yogurt 2%");
   assert.equal(result.input.brand, "Fage");
-  assert.equal(result.input.barcode, "4770123456789");
+  assert.equal(result.input.barcode, "4770123456782");
   assert.equal(result.input.nutritionBasis, "100g");
   assert.equal(result.input.servingSizeValue, 100);
   assert.equal(result.input.servingSizeUnit, "g");
@@ -155,4 +155,30 @@ test("blank barcode and brand normalize to null", () => {
 
   assert.equal(result.input.barcode, null);
   assert.equal(result.input.brand, null);
+});
+
+test("barcode input keeps digits only and validates the check digit", () => {
+  const formatted = buildCustomFoodItemInput({
+    ...validDraft,
+    barcode: "477-0123-45678-2",
+  });
+  assert.equal(formatted.error, undefined);
+  assert.equal(formatted.input.barcode, "4770123456782");
+
+  const upcA = buildCustomFoodItemInput({
+    ...validDraft,
+    barcode: "737628064502",
+  });
+  assert.equal(upcA.error, undefined);
+  assert.equal(upcA.input.barcode, "737628064502");
+
+  const badCheckDigit = buildCustomFoodItemInput({
+    ...validDraft,
+    barcode: "4770123456789",
+  });
+  assert.equal(badCheckDigit.input, undefined);
+  assert.match(badCheckDigit.error, /valid EAN, UPC, or GTIN/i);
+
+  const tooShort = buildCustomFoodItemInput({ ...validDraft, barcode: "123" });
+  assert.match(tooShort.error, /valid EAN, UPC, or GTIN/i);
 });

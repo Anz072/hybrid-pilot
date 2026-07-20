@@ -27,10 +27,11 @@ import {
   parseLocalizedNumber,
   toSafeNumber,
 } from "./customFoodItem";
-import FoodLogContextBar from "./FoodLogContextBar";
 import FoodScreenHeader from "./FoodScreenHeader";
+import MealBucketSelect, { getInitialMealBucket } from "./MealBucketSelect";
 import {
   calculateQuickAddCaloriesFromMacros,
+  MEAL_SLOT_LABELS,
   normalizePositiveFoodInput,
 } from "./foodUtils";
 import { resolveFoodLogContext } from "./foodLogContext";
@@ -58,6 +59,7 @@ const getBasisLabel = (basis: NutritionBasis) =>
   "Per serving";
 
 const getFoodItemDraftSignature = ({
+  barcode,
   basis,
   brand,
   calories,
@@ -73,6 +75,7 @@ const getFoodItemDraftSignature = ({
   servingValue,
   sugar,
 }: {
+  barcode: string;
   basis: NutritionBasis;
   brand: string;
   calories: string;
@@ -89,6 +92,7 @@ const getFoodItemDraftSignature = ({
   sugar: string;
 }) =>
   JSON.stringify({
+    barcode: barcode.trim(),
     basis,
     brand: brand.trim(),
     calories: calories.trim(),
@@ -111,9 +115,13 @@ const CreateFoodItemScreen = () => {
   const insets = useSafeAreaInsets();
   const { barcode, contextLabel, date, loggedAt, mealType, prefillName } =
     route.params;
+  const [selectedMeal, setSelectedMeal] = React.useState(() =>
+    getInitialMealBucket(mealType),
+  );
 
   const [name, setName] = React.useState(prefillName?.trim() ?? "");
   const [brand, setBrand] = React.useState("");
+  const [barcodeValue, setBarcodeValue] = React.useState(barcode?.trim() ?? "");
   const [basis, setBasis] = React.useState<NutritionBasis>("100g");
   const [servingValue, setServingValue] = React.useState("1");
   const [servingUnit, setServingUnit] = React.useState("serving");
@@ -148,8 +156,6 @@ const CreateFoodItemScreen = () => {
       }),
     [contextLabel, date, loggedAt, mealType],
   );
-
-  const trimmedBarcode = barcode?.trim() || null;
 
   const parsedProtein = React.useMemo(
     () => parseLocalizedNumber(protein),
@@ -195,6 +201,7 @@ const CreateFoodItemScreen = () => {
   const currentDraftSignature = React.useMemo(
     () =>
       getFoodItemDraftSignature({
+        barcode: barcodeValue,
         basis,
         brand,
         calories,
@@ -211,6 +218,7 @@ const CreateFoodItemScreen = () => {
         sugar,
       }),
     [
+      barcodeValue,
       basis,
       brand,
       calories,
@@ -313,7 +321,7 @@ const CreateFoodItemScreen = () => {
       const buildResult = buildCustomFoodItemInput({
         name,
         brand,
-        barcode: trimmedBarcode,
+        barcode: barcodeValue,
         basis,
         servingValue,
         servingUnit,
@@ -337,6 +345,26 @@ const CreateFoodItemScreen = () => {
       try {
         setSaveMode(mode);
 
+        const normalizedBarcode = buildResult.input.barcode;
+        if (normalizedBarcode) {
+          // saveFoodItem silently merges into an existing food with the same
+          // barcode, which would discard or overwrite this form. Best-effort:
+          // if the lookup fails, let the save proceed.
+          let existingFood = null;
+          try {
+            existingFood = await DB.getFoodItemByBarcode(normalizedBarcode);
+          } catch {
+            existingFood = null;
+          }
+
+          if (existingFood) {
+            setFormError(
+              `Barcode ${normalizedBarcode} already belongs to "${existingFood.name}". Scan or search for it instead, or change the barcode.`,
+            );
+            return;
+          }
+        }
+
         const foodId = await DB.saveFoodItem(buildResult.input);
 
         bypassUnsavedGuardRef.current = true;
@@ -345,10 +373,10 @@ const CreateFoodItemScreen = () => {
           navigation.replace("ScannedFood", {
             foodId,
             date,
-            mealType: foodLogContext.mealType,
+            mealType: MEAL_SLOT_LABELS[selectedMeal],
             loggedAt: foodLogContext.loggedAt,
-            contextLabel: foodLogContext.contextLabel,
-            barcode: trimmedBarcode,
+            contextLabel: MEAL_SLOT_LABELS[selectedMeal],
+            barcode: buildResult.input.barcode,
             scanStatus: "created",
           });
           return;
@@ -367,25 +395,25 @@ const CreateFoodItemScreen = () => {
       }
     },
     [
+      barcodeValue,
       basis,
       brand,
       date,
       fiber,
       foodLogContext.contextLabel,
       foodLogContext.loggedAt,
-      foodLogContext.mealType,
       name,
       navigation,
       parsedCarbs,
       parsedFat,
       parsedProtein,
       resolvedCalories,
+      selectedMeal,
       salt,
       saturatedFat,
       servingUnit,
       servingValue,
       sugar,
-      trimmedBarcode,
       user,
     ],
   );
@@ -407,10 +435,15 @@ const CreateFoodItemScreen = () => {
           <FoodScreenHeader
             eyebrow="Custom Food"
             title="Create food"
-            subtitle={foodLogContext.subtitle}
+            subtitle={foodLogContext.dateLabel}
             onBack={() => navigation.goBack()}
           />
-          <FoodLogContextBar context={foodLogContext} />
+          <MealBucketSelect
+            disabled={saving}
+            onChange={setSelectedMeal}
+            style={styles.mealBucketSelect}
+            value={selectedMeal}
+          />
 
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Food Details</Text>
@@ -446,15 +479,24 @@ const CreateFoodItemScreen = () => {
               }}
             />
 
-            {trimmedBarcode ? (
-              <View style={styles.barcodeRow}>
-                <View style={styles.barcodePill}>
-                  <Text style={styles.barcodePillText}>
-                    Barcode {trimmedBarcode}
-                  </Text>
-                </View>
-              </View>
-            ) : null}
+            <Text style={[styles.fieldLabel, styles.fieldLabelSpacing]}>
+              Barcode (optional)
+            </Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. 737628064502"
+              placeholderTextColor={appColors.textMuted}
+              value={barcodeValue}
+              onChangeText={(value) => {
+                setBarcodeValue(value);
+                setFormError(null);
+              }}
+              keyboardType="number-pad"
+            />
+            <Text style={styles.helperText}>
+              Add the EAN or UPC digits so scanning the package finds this food
+              next time.
+            </Text>
           </View>
 
           <View style={styles.card}>
@@ -773,6 +815,9 @@ const styles = StyleSheet.create({
     paddingBottom: 36,
   },
   card: sharedStyleValues.card,
+  mealBucketSelect: {
+    marginBottom: 16,
+  },
   sectionTitle: sharedStyleValues.sectionTitle,
   sectionSubtitle: sharedStyleValues.sectionSubtitle,
   fieldLabel: sharedStyleValues.fieldLabel,
@@ -781,8 +826,8 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    borderRadius: 8,
+    borderColor: "transparent",
+    borderRadius: 10,
     backgroundColor: appColors.surfaceField,
     paddingHorizontal: 12,
     paddingVertical: 12,
@@ -812,9 +857,9 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: appColors.borderStrong,
+    borderColor: appColors.borderSoft,
     backgroundColor: appColors.surfaceField,
-    paddingHorizontal: 11,
+    paddingHorizontal: 12,
     paddingVertical: 8,
     marginTop: 10,
   },
@@ -826,23 +871,6 @@ const styles = StyleSheet.create({
   moreNutrientsToggle: {
     marginBottom: 10,
   },
-  barcodeRow: {
-    flexDirection: "row",
-    marginTop: 14,
-  },
-  barcodePill: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    backgroundColor: appColors.surfaceGhost,
-    paddingHorizontal: 13,
-    paddingVertical: 8,
-  },
-  barcodePillText: {
-    color: appColors.textSecondary,
-    fontSize: 12,
-    fontWeight: "600",
-  },
   presetRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -852,22 +880,22 @@ const styles = StyleSheet.create({
   presetChip: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    backgroundColor: appColors.surfaceGhost,
-    paddingHorizontal: 13,
+    borderColor: appColors.borderSoft,
+    backgroundColor: appColors.surfaceField,
+    paddingHorizontal: 12,
     paddingVertical: 8,
   },
   presetChipSelected: {
-    backgroundColor: appColors.brand700,
-    borderColor: appColors.brand700,
+    backgroundColor: appColors.actionPrimarySoft,
+    borderColor: appColors.actionPrimaryBorder,
   },
   presetChipText: {
-    color: appColors.brand500,
+    color: appColors.textSecondary,
     fontSize: 12,
     fontWeight: "600",
   },
   presetChipTextSelected: {
-    color: appColors.white,
+    color: appColors.actionPrimaryPressed,
   },
   grid: {
     display: "flex",

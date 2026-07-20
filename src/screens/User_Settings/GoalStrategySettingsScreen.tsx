@@ -253,12 +253,15 @@ const GoalStrategySettingsScreen = ({ navigation }: Props) => {
                     )}
                   </AppText>
                 </View>
-                <View style={styles.metricPill}>
-                  <NumericText color="coral" variant="numberTrendDelta">
-                    {contextLoading ? "..." : previewPlan?.calories ?? user.calorieAllowance ?? "--"}{" "}
-                    kcal
-                  </NumericText>
-                </View>
+                <NumericText
+                  align="right"
+                  numberOfLines={1}
+                  style={styles.metricValue}
+                  variant="numberTrendDelta"
+                >
+                  {contextLoading ? "..." : previewPlan?.calories ?? user.calorieAllowance ?? "--"}{" "}
+                  kcal
+                </NumericText>
               </View>
 
               <View style={styles.previewGrid}>
@@ -393,11 +396,8 @@ const styles = StyleSheet.create({
   summaryCopy: {
     flex: 1,
   },
-  metricPill: {
-    borderRadius: 999,
-    backgroundColor: appColors.actionPrimarySoft,
-    paddingHorizontal: appSpacing.sm,
-    paddingVertical: appSpacing.xs,
+  metricValue: {
+    flexShrink: 0,
   },
   previewGrid: {
     flexDirection: "row",

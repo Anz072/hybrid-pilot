@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { ForkKnifeIcon } from "phosphor-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Pie, PolarChart } from "victory-native";
-import { AppCard, AppText, Chip, NumericText } from "../../components/ui";
+import { AppCard, AppText, NumericText } from "../../components/ui";
 import { getGoalStrategyRateLabel } from "../../engine/goalStrategy";
 import { getAgeFromBirthdateValue } from "../../helpers";
 import type {
@@ -100,7 +100,9 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
       title="Initial plan"
     >
       {goalRateLabel ? (
-        <Chip label={goalRateLabel} selected style={styles.pacePill} />
+        <AppText color="coral" style={styles.paceText} variant="bodySmallStrong">
+          {goalRateLabel}
+        </AppText>
       ) : null}
 
       <OnboardingReviewCard
@@ -232,7 +234,7 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
 };
 
 const styles = StyleSheet.create({
-  pacePill: {
+  paceText: {
     alignSelf: "flex-start",
     marginBottom: appSpacing.md,
   },

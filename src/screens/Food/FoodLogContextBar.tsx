@@ -1,13 +1,8 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import {
-  CalendarIcon,
-  ClockIcon,
-  ForkKnifeIcon,
-  PencilSimpleIcon,
-} from "phosphor-react-native";
+import { PencilSimpleIcon } from "phosphor-react-native";
 import { appColors } from "../../theme/colors";
-import { sharedStyleValues } from "../../theme/sharedStyles";
+import { appSpacing, appStates } from "../../theme/tokens";
 import type { FoodLogContext } from "./foodLogContext";
 
 type FoodLogContextBarProps = {
@@ -15,37 +10,29 @@ type FoodLogContextBarProps = {
   onTimePress?: () => void;
 };
 
+/** Logging context as one quiet metadata line — passive facts, not badges. */
 const FoodLogContextBar = ({ context, onTimePress }: FoodLogContextBarProps) => {
   return (
     <View style={styles.wrap}>
-      <View style={styles.pill}>
-        <CalendarIcon size={15} color={appColors.brand500} weight="bold" />
-        <Text style={styles.pillText}>{context.dateLabel}</Text>
-      </View>
+      <Text style={styles.metaText}>{context.dateLabel}</Text>
       {onTimePress ? (
-        <Pressable
-          onPress={onTimePress}
-          style={({ pressed }) => [
-            styles.pill,
-            styles.pressablePill,
-            pressed && styles.pressed,
-          ]}
-        >
-          <ClockIcon size={15} color={appColors.brand500} weight="bold" />
-          <Text style={styles.pillText}>{context.contextLabel}</Text>
-          <PencilSimpleIcon size={15} color={appColors.slate900} />
-        </Pressable>
-      ) : (
-        <View style={styles.pill}>
-          <ClockIcon size={15} color={appColors.brand500} weight="bold" />
-          <Text style={styles.pillText}>{context.contextLabel}</Text>
-        </View>
-      )}
-      {context.mealType ? (
-        <View style={styles.pill}>
-          <ForkKnifeIcon size={15} color={appColors.brand500} weight="bold" />
-          <Text style={styles.pillText}>{context.mealType}</Text>
-        </View>
+        <>
+          <Text style={styles.metaDot}>·</Text>
+          <Pressable
+            accessibilityLabel={`Change time, currently ${context.timeLabel}`}
+            accessibilityRole="button"
+            hitSlop={12}
+            onPress={onTimePress}
+            style={({ pressed }) => [styles.timeButton, pressed && styles.pressed]}
+          >
+            <Text style={styles.metaTextStrong}>{context.timeLabel}</Text>
+            <PencilSimpleIcon
+              size={13}
+              color={appColors.textSecondary}
+              weight="bold"
+            />
+          </Pressable>
+        </>
       ) : null}
     </View>
   );
@@ -55,19 +42,35 @@ const styles = StyleSheet.create({
   wrap: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 12,
+    alignItems: "center",
+    gap: 6,
+    marginBottom: appSpacing.sm,
   },
-  pill: {
-    ...sharedStyleValues.pill,
-    minHeight: 44,
-    paddingHorizontal: 12,
+  metaText: {
+    color: appColors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: "500",
   },
-  pressablePill: {
-    backgroundColor: appColors.surfaceCard,
+  metaTextStrong: {
+    color: appColors.textPrimary,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: "600",
   },
-  pillText: sharedStyleValues.pillText,
-  pressed: sharedStyleValues.pressed,
+  metaDot: {
+    color: appColors.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  timeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  pressed: {
+    opacity: appStates.pressedOpacity,
+  },
 });
 
 export default FoodLogContextBar;

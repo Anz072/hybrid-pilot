@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "icon": "./assets/images/icon.png",
+    "ios": {
+      "icon": "./assets/images/ios-icon.png"
+    },
+    "android": {
+      "icon": "./assets/images/android-icon.png",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundImage": "./assets/images/adaptive-background.png",
+        "monochromeImage": "./assets/images/monochrome-icon.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#21112E",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200
+        }
+      ]
+    ]
+  }
+}

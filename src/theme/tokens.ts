@@ -26,7 +26,7 @@ export const appRadius = {
 
 export const appBorders = {
   width: 1,
-  /** The signature ledger rule — heavy ink bar that opens a section. */
+  /** Heavier rule reserved for opening a hero section — used sparingly. */
   ruleWidth: 3,
   rule: appColors.textPrimary,
   soft: appColors.borderSoft,
@@ -58,15 +58,5 @@ export const appStates = {
 export const appMotion = {
   pressMs: 140,
   stateMs: 180,
-  modalMs: 260,
-} as const;
-
-export const appElevation = {
-  overlay: {
-    shadowColor: appColors.textPrimary,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    elevation: 12,
-  },
+  modalMs: 220,
 } as const;

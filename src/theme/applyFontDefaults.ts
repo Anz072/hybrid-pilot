@@ -12,10 +12,10 @@ type FontWeightValue = TextStyle["fontWeight"];
 
 type PatchedTextComponent = {
   render?: (...args: unknown[]) => React.ReactElement | null;
-  __interPatched?: boolean;
+  __fontPatched?: boolean;
 };
 
-type InterPatchedElementProps = {
+type FontPatchedElementProps = {
   onFocus?: ((event: unknown) => void) | undefined;
   style?: StyleProp<TextStyle>;
 };
@@ -34,18 +34,18 @@ const normalizeFontWeight = (fontWeight?: FontWeightValue): number => {
     return 400;
   }
 
-  if (parsed <= 150) return 100;
-  if (parsed <= 250) return 200;
-  if (parsed <= 350) return 300;
   if (parsed <= 450) return 400;
   if (parsed <= 550) return 500;
   if (parsed <= 650) return 600;
-  if (parsed <= 750) return 700;
-  if (parsed <= 850) return 800;
-  return 900;
+  return 700;
 };
 
-const resolveInterFontFamily = (
+/**
+ * IBM Plex Sans is the app-wide default for any Text/TextInput that hasn't
+ * opted into a role from `appTypography` (which sets its own fontFamily,
+ * e.g. Newsreader for titles and coaching copy).
+ */
+const resolveDefaultFontFamily = (
   fontWeight?: FontWeightValue,
   fontStyle?: TextStyle["fontStyle"],
 ) => {
@@ -53,28 +53,18 @@ const resolveInterFontFamily = (
   const italicSuffix = fontStyle === "italic" ? "_Italic" : "";
 
   switch (weight) {
-    case 100:
-      return `Inter_100Thin${italicSuffix}`;
-    case 200:
-      return `Inter_200ExtraLight${italicSuffix}`;
-    case 300:
-      return `Inter_300Light${italicSuffix}`;
     case 500:
-      return `Inter_500Medium${italicSuffix}`;
+      return `IBMPlexSans_500Medium${italicSuffix}`;
     case 600:
-      return `Inter_600SemiBold${italicSuffix}`;
+      return `IBMPlexSans_600SemiBold${italicSuffix}`;
     case 700:
-      return `Inter_700Bold${italicSuffix}`;
-    case 800:
-      return `Inter_800ExtraBold${italicSuffix}`;
-    case 900:
-      return `Inter_900Black${italicSuffix}`;
+      return `IBMPlexSans_700Bold${italicSuffix}`;
     default:
-      return `Inter_400Regular${italicSuffix}`;
+      return `IBMPlexSans_400Regular${italicSuffix}`;
   }
 };
 
-const withInterFont = (style: StyleProp<TextStyle>) => {
+const withDefaultFont = (style: StyleProp<TextStyle>) => {
   const flattened = StyleSheet.flatten(style);
   if (flattened?.fontFamily) {
     return style;
@@ -82,7 +72,7 @@ const withInterFont = (style: StyleProp<TextStyle>) => {
 
   return [
     {
-      fontFamily: resolveInterFontFamily(
+      fontFamily: resolveDefaultFontFamily(
         flattened?.fontWeight,
         flattened?.fontStyle,
       ),
@@ -97,21 +87,21 @@ const patchTextRender = (
     notifyOnFocus?: boolean;
   } = {},
 ) => {
-  if (component.__interPatched || !component.render) {
+  if (component.__fontPatched || !component.render) {
     return;
   }
 
   const originalRender = component.render;
-  component.render = function patchedInterRender(...args: unknown[]) {
+  component.render = function patchedFontRender(...args: unknown[]) {
     const element = originalRender.apply(this, args);
     if (!React.isValidElement(element)) {
       return element;
     }
 
-    const typedElement = element as React.ReactElement<InterPatchedElementProps>;
+    const typedElement = element as React.ReactElement<FontPatchedElementProps>;
     const props = typedElement.props;
-    const nextProps: InterPatchedElementProps = {
-      style: withInterFont(props.style),
+    const nextProps: FontPatchedElementProps = {
+      style: withDefaultFont(props.style),
     };
 
     if (options.notifyOnFocus) {
@@ -125,10 +115,10 @@ const patchTextRender = (
 
     return React.cloneElement(typedElement, nextProps);
   };
-  component.__interPatched = true;
+  component.__fontPatched = true;
 };
 
-export const applyInterFontDefaults = () => {
+export const applyFontDefaults = () => {
   patchTextRender(Text as unknown as PatchedTextComponent);
   patchTextRender(TextInput as unknown as PatchedTextComponent, {
     notifyOnFocus: true,

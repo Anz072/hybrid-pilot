@@ -53,6 +53,7 @@ export const AppText = ({
 
 type NumericTextProps = Omit<AppTextProps, "variant"> & {
   variant?:
+    | "numberDisplay"
     | "numberCalorieHero"
     | "numberCalorieRow"
     | "numberMacroSummary"

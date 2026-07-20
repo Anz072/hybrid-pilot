@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { MEAL_SLOT_LABELS, type MealSlot } from "./foodUtils";
 import { appColors } from "../../theme/colors";
-import { appStates } from "../../theme/tokens";
+import { appBorders, appSpacing, appStates } from "../../theme/tokens";
 import { CalendarCheckIcon } from "phosphor-react-native";
 
 type FoodDiaryMoreSectionProps = {
@@ -28,75 +28,75 @@ const FoodDiaryMoreSection = ({
 }: FoodDiaryMoreSectionProps) => {
   const selectedMealLabel = MEAL_SLOT_LABELS[selectedMeal];
 
+  const renderActionRow = ({
+    accessibilityLabel,
+    busy,
+    divider,
+    iconWeight,
+    label,
+    onPress,
+  }: {
+    accessibilityLabel: string;
+    busy: boolean;
+    divider: boolean;
+    iconWeight: "bold" | "regular";
+    label: string;
+    onPress: () => void;
+  }) => (
+    <Pressable
+      disabled={busy}
+      onPress={onPress}
+      accessibilityLabel={accessibilityLabel}
+      style={({ pressed }) => [
+        styles.actionRow,
+        divider && styles.actionRowDivider,
+        busy && styles.moreRowDisabled,
+        pressed && styles.cardPressed,
+      ]}
+    >
+      <View style={styles.actionIcon}>
+        {busy ? (
+          <ActivityIndicator color={appColors.textPrimary} size="small" />
+        ) : (
+          <CalendarCheckIcon
+            size={20}
+            color={appColors.textPrimary}
+            weight={iconWeight}
+          />
+        )}
+      </View>
+      <Text style={styles.actionRowText}>{label}</Text>
+    </Pressable>
+  );
+
   return (
     <View style={styles.card}>
       <Text style={styles.sectionTitle}>
         Fast actions for {selectedMealLabel}
       </Text>
-      <View style={styles.quickActionGrid}>
-        <Pressable
-          disabled={isRepeatingYesterdayMeal}
-          onPress={onRepeatYesterdayMeal}
-          accessibilityLabel={`Repeat yesterday's ${selectedMealLabel}`}
-          style={({ pressed }) => [
-            styles.actionTile,
-            isRepeatingYesterdayMeal && styles.moreRowDisabled,
-            pressed && styles.cardPressed,
-          ]}
-        >
-          <View style={styles.actionIcon}>
-            {isRepeatingYesterdayMeal ? (
-              <ActivityIndicator color={appColors.textPrimary} size="small" />
-            ) : (
-              <CalendarCheckIcon
-                size={22}
-                color={appColors.textPrimary}
-                weight="bold"
-              />
-            )}
-          </View>
-          <Text style={styles.actionTileText}>
-            {isRepeatingYesterdayMeal ? "Repeating" : "Repeat meal"}
-          </Text>
-        </Pressable>
-        <Pressable
-          disabled={isCopyingYesterday}
-          onPress={onCopyYesterday}
-          accessibilityLabel="Copy yesterday"
-          style={({ pressed }) => [
-            styles.actionTile,
-            isCopyingYesterday && styles.moreRowDisabled,
-            pressed && styles.cardPressed,
-          ]}
-        >
-          <View style={styles.actionIcon}>
-            {isCopyingYesterday ? (
-              <ActivityIndicator color={appColors.textPrimary} size="small" />
-            ) : (
-              <CalendarCheckIcon
-                size={22}
-                color={appColors.textPrimary}
-                weight="regular"
-              />
-            )}
-          </View>
-          <Text style={styles.actionTileText}>
-            {isCopyingYesterday ? "Copying" : "Copy last day"}
-          </Text>
-        </Pressable>
-      </View>
+      {renderActionRow({
+        accessibilityLabel: `Repeat yesterday's ${selectedMealLabel}`,
+        busy: isRepeatingYesterdayMeal,
+        divider: true,
+        iconWeight: "bold",
+        label: isRepeatingYesterdayMeal ? "Repeating" : "Repeat meal",
+        onPress: onRepeatYesterdayMeal,
+      })}
+      {renderActionRow({
+        accessibilityLabel: "Copy yesterday",
+        busy: isCopyingYesterday,
+        divider: false,
+        iconWeight: "regular",
+        label: isCopyingYesterday ? "Copying" : "Copy last day",
+        onPress: onCopyYesterday,
+      })}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: appColors.surfaceCanvas,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 12,
-    marginBottom: 16,
+    marginBottom: appSpacing.md,
   },
   sectionTitle: {
     color: appColors.textSecondary,
@@ -104,38 +104,31 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     letterSpacing: 0.7,
     textTransform: "uppercase",
-    marginBottom: 12,
+    marginBottom: appSpacing.xxs,
   },
-  quickActionGrid: {
+  actionRow: {
+    minHeight: 56,
     flexDirection: "row",
-    gap: 8,
-  },
-  actionTile: {
-    flex: 1,
-    minHeight: 82,
     alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderRadius: 8,
-    backgroundColor: appColors.surfaceCard,
-    borderWidth: 0,
-    borderColor: appColors.borderSoft,
-    paddingHorizontal: 6,
-    paddingVertical: 10,
+    gap: appSpacing.sm,
+    paddingVertical: appSpacing.xs,
+  },
+  actionRowDivider: {
+    borderBottomWidth: appBorders.width,
+    borderBottomColor: appBorders.soft,
   },
   actionIcon: {
-    width: 44,
-    height: 44,
+    width: 36,
+    height: 36,
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.surfaceGhost,
+    backgroundColor: appColors.surfaceField,
   },
-  actionTileText: {
+  actionRowText: {
     color: appColors.textPrimary,
-    fontSize: 12,
-    fontWeight: "600",
-    textAlign: "center",
+    fontSize: 15,
+    fontWeight: "500",
   },
   moreRowDisabled: {
     opacity: appStates.disabledOpacity,

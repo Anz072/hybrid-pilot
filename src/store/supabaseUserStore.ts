@@ -12,6 +12,14 @@ import {
   type SupabaseProfile,
 } from "../API/supabase/supabaseProfiles";
 import { resolveGoalStrategy } from "../engine/goalStrategy";
+import {
+  measureDiaryRequest,
+  measureDiaryStep,
+  recordDiaryCachePath,
+  recordDiaryRows,
+  type DiaryPerfRequestSource,
+  type DiaryPerfTrace,
+} from "../performance/diaryPerformance";
 import { getLocalAccount } from "../storage/localStore";
 import type {
   AdaptiveCalorieMode,
@@ -353,13 +361,21 @@ const resolveSupabaseUserId = async (
 
 const fetchSupabaseUserSettingsRow = async (
   userId: string,
+  perfTrace?: DiaryPerfTrace,
+  requestSource: DiaryPerfRequestSource = "supabase",
 ): Promise<SupabaseUserSettingsRow | null> => {
   const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from(SUPABASE_USER_SETTINGS_TABLE)
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
+  const { data, error } = await measureDiaryRequest(
+    perfTrace,
+    "settings",
+    requestSource,
+    async () =>
+      supabase
+        .from(SUPABASE_USER_SETTINGS_TABLE)
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle(),
+  );
 
   if (error) {
     throw error;
@@ -379,8 +395,13 @@ const cacheSupabaseUserSettingsRow = async (
 const refreshUserSettingsCache = async (
   userExternalId: string,
   authUserId: string,
+  perfTrace?: DiaryPerfTrace,
 ): Promise<void> => {
-  const remoteRow = await fetchSupabaseUserSettingsRow(authUserId);
+  const remoteRow = await fetchSupabaseUserSettingsRow(
+    authUserId,
+    perfTrace,
+    "background-supabase",
+  );
   if (remoteRow) {
     await cacheSupabaseUserSettingsRow(remoteRow);
     return;
@@ -891,22 +912,33 @@ export const upsertUser = async (input: DBUser): Promise<void> => {
 
 export const getUserByExternalId = async (
   externalId: string,
+  perfTrace?: DiaryPerfTrace,
 ): Promise<DBUser | null> => {
   if (isExpoGoDevUserId(externalId)) {
     return getUserByExternalIdLocal(externalId);
   }
 
-  const [localAccount, legacyUser, sessionUser] = await Promise.all([
-    getLocalAccount(),
-    getUserByExternalIdLocal(externalId),
-    getSupabaseSessionUser(),
-  ]);
+  const [localAccount, legacyUser, sessionUser] = await measureDiaryStep(
+    perfTrace,
+    "user.local-and-session",
+    () =>
+      Promise.all([
+        getLocalAccount(),
+        getUserByExternalIdLocal(externalId),
+        getSupabaseSessionUser(),
+      ]),
+  );
 
   if (!sessionUser || sessionUser.id !== externalId) {
     return null;
   }
 
-  let profile = await getSupabaseProfile(externalId);
+  let profile = await measureDiaryRequest(
+    perfTrace,
+    "profile",
+    "supabase",
+    () => getSupabaseProfile(externalId),
+  );
 
   if (!profile && legacyUser) {
     try {
@@ -930,41 +962,62 @@ export const getUserByExternalId = async (
   return legacyUser;
 };
 
-export const getFirstUser = async (): Promise<DBUser | null> => {
+export const getFirstUser = async (
+  perfTrace?: DiaryPerfTrace,
+): Promise<DBUser | null> => {
   if (await shouldUseExpoGoDevLocalStore()) {
     return getUserByExternalIdLocal(EXPO_GO_DEV_USER_ID);
   }
 
-  const sessionUser = await getSupabaseSessionUser();
+  const sessionUser = await measureDiaryStep(
+    perfTrace,
+    "user.session",
+    getSupabaseSessionUser,
+  );
 
   if (!sessionUser?.id) {
     return null;
   }
 
-  return getUserByExternalId(sessionUser.id);
+  return getUserByExternalId(sessionUser.id, perfTrace);
 };
 
 export const getUserSettings = async (
   userExternalId: string,
+  perfTrace?: DiaryPerfTrace,
 ): Promise<DBUserSettings | null> => {
-  const authUserId = await resolveSupabaseUserId(userExternalId);
+  const authUserId = await measureDiaryStep(
+    perfTrace,
+    "settings.resolve-session",
+    () => resolveSupabaseUserId(userExternalId),
+  );
   if (!authUserId) {
     return getUserSettingsLocal(userExternalId);
   }
 
-  const cachedSettings = await getUserSettingsLocal(userExternalId);
+  const cachedSettings = await measureDiaryRequest(
+    perfTrace,
+    "settings",
+    "sqlite",
+    () => getUserSettingsLocal(userExternalId),
+  );
   if (cachedSettings) {
-    void refreshUserSettingsCache(userExternalId, authUserId).catch(
+    recordDiaryCachePath(perfTrace, "settings", "sqlite-nonempty-hit");
+    recordDiaryRows(perfTrace, "settings", 1);
+    void refreshUserSettingsCache(userExternalId, authUserId, perfTrace).catch(
       () => undefined,
     );
     return cachedSettings;
   }
 
-  const remoteRow = await fetchSupabaseUserSettingsRow(authUserId);
+  recordDiaryCachePath(perfTrace, "settings", "empty-or-unknown");
+  const remoteRow = await fetchSupabaseUserSettingsRow(authUserId, perfTrace);
   if (remoteRow) {
+    recordDiaryRows(perfTrace, "settings", 1);
     return cacheSupabaseUserSettingsRow(remoteRow);
   }
 
+  recordDiaryRows(perfTrace, "settings", 0);
   return null;
 };
 

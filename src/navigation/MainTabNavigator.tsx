@@ -45,11 +45,18 @@ import WeightEntryModal, {
 import { generateUuid } from "../screens/Weight/weightUtils";
 import FoodBarcodeScannerModal from "../screens/Food/FoodBarcodeScannerModal";
 import type { ScannedFoodLookupResult } from "../screens/Food/FoodBarcodeScannerShared";
-import { formatFoodDateKey } from "../screens/Food/foodUtils";
+import {
+  buildFoodLoggedAt,
+  formatFoodDateKey,
+  getDefaultMealSlotForNow,
+  MEAL_SLOT_DEFAULT_HOUR,
+  MEAL_SLOT_LABELS,
+} from "../screens/Food/foodUtils";
 import {
   resolveFoodLogContext,
   toFoodLogRouteParams,
 } from "../screens/Food/foodLogContext";
+import { FoodDiaryDateProvider } from "../screens/Food/foodDiaryDateContext";
 import {
   getShortcutRecents,
   saveShortcutRecents,
@@ -98,6 +105,7 @@ const SECONDARY_SHORTCUTS: Shortcut[] = [
   "custom_meal",
   "custom_food",
 ];
+const ALL_SHORTCUTS: Shortcut[] = [...PRIMARY_SHORTCUTS, ...SECONDARY_SHORTCUTS];
 const SHORTCUT_LABELS: Record<Shortcut, string> = {
   barcode: "Scan",
   quick_add: "Quick Add",
@@ -126,6 +134,12 @@ const ShortcutPlaceholderScreen = () => (
 const MainTabNavigator = () => {
   const rootNavigation = useNavigation<RootNavigation>();
   const insets = useSafeAreaInsets();
+  const [selectedFoodDiaryDateKey, setSelectedFoodDiaryDateKey] =
+    React.useState(() => formatFoodDateKey(new Date()));
+  const [selectedFoodDiaryMeal, setSelectedFoodDiaryMeal] = React.useState(
+    () => getDefaultMealSlotForNow(),
+  );
+  const currentDayKeyRef = React.useRef(formatFoodDateKey(new Date()));
   const [shortcutsVisible, setShortcutsVisible] = React.useState(false);
   const [weightModalVisible, setWeightModalVisible] = React.useState(false);
   const [weightRefreshToken, setWeightRefreshToken] = React.useState(0);
@@ -134,6 +148,45 @@ const MainTabNavigator = () => {
   const [recentShortcuts, setRecentShortcuts] = React.useState<Shortcut[]>([]);
   const sheetProgress = React.useRef(new Animated.Value(0)).current;
   const afterCloseActionRef = React.useRef<null | (() => void)>(null);
+
+  const getSelectedFoodDiaryDateKey = React.useCallback(() => {
+    const nextCurrentDayKey = formatFoodDateKey(new Date());
+    const previousCurrentDayKey = currentDayKeyRef.current;
+    currentDayKeyRef.current = nextCurrentDayKey;
+
+    if (
+      selectedFoodDiaryDateKey === previousCurrentDayKey &&
+      nextCurrentDayKey !== previousCurrentDayKey
+    ) {
+      setSelectedFoodDiaryDateKey(nextCurrentDayKey);
+      return nextCurrentDayKey;
+    }
+
+    return selectedFoodDiaryDateKey;
+  }, [selectedFoodDiaryDateKey]);
+
+  const getShortcutFoodLogContext = React.useCallback(() => {
+    const date = getSelectedFoodDiaryDateKey();
+    const now = new Date();
+    const currentDateKey = formatFoodDateKey(now);
+    const useCurrentTime =
+      date === currentDateKey &&
+      selectedFoodDiaryMeal === getDefaultMealSlotForNow();
+    const loggedAt = useCurrentTime
+      ? buildFoodLoggedAt(date, now.getHours(), now.getMinutes())
+      : buildFoodLoggedAt(
+          date,
+          MEAL_SLOT_DEFAULT_HOUR[selectedFoodDiaryMeal],
+        );
+    const mealLabel = MEAL_SLOT_LABELS[selectedFoodDiaryMeal];
+
+    return resolveFoodLogContext({
+      contextLabel: mealLabel,
+      date,
+      loggedAt,
+      mealType: mealLabel,
+    });
+  }, [getSelectedFoodDiaryDateKey, selectedFoodDiaryMeal]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -203,11 +256,9 @@ const MainTabNavigator = () => {
   const handleShortcutPress = React.useCallback(
     (shortcut: Shortcut) => {
       rememberShortcut(shortcut);
-      
+
       const openFoodScreen = (screen: any) => {
-        const now = new Date();
-        const date = formatFoodDateKey(now);
-        const foodLogContext = resolveFoodLogContext({ date });
+        const foodLogContext = getShortcutFoodLogContext();
 
         closeShortcuts(() =>
           rootNavigation.navigate(screen, {
@@ -246,7 +297,12 @@ const MainTabNavigator = () => {
           return;
       }
     },
-    [closeShortcuts, rememberShortcut, rootNavigation],
+    [
+      closeShortcuts,
+      getShortcutFoodLogContext,
+      rememberShortcut,
+      rootNavigation,
+    ],
   );
 
   const handleShortcutWeightSave = React.useCallback(
@@ -295,9 +351,7 @@ const MainTabNavigator = () => {
 
   const handleShortcutScannedFoodResolved = React.useCallback(
     (result: ScannedFoodLookupResult) => {
-      const now = new Date();
-      const date = formatFoodDateKey(now);
-      const foodLogContext = resolveFoodLogContext({ date });
+      const foodLogContext = getShortcutFoodLogContext();
 
       const scannedFoodParams: RootStackParamList["ScannedFood"] = {
         ...toFoodLogRouteParams(foodLogContext),
@@ -311,14 +365,12 @@ const MainTabNavigator = () => {
         StackActions.push("ScannedFood", scannedFoodParams),
       );
     },
-    [rootNavigation],
+    [getShortcutFoodLogContext, rootNavigation],
   );
 
   const handleShortcutScannedFoodNotFound = React.useCallback(
     (barcode: string) => {
-      const now = new Date();
-      const date = formatFoodDateKey(now);
-      const foodLogContext = resolveFoodLogContext({ date });
+      const foodLogContext = getShortcutFoodLogContext();
 
       setBarcodeModalScannerVisible(false);
       rootNavigation.dispatch(
@@ -328,7 +380,7 @@ const MainTabNavigator = () => {
         }),
       );
     },
-    [rootNavigation],
+    [getShortcutFoodLogContext, rootNavigation],
   );
 
   const renderShortcutIcon = (shortcut: Shortcut, size = 26) => {
@@ -363,30 +415,20 @@ const MainTabNavigator = () => {
     }
   };
 
-  const renderShortcutButton = (
-    shortcut: Shortcut,
-    variant: "primary" | "secondary" = "secondary",
-  ) => (
+  const renderShortcutRow = (shortcut: Shortcut, isLast: boolean) => (
     <Pressable
       key={shortcut}
       accessibilityRole="button"
       onPress={() => handleShortcutPress(shortcut)}
       accessibilityLabel={SHORTCUT_LABELS[shortcut]}
       style={({ pressed }) => [
-        styles.shortcutCard,
-        variant === "primary" && styles.shortcutCardPrimary,
+        styles.shortcutRow,
+        !isLast && styles.shortcutRowDivider,
         pressed && styles.pressed,
       ]}
     >
-      <View
-        style={[
-          styles.shortcutIconWrap,
-          variant === "primary" && styles.shortcutIconWrapPrimary,
-        ]}
-      >
-        {renderShortcutIcon(shortcut, variant === "primary" ? 28 : 25)}
-      </View>
-      <AppText align="center" style={styles.shortcutLabel} variant="bodySmall">
+      <View style={styles.shortcutIconWrap}>{renderShortcutIcon(shortcut, 22)}</View>
+      <AppText style={styles.shortcutRowLabel} variant="body">
         {SHORTCUT_LABELS[shortcut]}
       </AppText>
     </Pressable>
@@ -413,20 +455,30 @@ const MainTabNavigator = () => {
     ],
     [insets.bottom],
   );
+  const foodDiaryDateContextValue = React.useMemo(
+    () => ({
+      selectedDateKey: selectedFoodDiaryDateKey,
+      selectedMeal: selectedFoodDiaryMeal,
+      setSelectedDateKey: setSelectedFoodDiaryDateKey,
+      setSelectedMeal: setSelectedFoodDiaryMeal,
+    }),
+    [selectedFoodDiaryDateKey, selectedFoodDiaryMeal],
+  );
 
   return (
     <View style={styles.container}>
-      <Tab.Navigator
-        initialRouteName="Home"
-        screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: FOCUSED_COLOR,
-          tabBarInactiveTintColor: UNFOCUSED_COLOR,
-          tabBarLabelStyle: styles.tabBarLabel,
-          tabBarItemStyle: styles.tabBarItem,
-          tabBarStyle: visibleTabBarStyle,
-        }}
-      >
+      <FoodDiaryDateProvider value={foodDiaryDateContextValue}>
+        <Tab.Navigator
+          initialRouteName="Food"
+          screenOptions={{
+            headerShown: false,
+            tabBarActiveTintColor: FOCUSED_COLOR,
+            tabBarInactiveTintColor: UNFOCUSED_COLOR,
+            tabBarLabelStyle: styles.tabBarLabel,
+            tabBarItemStyle: styles.tabBarItem,
+            tabBarStyle: visibleTabBarStyle,
+          }}
+        >
         <Tab.Screen
           name="Home"
           component={HomeScreen}
@@ -528,7 +580,8 @@ const MainTabNavigator = () => {
             ),
           }}
         />
-      </Tab.Navigator>
+        </Tab.Navigator>
+      </FoodDiaryDateProvider>
 
       <Modal
         visible={shortcutsVisible}
@@ -577,15 +630,9 @@ const MainTabNavigator = () => {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.shortcutScrollContent}
             >
-              <View style={styles.shortcutsGrid}>
-                {PRIMARY_SHORTCUTS.map((shortcut) =>
-                  renderShortcutButton(shortcut, "primary"),
-                )}
-              </View>
-
-              <View style={styles.shortcutsGrid}>
-                {SECONDARY_SHORTCUTS.map((shortcut) =>
-                  renderShortcutButton(shortcut),
+              <View style={styles.shortcutList}>
+                {ALL_SHORTCUTS.map((shortcut, index) =>
+                  renderShortcutRow(shortcut, index === ALL_SHORTCUTS.length - 1),
                 )}
               </View>
             </ScrollView>
@@ -687,40 +734,28 @@ const styles = StyleSheet.create({
   shortcutScrollContent: {
     paddingBottom: appSpacing.gutter,
   },
-  shortcutsGrid: {
+  shortcutList: {
+    gap: 0,
+  },
+  shortcutRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: appSpacing.sm,
-    marginBottom: appSpacing.xs,
-  },
-  shortcutCard: {
-    width: "30%",
     alignItems: "center",
-    gap: appSpacing.xs,
-    minHeight: 98,
+    gap: appSpacing.md,
+    minHeight: 56,
+    paddingVertical: appSpacing.sm,
   },
-  shortcutCardPrimary: {
-    flex: 1,
-    width: undefined,
+  shortcutRowDivider: {
+    borderBottomWidth: appBorders.width,
+    borderBottomColor: appBorders.soft,
   },
   shortcutIconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: appRadius.pill,
-    backgroundColor: appSurfaces.card,
-    borderWidth: appBorders.width,
-    borderColor: appBorders.strong,
+    width: 28,
     alignItems: "center",
     justifyContent: "center",
   },
-  shortcutIconWrapPrimary: {
-    width: 70,
-    height: 70,
-    backgroundColor: appSurfaces.ghost,
-  },
-  shortcutLabel: {
-    ...appTypography.bodySmall,
+  shortcutRowLabel: {
+    flex: 1,
+    ...appTypography.body,
   },
   pressed: {
     opacity: appStates.pressedOpacity,

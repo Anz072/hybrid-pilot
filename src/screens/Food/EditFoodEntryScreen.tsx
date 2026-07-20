@@ -13,9 +13,7 @@ import {
   View,
 } from "react-native";
 import {
-  CalendarIcon,
   ClockIcon,
-  ForkKnifeIcon,
   PencilSimpleIcon,
 } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -364,48 +362,21 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
           <FoodEntryForm
             headerEyebrow="Food Entry"
             headerTitle="Edit entry"
-            headerSubtitle={`${loggedDate} | ${loggedTime}`}
+            headerSubtitle={loggedDate}
             onBack={() => navigation.goBack()}
             heroEyebrow="Entry Review"
             heroTitle={entry.foodName}
             heroMeta={`Base serving ${formatFoodServing(
               entry.servingSize,
               entry.servingUnit,
-            )} | ${entry.calories.toFixed(0)} kcal`}
-            heroPills={[
-              {
-                key: "mode",
-                label: "Edit",
-                icon: (
-                  <PencilSimpleIcon
-                    size={14}
-                    color={appColors.brand500}
-                    weight="bold"
-                  />
-                ),
-              },
-              {
-                key: "date",
-                label: loggedDate,
-                icon: <CalendarIcon size={14} color={appColors.brand500} weight="bold" />,
-              },
-              ...(mealTypeValue.trim()
-                ? [
-                    {
-                      key: "label",
-                      label: mealTypeValue.trim(),
-                      icon: <ForkKnifeIcon size={14} color={appColors.brand500} weight="fill" />,
-                    },
-                  ]
-                : []),
-            ]}
+            )} · ${entry.calories.toFixed(0)} kcal`}
             previewCaloriesText={preview ? `${preview.calories.toFixed(0)} kcal` : "--"}
             previewSummaryText={
               preview
-                ? `${formatFoodMacro(preview.proteinG, "P")} | ${formatFoodMacro(
+                ? `${formatFoodMacro(preview.proteinG, "P")} · ${formatFoodMacro(
                     preview.carbsG,
                     "C",
-                  )} | ${formatFoodMacro(preview.fatG, "F")}`
+                  )} · ${formatFoodMacro(preview.fatG, "F")}`
                 : "Enter an amount to preview nutrition"
             }
             amountKeyboardType="decimal-pad"
@@ -547,10 +518,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   content: {
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
   },
   centerCard: sharedStyleValues.centerCard,
-  centerText: sharedStyleValues.centerText,
   footer: sharedStyleValues.footer,
   primaryButton: {
     ...sharedStyleValues.buttonBase,

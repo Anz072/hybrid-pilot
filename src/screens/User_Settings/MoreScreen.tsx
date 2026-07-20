@@ -37,7 +37,7 @@ import { useDisplayPreferences } from "../../preferences/usePreferences";
 import { weightUnitLabel } from "../../preferences/displayPreferences";
 import { appColors } from "../../theme/colors";
 import { appTypography } from "../../theme/typography";
-import { appBorders, appRadius, appSpacing, appStates, appSurfaces } from "../../theme/tokens";
+import { appBorders, appRadius, appSpacing, appStates } from "../../theme/tokens";
 import { AppButton, ErrorState, LoadingState } from "../../components/ui";
 import CalorieBudgetChart from "./CalorieBudgetChart";
 import { seedDeveloperTestData } from "./testDataSeeder";
@@ -65,6 +65,8 @@ const buildCurrentWeekDates = (reference: Date): Date[] => {
 
 type MoreActionRowProps = {
   description?: string;
+  /** Bottom hairline; pass false on the last row of a section. */
+  divider?: boolean;
   icon: React.ReactNode;
   onPress: () => void;
   title: string;
@@ -72,6 +74,7 @@ type MoreActionRowProps = {
 };
 
 const MoreActionRow = ({
+  divider = true,
   icon,
   onPress,
   title,
@@ -82,6 +85,7 @@ const MoreActionRow = ({
       onPress={onPress}
       style={({ pressed }) => [
         styles.actionRow,
+        divider && styles.actionRowDivider,
         pressed && styles.actionRowPressed,
       ]}
     >
@@ -295,8 +299,8 @@ const MoreScreen = () => {
             icon={
               <ChartLineUpIcon
                 size={18}
-                color={appColors.brand700}
-                weight="fill"
+                color={appColors.textSecondary}
+                weight="regular"
               />
             }
             onPress={() => navigation.navigate("WeeklyReviewScreen")}
@@ -307,11 +311,12 @@ const MoreScreen = () => {
             icon={
               <LightningIcon
                 size={18}
-                color={appColors.brand700}
-                weight="fill"
+                color={appColors.textSecondary}
+                weight="regular"
               />
             }
             onPress={() => navigation.navigate("AdaptiveCaloriesSettingsScreen")}
+            divider={false}
             title="Adaptive calories"
             value={
               settingsLoading
@@ -331,11 +336,12 @@ const MoreScreen = () => {
             icon={
               <UserCircleIcon
                 size={18}
-                color={appColors.brand700}
-                weight="fill"
+                color={appColors.textSecondary}
+                weight="regular"
               />
             }
             onPress={() => navigation.navigate("ProfileSettingsScreen")}
+            divider={false}
             title="Profile & account"
             value={user?.displayName ?? "Manage"}
           />
@@ -347,8 +353,8 @@ const MoreScreen = () => {
             icon={
               <ForkKnifeIcon
                 size={18}
-                color={appColors.brand700}
-                weight="fill"
+                color={appColors.textSecondary}
+                weight="regular"
               />
             }
             onPress={() => navigation.navigate("CalorieAllowanceSettingsScreen")}
@@ -363,8 +369,8 @@ const MoreScreen = () => {
             icon={
               <TargetIcon
                 size={18}
-                color={appColors.brand700}
-                weight="fill"
+                color={appColors.textSecondary}
+                weight="regular"
               />
             }
             onPress={() => navigation.navigate("AdjustGoalSettingsScreen")}
@@ -377,8 +383,8 @@ const MoreScreen = () => {
             icon={
               <TargetIcon
                 size={18}
-                color={appColors.brand700}
-                weight="fill"
+                color={appColors.textSecondary}
+                weight="regular"
               />
             }
             onPress={() => navigation.navigate("GoalStrategySettingsScreen")}
@@ -391,8 +397,8 @@ const MoreScreen = () => {
             icon={
               <BarbellIcon
                 size={18}
-                color={appColors.brand700}
-                weight="fill"
+                color={appColors.textSecondary}
+                weight="regular"
               />
             }
             onPress={() => navigation.navigate("ProteinFocusSettingsScreen")}
@@ -403,8 +409,8 @@ const MoreScreen = () => {
             icon={
               <BarbellIcon
                 size={18}
-                color={appColors.brand700}
-                weight="fill"
+                color={appColors.textSecondary}
+                weight="regular"
               />
             }
             onPress={() => navigation.navigate("TrainingTypesSettingsScreen")}
@@ -415,11 +421,12 @@ const MoreScreen = () => {
             icon={
               <ForkKnifeIcon
                 size={18}
-                color={appColors.brand700}
-                weight="fill"
+                color={appColors.textSecondary}
+                weight="regular"
               />
             }
             onPress={() => navigation.navigate("CalorieScheduleScreen")}
+            divider={false}
             title="Daily calorie schedule"
             value={
               settingsLoading
@@ -437,8 +444,8 @@ const MoreScreen = () => {
             icon={
               <SlidersHorizontalIcon
                 size={18}
-                color={appColors.brand700}
-                weight="fill"
+                color={appColors.textSecondary}
+                weight="regular"
               />
             }
             onPress={() => navigation.navigate("PreferencesScreen")}
@@ -449,11 +456,12 @@ const MoreScreen = () => {
             icon={
               <ExportIcon
                 size={18}
-                color={appColors.brand700}
-                weight="fill"
+                color={appColors.textSecondary}
+                weight="regular"
               />
             }
             onPress={() => navigation.navigate("DataExportScreen")}
+            divider={false}
             title="Export & backup"
             value="Open"
           />
@@ -465,8 +473,8 @@ const MoreScreen = () => {
             icon={
               <CookingPotIcon
                 size={18}
-                color={appColors.brand700}
-                weight="fill"
+                color={appColors.textSecondary}
+                weight="regular"
               />
             }
             onPress={() => navigation.navigate("UserCreatedRecipesScreen")}
@@ -477,11 +485,12 @@ const MoreScreen = () => {
             icon={
               <ForkKnifeIcon
                 size={18}
-                color={appColors.brand700}
-                weight="fill"
+                color={appColors.textSecondary}
+                weight="regular"
               />
             }
             onPress={() => navigation.navigate("UserCreatedCustomMealsScreen")}
+            divider={false}
             title="Your custom meals"
             value="Manage"
           />
@@ -495,8 +504,8 @@ const MoreScreen = () => {
                 icon={
                   <SlidersHorizontalIcon
                     size={18}
-                    color={appColors.brand700}
-                    weight="fill"
+                    color={appColors.textSecondary}
+                    weight="regular"
                   />
                 }
                 onPress={() => navigation.navigate("SettingsScreen")}
@@ -507,11 +516,12 @@ const MoreScreen = () => {
                 icon={
                   <LightningIcon
                     size={18}
-                    color={appColors.brand700}
-                    weight="fill"
+                    color={appColors.textSecondary}
+                    weight="regular"
                   />
                 }
                 onPress={confirmSeedDeveloperTestData}
+                divider={false}
                 title="Generate test history"
                 value={isSeedingTestData ? "Working..." : "28 days"}
               />
@@ -532,22 +542,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: appSpacing.gutter,
   },
   heroCard: {
-    backgroundColor: appSurfaces.card,
-    borderRadius: appRadius.md,
-    padding: appSpacing.lg,
-    borderWidth: appBorders.width,
-    borderColor: appBorders.soft,
     marginBottom: appSpacing.md,
   },
   eyebrow: {
     alignSelf: "flex-start",
     ...appTypography.label,
     color: appColors.textSecondary,
-    backgroundColor: appSurfaces.ghost,
-    paddingHorizontal: appSpacing.sm,
-    paddingVertical: 7,
-    borderRadius: appRadius.pill,
-    marginBottom: appSpacing.sm,
+    marginBottom: appSpacing.xs,
   },
   heroTitle: {
     ...appTypography.displaySection,
@@ -557,13 +558,10 @@ const styles = StyleSheet.create({
   heroMetrics: {
     marginTop: appSpacing.gutter,
     flexDirection: "row",
-    gap: appSpacing.xs,
+    gap: appSpacing.lg,
   },
   metricCard: {
     flex: 1,
-    borderRadius: appRadius.md,
-    backgroundColor: appSurfaces.soft,
-    padding: 14,
   },
   metricLabel: {
     ...appTypography.label,
@@ -577,32 +575,27 @@ const styles = StyleSheet.create({
   },
   metricValueSmall: {
     color: appColors.textPrimary,
-    ...appTypography.bodySmallStrong,
+    fontSize: 16,
+    fontWeight: "600",
   },
   sectionTitle: {
-    color: appColors.textPrimary,
-    fontSize: 20,
-    fontWeight: "500",
-    marginTop: appSpacing.gutter,
+    ...appTypography.eyebrow,
+    color: appColors.textSecondary,
+    marginTop: appSpacing.xl,
     marginBottom: appSpacing.xs,
   },
   stateBlock: {
     marginBottom: appSpacing.md,
   },
-  sectionCard: {
-    backgroundColor: appSurfaces.card,
-    borderRadius: appRadius.md,
-    borderWidth: appBorders.width,
-    borderColor: appBorders.soft,
-    overflow: "hidden",
-  },
+  sectionCard: {},
   actionRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: appSpacing.sm,
     minHeight: 64,
-    paddingHorizontal: appSpacing.md,
-    paddingVertical: 14,
+    paddingVertical: appSpacing.sm,
+  },
+  actionRowDivider: {
     borderBottomWidth: appBorders.width,
     borderBottomColor: appBorders.soft,
   },
@@ -615,7 +608,7 @@ const styles = StyleSheet.create({
     borderRadius: appRadius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.actionPrimarySoft,
+    backgroundColor: appColors.surfaceField,
   },
   actionCopy: {
     flex: 1,
@@ -633,7 +626,7 @@ const styles = StyleSheet.create({
     maxWidth: "38%",
   },
   actionValue: {
-    color: appColors.actionPrimary,
+    color: appColors.textSecondary,
     ...appTypography.label,
     textAlign: "right",
     flexShrink: 1,

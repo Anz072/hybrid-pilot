@@ -1,49 +1,47 @@
 /**
- * Shared app color tokens — the "Kitchen Ledger" direction.
- * Ink on oat paper with a single lingonberry accent; every hue comes from
- * the kitchen (bran, wheat, olive oil, honey, garden greens, spring water).
- * Calories are set in ink, like the bold calorie line on a nutrition label.
+ * Shared app color tokens — the "Bright Editorial" direction.
+ * A porcelain canvas with near-black ink text and one persimmon action
+ * accent. Nutrient/status hues stay deliberately subdued — they exist to
+ * support progress visualization, not to decorate the page.
  */
 const palette = {
   white: "#FFFFFF",
-  paper: "#F3EEE3",
-  paperSoft: "#EDE6D6",
-  milk: "#FCFAF4",
-  milkToned: "#F6F1E6",
-  bran: "#ECE5D6",
-  branDeep: "#E1D6BF",
-  sand: "#E4DCCA",
-  sandDeep: "#CDC2A8",
-  taupe: "#8B8170",
-  ink: "#262019",
-  inkSoft: "#5C5347",
-  inkMuted: "#9A8F7E",
-  lingonberryTint: "#F3DCD6",
-  lingonberrySoft: "#D8A093",
-  lingonberry: "#A63D2F",
-  lingonberryDeep: "#872F24",
-  redTint: "#F5DFD9",
-  red: "#9B2C1F",
-  redDeep: "#7C2015",
-  gardenSoft: "#8FAE8B",
-  garden: "#6F8F6C",
-  gardenDeep: "#52734F",
-  spring: "#5E8CA0",
-  olive: "#77804B",
-  russet: "#815334",
-  wheat: "#B8862B",
-  honeySoft: "#EAD7AC",
-  honey: "#C08A2E",
-  honeyDeep: "#8F6119",
+  porcelain: "#FAFAF8",
+  porcelainSoft: "#F1F1ED",
+  porcelainMuted: "#EAEAE4",
+  ink: "#171715",
+  inkSoft: "#55534C",
+  inkMuted: "#8A887E",
+  divider: "#E5E5DF",
+  dividerStrong: "#D8D8D0",
+  persimmonTint: "#F7E2DB",
+  persimmonSoft: "#E9AA98",
+  persimmonMid: "#E08063",
+  persimmon: "#D6533C",
+  persimmonDeep: "#B8402C",
+  redTint: "#F3DED8",
+  red: "#A3402F",
+  redDeep: "#7C2E20",
+  gardenTint: "#E4EBE1",
+  gardenSoft: "#9FB79A",
+  garden: "#5B8A66",
+  gardenDeep: "#436B4E",
+  spring: "#5E86A0",
+  olive: "#66753F",
+  russet: "#A34E36",
+  wheat: "#A87A2F",
+  honeySoft: "#F3E7D2",
+  honey: "#B98A3D",
+  honeyDeep: "#8F6821",
 } as const;
 
 const neutral = {
-  50: palette.paper,
-  100: palette.paperSoft,
-  200: palette.sand,
-  300: palette.sand,
-  400: palette.sandDeep,
-  500: palette.taupe,
+  50: palette.porcelain,
+  100: palette.porcelainSoft,
+  200: palette.divider,
+  300: palette.dividerStrong,
+  400: palette.inkMuted,
+  500: palette.inkMuted,
   600: palette.inkSoft,
   700: palette.inkSoft,
   800: palette.ink,
@@ -52,13 +50,13 @@ const neutral = {
 } as const;
 
 const brand = {
-  100: palette.lingonberryTint,
-  200: palette.lingonberryTint,
-  300: palette.lingonberrySoft,
-  400: palette.lingonberrySoft,
-  500: palette.lingonberry,
-  600: palette.lingonberry,
-  700: palette.lingonberryDeep,
+  100: palette.persimmonTint,
+  200: palette.persimmonTint,
+  300: palette.persimmonSoft,
+  400: palette.persimmonMid,
+  500: palette.persimmon,
+  600: palette.persimmon,
+  700: palette.persimmonDeep,
   800: palette.ink,
   900: palette.ink,
 } as const;
@@ -74,8 +72,8 @@ const warning = {
   600: palette.honey,
   700: palette.honeyDeep,
   800: palette.honeyDeep,
-  surface: palette.paperSoft,
-  surfaceStrong: palette.branDeep,
+  surface: palette.honeySoft,
+  surfaceStrong: palette.porcelainMuted,
 } as const;
 
 const danger = {
@@ -90,10 +88,10 @@ const danger = {
 } as const;
 
 const grayScale = {
-  50: palette.paper,
-  100: palette.paperSoft,
-  200: palette.sand,
-  300: palette.sandDeep,
+  50: palette.porcelain,
+  100: palette.porcelainSoft,
+  200: palette.divider,
+  300: palette.dividerStrong,
   400: palette.inkMuted,
   500: palette.inkSoft,
   600: palette.inkSoft,
@@ -103,17 +101,19 @@ const grayScale = {
 } as const;
 
 const surface = {
-  canvas: palette.paper,
-  canvasAlt: palette.paperSoft,
-  base: palette.paper,
-  card: palette.milk,
-  cardAlt: palette.milkToned,
-  cardRaised: palette.milk,
-  field: palette.bran,
-  fieldAlt: palette.branDeep,
-  overlay: "rgba(20, 16, 10, 0.45)",
-  ghost: "rgba(38, 32, 25, 0.05)",
-  ghostStrong: "rgba(38, 32, 25, 0.10)",
+  canvas: palette.porcelain,
+  canvasAlt: palette.porcelainSoft,
+  base: palette.porcelain,
+  card: palette.white,
+  cardAlt: palette.porcelainSoft,
+  cardRaised: palette.white,
+  field: palette.porcelainSoft,
+  fieldAlt: palette.porcelainMuted,
+  overlay: "rgba(23, 23, 21, 0.45)",
+  ghost: "rgba(23, 23, 21, 0.05)",
+  ghostStrong: "rgba(23, 23, 21, 0.10)",
+  /** Ink-filled surface for toasts/snackbars — the one intentionally dark panel. */
+  inverse: palette.ink,
 } as const;
 
 const text = {
@@ -123,8 +123,8 @@ const text = {
 } as const;
 
 const border = {
-  soft: palette.sand,
-  strong: palette.sandDeep,
+  soft: palette.divider,
+  strong: palette.dividerStrong,
 } as const;
 
 export const gray = {
@@ -190,11 +190,13 @@ export const appColors = {
   surfaceOverlay: surface.overlay,
   surfaceGhost: surface.ghost,
   surfaceGhostStrong: surface.ghostStrong,
+  surfaceInverse: surface.inverse,
 
   textPrimary: text.primary,
   textSecondary: text.secondary,
   textMuted: text.muted,
   textDisabled: text.muted,
+  textInverse: palette.porcelain,
 
   borderSoft: border.soft,
   borderStrong: border.strong,
@@ -213,22 +215,21 @@ export const appColors = {
   actionPrimaryBorder: brand[300],
 
   statusSuccess: success[700],
-  statusSuccessSoft: surface.cardAlt,
+  statusSuccessSoft: palette.gardenTint,
   statusWarning: warning[700],
   statusWarningSoft: warning.surface,
   statusError: danger[600],
   statusErrorSoft: danger.surface,
 
-  // Macro aliases — food-native hues. Calories are ink: the boldest
-  // black line on the label, not a brand decoration.
+  // Macro aliases — kept as subdued, food-native hues for progress
+  // visualization only. Calories stay ink: the boldest line on the label,
+  // not a brand decoration.
   calories: palette.ink,
   protein: palette.russet,
   carbs: palette.wheat,
   fat: palette.olive,
   water: palette.spring,
 } as const;
-
-export const appColorPrimitives = palette;
 
 export type AppColorToken = keyof typeof appColors;
 export type AppColorValue = (typeof appColors)[AppColorToken];

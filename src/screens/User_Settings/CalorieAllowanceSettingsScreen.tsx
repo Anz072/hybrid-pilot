@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
     borderRadius: appRadius.md,
     backgroundColor: appSurfaces.soft,
     borderWidth: appBorders.width,
-    borderColor: appBorders.strong,
+    borderColor: "transparent",
     paddingHorizontal: appSpacing.md,
     paddingVertical: appSpacing.sm,
   },

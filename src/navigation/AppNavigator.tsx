@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: appColors.slate50,
     paddingHorizontal: 24,
-    paddingVertical: 14,
+    paddingVertical: 16,
   },
   retryButtonPressed: {
     opacity: 0.85,

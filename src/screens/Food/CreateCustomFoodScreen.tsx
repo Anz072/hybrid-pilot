@@ -25,12 +25,13 @@ import type { FoodStackParamList } from "../../navigation/foodTypes";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import { DB } from "../../store/DB";
 import { useAppSelector } from "../../store/hooks";
-import FoodLogContextBar from "./FoodLogContextBar";
 import FoodScreenHeader from "./FoodScreenHeader";
+import MealBucketSelect, { getInitialMealBucket } from "./MealBucketSelect";
 import PublicVisibilityCheckbox from "./PublicVisibilityCheckbox";
 import {
   calculateQuickAddCaloriesFromMacros,
   formatFoodMacro,
+  MEAL_SLOT_LABELS,
   normalizePositiveFoodInput,
 } from "./foodUtils";
 import { resolveFoodLogContext } from "./foodLogContext";
@@ -143,6 +144,9 @@ const CreateCustomFoodScreen = () => {
   const insets = useSafeAreaInsets();
   const { contextLabel, date, loggedAt, mealType, mealId } = route.params;
   const isEditing = mealId != null;
+  const [selectedMeal, setSelectedMeal] = React.useState(() =>
+    getInitialMealBucket(mealType),
+  );
   const foodLogContext = React.useMemo(
     () =>
       resolveFoodLogContext({
@@ -157,8 +161,6 @@ const CreateCustomFoodScreen = () => {
 
   const trimmedName = name.trim();
   const trimmedDescription = description.trim();
-  const trimmedMealType = mealType?.trim() || null;
-
   const parsedServing = React.useMemo(
     () => parseLocalizedNumber(servingSize),
     [servingSize],
@@ -510,7 +512,7 @@ const CreateCustomFoodScreen = () => {
             date,
             loggedAt: resolvedLoggedAt,
             quantityG: parsedServing,
-            mealType: foodLogContext.mealType,
+            mealType: MEAL_SLOT_LABELS[selectedMeal],
           });
         }
 
@@ -536,7 +538,7 @@ const CreateCustomFoodScreen = () => {
       isPublic,
       loadedMealOwnerUserId,
       mealId,
-      foodLogContext.mealType,
+      selectedMeal,
       parsedCarbs,
       parsedFat,
       parsedProtein,
@@ -777,10 +779,17 @@ const CreateCustomFoodScreen = () => {
           <FoodScreenHeader
             eyebrow="Custom Meal"
             title={isEditing ? "Edit custom meal" : "Create custom meal"}
-            subtitle={isEditing ? "Library item" : foodLogContext.subtitle}
+            subtitle={foodLogContext.dateLabel}
             onBack={() => navigation.goBack()}
           />
-          {!isEditing ? <FoodLogContextBar context={foodLogContext} /> : null}
+          {!isEditing ? (
+            <MealBucketSelect
+              disabled={saving || deleting}
+              onChange={setSelectedMeal}
+              style={styles.mealBucketSelect}
+              value={selectedMeal}
+            />
+          ) : null}
 
           {loadingMeal ? (
             <View style={styles.card}>
@@ -905,40 +914,10 @@ const styles = StyleSheet.create({
     ...sharedStyleValues.content,
     paddingBottom: 36,
   },
-  heroCard: sharedStyleValues.card,
-  heroHeaderCopy: {
-    marginBottom: 10,
-  },
-  heroEyebrow: sharedStyleValues.eyebrow,
-  heroTitle: sharedStyleValues.heroTitleLarge,
-  heroMeta: sharedStyleValues.metaText,
-  pillRow: sharedStyleValues.pillRow,
-  pill: sharedStyleValues.pill,
-  pillText: sharedStyleValues.pillText,
-  previewStrip: {
-    borderRadius: 8,
-    backgroundColor: appColors.brand700,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-  },
-  previewValue: {
-    color: appColors.white,
-    fontSize: 20,
-    fontWeight: "600",
-    marginBottom: 2,
-  },
-  previewText: {
-    color: appColors.brand300,
-    fontSize: 12,
-    lineHeight: 16,
-    marginBottom: 2,
-  },
-  previewSubtext: {
-    color: appColors.brand300,
-    fontSize: 12,
-    lineHeight: 16,
-  },
   card: sharedStyleValues.card,
+  mealBucketSelect: {
+    marginBottom: 16,
+  },
   sectionTitle: sharedStyleValues.sectionTitle,
   sectionSubtitle: sharedStyleValues.sectionSubtitle,
   fieldLabel: sharedStyleValues.fieldLabel,
@@ -947,8 +926,8 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    borderRadius: 8,
+    borderColor: "transparent",
+    borderRadius: 10,
     backgroundColor: appColors.surfaceField,
     paddingHorizontal: 12,
     paddingVertical: 12,
@@ -977,9 +956,9 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: appColors.borderStrong,
+    borderColor: appColors.borderSoft,
     backgroundColor: appColors.surfaceField,
-    paddingHorizontal: 11,
+    paddingHorizontal: 12,
     paddingVertical: 8,
     marginTop: 10,
   },
@@ -989,7 +968,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   optionalPanel: {
-    borderRadius: 8,
+    borderRadius: 10,
     backgroundColor: appColors.surfaceField,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
@@ -1002,6 +981,7 @@ const styles = StyleSheet.create({
   },
   optionalInput: {
     backgroundColor: appColors.surfaceCard,
+    borderColor: appColors.borderSoft,
   },
   presetRow: {
     flexDirection: "row",
@@ -1011,13 +991,13 @@ const styles = StyleSheet.create({
   presetChip: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    backgroundColor: appColors.surfaceGhost,
-    paddingHorizontal: 13,
+    borderColor: appColors.borderSoft,
+    backgroundColor: appColors.surfaceField,
+    paddingHorizontal: 12,
     paddingVertical: 8,
   },
   presetChipText: {
-    color: appColors.brand500,
+    color: appColors.textSecondary,
     fontSize: 12,
     fontWeight: "600",
   },

@@ -131,15 +131,13 @@ const styles = StyleSheet.create({
     borderRadius: appRadius.md,
     borderWidth: appBorders.width,
     borderColor: appBorders.soft,
-    backgroundColor: appSurfaces.card,
+    backgroundColor: appSurfaces.soft,
     padding: appSpacing.xl,
   },
   errorBlock: {
-    borderColor: appColors.dangerBorder,
     backgroundColor: appColors.dangerSurface,
   },
   successBlock: {
-    borderColor: appColors.success500,
     backgroundColor: appColors.statusSuccessSoft,
   },
   iconWrap: {

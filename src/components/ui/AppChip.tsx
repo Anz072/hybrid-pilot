@@ -63,6 +63,7 @@ type SegmentedControlProps<T extends string> = {
   value: T;
 };
 
+/** Compact editorial tabs — an underline indicates the active segment, with no enclosing capsule. */
 export const SegmentedControl = <T extends string>({
   disabled,
   onChange,
@@ -84,18 +85,18 @@ export const SegmentedControl = <T extends string>({
             styles.segment,
             selected && styles.segmentSelected,
             Boolean(disabled) && styles.disabled,
-            pressed && !selected && !disabled && styles.pressed,
+            pressed && !disabled && styles.pressed,
           ]}
         >
           <AppText
-            color={selected ? appColors.white : appColors.textSecondary}
-            variant="label"
+            color={selected ? "primary" : "muted"}
+            variant={selected ? "bodySmallStrong" : "bodySmall"}
           >
             {option.label}
           </AppText>
           {option.hint ? (
             <AppText
-              color={selected ? appColors.white : appColors.textMuted}
+              color={selected ? appColors.textSecondary : appColors.textMuted}
               variant="micro"
             >
               {option.hint}
@@ -113,7 +114,7 @@ const styles = StyleSheet.create({
     borderRadius: appRadius.pill,
     borderWidth: appBorders.width,
     borderColor: appBorders.soft,
-    backgroundColor: appSurfaces.card,
+    backgroundColor: appSurfaces.soft,
     paddingHorizontal: appSpacing.sm,
     paddingVertical: appSpacing.xs,
     flexDirection: "row",
@@ -130,24 +131,22 @@ const styles = StyleSheet.create({
   },
   segmented: {
     flexDirection: "row",
-    gap: 6,
-    borderRadius: appRadius.pill,
-    borderWidth: appBorders.width,
-    borderColor: appBorders.soft,
-    backgroundColor: appSurfaces.soft,
-    padding: appSpacing.xxs,
+    gap: appSpacing.lg,
+    borderBottomWidth: appBorders.width,
+    borderBottomColor: appBorders.soft,
   },
   segment: {
-    flex: 1,
     minHeight: 38,
-    borderRadius: appRadius.pill,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: appSpacing.sm,
-    paddingVertical: appSpacing.xs,
+    paddingHorizontal: appSpacing.xxs,
+    paddingBottom: appSpacing.xs,
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+    marginBottom: -1,
   },
   segmentSelected: {
-    backgroundColor: appColors.actionPrimary,
+    borderBottomColor: appColors.textPrimary,
   },
   disabled: {
     opacity: appStates.disabledOpacity,

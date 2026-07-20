@@ -12,7 +12,6 @@ import type {
   RouteProp,
 } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { CalendarIcon, EyeIcon } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
@@ -198,7 +197,7 @@ const FoodReadOnlyScreen = () => {
         <FoodScreenHeader
           eyebrow="Ingredient"
           title="Ingredient details"
-          subtitle={`${formatFoodShortDate(date)} | ${resolvedContextLabel}`}
+          subtitle={formatFoodShortDate(date)}
           onBack={() => navigation.goBack()}
         />
 
@@ -207,27 +206,10 @@ const FoodReadOnlyScreen = () => {
             <Text style={styles.heroEyebrow}>Read Only</Text>
             <Text style={styles.heroTitle}>{food.name}</Text>
             <Text style={styles.heroMeta}>
-              {`${food.brand ? `${food.brand} | ` : ""}${formatFoodSourceLabel(
+              {`${food.brand ? `${food.brand} · ` : ""}${formatFoodSourceLabel(
                 food.source,
-              )} | Serving ${formatFoodItemServing(food)}`}
+              )} · Serving ${formatFoodItemServing(food)}`}
             </Text>
-          </View>
-
-          <View style={styles.heroPillsRow}>
-            <View style={styles.contextPill}>
-              <EyeIcon size={14} color={appColors.brand500} weight="bold" />
-              <Text style={styles.contextPillText}>Recipe ingredient</Text>
-            </View>
-            <View style={styles.contextPill}>
-              <CalendarIcon
-                size={14}
-                color={appColors.brand500}
-                weight="bold"
-              />
-              <Text style={styles.contextPillText}>
-                {formatFoodShortDate(date)}
-              </Text>
-            </View>
           </View>
 
           <View style={styles.previewStrip}>
@@ -236,10 +218,10 @@ const FoodReadOnlyScreen = () => {
             </Text>
             <Text style={styles.previewText}>
               {preview
-                ? `${formatFoodMacro(preview.proteinG, "P")} | ${formatFoodMacro(
+                ? `${formatFoodMacro(preview.proteinG, "P")} · ${formatFoodMacro(
                     preview.carbsG,
                     "C",
-                  )} | ${formatFoodMacro(preview.fatG, "F")}`
+                  )} · ${formatFoodMacro(preview.fatG, "F")}`
                 : "Nutrition preview unavailable for this amount"}
             </Text>
             <Text style={styles.previewSubtext}>
@@ -338,7 +320,6 @@ const styles = StyleSheet.create({
   },
   content: sharedStyleValues.content,
   centerCard: sharedStyleValues.centerCard,
-  centerText: sharedStyleValues.centerText,
   heroCard: sharedStyleValues.cardCompact,
   heroHeaderCopy: {
     marginBottom: 12,
@@ -346,44 +327,26 @@ const styles = StyleSheet.create({
   heroEyebrow: sharedStyleValues.eyebrow,
   heroTitle: sharedStyleValues.heroTitle,
   heroMeta: sharedStyleValues.metaText,
-  heroPillsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 12,
-  },
-  contextPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: appColors.surfaceGhost,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-  },
-  contextPillText: sharedStyleValues.contextPillText,
   previewStrip: {
-    borderRadius: 8,
-    backgroundColor: appColors.brand700,
+    borderRadius: 10,
+    backgroundColor: appColors.surfaceField,
     paddingHorizontal: 12,
-    paddingVertical: 11,
+    paddingVertical: 12,
   },
   previewValue: {
-    color: appColors.white,
+    color: appColors.textPrimary,
     fontSize: 22,
     fontWeight: "600",
     marginBottom: 2,
   },
   previewText: {
-    color: appColors.brand300,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 16,
     marginBottom: 2,
   },
   previewSubtext: {
-    color: appColors.brand300,
+    color: appColors.textSecondary,
     fontSize: 12,
     lineHeight: 16,
   },
@@ -395,12 +358,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     backgroundColor: appColors.surfaceField,
     borderWidth: 1,
-    borderColor: appColors.borderStrong,
+    borderColor: "transparent",
     paddingHorizontal: 12,
-    paddingVertical: 11,
+    paddingVertical: 12,
     marginBottom: 8,
   },
   readOnlyLabel: {

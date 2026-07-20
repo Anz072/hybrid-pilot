@@ -4,6 +4,14 @@ import {
 } from "../API/supabase/client";
 import { shouldUseExpoGoDevLocalStore } from "../dev/expoGoDevAuth";
 import {
+  measureDiaryRequest,
+  measureDiaryStep,
+  recordDiaryCachePath,
+  recordDiaryRows,
+  type DiaryPerfRequestSource,
+  type DiaryPerfTrace,
+} from "../performance/diaryPerformance";
+import {
   assertValidFoodLogQuantity,
   getFoodResolvedServing as getResolvedServing,
 } from "../engine/nutrition";
@@ -161,6 +169,11 @@ type SupabaseCustomRecipeRow = {
 
 type FoodLogEntriesReadOptions = {
   forceRefresh?: boolean;
+  perfTrace?: DiaryPerfTrace;
+};
+
+type FoodReadPerfOptions = {
+  perfTrace?: DiaryPerfTrace;
 };
 
 type SupabaseRecipeIngredientRow = {
@@ -701,16 +714,26 @@ const resolveSupabaseUserId = async (
   return authUser.id;
 };
 
-const fetchFoodItemsByIds = async (ids: number[]): Promise<DBFoodItem[]> => {
+const fetchFoodItemsByIds = async (
+  ids: number[],
+  perfTrace?: DiaryPerfTrace,
+  requestSource: DiaryPerfRequestSource = "supabase",
+): Promise<DBFoodItem[]> => {
   if (ids.length === 0) {
     return [];
   }
 
   const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from(SUPABASE_FOOD_ITEMS_TABLE)
-    .select("*")
-    .in("id", ids);
+  const { data, error } = await measureDiaryRequest(
+    perfTrace,
+    "food-items-by-ids",
+    requestSource,
+    async () =>
+      supabase
+        .from(SUPABASE_FOOD_ITEMS_TABLE)
+        .select("*")
+        .in("id", ids),
+  );
 
   if (error) {
     throw error;
@@ -1076,8 +1099,15 @@ const listOwnedLocalCustomMealFoods = async (
 const fetchSyntheticRecipeFoodById = async (
   recipeId: number,
   authUserId?: string,
+  perfTrace?: DiaryPerfTrace,
+  requestSource: DiaryPerfRequestSource = "supabase",
 ): Promise<DBFoodItem | null> => {
-  const recipeRow = await fetchCustomRecipeRowById(recipeId);
+  const recipeRow = await measureDiaryRequest(
+    perfTrace,
+    "recent-recipe",
+    requestSource,
+    () => fetchCustomRecipeRowById(recipeId),
+  );
 
   if (!recipeRow) {
     return null;
@@ -1094,11 +1124,20 @@ const fetchSyntheticRecipeFoodById = async (
     return null;
   }
 
-  const ingredientRows = await fetchRecipeIngredientsByRecipeId(recipeId);
+  const ingredientRows = await measureDiaryRequest(
+    perfTrace,
+    "recent-recipe-ingredients",
+    requestSource,
+    () => fetchRecipeIngredientsByRecipeId(recipeId),
+  );
   const ingredientFoodIds = ingredientRows.map((row) =>
     parseRequiredNumber(row.food_item_id),
   );
-  const foods = await fetchFoodItemsByIds(ingredientFoodIds);
+  const foods = await fetchFoodItemsByIds(
+    ingredientFoodIds,
+    perfTrace,
+    requestSource,
+  );
   const foodById = new Map(foods.map((food) => [food.id, food]));
   const servings = parseRequiredNumber(recipeRow.servings, 1);
   const nutrientTotals = {} as Partial<Record<keyof DBFoodNutrientDetails, number>>;
@@ -1147,8 +1186,15 @@ const fetchSyntheticRecipeFoodById = async (
 const fetchSyntheticMealFoodById = async (
   mealId: number,
   authUserId?: string,
+  perfTrace?: DiaryPerfTrace,
+  requestSource: DiaryPerfRequestSource = "supabase",
 ): Promise<DBFoodItem | null> => {
-  const mealRow = await fetchCustomMealRowById(mealId);
+  const mealRow = await measureDiaryRequest(
+    perfTrace,
+    "recent-meal",
+    requestSource,
+    () => fetchCustomMealRowById(mealId),
+  );
   if (
     !mealRow ||
     (authUserId &&
@@ -1595,16 +1641,24 @@ const fetchFoodLogEntryRowByIdSupabase = async (
 const getRecentSupabaseItems = async (
   userExternalId: string,
   limit: number,
+  perfTrace?: DiaryPerfTrace,
+  requestSource: DiaryPerfRequestSource = "supabase",
 ): Promise<DBFoodItem[]> => {
   const authUserId = userExternalId;
   const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from(SUPABASE_FOOD_ENTRIES_TABLE)
-    .select("*")
-    .eq("user_id", userExternalId)
-    .order("logged_at", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(Math.max(limit * 6, 40));
+  const { data, error } = await measureDiaryRequest(
+    perfTrace,
+    "recent-entry-list",
+    requestSource,
+    async () =>
+      supabase
+        .from(SUPABASE_FOOD_ENTRIES_TABLE)
+        .select("*")
+        .eq("user_id", userExternalId)
+        .order("logged_at", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(Math.max(limit * 6, 40)),
+  );
 
   if (error) {
     throw error;
@@ -1624,7 +1678,12 @@ const getRecentSupabaseItems = async (
         continue;
       }
 
-      const food = await fetchFoodItemByIdSupabase(foodId);
+      const food = await measureDiaryRequest(
+        perfTrace,
+        "recent-food-item",
+        requestSource,
+        () => fetchFoodItemByIdSupabase(foodId),
+      );
       if (food) {
         seen.add(dedupeKey);
         recentFoods.push(food);
@@ -1636,7 +1695,12 @@ const getRecentSupabaseItems = async (
         continue;
       }
 
-      const food = await fetchSyntheticRecipeFoodById(recipeId, authUserId);
+      const food = await fetchSyntheticRecipeFoodById(
+        recipeId,
+        authUserId,
+        perfTrace,
+        requestSource,
+      );
       if (food) {
         seen.add(dedupeKey);
         recentFoods.push(food);
@@ -1648,7 +1712,12 @@ const getRecentSupabaseItems = async (
         continue;
       }
 
-      const food = await fetchSyntheticMealFoodById(mealId, authUserId);
+      const food = await fetchSyntheticMealFoodById(
+        mealId,
+        authUserId,
+        perfTrace,
+        requestSource,
+      );
       if (food) {
         seen.add(dedupeKey);
         recentFoods.push(food);
@@ -1910,22 +1979,40 @@ export const setFoodItemFavorite = async (
 
 export const getFavoriteFoodIds = async (
   userExternalId: string,
+  perfTrace?: DiaryPerfTrace,
+  requestSource: DiaryPerfRequestSource = "supabase",
 ): Promise<number[]> => {
-  const authUserId = await resolveSupabaseUserId(userExternalId);
+  const authUserId = await measureDiaryStep(
+    perfTrace,
+    "favorites.resolve-session",
+    () => resolveSupabaseUserId(userExternalId),
+  );
 
   if (!authUserId) {
     return getFavoriteFoodIdsLocal(userExternalId);
   }
 
-  const cachedIds = await getFavoriteFoodIdsLocal(userExternalId);
+  const cachedIds = await measureDiaryRequest(
+    perfTrace,
+    "favorite-ids",
+    "sqlite",
+    () => getFavoriteFoodIdsLocal(userExternalId),
+  );
   if (cachedIds.length > 0) {
+    recordDiaryCachePath(perfTrace, "favorites", "sqlite-nonempty-hit");
     void (async () => {
       const supabase = getSupabaseClient();
-      const { data, error } = await supabase
-        .from(SUPABASE_FAVORITES_TABLE)
-        .select("food_item_id")
-        .eq("user_id", authUserId)
-        .order("created_at", { ascending: false });
+      const { data, error } = await measureDiaryRequest(
+        perfTrace,
+        "favorite-ids",
+        "background-supabase",
+        async () =>
+          supabase
+            .from(SUPABASE_FAVORITES_TABLE)
+            .select("food_item_id")
+            .eq("user_id", authUserId)
+            .order("created_at", { ascending: false }),
+      );
 
       if (error) {
         throw error;
@@ -1938,12 +2025,19 @@ export const getFavoriteFoodIds = async (
     return cachedIds;
   }
 
+  recordDiaryCachePath(perfTrace, "favorites", "empty-or-unknown");
   const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from(SUPABASE_FAVORITES_TABLE)
-    .select("food_item_id")
-    .eq("user_id", authUserId)
-    .order("created_at", { ascending: false });
+  const { data, error } = await measureDiaryRequest(
+    perfTrace,
+    "favorite-ids",
+    requestSource,
+    async () =>
+      supabase
+        .from(SUPABASE_FAVORITES_TABLE)
+        .select("food_item_id")
+        .eq("user_id", authUserId)
+        .order("created_at", { ascending: false }),
+  );
 
   if (error) {
     throw error;
@@ -1959,27 +2053,49 @@ export const getFavoriteFoodIds = async (
 export const getFavoriteFoodItems = async (
   userExternalId: string,
   limit = 30,
+  perfTrace?: DiaryPerfTrace,
 ): Promise<DBFoodItem[]> => {
-  const authUserId = await resolveSupabaseUserId(userExternalId);
+  const authUserId = await measureDiaryStep(
+    perfTrace,
+    "favorites.resolve-session",
+    () => resolveSupabaseUserId(userExternalId),
+  );
 
   if (!authUserId) {
     return getFavoriteFoodItemsLocal(userExternalId, limit);
   }
 
-  const cachedFoods = await getFavoriteFoodItemsLocal(userExternalId, limit);
+  const cachedFoods = await measureDiaryRequest(
+    perfTrace,
+    "favorite-foods",
+    "sqlite",
+    () => getFavoriteFoodItemsLocal(userExternalId, limit),
+  );
   if (cachedFoods.length > 0) {
+    recordDiaryCachePath(perfTrace, "favorite-foods", "sqlite-nonempty-hit");
+    recordDiaryRows(perfTrace, "favorite-foods", cachedFoods.length);
     void (async () => {
-      const ids = await getFavoriteFoodIds(userExternalId);
-      const foods = await fetchFoodItemsByIds(ids.slice(0, limit));
+      const ids = await getFavoriteFoodIds(
+        userExternalId,
+        perfTrace,
+        "background-supabase",
+      );
+      const foods = await fetchFoodItemsByIds(
+        ids.slice(0, limit),
+        perfTrace,
+        "background-supabase",
+      );
       await cacheFoodItems(foods);
     })().catch(() => undefined);
     return cachedFoods;
   }
 
-  const ids = await getFavoriteFoodIds(userExternalId);
+  recordDiaryCachePath(perfTrace, "favorite-foods", "empty-or-unknown");
+  const ids = await getFavoriteFoodIds(userExternalId, perfTrace);
   const limitedIds = ids.slice(0, limit);
-  const foods = await fetchFoodItemsByIds(limitedIds);
+  const foods = await fetchFoodItemsByIds(limitedIds, perfTrace);
   await cacheFoodItems(foods);
+  recordDiaryRows(perfTrace, "favorite-foods", foods.length);
   const byId = new Map(foods.map((food) => [food.id, food]));
 
   return limitedIds
@@ -2210,23 +2326,42 @@ export const searchFoodItems = async (
 export const getRecentFoodItems = async (
   userExternalId: string,
   limit = 20,
+  perfTrace?: DiaryPerfTrace,
 ): Promise<DBFoodItem[]> => {
-  const authUserId = await resolveSupabaseUserId(userExternalId);
+  const authUserId = await measureDiaryStep(
+    perfTrace,
+    "recents.resolve-session",
+    () => resolveSupabaseUserId(userExternalId),
+  );
 
   if (!authUserId) {
     return getRecentFoodItemsLocal(userExternalId, limit);
   }
 
-  const cachedRecent = await getRecentCachedFoodItems(userExternalId, limit);
+  const cachedRecent = await measureDiaryRequest(
+    perfTrace,
+    "recent-foods",
+    "sqlite",
+    () => getRecentCachedFoodItems(userExternalId, limit),
+  );
   if (cachedRecent.length > 0) {
-    void getRecentSupabaseItems(authUserId, limit)
+    recordDiaryCachePath(perfTrace, "recent-foods", "sqlite-nonempty-hit");
+    recordDiaryRows(perfTrace, "recent-foods", cachedRecent.length);
+    void getRecentSupabaseItems(
+      authUserId,
+      limit,
+      perfTrace,
+      "background-supabase",
+    )
       .then(cacheFoodItems)
       .catch(() => undefined);
     return cachedRecent;
   }
 
-  const recent = await getRecentSupabaseItems(authUserId, limit);
+  recordDiaryCachePath(perfTrace, "recent-foods", "empty-or-unknown");
+  const recent = await getRecentSupabaseItems(authUserId, limit, perfTrace);
   await cacheFoodItems(recent);
+  recordDiaryRows(perfTrace, "recent-foods", recent.length);
   return recent;
 };
 
@@ -3101,21 +3236,76 @@ export const getUserFoodLogEntriesBetween = async (
   endDate: string,
   options: FoodLogEntriesReadOptions = {},
 ): Promise<DBUserFoodLogEntry[]> => {
-  const authUserId = await resolveSupabaseUserId(userExternalId);
+  const perfTrace = options.perfTrace;
+  const authUserId = await measureDiaryStep(
+    perfTrace,
+    "week-entries.resolve-session",
+    () => resolveSupabaseUserId(userExternalId),
+  );
 
   if (!authUserId) {
     return getUserFoodLogEntriesBetweenLocal(userExternalId, startDate, endDate);
   }
 
-  const cached = await getCachedFoodLogEntriesBetween(
-    userExternalId,
-    startDate,
-    endDate,
+  const cached = await measureDiaryRequest(
+    perfTrace,
+    "week-entries",
+    "sqlite",
+    () =>
+      getCachedFoodLogEntriesBetween(
+        userExternalId,
+        startDate,
+        endDate,
+      ),
   );
   if (!options.forceRefresh && cached.length > 0) {
+    recordDiaryCachePath(perfTrace, "week-entries", "sqlite-nonempty-hit");
+    recordDiaryRows(perfTrace, "week-entries", cached.length);
     void (async () => {
       const supabase = getSupabaseClient();
-      const { data, error } = await supabase
+      const { data, error } = await measureDiaryRequest(
+        perfTrace,
+        "week-entries",
+        "background-supabase",
+        async () =>
+          supabase
+            .from(SUPABASE_FOOD_ENTRIES_TABLE)
+            .select("*")
+            .eq("user_id", authUserId)
+            .gte("date", startDate)
+            .lte("date", endDate)
+            .order("date", { ascending: true })
+            .order("logged_at", { ascending: true })
+            .order("created_at", { ascending: true }),
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      await measureDiaryStep(
+        perfTrace,
+        "week-entries.background-cache-write",
+        () =>
+          replaceCachedFoodLogEntriesBetween(
+            userExternalId,
+            startDate,
+            endDate,
+            ((data as SupabaseUserFoodEntryRow[]) ?? []).map(toDbFoodLogEntry),
+          ),
+      );
+    })().catch(() => undefined);
+    return cached;
+  }
+
+  recordDiaryCachePath(perfTrace, "week-entries", "empty-or-unknown");
+  const supabase = getSupabaseClient();
+  const { data, error } = await measureDiaryRequest(
+    perfTrace,
+    "week-entries",
+    "supabase",
+    async () =>
+      supabase
         .from(SUPABASE_FOOD_ENTRIES_TABLE)
         .select("*")
         .eq("user_id", authUserId)
@@ -3123,32 +3313,8 @@ export const getUserFoodLogEntriesBetween = async (
         .lte("date", endDate)
         .order("date", { ascending: true })
         .order("logged_at", { ascending: true })
-        .order("created_at", { ascending: true });
-
-      if (error) {
-        throw error;
-      }
-
-      await replaceCachedFoodLogEntriesBetween(
-        userExternalId,
-        startDate,
-        endDate,
-        ((data as SupabaseUserFoodEntryRow[]) ?? []).map(toDbFoodLogEntry),
-      );
-    })().catch(() => undefined);
-    return cached;
-  }
-
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from(SUPABASE_FOOD_ENTRIES_TABLE)
-    .select("*")
-    .eq("user_id", authUserId)
-    .gte("date", startDate)
-    .lte("date", endDate)
-    .order("date", { ascending: true })
-    .order("logged_at", { ascending: true })
-    .order("created_at", { ascending: true });
+        .order("created_at", { ascending: true }),
+  );
 
   if (error) {
     throw error;
@@ -3157,11 +3323,17 @@ export const getUserFoodLogEntriesBetween = async (
   const entries = ((data as SupabaseUserFoodEntryRow[]) ?? []).map(
     toDbFoodLogEntry,
   );
-  await replaceCachedFoodLogEntriesBetween(
-    userExternalId,
-    startDate,
-    endDate,
-    entries,
+  recordDiaryRows(perfTrace, "week-entries", entries.length);
+  await measureDiaryStep(
+    perfTrace,
+    "week-entries.cache-write",
+    () =>
+      replaceCachedFoodLogEntriesBetween(
+        userExternalId,
+        startDate,
+        endDate,
+        entries,
+      ),
   );
   return entries;
 };
@@ -3209,11 +3381,16 @@ export const listDiaryDayStatusesBetween = async (
   userExternalId: string,
   startDate: string,
   endDate: string,
+  perfTrace?: DiaryPerfTrace,
 ): Promise<DBDiaryDayStatus[]> => {
   let authUserId: string | null;
 
   try {
-    authUserId = await resolveSupabaseUserId(userExternalId);
+    authUserId = await measureDiaryStep(
+      perfTrace,
+      "week-statuses.resolve-session",
+      () => resolveSupabaseUserId(userExternalId),
+    );
   } catch {
     return [];
   }
@@ -3221,13 +3398,26 @@ export const listDiaryDayStatusesBetween = async (
     return listCachedDiaryDayStatusesBetween(userExternalId, startDate, endDate);
   }
 
-  const cached = await listCachedDiaryDayStatusesBetween(
-    userExternalId,
-    startDate,
-    endDate,
+  const cached = await measureDiaryRequest(
+    perfTrace,
+    "week-statuses",
+    "sqlite",
+    () =>
+      listCachedDiaryDayStatusesBetween(
+        userExternalId,
+        startDate,
+        endDate,
+      ),
   );
   if (cached.length > 0) {
-    void listDiaryDayRowsBetween(authUserId, startDate, endDate)
+    recordDiaryCachePath(perfTrace, "week-statuses", "sqlite-nonempty-hit");
+    recordDiaryRows(perfTrace, "week-statuses", cached.length);
+    void measureDiaryRequest(
+      perfTrace,
+      "week-statuses",
+      "background-supabase",
+      () => listDiaryDayRowsBetween(authUserId, startDate, endDate),
+    )
       .then((rows) =>
         upsertCachedDiaryDayStatuses(
           userExternalId,
@@ -3238,9 +3428,18 @@ export const listDiaryDayStatusesBetween = async (
     return cached;
   }
 
-  const rows = await listDiaryDayRowsBetween(authUserId, startDate, endDate);
+  recordDiaryCachePath(perfTrace, "week-statuses", "empty-or-unknown");
+  const rows = await measureDiaryRequest(
+    perfTrace,
+    "week-statuses",
+    "supabase",
+    () => listDiaryDayRowsBetween(authUserId, startDate, endDate),
+  );
   const statuses = rows.map(toDbDiaryDayStatus);
-  await upsertCachedDiaryDayStatuses(userExternalId, statuses);
+  recordDiaryRows(perfTrace, "week-statuses", statuses.length);
+  await measureDiaryStep(perfTrace, "week-statuses.cache-write", () =>
+    upsertCachedDiaryDayStatuses(userExternalId, statuses),
+  );
   return statuses;
 };
 

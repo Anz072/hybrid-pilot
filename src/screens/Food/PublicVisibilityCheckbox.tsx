@@ -42,11 +42,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
     backgroundColor: appColors.surfaceField,
-    padding: 14,
+    padding: 16,
   },
   cardChecked: {
     borderColor: appColors.brand500,
@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
   checkbox: {
     width: 22,
     height: 22,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1.5,
     borderColor: appColors.borderStrong,
     backgroundColor: appColors.surfaceCardAlt,
@@ -81,11 +81,6 @@ const styles = StyleSheet.create({
   },
   titleChecked:{
     color: appColors.slate100
-  },
-  description: {
-    color: appColors.textSecondary,
-    fontSize: 12,
-    lineHeight: 18,
   },
 });
 

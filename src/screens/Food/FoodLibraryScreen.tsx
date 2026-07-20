@@ -202,12 +202,12 @@ const FoodLibraryScreen = () => {
                   >
                     <View style={styles.rowMain}>
                       <Text style={styles.rowTitle}>
-                        {item.id} | {item.name}
+                        {item.id} · {item.name}
                       </Text>
                       <Text style={styles.rowSubtitle}>
                         {item.source}
-                        {item.brand ? ` | ${item.brand}` : ""}
-                        {item.barcode ? ` | ${item.barcode}` : ""}
+                        {item.brand ? ` · ${item.brand}` : ""}
+                        {item.barcode ? ` · ${item.barcode}` : ""}
                       </Text>
                     </View>
                     <Text style={styles.rowChevron}>{isSelected ? "Hide" : "View"}</Text>
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.white,
     borderWidth: 1,
     borderColor: appColors.slate300,
-    borderRadius: 8,
+    borderRadius: 10,
     padding: 12,
     marginBottom: 12,
   },
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
   searchInput: {
     borderWidth: 1,
     borderColor: appColors.slate300,
-    borderRadius: 8,
+    borderRadius: 10,
     backgroundColor: appColors.white,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     gap: 12,
     borderWidth: 1,
     borderColor: appColors.slate200,
-    borderRadius: 8,
+    borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     backgroundColor: appColors.white,
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
   deleteButton: {
     borderWidth: 1,
     borderColor: appColors.danger600,
-    borderRadius: 8,
+    borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
     backgroundColor: appColors.dangerSurface,

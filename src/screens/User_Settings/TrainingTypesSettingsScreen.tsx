@@ -5,7 +5,6 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { BarbellIcon } from "phosphor-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { TrainingType } from "../../navigation/onboardingTypes";
@@ -95,22 +94,20 @@ const TrainingTypesSettingsScreen = ({ navigation }: Props) => {
           <>
             <AppCard style={styles.card}>
               <View style={styles.summaryRow}>
-                <View>
+                <View style={styles.summaryCopy}>
                   <AppText variant="cardTitle">Current profile</AppText>
                   <AppText color="secondary" variant="bodySmall">
                     {formatTrainingSummary(user.trainingTypes)}
                   </AppText>
                 </View>
-                <View style={styles.metricPill}>
-                  <BarbellIcon
-                    size={16}
-                    color={appColors.brand700}
-                    weight="fill"
-                  />
-                  <NumericText color="coral" variant="numberTrendDelta">
-                    {selectedTraining.length} selected
-                  </NumericText>
-                </View>
+                <NumericText
+                  align="right"
+                  numberOfLines={2}
+                  style={styles.metricValue}
+                  variant="numberTrendDelta"
+                >
+                  {selectedTraining.length} selected
+                </NumericText>
               </View>
 
               <View style={styles.optionStack}>
@@ -161,14 +158,13 @@ const styles = StyleSheet.create({
     gap: appSpacing.sm,
     marginBottom: appSpacing.md,
   },
-  metricPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: appSpacing.xxs,
-    borderRadius: 999,
-    backgroundColor: appColors.actionPrimarySoft,
-    paddingHorizontal: appSpacing.sm,
-    paddingVertical: appSpacing.xs,
+  summaryCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  metricValue: {
+    flexShrink: 1,
+    maxWidth: "42%",
   },
   optionStack: {
     gap: appSpacing.xs,

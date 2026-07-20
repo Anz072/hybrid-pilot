@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     borderRadius: appRadius.md,
     paddingHorizontal: appSpacing.md,
-    paddingVertical: 13,
+    paddingVertical: appSpacing.sm,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
@@ -121,12 +121,12 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.actionPrimary,
   },
   secondaryButton: {
-    backgroundColor: appSurfaces.card,
+    backgroundColor: appSurfaces.soft,
     borderWidth: appBorders.width,
     borderColor: appBorders.soft,
   },
   ghostButton: {
-    backgroundColor: appSurfaces.ghost,
+    backgroundColor: "transparent",
   },
   dangerButton: {
     backgroundColor: appColors.dangerSurface,
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     borderRadius: appRadius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appSurfaces.ghost,
+    backgroundColor: appSurfaces.soft,
     borderWidth: appBorders.width,
     borderColor: appBorders.soft,
   },

@@ -19,10 +19,11 @@ import { DB } from "../../store/DB";
 import type {
   DBFoodItem,
   DBAdaptiveCalorieRecommendation,
-  DBUser,
+  DBDiaryDayStatus,
   DBUserSettings,
   DBUserFoodLogEntry,
 } from "../../store/DB_TYPES";
+import { useAppSelector } from "../../store/hooks";
 import {
   getFoodLogEntriesToCopy,
   getFoodLogCopyPreview,
@@ -75,6 +76,18 @@ import {
   markAdaptiveRecommendationSeen,
 } from "../../storage/localStore";
 import { prefetchAddFoodStaticLists } from "./addFoodStaticListsCache";
+import { useFoodDiaryDateContext } from "./foodDiaryDateContext";
+import {
+  finishDiaryTrace,
+  markDiaryUseful,
+  measureDiaryRequest,
+  measureDiaryStep,
+  recordDiaryCachePath,
+  recordDiaryRender,
+  startDiaryTrace,
+  type DiaryPerfReason,
+  type DiaryPerfTrace,
+} from "../../performance/diaryPerformance";
 
 type FoodDiaryNav = NativeStackNavigationProp<FoodStackParamList, "Diary">;
 
@@ -144,16 +157,29 @@ const shouldShowAdaptiveRecommendationBanner = (
   return recommendation.id === lastSeenRecommendationId ? null : recommendation;
 };
 
+const getDiaryWeekStartKey = (date: Date) =>
+  formatFoodDateKey(buildFoodDiaryWeekDays(date)[0] ?? date);
+
 const FoodDiaryScreen = () => {
   const navigation = useNavigation<FoodDiaryNav>();
   const insets = useSafeAreaInsets();
+  const foodDiaryDateContext = useFoodDiaryDateContext();
+  const setSharedSelectedDateKey = foodDiaryDateContext?.setSelectedDateKey;
+  const setSharedSelectedMeal = foodDiaryDateContext?.setSelectedMeal;
+  const user = useAppSelector((state) => state.user.currentUser);
 
-  const [selectedDate, setSelectedDate] = useState(() => new Date());
-  const [user, setUser] = useState<DBUser | null>(null);
+  const [selectedDate, setSelectedDate] = useState(() =>
+    foodDiaryDateContext
+      ? parseFoodDateKey(foodDiaryDateContext.selectedDateKey)
+      : new Date(),
+  );
+  // Keep the displayed date stable across week boundaries until that week's
+  // entries and statuses are ready; same-week requests commit immediately.
+  const [requestedDate, setRequestedDate] = useState(selectedDate);
   const [weekEntries, setWeekEntries] = useState<DBUserFoodLogEntry[]>([]);
   const [mainStripDays, setMainStripDays] = useState<FoodDiaryMainStripDay[]>(
     () =>
-      buildFoodDiaryWeekDays(new Date()).map((date) => ({
+      buildFoodDiaryWeekDays(selectedDate).map((date) => ({
         date,
         dateKey: formatFoodDateKey(date),
         calories: 0,
@@ -180,11 +206,23 @@ const FoodDiaryScreen = () => {
   const [adaptiveRecommendation, setAdaptiveRecommendation] =
     useState<DBAdaptiveCalorieRecommendation | null>(null);
   const [selectedMeal, setSelectedMeal] = useState<MealSlot>(() =>
-    getDefaultMealSlotForNow(),
+    foodDiaryDateContext?.selectedMeal ?? getDefaultMealSlotForNow(),
   );
   const snackbarTranslateX = React.useRef(new Animated.Value(0)).current;
   const diaryLoadRequestRef = useRef(0);
+  const activeDiaryLoadWeekRef = useRef<string | null>(null);
   const hasLoadedDiaryRef = useRef(false);
+  const weekLoadInFlightRef = useRef(
+    new Map<
+      string,
+      Promise<[DBUserFoodLogEntry[], DBDiaryDayStatus[]]>
+    >(),
+  );
+  const adaptiveRefreshInFlightRef = useRef<Promise<void> | null>(null);
+  const adaptiveRefreshGenerationRef = useRef(0);
+  const activeDiaryTraceRef = useRef<DiaryPerfTrace | null>(null);
+  const readyDiaryTraceIdRef = useRef<string | null>(null);
+  const visitedDiaryDatesRef = useRef(new Set<string>());
   const todayDateKeyRef = useRef(formatFoodDateKey(new Date()));
   // Synchronous re-entrancy lock: a double-tap on a quick-log chip must not
   // create two diary entries while the first write is in flight.
@@ -194,9 +232,23 @@ const FoodDiaryScreen = () => {
     () => formatFoodDateKey(selectedDate),
     [selectedDate],
   );
+  const selectedDateKeyRef = useRef(dateKey);
+  selectedDateKeyRef.current = dateKey;
+  const requestedDateKey = useMemo(
+    () => formatFoodDateKey(requestedDate),
+    [requestedDate],
+  );
+  const requestedDateKeyRef = useRef(requestedDateKey);
+  requestedDateKeyRef.current = requestedDateKey;
+  React.useEffect(() => {
+    setSharedSelectedDateKey?.(dateKey);
+  }, [dateKey, setSharedSelectedDateKey]);
+  React.useEffect(() => {
+    setSharedSelectedMeal?.(selectedMeal);
+  }, [selectedMeal, setSharedSelectedMeal]);
   const selectedWeekStart = useMemo(
-    () => buildFoodDiaryWeekDays(selectedDate)[0] ?? selectedDate,
-    [selectedDate],
+    () => buildFoodDiaryWeekDays(requestedDate)[0] ?? requestedDate,
+    [requestedDate],
   );
   const weekStart = useMemo(
     () => formatFoodDateKey(selectedWeekStart),
@@ -212,12 +264,185 @@ const FoodDiaryScreen = () => {
   );
   const weekEnd = weekDateKeys[weekDateKeys.length - 1] ?? dateKey;
 
+  const beginDiaryTrace = useCallback(
+    (reason: DiaryPerfReason, fromDate: string, toDate: string) => {
+      finishDiaryTrace(activeDiaryTraceRef.current, "obsolete");
+      const trace = startDiaryTrace({
+        reason,
+        fromDate,
+        toDate,
+        visit: visitedDiaryDatesRef.current.has(toDate) ? "repeat" : "first",
+      });
+      activeDiaryTraceRef.current = trace;
+      readyDiaryTraceIdRef.current = null;
+      return trace;
+    },
+    [],
+  );
+
+  const completeDiaryTraceAfterFrame = useCallback(
+    (trace: DiaryPerfTrace, afterUsefulContent?: () => void) => {
+      requestAnimationFrame(() => {
+        if (
+          activeDiaryTraceRef.current?.id !== trace.id ||
+          readyDiaryTraceIdRef.current !== trace.id
+        ) {
+          return;
+        }
+
+        markDiaryUseful(trace);
+        visitedDiaryDatesRef.current.add(trace.toDate);
+        finishDiaryTrace(trace, "success");
+        activeDiaryTraceRef.current = null;
+        readyDiaryTraceIdRef.current = null;
+        afterUsefulContent?.();
+      });
+    },
+    [],
+  );
+
+  const loadWeekData = useCallback(
+    (
+      userExternalId: string,
+      startDate: string,
+      endDate: string,
+      trace: DiaryPerfTrace,
+    ) => {
+      const key = `${userExternalId}:${startDate}:${endDate}`;
+      const existing = weekLoadInFlightRef.current.get(key);
+      if (existing) {
+        recordDiaryCachePath(trace, "week-load", "in-flight-coalesced");
+        return measureDiaryStep(trace, "week-load.coalesced", () => existing);
+      }
+
+      const request = Promise.all([
+        measureDiaryRequest(trace, "week-entries", "logical", () =>
+          DB.getUserFoodLogEntriesBetween(
+            userExternalId,
+            startDate,
+            endDate,
+            { perfTrace: trace },
+          ),
+        ),
+        measureDiaryRequest(trace, "week-statuses", "logical", () =>
+          DB.listDiaryDayStatusesBetween(
+            userExternalId,
+            startDate,
+            endDate,
+            trace,
+          ),
+        ),
+      ]);
+      const trackedRequest = request.finally(() => {
+        if (weekLoadInFlightRef.current.get(key) === trackedRequest) {
+          weekLoadInFlightRef.current.delete(key);
+        }
+      });
+      weekLoadInFlightRef.current.set(key, trackedRequest);
+      return trackedRequest;
+    },
+    [],
+  );
+
+  const refreshAdaptiveInBackground = useCallback(
+    (userExternalId: string, nextSettings: DBUserSettings | null) => {
+      if (!nextSettings?.adaptiveCaloriesEnabled) {
+        adaptiveRefreshGenerationRef.current += 1;
+        setAdaptiveRecommendation(null);
+        return;
+      }
+
+      if (adaptiveRefreshInFlightRef.current) {
+        return;
+      }
+
+      const generation = adaptiveRefreshGenerationRef.current + 1;
+      adaptiveRefreshGenerationRef.current = generation;
+      const refresh = (async () => {
+        try {
+          const [lastSeenRecommendationId, refreshResult] = await Promise.all([
+            getLastSeenAdaptiveRecommendationId(userExternalId),
+            refreshAdaptiveRecommendationForUser({ userExternalId }),
+          ]);
+          if (adaptiveRefreshGenerationRef.current !== generation) {
+            return;
+          }
+          setAdaptiveRecommendation(
+            shouldShowAdaptiveRecommendationBanner(
+              refreshResult.latestRecommendation,
+              lastSeenRecommendationId,
+            ),
+          );
+          if (refreshResult.settings) {
+            setSettings(refreshResult.settings);
+          }
+        } catch {
+          const [lastSeenRecommendationId, latestOpenRecommendation] =
+            await Promise.all([
+              getLastSeenAdaptiveRecommendationId(userExternalId),
+              DB.getLatestAdaptiveCalorieRecommendation(
+                userExternalId,
+                "proposed",
+              ),
+            ]);
+          if (adaptiveRefreshGenerationRef.current !== generation) {
+            return;
+          }
+          setAdaptiveRecommendation(
+            shouldShowAdaptiveRecommendationBanner(
+              latestOpenRecommendation,
+              lastSeenRecommendationId,
+            ),
+          );
+        }
+      })()
+        .catch(() => undefined)
+        .finally(() => {
+          adaptiveRefreshInFlightRef.current = null;
+        });
+
+      adaptiveRefreshInFlightRef.current = refresh;
+    },
+    [],
+  );
+
+  React.useEffect(
+    () => () => {
+      diaryLoadRequestRef.current += 1;
+      activeDiaryLoadWeekRef.current = null;
+      adaptiveRefreshGenerationRef.current += 1;
+      finishDiaryTrace(activeDiaryTraceRef.current, "obsolete");
+      activeDiaryTraceRef.current = null;
+      readyDiaryTraceIdRef.current = null;
+    },
+    [],
+  );
+
   const loadData = useCallback(
-    async (options?: { showBlockingState?: boolean }) => {
+    async (options?: {
+      showBlockingState?: boolean;
+      reason?: DiaryPerfReason;
+    }) => {
       const showBlockingState = options?.showBlockingState ?? true;
       const requestId = diaryLoadRequestRef.current + 1;
       diaryLoadRequestRef.current = requestId;
+      activeDiaryLoadWeekRef.current = weekStart;
       const isCurrentRequest = () => requestId === diaryLoadRequestRef.current;
+      const targetDateKey = requestedDateKeyRef.current;
+      const existingTrace = activeDiaryTraceRef.current;
+      const trace =
+        existingTrace &&
+        !existingTrace.finished &&
+        existingTrace.toDate === targetDateKey
+          ? existingTrace
+          : beginDiaryTrace(
+              options?.reason ??
+                (hasLoadedDiaryRef.current
+                  ? "post-mutation"
+                  : "initial-focus"),
+              selectedDateKeyRef.current,
+              targetDateKey,
+            );
 
       if (showBlockingState) {
         if (hasLoadedDiaryRef.current) {
@@ -229,11 +454,7 @@ const FoodDiaryScreen = () => {
       setDiaryLoadError(null);
 
       try {
-        const currentUser = await DB.getUser();
-        if (!isCurrentRequest()) {
-          return;
-        }
-        setUser(currentUser);
+        const currentUser = user;
 
         if (!currentUser) {
           setWeekEntries([]);
@@ -247,7 +468,19 @@ const FoodDiaryScreen = () => {
           })));
           setFavoriteFoods([]);
           setRecentFoods([]);
+          const latestRequestedDateKey = requestedDateKeyRef.current;
+          setSelectedDate(
+            parseFoodDateKey(
+              weekDateKeys.includes(latestRequestedDateKey)
+                ? latestRequestedDateKey
+                : targetDateKey,
+            ),
+          );
           hasLoadedDiaryRef.current = true;
+          if (activeDiaryTraceRef.current?.id === trace.id && !trace.finished) {
+            readyDiaryTraceIdRef.current = trace.id;
+            completeDiaryTraceAfterFrame(trace);
+          }
           return;
         }
 
@@ -255,41 +488,63 @@ const FoodDiaryScreen = () => {
           favorites,
           recents,
           nextSettings,
-          weekEntries,
-          weekDayStatuses,
-          lastSeenRecommendationId,
+          [loadedWeekEntries, weekDayStatuses],
         ] =
           await Promise.all([
-            DB.getFavoriteFoodItems(currentUser.externalId, 10),
-            DB.getRecentFoodItems(currentUser.externalId, 12),
-            DB.getUserSettings(currentUser.externalId),
-            DB.getUserFoodLogEntriesBetween(currentUser.externalId, weekStart, weekEnd),
-            DB.listDiaryDayStatusesBetween(currentUser.externalId, weekStart, weekEnd),
-            getLastSeenAdaptiveRecommendationId(currentUser.externalId),
+            measureDiaryRequest(trace, "favorites", "logical", () =>
+              DB.getFavoriteFoodItems(currentUser.externalId, 10, trace),
+            ),
+            measureDiaryRequest(trace, "recents", "logical", () =>
+              DB.getRecentFoodItems(currentUser.externalId, 12, trace),
+            ),
+            measureDiaryRequest(trace, "settings", "logical", () =>
+              DB.getUserSettings(currentUser.externalId, trace),
+            ),
+            loadWeekData(
+              currentUser.externalId,
+              weekStart,
+              weekEnd,
+              trace,
+            ),
           ]);
 
         if (!isCurrentRequest()) {
           return;
         }
 
-        const weekEntriesByDate = weekDateKeys.map((weekDateKey) =>
-          weekEntries.filter((entry) => entry.date === weekDateKey),
+        const weekEntriesByDate = await measureDiaryStep(
+          trace,
+          "transform.group-week-entries",
+          () =>
+            weekDateKeys.map((weekDateKey) =>
+              loadedWeekEntries.filter((entry) => entry.date === weekDateKey),
+            ),
         );
 
-        setWeekEntries(weekEntries);
-        setSettings(nextSettings);
-        setMainStripDays(
-          weekDays.map((date, index) => ({
-            date,
-            dateKey: weekDateKeys[index],
-            calories: sumLoggedNutrition(weekEntriesByDate[index] ?? []).calories,
-          })),
-        );
-        setDayCompletionByDate(
-          Object.fromEntries(
-            weekDayStatuses.map((status) => [status.date, status.isComplete]),
-          ) as Record<string, boolean>,
-        );
+        await measureDiaryStep(trace, "transform-and-state-commit", () => {
+          setWeekEntries(loadedWeekEntries);
+          setSettings(nextSettings);
+          setMainStripDays(
+            weekDays.map((date, index) => ({
+              date,
+              dateKey: weekDateKeys[index],
+              calories: sumLoggedNutrition(weekEntriesByDate[index] ?? []).calories,
+            })),
+          );
+          setDayCompletionByDate(
+            Object.fromEntries(
+              weekDayStatuses.map((status) => [status.date, status.isComplete]),
+            ) as Record<string, boolean>,
+          );
+          const latestRequestedDateKey = requestedDateKeyRef.current;
+          setSelectedDate(
+            parseFoodDateKey(
+              weekDateKeys.includes(latestRequestedDateKey)
+                ? latestRequestedDateKey
+                : targetDateKey,
+            ),
+          );
+        });
 
         const toQuickPick = (food: (typeof favorites)[number]): FoodDiaryFavoriteFood => {
           const serving = getFoodResolvedServing(food);
@@ -304,67 +559,103 @@ const FoodDiaryScreen = () => {
           };
         };
 
-        const mappedFavorites = favorites.map(toQuickPick);
-        const favoriteIds = new Set(mappedFavorites.map((food) => food.id));
+        await measureDiaryStep(trace, "transform.quick-picks", () => {
+          const mappedFavorites = favorites.map(toQuickPick);
+          const favoriteIds = new Set(mappedFavorites.map((food) => food.id));
 
-        setFavoriteFoods(mappedFavorites);
-        setRecentFoods(
-          recents
-            .filter((food) => !favoriteIds.has(food.id))
-            .map(toQuickPick)
-            .slice(0, 8),
-        );
-
-        if (nextSettings?.adaptiveCaloriesEnabled) {
-          try {
-            const refreshResult = await refreshAdaptiveRecommendationForUser({
-              userExternalId: currentUser.externalId,
-            });
-            if (!isCurrentRequest()) {
-              return;
-            }
-            setAdaptiveRecommendation(
-              shouldShowAdaptiveRecommendationBanner(
-                refreshResult.latestRecommendation,
-                lastSeenRecommendationId,
-              ),
-            );
-            if (refreshResult.settings) {
-              setSettings(refreshResult.settings);
-            }
-          } catch {
-            const latestOpenRecommendation =
-              await DB.getLatestAdaptiveCalorieRecommendation(
-                currentUser.externalId,
-                "proposed",
-              );
-            if (!isCurrentRequest()) {
-              return;
-            }
-            setAdaptiveRecommendation(
-              shouldShowAdaptiveRecommendationBanner(
-                latestOpenRecommendation,
-                lastSeenRecommendationId,
-              ),
-            );
-          }
-        } else {
-          setAdaptiveRecommendation(null);
-        }
+          setFavoriteFoods(mappedFavorites);
+          setRecentFoods(
+            recents
+              .filter((food) => !favoriteIds.has(food.id))
+              .map(toQuickPick)
+              .slice(0, 8),
+          );
+        });
 
         hasLoadedDiaryRef.current = true;
+        if (activeDiaryTraceRef.current?.id === trace.id && !trace.finished) {
+          readyDiaryTraceIdRef.current = trace.id;
+          completeDiaryTraceAfterFrame(
+            trace,
+            () =>
+              refreshAdaptiveInBackground(
+                currentUser.externalId,
+                nextSettings,
+              ),
+          );
+        } else {
+          refreshAdaptiveInBackground(currentUser.externalId, nextSettings);
+        }
       } catch {
         if (isCurrentRequest()) {
           setDiaryLoadError("Could not load the diary. Check your connection and try again.");
+          finishDiaryTrace(trace, "failed");
+          if (activeDiaryTraceRef.current?.id === trace.id) {
+            activeDiaryTraceRef.current = null;
+            readyDiaryTraceIdRef.current = null;
+          }
         }
       } finally {
         if (isCurrentRequest()) {
+          activeDiaryLoadWeekRef.current = null;
           setIsInitialDiaryLoading(false);
           setIsDiaryRefreshing(false);
         }
       }
     },
-    [weekDateKeys, weekDays, weekEnd, weekStart],
+    [
+      beginDiaryTrace,
+      completeDiaryTraceAfterFrame,
+      loadWeekData,
+      refreshAdaptiveInBackground,
+      user,
+      weekDateKeys,
+      weekDays,
+      weekEnd,
+      weekStart,
+    ],
+  );
+
+  const requestDiaryDate = useCallback(
+    (nextDate: Date, reason: "date-select" | "week-change") => {
+      const fromDateKey = selectedDateKeyRef.current;
+      const nextDateKey = formatFoodDateKey(nextDate);
+      if (
+        nextDateKey === fromDateKey &&
+        nextDateKey === requestedDateKeyRef.current
+      ) {
+        return;
+      }
+
+      const staysInDisplayedWeek =
+        getDiaryWeekStartKey(nextDate) ===
+        getDiaryWeekStartKey(parseFoodDateKey(fromDateKey));
+      if (staysInDisplayedWeek && !hasLoadedDiaryRef.current) {
+        setRequestedDate(nextDate);
+        setSelectedDate(nextDate);
+        return;
+      }
+
+      const trace = beginDiaryTrace(reason, fromDateKey, nextDateKey);
+      const activeLoadWeek = activeDiaryLoadWeekRef.current;
+      if (
+        hasLoadedDiaryRef.current &&
+        activeLoadWeek != null &&
+        activeLoadWeek !== getDiaryWeekStartKey(nextDate)
+      ) {
+        diaryLoadRequestRef.current += 1;
+        activeDiaryLoadWeekRef.current = null;
+        setIsDiaryRefreshing(false);
+      }
+      setRequestedDate(nextDate);
+
+      if (staysInDisplayedWeek && hasLoadedDiaryRef.current) {
+        setSelectedDate(nextDate);
+        readyDiaryTraceIdRef.current = trace.id;
+        completeDiaryTraceAfterFrame(trace);
+      }
+    },
+    [beginDiaryTrace, completeDiaryTraceAfterFrame],
   );
 
   const rollSelectedTodayForward = useCallback(() => {
@@ -374,21 +665,24 @@ const FoodDiaryScreen = () => {
     todayDateKeyRef.current = nextTodayDateKey;
 
     if (
-      dateKey === previousTodayDateKey &&
+      selectedDateKeyRef.current === previousTodayDateKey &&
       nextTodayDateKey !== previousTodayDateKey
     ) {
-      setSelectedDate(now);
+      requestDiaryDate(now, "date-select");
       setSelectedMeal(getDefaultMealSlotForNow());
       return true;
     }
 
     return false;
-  }, [dateKey]);
+  }, [requestDiaryDate]);
 
   useFocusEffect(
     useCallback(() => {
       if (!rollSelectedTodayForward()) {
-        void loadData({ showBlockingState: true });
+        void loadData({
+          showBlockingState: true,
+          reason: hasLoadedDiaryRef.current ? "focus" : "initial-focus",
+        });
       }
     }, [loadData, rollSelectedTodayForward]),
   );
@@ -400,7 +694,7 @@ const FoodDiaryScreen = () => {
       }
 
       if (!rollSelectedTodayForward()) {
-        void loadData({ showBlockingState: false });
+        void loadData({ showBlockingState: false, reason: "resume" });
       }
     });
 
@@ -510,9 +804,39 @@ const FoodDiaryScreen = () => {
       }),
     [mainStripDays, settings, user?.calorieAllowance],
   );
-  const isDiaryLoading = isInitialDiaryLoading || isDiaryRefreshing;
+  const isDiaryLoading = isInitialDiaryLoading;
   const isToday = dateKey === formatFoodDateKey(new Date());
   const isSelectedDayComplete = Boolean(dayCompletionByDate[dateKey]);
+
+  const selectDiaryDate = useCallback(
+    (nextDate: Date) => {
+      requestDiaryDate(nextDate, "date-select");
+    },
+    [requestDiaryDate],
+  );
+
+  const shiftDiaryWeek = useCallback(
+    (amount: -7 | 7) => {
+      requestDiaryDate(shiftFoodDate(requestedDate, amount), "week-change");
+    },
+    [requestDiaryDate, requestedDate],
+  );
+
+  const retryDiaryLoad = useCallback(() => {
+    beginDiaryTrace(
+      "retry",
+      selectedDateKeyRef.current,
+      requestedDateKeyRef.current,
+    );
+    void loadData({ showBlockingState: true, reason: "retry" });
+  }, [beginDiaryTrace, loadData]);
+
+  const handleDiaryProfilerRender = useCallback<React.ProfilerOnRenderCallback>(
+    (_id, _phase, actualDuration) => {
+      recordDiaryRender(activeDiaryTraceRef.current, actualDuration);
+    },
+    [],
+  );
 
   React.useEffect(() => {
     if (!user?.externalId) {
@@ -1239,47 +1563,48 @@ const FoodDiaryScreen = () => {
           />
         ) : null}
 
-        <FoodDiaryMainStrip
-          days={mainStripDays}
-          selectedDate={selectedDate}
-          selectedTargetCalories={selectedTargetCalories}
-          targetCaloriesByDate={targetCaloriesByDate}
-          weeklyBudgetCalories={weeklyBudgetCalories}
-          weeklyConsumedCalories={weeklyConsumedCalories}
-          onNextWeek={() =>
-            setSelectedDate((current) => shiftFoodDate(current, 7))
-          }
-          onPreviousWeek={() =>
-            setSelectedDate((current) => shiftFoodDate(current, -7))
-          }
-          onSelectDate={setSelectedDate}
-          totals={totals}
-          user={user}
-          mealBuckets={mealBuckets}
-          selectedMeal={selectedMeal}
-          favoriteFoods={favoriteFoods}
-          recentFoods={recentFoods}
-          isLoading={isDiaryLoading}
-          loadError={diaryLoadError}
-          isDayComplete={isSelectedDayComplete}
-          isDayCompleteLoading={isDayCompleteLoading}
-          onAddFood={openAddFoodAtMeal}
-          onAddFavorite={(food, slot) => {
-            openFavoriteEditorAtMeal(food, slot);
-          }}
-          onDeleteEntry={deleteEntry}
-          onEditEntry={editEntry}
-          onQuickLogFavorite={(food, slot) => {
-            void quickLogFavoriteAtMeal(food, slot);
-          }}
-          onRetryLoad={() => {
-            void loadData({ showBlockingState: true });
-          }}
-          onSelectMeal={setSelectedMeal}
-          onToggleDayComplete={() => {
-            void toggleDayComplete();
-          }}
-        />
+        <React.Profiler
+          id="FoodDiaryMainStrip"
+          onRender={handleDiaryProfilerRender}
+        >
+          <FoodDiaryMainStrip
+            days={mainStripDays}
+            selectedDate={selectedDate}
+            selectedTargetCalories={selectedTargetCalories}
+            targetCaloriesByDate={targetCaloriesByDate}
+            weeklyBudgetCalories={weeklyBudgetCalories}
+            weeklyConsumedCalories={weeklyConsumedCalories}
+            onNextWeek={() => shiftDiaryWeek(7)}
+            onPreviousWeek={() => shiftDiaryWeek(-7)}
+            onSelectDate={selectDiaryDate}
+            totals={totals}
+            user={user}
+            mealBuckets={mealBuckets}
+            selectedMeal={selectedMeal}
+            favoriteFoods={favoriteFoods}
+            recentFoods={recentFoods}
+            isLoading={isDiaryLoading}
+            isRefreshing={isDiaryRefreshing}
+            hasLoadedData={hasLoadedDiaryRef.current}
+            loadError={diaryLoadError}
+            isDayComplete={isSelectedDayComplete}
+            isDayCompleteLoading={isDayCompleteLoading}
+            onAddFood={openAddFoodAtMeal}
+            onAddFavorite={(food, slot) => {
+              openFavoriteEditorAtMeal(food, slot);
+            }}
+            onDeleteEntry={deleteEntry}
+            onEditEntry={editEntry}
+            onQuickLogFavorite={(food, slot) => {
+              void quickLogFavoriteAtMeal(food, slot);
+            }}
+            onRetryLoad={retryDiaryLoad}
+            onSelectMeal={setSelectedMeal}
+            onToggleDayComplete={() => {
+              void toggleDayComplete();
+            }}
+          />
+        </React.Profiler>
 
         <FoodDiaryMoreSection
           isCopyingYesterday={isCopyingYesterday}
@@ -1435,7 +1760,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
   },
   actionModalBackdrop: {
     flex: 1,
@@ -1451,8 +1776,8 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCard,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
-    paddingHorizontal: 18,
-    paddingVertical: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
     gap: 10,
   },
   actionModalTitle: {
@@ -1509,10 +1834,10 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 20,
     right: 20,
-    borderRadius: 8,
+    borderRadius: 10,
     backgroundColor: appColors.slate900,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -1527,8 +1852,8 @@ const styles = StyleSheet.create({
   snackbarAction: {
     borderRadius: 999,
     backgroundColor: appColors.surfaceCard,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
   snackbarActionPressed: {
     opacity: 0.88,

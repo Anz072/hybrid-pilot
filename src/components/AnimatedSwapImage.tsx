@@ -8,6 +8,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
+import { useReducedMotion } from "../theme/useReducedMotion";
 
 type AnimatedSwapImageProps = {
   firstSource: ImageSourcePropType;
@@ -36,8 +37,13 @@ const AnimatedSwapImage = ({
 }: AnimatedSwapImageProps) => {
   const frame = React.useRef(new Animated.Value(0)).current;
   const bob = React.useRef(new Animated.Value(0)).current;
+  const reducedMotion = useReducedMotion();
 
   React.useEffect(() => {
+    if (reducedMotion) {
+      return undefined;
+    }
+
     const frameLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(frame, {
@@ -87,6 +93,7 @@ const AnimatedSwapImage = ({
     firstHoldMs,
     frame,
     frameDurationMs,
+    reducedMotion,
     secondHoldMs,
   ]);
 

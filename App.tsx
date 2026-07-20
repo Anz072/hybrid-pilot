@@ -1,37 +1,31 @@
 import React from "react";
 import { Provider } from "react-redux";
 import {
-  Inter_100Thin,
-  Inter_100Thin_Italic,
-  Inter_200ExtraLight,
-  Inter_200ExtraLight_Italic,
-  Inter_300Light,
-  Inter_300Light_Italic,
-  Inter_400Regular,
-  Inter_400Regular_Italic,
-  Inter_500Medium,
-  Inter_500Medium_Italic,
-  Inter_600SemiBold,
-  Inter_600SemiBold_Italic,
-  Inter_700Bold,
-  Inter_700Bold_Italic,
-  Inter_800ExtraBold,
-  Inter_800ExtraBold_Italic,
-  Inter_900Black,
-  Inter_900Black_Italic,
-  useFonts,
-} from "@expo-google-fonts/inter";
+  IBMPlexSans_400Regular,
+  IBMPlexSans_500Medium,
+  IBMPlexSans_600SemiBold,
+  IBMPlexSans_700Bold,
+  useFonts as usePlexSansFonts,
+} from "@expo-google-fonts/ibm-plex-sans";
+import {
+  Newsreader_400Regular,
+  Newsreader_500Medium,
+  Newsreader_500Medium_Italic,
+  Newsreader_600SemiBold,
+  Newsreader_700Bold,
+  useFonts as useNewsreaderFonts,
+} from "@expo-google-fonts/newsreader";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 
 import AppNavigator from "./src/navigation/AppNavigator";
 import { store } from "./src/store/appStore";
-import { applyInterFontDefaults } from "./src/theme/applyInterFontDefaults";
+import { applyFontDefaults } from "./src/theme/applyFontDefaults";
 import { appColors } from "./src/theme/colors";
 import { loadDisplayPreferences } from "./src/preferences/displayPreferences";
 
-applyInterFontDefaults();
+applyFontDefaults();
 
 export default function App() {
   const [preferencesReady, setPreferencesReady] = React.useState(false);
@@ -48,26 +42,22 @@ export default function App() {
     };
   }, []);
 
-  const [fontsLoaded, fontError] = useFonts({
-    Inter_100Thin,
-    Inter_100Thin_Italic,
-    Inter_200ExtraLight,
-    Inter_200ExtraLight_Italic,
-    Inter_300Light,
-    Inter_300Light_Italic,
-    Inter_400Regular,
-    Inter_400Regular_Italic,
-    Inter_500Medium,
-    Inter_500Medium_Italic,
-    Inter_600SemiBold,
-    Inter_600SemiBold_Italic,
-    Inter_700Bold,
-    Inter_700Bold_Italic,
-    Inter_800ExtraBold,
-    Inter_800ExtraBold_Italic,
-    Inter_900Black,
-    Inter_900Black_Italic,
+  const [plexSansLoaded, plexSansError] = usePlexSansFonts({
+    IBMPlexSans_400Regular,
+    IBMPlexSans_500Medium,
+    IBMPlexSans_600SemiBold,
+    IBMPlexSans_700Bold,
   });
+  const [newsreaderLoaded, newsreaderError] = useNewsreaderFonts({
+    Newsreader_400Regular,
+    Newsreader_500Medium,
+    Newsreader_500Medium_Italic,
+    Newsreader_600SemiBold,
+    Newsreader_700Bold,
+  });
+
+  const fontsLoaded = plexSansLoaded && newsreaderLoaded;
+  const fontError = plexSansError ?? newsreaderError;
 
   if ((!fontsLoaded && !fontError) || !preferencesReady) {
     return null;

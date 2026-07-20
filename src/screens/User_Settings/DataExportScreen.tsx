@@ -288,7 +288,7 @@ const ExportRow = ({ icon, title, description, busy, onPress, last }: ExportRowP
       </AppText>
     </View>
     {busy ? (
-      <ActivityIndicator color={appColors.brand700} size="small" />
+      <ActivityIndicator color={appColors.actionPrimary} size="small" />
     ) : (
       <DownloadSimpleIcon size={18} color={appColors.textMuted} />
     )}

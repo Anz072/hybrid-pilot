@@ -35,8 +35,10 @@ import { appColors } from "../../theme/colors";
 import { sharedStyleValues } from "../../theme/sharedStyles";
 import FoodLogContextBar from "./FoodLogContextBar";
 import FoodScreenHeader from "./FoodScreenHeader";
+import MealBucketSelect, { getInitialMealBucket } from "./MealBucketSelect";
 import {
   calculateQuickAddCaloriesFromMacros,
+  MEAL_SLOT_LABELS,
   normalizePositiveFoodInput,
 } from "./foodUtils";
 import { resolveFoodLogContext } from "./foodLogContext";
@@ -81,6 +83,9 @@ const QuickAddFoodScreen = () => {
   const [fatValue, setFatValue] = React.useState("");
   const [carbsValue, setCarbsValue] = React.useState("");
   const [nameValue, setNameValue] = React.useState("");
+  const [selectedMeal, setSelectedMeal] = React.useState(() =>
+    getInitialMealBucket(route.params.mealType),
+  );
   const [showTimePicker, setShowTimePicker] = React.useState(false);
   const [isEnergyManuallySet, setIsEnergyManuallySet] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
@@ -102,6 +107,7 @@ const QuickAddFoodScreen = () => {
       fat,
       isManual,
       loggedAtIso,
+      meal,
       name,
       protein,
     }: {
@@ -110,6 +116,7 @@ const QuickAddFoodScreen = () => {
       fat: string;
       isManual: boolean;
       loggedAtIso: string;
+      meal: string;
       name: string;
       protein: string;
     }) =>
@@ -119,6 +126,7 @@ const QuickAddFoodScreen = () => {
         fat: fat.trim(),
         isManual,
         loggedAt: loggedAtIso,
+        meal,
         name: name.trim(),
         protein: protein.trim(),
       }),
@@ -151,6 +159,8 @@ const QuickAddFoodScreen = () => {
 
         setEntry(nextEntry);
         setLoggedAtDate(new Date(nextEntry.loggedAt));
+        const nextMeal = getInitialMealBucket(nextEntry.mealType);
+        setSelectedMeal(nextMeal);
         setEnergyValue(formatNumberInput(nextEntry.calories));
         setProteinValue(formatNumberInput(nextEntry.proteinG));
         setFatValue(formatNumberInput(nextEntry.fatG));
@@ -163,6 +173,7 @@ const QuickAddFoodScreen = () => {
           fat: formatNumberInput(nextEntry.fatG),
           isManual: nextEntry.isEnergyManuallySet,
           loggedAtIso: nextEntry.loggedAt,
+          meal: MEAL_SLOT_LABELS[nextMeal],
           name: nextEntry.quickAddName ?? "",
           protein: formatNumberInput(nextEntry.proteinG),
         });
@@ -223,9 +234,9 @@ const QuickAddFoodScreen = () => {
       resolveFoodLogContext({
         date: route.params.date,
         loggedAt: loggedAtDate.toISOString(),
-        mealType: route.params.mealType ?? entry?.mealType ?? null,
+        mealType: MEAL_SLOT_LABELS[selectedMeal],
       }),
-    [entry?.mealType, loggedAtDate, route.params.date, route.params.mealType],
+    [loggedAtDate, route.params.date, selectedMeal],
   );
   const currentDraftSignature = React.useMemo(
     () =>
@@ -235,6 +246,7 @@ const QuickAddFoodScreen = () => {
         fat: fatValue,
         isManual: isEnergyManuallySet,
         loggedAtIso: loggedAtDate.toISOString(),
+        meal: MEAL_SLOT_LABELS[selectedMeal],
         name: nameValue,
         protein: proteinValue,
       }),
@@ -247,6 +259,7 @@ const QuickAddFoodScreen = () => {
       loggedAtDate,
       nameValue,
       proteinValue,
+      selectedMeal,
     ],
   );
 
@@ -352,7 +365,7 @@ const QuickAddFoodScreen = () => {
         await DB.updateQuickAddFoodLog({
           id: route.params.entryId,
           loggedAt: loggedAtDate.toISOString(),
-          mealType: route.params.mealType ?? entry?.mealType ?? null,
+          mealType: MEAL_SLOT_LABELS[selectedMeal],
           name: nameValue.trim() || null,
           calories,
           proteinG,
@@ -366,7 +379,7 @@ const QuickAddFoodScreen = () => {
           userExternalId: user.externalId,
           date: route.params.date,
           loggedAt: loggedAtDate.toISOString(),
-          mealType: route.params.mealType ?? null,
+          mealType: MEAL_SLOT_LABELS[selectedMeal],
           name: nameValue.trim() || null,
           calories,
           proteinG,
@@ -389,7 +402,6 @@ const QuickAddFoodScreen = () => {
     calories,
     carbsG,
     closeAfterSave,
-    entry?.mealType,
     fatG,
     isEnergyManuallySet,
     loggedAtDate,
@@ -398,7 +410,7 @@ const QuickAddFoodScreen = () => {
     proteinG,
     route.params.date,
     route.params.entryId,
-    route.params.mealType,
+    selectedMeal,
     user,
   ]);
 
@@ -492,6 +504,12 @@ const QuickAddFoodScreen = () => {
             <FoodLogContextBar
               context={activeFoodLogContext}
               onTimePress={() => setShowTimePicker((current) => !current)}
+            />
+            <MealBucketSelect
+              disabled={saving}
+              onChange={setSelectedMeal}
+              style={styles.mealBucketSelect}
+              value={selectedMeal}
             />
             <View style={styles.energyLabelContainer}>
               <View style={{ marginBottom: 8 }}>
@@ -690,14 +708,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 999,
-    backgroundColor: appColors.surfaceGhost,
-    borderColor: appColors.surfaceGhostStrong,
+    backgroundColor: appColors.surfaceField,
+    borderWidth: 1,
+    borderColor: appColors.borderSoft,
   },
   heroTitle: {
     ...sharedStyleValues.heroTitleLarge,
     marginBottom: 4,
   },
   card: sharedStyleValues.card,
+  mealBucketSelect: {
+    marginBottom: 16,
+  },
   sectionTitle: {
     ...sharedStyleValues.sectionTitle,
     marginBottom: 10,
@@ -718,8 +740,6 @@ const styles = StyleSheet.create({
   },
   energyInput: {
     ...sharedStyleValues.input,
-    borderWidth: 1,
-    borderColor: appColors.brand700,
     fontSize: 20,
     fontWeight: "600",
     fontVariant: ["tabular-nums"],
@@ -741,9 +761,9 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: appColors.borderStrong,
+    borderColor: appColors.borderSoft,
     backgroundColor: appColors.surfaceField,
-    paddingHorizontal: 11,
+    paddingHorizontal: 12,
     paddingVertical: 8,
     marginTop: 10,
   },
@@ -760,13 +780,13 @@ const styles = StyleSheet.create({
   presetChip: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    backgroundColor: appColors.surfaceGhost,
-    paddingHorizontal: 13,
+    borderColor: appColors.borderSoft,
+    backgroundColor: appColors.surfaceField,
+    paddingHorizontal: 12,
     paddingVertical: 8,
   },
   presetChipText: {
-    color: appColors.brand500,
+    color: appColors.textSecondary,
     fontSize: 12,
     fontWeight: "500",
     fontVariant: ["tabular-nums"],
@@ -784,14 +804,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 8,
     borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    borderRadius: 8,
+    borderColor: "transparent",
+    borderRadius: 10,
     backgroundColor: appColors.surfaceField,
     paddingHorizontal: 12,
   },
   nutrientInput: {
     flex: 1,
-    paddingVertical: 11,
+    paddingVertical: 12,
     color: appColors.textPrimary,
     fontSize: 14,
     fontWeight: "500",
@@ -804,7 +824,7 @@ const styles = StyleSheet.create({
   },
   textInput: sharedStyleValues.input,
   optionalPanel: {
-    borderRadius: 8,
+    borderRadius: 10,
     backgroundColor: appColors.surfaceField,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
@@ -816,6 +836,7 @@ const styles = StyleSheet.create({
   },
   optionalInput: {
     backgroundColor: appColors.surfaceCard,
+    borderColor: appColors.borderSoft,
   },
   formError: {
     color: appColors.danger700,

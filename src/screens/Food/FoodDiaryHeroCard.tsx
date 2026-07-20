@@ -1,14 +1,14 @@
 import React from "react";
-import { LayoutAnimation, StyleSheet, Text, View } from "react-native";
+import { LayoutAnimation, StyleSheet, View } from "react-native";
 import { CaretDownIcon, CaretUpIcon } from "phosphor-react-native";
 import type { DBUser } from "../../store/DB_TYPES";
-import { InteractiveCard } from "../../components/ui";
-import { clampFoodRatio, type FoodNutritionTotals } from "./foodUtils";
-import { appColors } from "../../theme/colors";
-import { appRadius, appSpacing } from "../../theme/tokens";
+import { AppText, InteractiveCard, NumericText, ProgressRail } from "../../components/ui";
+import type { FoodNutritionTotals } from "./foodUtils";
+import { appColors, type AppColorValue } from "../../theme/colors";
+import { appSpacing, appSurfaces } from "../../theme/tokens";
 
 type MacroBarProps = {
-  accent: string;
+  accent: AppColorValue;
   consumed: number;
   label: string;
   places?: number;
@@ -37,7 +37,6 @@ export const MacroBar = ({
   const hasTarget = safeTarget != null && safeTarget > 0;
   const rawRatio = hasTarget ? safeConsumed / safeTarget : 0;
   const safeRatio = Number.isFinite(rawRatio) ? rawRatio : 0;
-  const ratio = clampFoodRatio(safeRatio);
   const isOver = hasTarget && safeRatio > 1;
   const remaining = hasTarget ? safeTarget - safeConsumed : null;
   const progressLabel =
@@ -50,44 +49,34 @@ export const MacroBar = ({
   return (
     <View style={styles.macroCard}>
       <View style={styles.progressTextRow}>
-        <Text style={styles.progressHeadline}>
-          <Text style={styles.progressHeadlineStrong}>{label}</Text>
-          <Text style={styles.progressHeadlineMuted}>
-            {" "}
-            - {safeConsumed.toFixed(places)} /{" "}
-            {hasTarget ? safeTarget.toFixed(places) : "--"} {unit}
-          </Text>
-        </Text>
+        <AppText numberOfLines={1} style={styles.progressHeadline} variant="bodySmall">
+          <AppText variant="bodySmallStrong">{label}</AppText>
+          <AppText color="secondary" variant="bodySmall">
+            {"  "}
+            {safeConsumed.toFixed(places)} / {hasTarget ? safeTarget.toFixed(places) : "--"} {unit}
+          </AppText>
+        </AppText>
         <View style={styles.progressMetaGroup}>
-          <Text
-            style={[
-              styles.progressPercent,
-              isOver && styles.progressPercentOver,
-            ]}
-          >
+          <NumericText color={isOver ? "error" : "secondary"} variant="numberTrendDelta">
             {progressLabel}
-          </Text>
+          </NumericText>
           {accessory ? (
             <View style={styles.progressAccessory}>{accessory}</View>
           ) : null}
         </View>
       </View>
-      <View style={styles.progressTrack}>
-        <View
-          style={[
-            styles.progressFill,
-            {
-              backgroundColor: accent,
-              flex: ratio,
-              minWidth: ratio > 0 ? 6 : 0,
-            },
-          ]}
-        />
-        <View style={[styles.progressRemainder, { flex: 1 - ratio }]} />
-      </View>
+      <ProgressRail
+        color={accent}
+        height={6}
+        max={hasTarget ? safeTarget : 0}
+        overColor={accent}
+        value={safeConsumed}
+      />
     </View>
   );
 };
+
+const formatWholeNumber = (value: number) => Math.round(value).toLocaleString();
 
 const FoodDiaryHeroCard = ({
   energyTargetCalories,
@@ -100,6 +89,19 @@ const FoodDiaryHeroCard = ({
     setExpanded((current) => !current);
   }, []);
 
+  const consumed = Number.isFinite(totals.calories) ? totals.calories : 0;
+  const target =
+    energyTargetCalories != null && energyTargetCalories > 0
+      ? energyTargetCalories
+      : null;
+  const remaining = target != null ? Math.round(target - consumed) : null;
+  const remainingLabel =
+    remaining == null
+      ? "Set a calorie target"
+      : remaining >= 0
+        ? `${formatWholeNumber(remaining)} kcal left`
+        : `${formatWholeNumber(Math.abs(remaining))} kcal over`;
+
   return (
     <InteractiveCard
       accessibilityLabel={
@@ -110,56 +112,63 @@ const FoodDiaryHeroCard = ({
       variant="hero"
       style={styles.hero}
     >
-      <View style={styles.progressPanel}>
-        <MacroBar
-          accent={appColors.calories}
-          consumed={Number(totals.calories.toFixed(0))}
-          label="Energy"
-          places={0}
-          target={energyTargetCalories}
-          unit="kcal"
-          accessory={
-            expanded ? (
-              <CaretUpIcon
-                size={17}
-                color={appColors.textMuted}
-                weight="bold"
-              />
-            ) : (
-              <CaretDownIcon
-                size={17}
-                color={appColors.textMuted}
-                weight="bold"
-              />
-            )
-          }
-        />
-        {expanded ? (
-          <>
-            <MacroBar
-              accent={appColors.protein}
-              consumed={Number(totals.proteinG.toFixed(0))}
-              label="Protein"
-              target={user?.proteinG ?? null}
-              unit="g"
-            />
-            <MacroBar
-              accent={appColors.carbs}
-              consumed={Number(totals.carbsG.toFixed(0))}
-              label="Carbs"
-              target={user?.carbsG ?? null}
-              unit="g"
-            />
-            <MacroBar
-              accent={appColors.fat}
-              consumed={Number(totals.fatG.toFixed(0))}
-              label="Fat"
-              target={user?.fatG ?? null}
-              unit="g"
-            />
-          </>
-        ) : null}
+      <View style={styles.calorieRow}>
+        <View style={styles.calorieValueGroup}>
+          <View style={styles.calorieValueRow}>
+            <NumericText adjustsFontSizeToFit numberOfLines={1} variant="numberDisplay">
+              {formatWholeNumber(consumed)}
+            </NumericText>
+            <AppText color="secondary" style={styles.calorieTarget} variant="label">
+              / {target != null ? formatWholeNumber(target) : "--"} kcal
+            </AppText>
+          </View>
+          <AppText
+            color={remaining != null && remaining < 0 ? "error" : "muted"}
+            variant="bodySmall"
+          >
+            {remainingLabel}
+          </AppText>
+        </View>
+        <View style={styles.disclosure}>
+          {expanded ? (
+            <CaretUpIcon size={18} color={appColors.textSecondary} weight="bold" />
+          ) : (
+            <CaretDownIcon size={18} color={appColors.textSecondary} weight="bold" />
+          )}
+        </View>
       </View>
+      <ProgressRail
+        color={appColors.calories}
+        height={6}
+        max={target ?? 0}
+        style={styles.calorieRail}
+        value={consumed}
+      />
+      {expanded ? (
+        <View style={styles.macroPanel}>
+          <MacroBar
+            accent={appColors.protein}
+            consumed={Number(totals.proteinG.toFixed(0))}
+            label="Protein"
+            target={user?.proteinG ?? null}
+            unit="g"
+          />
+          <MacroBar
+            accent={appColors.carbs}
+            consumed={Number(totals.carbsG.toFixed(0))}
+            label="Carbs"
+            target={user?.carbsG ?? null}
+            unit="g"
+          />
+          <MacroBar
+            accent={appColors.fat}
+            consumed={Number(totals.fatG.toFixed(0))}
+            label="Fat"
+            target={user?.fatG ?? null}
+            unit="g"
+          />
+        </View>
+      ) : null}
     </InteractiveCard>
   );
 };
@@ -173,9 +182,38 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     borderWidth: 0,
   },
-  progressPanel: {
+  calorieRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: appSpacing.sm,
+  },
+  calorieValueGroup: {
+    flex: 1,
     gap: appSpacing.xxs,
-    borderRadius: appRadius.sm,
+  },
+  calorieValueRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    flexWrap: "wrap",
+  },
+  calorieTarget: {
+    marginLeft: appSpacing.xxs,
+  },
+  disclosure: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: appSurfaces.soft,
+  },
+  calorieRail: {
+    marginTop: appSpacing.sm,
+  },
+  macroPanel: {
+    marginTop: appSpacing.md,
+    gap: appSpacing.sm,
   },
   macroCard: {
     gap: appSpacing.xxs,
@@ -188,52 +226,17 @@ const styles = StyleSheet.create({
   },
   progressHeadline: {
     flex: 1,
-    color: appColors.textPrimary,
-    fontSize: 13,
-    lineHeight: 16,
-    fontVariant: ["tabular-nums"],
-  },
-  progressHeadlineStrong: {
-    fontWeight: "500",
-  },
-  progressHeadlineMuted: {
-    color: appColors.textSecondary,
-    fontWeight: "400",
   },
   progressMetaGroup: {
     flexDirection: "row",
     alignItems: "center",
     gap: appSpacing.xs,
   },
-  progressPercent: {
-    color: appColors.textPrimary,
-    fontSize: 14,
-    fontWeight: "400",
-    fontVariant: ["tabular-nums"],
-  },
-  progressPercentOver: {
-    color: appColors.danger600,
-  },
   progressAccessory: {
     width: 18,
     height: 18,
     alignItems: "flex-end",
     justifyContent: "center",
-  },
-  progressTrack: {
-    marginTop: -2,
-    flexDirection: "row",
-    height: 9,
-    borderRadius: 999,
-    backgroundColor: appColors.surfaceGhostStrong,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 999,
-  },
-  progressRemainder: {
-    height: "100%",
   },
 });
 

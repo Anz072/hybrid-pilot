@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ArrowLeftIcon, ClockIcon, PencilSimpleIcon } from "phosphor-react-native";
+import { ArrowLeftIcon, CalendarIcon, ClockIcon, PencilSimpleIcon } from "phosphor-react-native";
 import type { DBWeightEntry } from "../../store/DB_TYPES";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import {
@@ -29,13 +29,12 @@ import { useDisplayPreferences } from "../../preferences/usePreferences";
 import { appColors } from "../../theme/colors";
 import {
   AppButton,
-  AppCard,
   AppInput,
   AppText,
   IconButton,
   InteractiveCard,
 } from "../../components/ui";
-import { appBorders, appRadius, appSpacing, appSurfaces } from "../../theme/tokens";
+import { appRadius, appSpacing, appSurfaces } from "../../theme/tokens";
 import { appTypography } from "../../theme/typography";
 
 export type WeightEntryDraft = {
@@ -222,7 +221,7 @@ const WeightEntryModal = ({
           ]}
           focusedInputBottomOffset={132}
         >
-          <AppCard style={styles.card}>
+          <View style={styles.card}>
             <View>
               <AppText style={styles.heroTitle} variant="sectionTitleLarge">
                 {mode === "create" ? "Log weight" : "Update weight entry"}
@@ -255,7 +254,7 @@ const WeightEntryModal = ({
                 accessibilityLabel="Select measurement date"
                 variant="compact"
               >
-                <ClockIcon
+                <CalendarIcon
                   size={16}
                   color={appColors.textPrimary}
                   weight="bold"
@@ -311,7 +310,7 @@ const WeightEntryModal = ({
               multiline
               accessibilityLabel="Entry notes"
             />
-          </AppCard>
+          </View>
 
           <AppButton
             onPress={() => void handleSave()}
@@ -384,18 +383,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   weightInput: {
-    ...appTypography.numberWeightEntry,
-    minHeight: 50,
+    ...appTypography.numberCalorieHero,
+    minHeight: 64,
     textAlign: "left",
   },
   unitPill: {
-    minHeight: 50,
+    minHeight: 64,
     minWidth: 60,
     paddingHorizontal: appSpacing.md,
     borderRadius: appRadius.md,
-    backgroundColor: appSurfaces.ghost,
-    borderWidth: appBorders.width,
-    borderColor: appBorders.soft,
+    backgroundColor: appSurfaces.soft,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -415,6 +412,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: appSpacing.xs,
     paddingHorizontal: appSpacing.sm,
+    backgroundColor: appSurfaces.soft,
+    borderWidth: 0,
   },
   dateButtonText: {
     flexShrink: 1,

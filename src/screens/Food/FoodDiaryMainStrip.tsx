@@ -19,7 +19,6 @@ import {
   CaretUpIcon,
   CookingPotIcon,
   ForkKnifeIcon,
-  PlusCircleIcon,
   PlusIcon,
   ShieldCheckIcon,
   ShieldIcon,
@@ -44,7 +43,7 @@ import { formatTimeOfDay } from "../../preferences/displayPreferences";
 import { useDisplayPreferences } from "../../preferences/usePreferences";
 import { appColors } from "../../theme/colors";
 import { AppButton, AppText, ErrorState, LoadingState } from "../../components/ui";
-import { appRadius, appSpacing, appStates } from "../../theme/tokens";
+import { appBorders, appRadius, appSpacing, appStates, appSurfaces } from "../../theme/tokens";
 
 export type FoodDiaryMainStripDay = {
   date: Date;
@@ -69,6 +68,8 @@ type FoodDiaryMainStripProps = {
   favoriteFoods: FoodDiaryFavoriteFood[];
   recentFoods: FoodDiaryFavoriteFood[];
   isLoading: boolean;
+  isRefreshing: boolean;
+  hasLoadedData: boolean;
   loadError: string | null;
   isDayComplete: boolean;
   isDayCompleteLoading: boolean;
@@ -273,14 +274,15 @@ const FoodDiaryMealItem = ({
                     </View>
                     <View style={styles.entryMetaRow}>
                       {entry.entrySource === "quick_add" ? (
-                        <View style={styles.entryTag}>
-                          <Text style={styles.entryTagText}>Quick Add</Text>
-                        </View>
+                        <>
+                          <Text style={styles.entryText}>Quick Add</Text>
+                          <Text style={styles.entryDivider}>·</Text>
+                        </>
                       ) : null}
                       <Text style={styles.entryText}>{time}</Text>
                       {entry.entrySource !== "quick_add" ? (
                         <>
-                          <Text style={styles.entryDivider}>|</Text>
+                          <Text style={styles.entryDivider}>·</Text>
                           <Text style={styles.entryText}>
                             {formatFoodServing(
                               entry.quantityG,
@@ -296,18 +298,6 @@ const FoodDiaryMealItem = ({
             );
           })}
 
-          <Pressable
-            onPress={(event) =>
-              runWithoutToggling(event, () => onAddFood(bucket.slot))
-            }
-            style={({ pressed }) => [
-              styles.addMoreRow,
-              pressed && styles.cardPressed,
-            ]}
-          >
-            <PlusCircleIcon size={16} color={appColors.brand500} />
-            <Text style={styles.addMoreText}>Add to {bucket.label}</Text>
-          </Pressable>
         </View>
       ) : null}
     </View>
@@ -331,6 +321,8 @@ const FoodDiaryMainStrip = ({
   favoriteFoods,
   recentFoods,
   isLoading,
+  isRefreshing,
+  hasLoadedData,
   loadError,
   isDayComplete,
   isDayCompleteLoading,
@@ -362,15 +354,9 @@ const FoodDiaryMainStrip = ({
         )}`
       : "";
   const selectedDateHeading = formatSelectedDateHeading(selectedDate);
+  const canShowContent = !isLoading && (!loadError || hasLoadedData);
   const fallbackMaxCalories = Math.max(1, ...days.map((day) => day.calories));
   const todayKey = formatFoodDateKey(new Date());
-  const hasLoggedEntries = mealBuckets.some(
-    (bucket) => bucket.entries.length > 0,
-  );
-  const selectedMealLabel =
-    mealBuckets.find((bucket) => bucket.slot === selectedMeal)?.label ??
-    "this meal";
-
   // On day change, collapse only the empty meals so the logged day reads at a
   // glance without wasted vertical space.
   React.useEffect(() => {
@@ -412,33 +398,44 @@ const FoodDiaryMainStrip = ({
 
   return (
     <View style={styles.card}>
-      <Text style={styles.selectedDateTitle}>{selectedDateHeading}</Text>
+      <View style={styles.dateControls}>
+        <Text style={styles.selectedDateTitle}>{selectedDateHeading}</Text>
 
-      <View style={styles.weekNavRow}>
-        <Pressable
-          onPress={onPreviousWeek}
-          style={({ pressed }) => [
-            styles.navButton,
-            pressed && styles.cardPressed,
-          ]}
-        >
-          <CaretDoubleLeftIcon size={17} color={appColors.brand500} />
-        </Pressable>
-        <Text style={styles.weekRange} numberOfLines={1}>
-          {weekRange}
-        </Text>
-        <Pressable
-          onPress={onNextWeek}
-          style={({ pressed }) => [
-            styles.navButton,
-            pressed && styles.cardPressed,
-          ]}
-        >
-          <CaretDoubleRightIcon size={17} color={appColors.brand500} />
-        </Pressable>
-      </View>
+        <View style={styles.weekNavRow}>
+          <Pressable
+            onPress={onPreviousWeek}
+            style={({ pressed }) => [
+              styles.navButton,
+              pressed && styles.cardPressed,
+            ]}
+          >
+            <CaretDoubleLeftIcon size={17} color={appColors.brand500} />
+          </Pressable>
+          <View style={styles.weekRangeContainer}>
+            <Text style={styles.weekRange} numberOfLines={1}>
+              {weekRange}
+            </Text>
+            {isRefreshing ? (
+              <ActivityIndicator
+                accessibilityLabel="Refreshing diary"
+                color={appColors.brand500}
+                size="small"
+                style={styles.refreshIndicator}
+              />
+            ) : null}
+          </View>
+          <Pressable
+            onPress={onNextWeek}
+            style={({ pressed }) => [
+              styles.navButton,
+              pressed && styles.cardPressed,
+            ]}
+          >
+            <CaretDoubleRightIcon size={17} color={appColors.brand500} />
+          </Pressable>
+        </View>
 
-      <View style={styles.dayRow} onLayout={handleDayRowLayout}>
+        <View style={styles.dayRow} onLayout={handleDayRowLayout}>
         {days.map((day) => {
           const selected = day.dateKey === selectedDateKey;
           const isToday = day.dateKey === todayKey;
@@ -525,6 +522,7 @@ const FoodDiaryMainStrip = ({
             </Pressable>
           );
         })}
+        </View>
       </View>
 
       {loadError ? (
@@ -540,13 +538,15 @@ const FoodDiaryMainStrip = ({
           }
           style={styles.stateBlock}
         />
-      ) : isLoading ? (
+      ) : null}
+
+      {isLoading ? (
         <LoadingState
           title="Loading diary"
           message="Fetching meals, totals, and day status."
           style={styles.stateBlock}
         />
-      ) : totals && user ? (
+      ) : canShowContent && totals && user ? (
         <FoodDiaryHeroCard
           energyTargetCalories={selectedTargetCalories}
           totals={totals}
@@ -554,7 +554,7 @@ const FoodDiaryMainStrip = ({
         />
       ) : null}
 
-      {!isLoading && !loadError ? (
+      {canShowContent ? (
         <Pressable
           disabled={isDayCompleteLoading}
           onPress={onToggleDayComplete}
@@ -572,11 +572,11 @@ const FoodDiaryMainStrip = ({
         >
           <View style={styles.dayStatusIcon}>
             {isDayCompleteLoading ? (
-              <ActivityIndicator color={appColors.brand700} size="small" />
+              <ActivityIndicator color={appColors.textSecondary} size="small" />
             ) : isDayComplete ? (
               <ShieldCheckIcon
                 size={22}
-                color={appColors.brand700}
+                color={appColors.statusSuccess}
                 weight="fill"
               />
             ) : (
@@ -600,7 +600,7 @@ const FoodDiaryMainStrip = ({
         </Pressable>
       ) : null}
 
-      {!isLoading && !loadError ? (
+      {canShowContent ? (
         <View style={styles.mealsSection}>
           <FoodDiaryQuickAdds
             favoriteFoods={favoriteFoods}
@@ -611,25 +611,6 @@ const FoodDiaryMainStrip = ({
           />
 
           <View style={styles.mealList}>
-            {!hasLoggedEntries ? (
-              <View style={styles.emptyDayCard}>
-                <AppText variant="cardTitle">Start this diary day</AppText>
-                <AppText
-                  variant="bodySmall"
-                  color="secondary"
-                  style={styles.emptyDayText}
-                >
-                  Add a food to {selectedMealLabel} or quick log a known item when
-                  you just need the calories captured.
-                </AppText>
-                <AppButton
-                  label={`Add ${selectedMealLabel}`}
-                  onPress={() => onAddFood(selectedMeal)}
-                  size="sm"
-                  style={styles.emptyDayButton}
-                />
-              </View>
-            ) : null}
             {mealBuckets.map((bucket) => (
               <FoodDiaryMealItem
                 key={bucket.slot}
@@ -651,27 +632,41 @@ const FoodDiaryMainStrip = ({
 
 const styles = StyleSheet.create({
   card: {
-    marginBottom: 16,
+    marginBottom: appSpacing.md,
+  },
+  dateControls: {
+    marginTop: appSpacing.md,
   },
   weekNavRow: {
     minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
-    marginBottom: 10,
+    gap: appSpacing.xs,
+    marginBottom: appSpacing.xs,
   },
   weekRange: {
-    flex: 1,
     color: appColors.textSecondary,
     fontSize: 13,
     fontWeight: "500",
     textAlign: "center",
   },
+  weekRangeContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  refreshIndicator: {
+    position: "absolute",
+    right: 0,
+  },
   navButton: {
+    width: 44,
+    height: 44,
     borderRadius: 9999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: appSurfaces.soft,
   },
   dayRow: {
     flexDirection: "row",
@@ -683,7 +678,7 @@ const styles = StyleSheet.create({
   dayPill: {
     minWidth: 0,
     minHeight: 76,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: "transparent",
     alignItems: "center",
@@ -747,35 +742,34 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.brand800,
   },
   mealsSection: {
-    marginTop: 18,
+    marginTop: appSpacing.lg,
   },
   stateBlock: {
-    marginTop: 14,
+    marginTop: appSpacing.md,
   },
   selectedDateTitle: {
     color: appColors.textPrimary,
-    fontSize: 17,
-    lineHeight: 24,
-    fontWeight: "600",
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: "700",
+    fontFamily: "Newsreader_700Bold",
+    letterSpacing: -0.2,
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: appSpacing.xs,
   },
   dayStatusRow: {
     minHeight: 58,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    backgroundColor: appColors.surfaceCard,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginTop: 14,
+    gap: appSpacing.sm,
+    borderRadius: appRadius.md,
+    paddingHorizontal: appSpacing.sm,
+    paddingVertical: appSpacing.sm,
+    marginTop: appSpacing.md,
+    backgroundColor: appColors.surfaceField,
   },
   dayStatusRowComplete: {
-    borderColor: appColors.borderStrong,
-    backgroundColor: appColors.surfaceField,
+    backgroundColor: appColors.statusSuccessSoft,
   },
   dayStatusRowLoading: {
     opacity: appStates.disabledOpacity,
@@ -786,7 +780,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.surfaceGhost,
+    backgroundColor: appColors.white,
   },
   dayStatusCopy: {
     flex: 1,
@@ -803,19 +797,16 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   mealList: {
-    gap: 8,
+    gap: 0,
   },
   mealCard: {
-    borderRadius: appRadius.md,
-    backgroundColor: appColors.surfaceCard,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderBottomWidth: appBorders.width,
+    borderBottomColor: appBorders.soft,
+    paddingVertical: appSpacing.sm,
+    paddingHorizontal: appSpacing.xs,
   },
   mealCardActive: {
-    borderColor: appColors.brand400,
-    backgroundColor: appColors.surfaceRaised,
+    backgroundColor: appStates.selectedFill,
   },
   mealHeader: {
     flexDirection: "row",
@@ -884,8 +875,8 @@ const styles = StyleSheet.create({
   entryCard: {
     backgroundColor: "transparent",
     paddingVertical: 6,
-    borderTopWidth: 1,
-    borderTopColor: withOpacity(appColors.borderSoft, 0.55),
+    borderTopWidth: appBorders.width,
+    borderTopColor: appBorders.soft,
   },
   entryMain: {
     flex: 1,
@@ -930,24 +921,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 14,
   },
-  entryTag: {
-    borderRadius: 999,
-    backgroundColor: appColors.surfaceGhost,
-    borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  entryTagText: {
-    color: appColors.brand500,
-    fontSize: 9,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
-  },
   deleteSwipe: {
     width: 96,
-    borderRadius: 8,
+    borderRadius: 10,
     backgroundColor: appColors.danger700,
     alignItems: "center",
     justifyContent: "center",
@@ -958,32 +934,6 @@ const styles = StyleSheet.create({
     color: appColors.white,
     fontSize: 12,
     fontWeight: "600",
-  },
-  addMoreRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingTop: 8,
-  },
-  addMoreText: {
-    color: appColors.brand500,
-    fontSize: 13,
-    lineHeight: 17,
-    fontWeight: "500",
-  },
-  emptyDayCard: {
-    gap: appSpacing.xs,
-    borderRadius: appRadius.md,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    backgroundColor: appColors.surfaceField,
-    padding: appSpacing.md,
-  },
-  emptyDayText: {
-    marginBottom: appSpacing.xs,
-  },
-  emptyDayButton: {
-    alignSelf: "flex-start",
   },
   cardPressed: {
     opacity: 0.9,

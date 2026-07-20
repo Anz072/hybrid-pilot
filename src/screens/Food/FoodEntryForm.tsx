@@ -7,12 +7,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { sharedStyleValues } from "../../theme/sharedStyles";
 import { NumericText } from "../../components/ui";
 
-export type FoodEntryFormPill = {
-  key: string;
-  label: string;
-  icon?: React.ReactNode;
-};
-
 export type FoodEntryFormHeroAction = {
   active?: boolean;
   icon?: React.ReactNode;
@@ -56,7 +50,6 @@ type FoodEntryFormProps = {
   heroAction?: FoodEntryFormHeroAction;
   heroEyebrow: string;
   heroMeta: string;
-  heroPills: FoodEntryFormPill[];
   heroTitle: string;
   labelFieldLabel?: string;
   labelPlaceholder: string;
@@ -94,7 +87,6 @@ const FoodEntryForm = ({
   heroAction,
   heroEyebrow,
   heroMeta,
-  heroPills,
   heroTitle,
   labelFieldLabel = "Optional label",
   labelPlaceholder,
@@ -178,16 +170,6 @@ const FoodEntryForm = ({
             </Pressable>
           ) : null}
         </View>
-        {heroPills.length > 0 ? (
-          <View style={styles.pillRow}>
-            {heroPills.map((pill) => (
-              <View key={pill.key} style={styles.pill}>
-                {pill.icon}
-                <Text style={styles.pillText}>{pill.label}</Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
         <Text style={styles.sectionTitle}>{detailsTitle}</Text>
 
         <Text style={styles.fieldLabel}>{amountLabel}</Text>
@@ -313,9 +295,9 @@ const styles = StyleSheet.create({
     gap: 6,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    backgroundColor: appColors.white,
-    paddingHorizontal: 10,
+    borderColor: appColors.borderSoft,
+    backgroundColor: appColors.surfaceField,
+    paddingHorizontal: 12,
     paddingVertical: 8,
   },
   heroActionActive: {
@@ -330,9 +312,6 @@ const styles = StyleSheet.create({
   heroActionTextActive: {
     color: appColors.white,
   },
-  pillRow: sharedStyleValues.pillRow,
-  pill: sharedStyleValues.pill,
-  pillText: sharedStyleValues.pillText,
   cardX: sharedStyleValues.cardCompact,
   card: sharedStyleValues.cardCompact,
   sectionTitle: sharedStyleValues.sectionTitle,
@@ -349,11 +328,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     backgroundColor: appColors.surfaceField,
     borderWidth: 1,
-    borderColor: appColors.borderStrong,
-    padding: 11,
+    borderColor: appColors.borderSoft,
+    padding: 12,
   },
   slotIcon: {
     width: 32,

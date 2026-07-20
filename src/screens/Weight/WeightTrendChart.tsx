@@ -20,7 +20,7 @@ import {
 } from "./weightUtils";
 import { appColors } from "../../theme/colors";
 import { AppText, NumericText, SegmentedControl } from "../../components/ui";
-import { appBorders, appRadius, appSpacing, appSurfaces } from "../../theme/tokens";
+import { appRadius, appSpacing } from "../../theme/tokens";
 import { appTypography } from "../../theme/typography";
 
 type WeightTrendChartProps = {
@@ -43,16 +43,18 @@ const CHART_TOP_PADDING = 14;
 const CHART_BOTTOM_PADDING = 34;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-const TREND_LINE_COLOR = appColors.brand600;
-const TREND_HALO_COLOR = appColors.brand700;
+// The trend is data, so it draws in ink; the one persimmon mark is the
+// current point. The goal band is a quiet honey wash with a dashed rule.
+const TREND_LINE_COLOR = appColors.textPrimary;
 const DAILY_LINE_COLOR = appColors.textMuted;
 const DAILY_POINT_STROKE = appColors.textSecondary;
 const DAILY_POINT_FILL = appColors.white;
-const CURRENT_POINT_FILL = appColors.brand600;
+const CURRENT_POINT_FILL = appColors.actionPrimary;
+const CURRENT_POINT_RING = appColors.actionPrimarySoft;
 const GRID_COLOR = appColors.borderSoft;
 const AXIS_TEXT_COLOR = appColors.textMuted;
-const GOAL_BAND_FILL = appColors.actionPrimarySoft;
-const GOAL_LINE_COLOR = appColors.brand400;
+const GOAL_BAND_FILL = appColors.warningSurface;
+const GOAL_LINE_COLOR = appColors.borderStrong;
 const RANGE_OPTIONS = WEIGHT_RANGE_LABELS.map((item) => ({
   label: item,
   value: item,
@@ -366,11 +368,9 @@ const WeightTrendChart = ({
             </AppText>
           )}
         </View>
-        <View style={styles.logsPill}>
-          <NumericText color="muted" style={styles.logsPillText} variant="numberTrendDelta">
-            {latestEntry ? `${sortedEntries.length} logs` : "No logs"}
-          </NumericText>
-        </View>
+        <NumericText color="muted" variant="numberTrendDelta">
+          {latestEntry ? `${sortedEntries.length} logs` : "No logs"}
+        </NumericText>
       </View>
 
       <View
@@ -415,7 +415,6 @@ const WeightTrendChart = ({
                         ),
                     )}
                     fill={GOAL_BAND_FILL}
-                    opacity={0.45}
                   />
                   <Line
                     x1={CHART_LEFT_PADDING}
@@ -439,18 +438,6 @@ const WeightTrendChart = ({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   opacity={0.75}
-                />
-              ) : null}
-
-              {chartData.trendPoints.length >= 3 ? (
-                <Path
-                  d={buildLinePath(chartData.trendPoints)}
-                  stroke={TREND_HALO_COLOR}
-                  strokeWidth={6}
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  opacity={0.72}
                 />
               ) : null}
 
@@ -483,9 +470,8 @@ const WeightTrendChart = ({
                   <Circle
                     cx={chartData.currentPoint.x}
                     cy={chartData.currentPoint.y}
-                    r={6.5}
-                    fill={TREND_HALO_COLOR}
-                    opacity={0.9}
+                    r={7}
+                    fill={CURRENT_POINT_RING}
                   />
                   <Circle
                     cx={chartData.currentPoint.x}
@@ -589,38 +575,18 @@ const styles = StyleSheet.create({
   helperText: {
     flexShrink: 1,
   },
-  logsPill: {
-    borderRadius: appRadius.pill,
-    backgroundColor: appSurfaces.soft,
-    paddingHorizontal: appSpacing.sm,
-    paddingVertical: appSpacing.xs,
-  },
-  logsPillText: {
-    textAlign: "left",
-  },
   chartFrame: {
-    backgroundColor: appSurfaces.canvas,
-    overflow: "hidden",
-    borderRadius: appRadius.md,
-    borderWidth: appBorders.width,
-    borderColor: appBorders.soft,
     paddingVertical: appSpacing.xs,
   },
   rangeRail: {
     marginTop: appSpacing.md,
   },
   legendCard: {
-    marginTop: appSpacing.md,
+    marginTop: appSpacing.sm,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: appSpacing.lg,
-    borderRadius: appRadius.md,
-    backgroundColor: appSurfaces.soft,
-    paddingHorizontal: appSpacing.md,
-    paddingVertical: appSpacing.sm,
-    borderWidth: appBorders.width,
-    borderColor: appBorders.soft,
   },
   legendItem: {
     flexDirection: "row",

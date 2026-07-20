@@ -26,7 +26,8 @@
     "build:apk:local:debug": "cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
-    "@expo-google-fonts/inter": "^0.4.2",
+    "@expo-google-fonts/ibm-plex-sans": "^0.4.1",
+    "@expo-google-fonts/newsreader": "^0.4.1",
     "@expo/ngrok": "github:expo/ngrok",
     "@react-native-community/datetimepicker": "8.4.4",
     "@react-navigation/bottom-tabs": "^7.15.9",

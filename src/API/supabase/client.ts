@@ -46,7 +46,7 @@ export const isSupabaseConfigured = () => {
 };
 
 export const getSupabaseConfigError = () =>
-  "Missing Supabase config. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY in dribsnis/.env.";
+  "Missing Supabase config. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY in the app's .env file.";
 
 export const getSupabaseClient = () => {
   const { publishableKey, url } = readConfig();

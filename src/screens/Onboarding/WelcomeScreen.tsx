@@ -1,10 +1,8 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
-import { BarbellIcon, RocketLaunchIcon } from "phosphor-react-native";
+import { Image, StyleSheet, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { AppButton } from "../../components/ui";
 import type { OnboardingParamList } from "../../navigation/onboardingTypes";
-import { appColors } from "../../theme/colors";
 import { appSpacing } from "../../theme/tokens";
 import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
 import OnboardingStepScreen, { onboardingStepProgress } from "./OnboardingStepScreen";
@@ -16,15 +14,16 @@ const WelcomeScreen = ({ navigation }: Props) => (
     centered
     eyebrow="Nutrition + Training"
     headerAccessory={
-      <View style={styles.heroRow}>
-        <RocketLaunchIcon size={28} color={appColors.actionPrimary} weight="fill" />
-        <BarbellIcon size={24} color={appColors.textPrimary} weight="fill" />
-      </View>
+      <Image
+        accessibilityLabel="Nouri logo"
+        source={require("../../../nouri_app_assets/brand/nouri-rounded-preview-transparent.png")}
+        style={styles.brandMark}
+      />
     }
     progress={onboardingStepProgress(1)}
     stepLabel="Welcome"
     subtitle="Build your plan in under a minute and get tailored calories, macros, and progress tracking."
-    title="Dribsnis"
+    title="Nouri"
   >
     <View style={styles.actions}>
       <OnboardingPrimaryButton
@@ -41,11 +40,9 @@ const WelcomeScreen = ({ navigation }: Props) => (
 );
 
 const styles = StyleSheet.create({
-  heroRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: appSpacing.sm,
+  brandMark: {
+    width: 112,
+    height: 112,
     marginBottom: appSpacing.xs,
   },
   actions: {

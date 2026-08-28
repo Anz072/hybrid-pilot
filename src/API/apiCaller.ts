@@ -1,9 +1,8 @@
 import { localFoodAPI } from "./Local/LocalEndpoint";
-import { openFoodsAPI } from "./OpenFoods/openFoodsEndpoints";
-import { usdaAPI } from "./USDA/usdaEndpoints";
 
+// External nutrition providers (USDA, Open Food Facts) are no longer called from
+// the app. They live behind the Nouri backend, which holds their credentials and
+// normalizes their responses — see src/API/nouri/foodsApi.ts.
 export const API = {
-  openFoodsAPI,
-  usdaAPI,
-  localFoodAPI
+  localFoodAPI,
 };

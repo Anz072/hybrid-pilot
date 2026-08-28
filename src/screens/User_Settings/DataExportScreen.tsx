@@ -84,19 +84,19 @@ const DataExportScreen = ({ navigation }: Props) => {
   );
 
   const exportWeightsCsv = () =>
-    share("weights-csv", "Dribsnis weights (CSV)", async () => {
+    share("weights-csv", "Nouri weights (CSV)", async () => {
       const { weights } = await loadAll();
       return buildWeightsCsv(weights);
     });
 
   const exportFoodCsv = () =>
-    share("food-csv", "Dribsnis food log (CSV)", async () => {
+    share("food-csv", "Nouri food log (CSV)", async () => {
       const { foodLog } = await loadAll();
       return buildFoodLogCsv(foodLog);
     });
 
   const exportBackup = () =>
-    share("backup-json", "Dribsnis backup (JSON)", async () => {
+    share("backup-json", "Nouri backup (JSON)", async () => {
       const { settings, weightGoal, weights, foodLog } = await loadAll();
       return serializeBackup(
         buildBackup({
@@ -230,7 +230,7 @@ const DataExportScreen = ({ navigation }: Props) => {
         <AppText style={styles.sectionTitle} variant="sectionTitle">Restore</AppText>
         <AppCard style={styles.card}>
           <AppText color="secondary" style={styles.restoreHint} variant="bodySmall">
-            Paste the contents of a Dribsnis backup (JSON) to restore your weight
+            Paste the contents of a Nouri backup (JSON) to restore your weight
             history onto this account.
           </AppText>
           <AppInput

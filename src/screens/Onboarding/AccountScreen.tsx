@@ -146,7 +146,7 @@ const AccountScreen = ({ navigation, route }: Props) => {
       validateEmailPassword(normalizedEmail, password);
 
       const resolvedDisplayName =
-        displayName.trim() || normalizedEmail.split("@")[0] || "Dribsnis User";
+        displayName.trim() || normalizedEmail.split("@")[0] || "Nouri User";
       const result = await signUpWithEmailPassword({
         displayName: resolvedDisplayName,
         email: normalizedEmail,

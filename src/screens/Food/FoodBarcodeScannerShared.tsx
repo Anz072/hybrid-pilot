@@ -15,7 +15,6 @@ import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BarcodeIcon, KeyboardIcon, XIcon } from "phosphor-react-native";
 import { DB } from "../../store/DB";
-import { API } from "../../API/apiCaller";
 import { appColors } from "../../theme/colors";
 import {
   normalizeBarcodeValue,
@@ -151,41 +150,24 @@ export const useBarcodeDebugScanner = (
           return true;
         }
 
-        const localFood = await DB.getFoodItemByBarcode(nextValue);
+        // One call. The backend checks the shared catalogue, falls back to Open
+        // Food Facts, and promotes any hit into the catalogue so it comes back
+        // with a real, loggable id. The app no longer talks to Open Food Facts
+        // itself and no longer needs to know which path answered.
+        const food = await DB.getFoodItemByBarcode(nextValue);
 
-        if (localFood) {
-          resolveFood({
-            foodId: localFood.id,
-            barcode: nextValue,
-            status: "existing",
-            foodName: localFood.name,
-          });
-          return true;
-        }
-
-        const foodData = await API.openFoodsAPI.getByBarcode(nextValue);
-        if (!foodData) {
-          setScannedCode(`Could not look up barcode ${nextValue}.`);
-          setModalVisible(true);
-          return true;
-        }
-
-        if (!foodData.valid || !foodData.foodItem) {
-          await DB.saveCachedBarcodeMiss(nextValue);
+        if (!food) {
           setScannedCode(`No food found for barcode ${nextValue}.`);
           setNotFoundBarcode(nextValue);
           setModalVisible(true);
           return true;
         }
 
-        const foodId = await DB.saveFoodItem(foodData.foodItem);
-        const savedFood = await DB.getFoodItemById(foodId);
-
         resolveFood({
-          foodId,
+          foodId: food.id,
           barcode: nextValue,
-          status: "created",
-          foodName: savedFood?.name ?? foodData.foodItem.name,
+          status: "existing",
+          foodName: food.name,
         });
       } catch (error) {
         console.error("[BarcodeScanner] Could not resolve scanned food", error);

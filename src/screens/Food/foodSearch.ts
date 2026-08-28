@@ -1,4 +1,3 @@
-import { API } from "../../API/apiCaller";
 import type { DBFoodItem, SaveFoodItemInput } from "../../store/DB_TYPES";
 
 export type FoodSearchResult = SaveFoodItemInput & {
@@ -31,12 +30,16 @@ type SearchFoodResultsInput = {
   getLocalRows: (query: string) => Promise<DBFoodItem[]>;
   filterLocalRow?: (food: DBFoodItem) => boolean;
   includeLocalFood?: boolean;
-  includeRemote?: boolean;
   onLocalResults?: (results: FoodSearchResult[]) => void;
-  onRemoteSearchError?: () => void;
   rankOptions?: RankFoodSearchOptions;
+  /** @deprecated The backend decides when to consult external providers. */
+  includeRemote?: boolean;
+  /** @deprecated The backend applies its own minimum query length. */
   remoteMinQueryLength?: number;
+  /** @deprecated The backend controls upstream page size. */
   remotePageSize?: number;
+  /** @deprecated External failures now degrade server-side, not client-side. */
+  onRemoteSearchError?: () => void;
 };
 
 const DEFAULT_MAX_SEARCH_RESULTS = 30;
@@ -349,49 +352,24 @@ export const searchFoodResults = async ({
   getLocalRows,
   filterLocalRow,
   includeLocalFood = false,
-  includeRemote = true,
   onLocalResults,
-  onRemoteSearchError,
   rankOptions,
-  remoteMinQueryLength = DEFAULT_REMOTE_SEARCH_MIN_QUERY_LENGTH,
-  remotePageSize = DEFAULT_REMOTE_PAGE_SIZE,
 }: SearchFoodResultsInput) => {
   const trimmedQuery = query.trim();
-  const shouldFetchRemote =
-    includeRemote && shouldSearchRemotely(trimmedQuery, remoteMinQueryLength);
 
-  const localRowsPromise = getLocalRows(trimmedQuery);
-  const remoteRowsPromise = shouldFetchRemote
-    ? API.usdaAPI
-        .getFood(trimmedQuery, { pageSize: remotePageSize })
-        .catch(() => {
-          onRemoteSearchError?.();
-          return [];
-        })
-    : Promise.resolve([]);
-  const localRows = await localRowsPromise;
-
-  const localResults = localRows
+  // `getLocalRows` now resolves through DB.searchFoodItems, which the Nouri API
+  // serves. The backend already merges the shared catalogue, the user's own and
+  // public recipes/meals and USDA, and ranks them with the same heuristics that
+  // used to run here. There is no second remote call to make.
+  //
+  // Ranking is still applied locally so screen-specific `rankOptions`
+  // (category priority, dedupe rules) keep working on top of the server order.
+  const localRows = await getLocalRows(trimmedQuery);
+  const results = localRows
     .filter((food) => filterLocalRow?.(food) ?? true)
     .map((food) => fromDbFoodItem(food, includeLocalFood));
-  onLocalResults?.(rankSearchResults(trimmedQuery, localResults, rankOptions));
-  const remoteRows = await remoteRowsPromise;
-  const localKeys = new Set(
-    localResults.flatMap((food) =>
-      getSearchDedupeKeys(food, rankOptions?.dedupe),
-    ),
-  );
-  const remoteResults = remoteRows
-    .map((food) => toSearchFoodResult(food, null))
-    .filter((food) =>
-      getSearchDedupeKeys(food, rankOptions?.dedupe).every(
-        (key) => !localKeys.has(key),
-      ),
-    );
 
-  return rankSearchResults(
-    trimmedQuery,
-    [...localResults, ...remoteResults],
-    rankOptions,
-  );
+  const ranked = rankSearchResults(trimmedQuery, results, rankOptions);
+  onLocalResults?.(ranked);
+  return ranked;
 };

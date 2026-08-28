@@ -10,7 +10,7 @@ import { calculateLoggedNutrition } from "../Food/foodUtils";
 export const BACKUP_FORMAT = "dribsnis.backup";
 export const BACKUP_VERSION = 1;
 
-export type DribsnisBackup = {
+export type NouriBackup = {
   format: typeof BACKUP_FORMAT;
   version: number;
   exportedAt: string;
@@ -84,7 +84,7 @@ export const buildBackup = (input: {
   weights: DBWeightEntry[];
   foodLog: DBUserFoodLogEntry[];
   exportedAt: string;
-}): DribsnisBackup => ({
+}): NouriBackup => ({
   format: BACKUP_FORMAT,
   version: BACKUP_VERSION,
   exportedAt: input.exportedAt,
@@ -95,11 +95,11 @@ export const buildBackup = (input: {
   foodLog: input.foodLog,
 });
 
-export const serializeBackup = (backup: DribsnisBackup): string =>
+export const serializeBackup = (backup: NouriBackup): string =>
   JSON.stringify(backup, null, 2);
 
 export type ParsedBackup =
-  | { ok: true; backup: DribsnisBackup }
+  | { ok: true; backup: NouriBackup }
   | { ok: false; error: string };
 
 export const parseBackup = (raw: string): ParsedBackup => {
@@ -117,11 +117,11 @@ export const parseBackup = (raw: string): ParsedBackup => {
   ) {
     return {
       ok: false,
-      error: "This does not look like a Dribsnis backup file.",
+      error: "This does not look like a Nouri backup file.",
     };
   }
 
-  const candidate = parsed as Partial<DribsnisBackup>;
+  const candidate = parsed as Partial<NouriBackup>;
   return {
     ok: true,
     backup: {

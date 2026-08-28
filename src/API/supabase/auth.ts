@@ -149,7 +149,7 @@ export const getSupabaseAuthDisplayName = (
     }
   }
 
-  return "Dribsnis User";
+  return "Nouri User";
 };
 
 export const upsertSupabaseAuthUserAccount = async (

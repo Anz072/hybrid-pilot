@@ -1,43 +1,46 @@
 {
   "expo": {
-    "name": "Dribsnis",
+    "name": "Nouri",
     "slug": "dribsnis",
     "version": "1.0.3",
     "orientation": "portrait",
-    "icon": "./assets/icon1.png",
+    "icon": "./nouri_app_assets/assets/images/icon.png",
     "scheme": "dribsnis",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/cat-1.png",
+      "image": "./nouri_app_assets/assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#191c1f"
+      "backgroundColor": "#21112E"
     },
     "ios": {
+      "icon": "./nouri_app_assets/assets/images/ios-icon.png",
       "bundleIdentifier": "com.dribsnis.app",
       "supportsTablet": true
     },
     "android": {
+      "icon": "./nouri_app_assets/assets/images/android-icon.png",
       "package": "com.dribsnis.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon1.png",
-        "backgroundColor": "#F6EFDf"
+        "foregroundImage": "./nouri_app_assets/assets/images/adaptive-icon.png",
+        "backgroundImage": "./nouri_app_assets/assets/images/adaptive-background.png",
+        "monochromeImage": "./nouri_app_assets/assets/images/monochrome-icon.png"
       },
       "edgeToEdgeEnabled": true,
       "softwareKeyboardLayoutMode": "resize",
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./nouri_app_assets/assets/images/favicon.png"
     },
     "plugins": [
       "@react-native-community/datetimepicker",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/cat-1.png",
+          "image": "./nouri_app_assets/assets/images/splash-icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#191c1f",
+          "backgroundColor": "#21112E",
           "imageWidth": 200
         }
       ],

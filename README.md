@@ -1,6 +1,6 @@
 # Dribsnis
 
-A personal calorie and nutrition tracker built with Expo SDK 54 and React Native. Log food from the USDA and Open Food Facts databases (or scan a barcode), track weight, and let the adaptive engine estimate your TDEE and calorie targets over time. State is managed with Redux Toolkit, stored locally in SQLite, and synced to Supabase.
+A personal calorie and nutrition tracker built with Expo SDK 54 and React Native. Log food from the USDA and Open Food Facts databases (or scan a barcode), track weight, and let the adaptive engine estimate your TDEE and calorie targets over time. State is managed with Redux Toolkit and cached locally in SQLite. The calorie diary and food search are served by the Nouri backend; authentication remains directly with Supabase.
 
 ## Prerequisites
 
@@ -23,9 +23,13 @@ Required environment variables (see [.env.example](.env.example)):
 
 | Variable | Description |
 | --- | --- |
-| `EXPO_PUBLIC_USDA_API_KEY` | USDA FoodData Central API key ([get one](https://fdc.nal.usda.gov/api-key-signup.html)) |
-| `EXPO_PUBLIC_SUPABASE_URL` | Your Supabase project URL |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Your Supabase anon key |
+| `EXPO_PUBLIC_SUPABASE_URL` | Your Supabase project URL (used for Auth) |
+| `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Your Supabase publishable key (public by design) |
+| `EXPO_PUBLIC_API_BASE_URL` | Nouri backend base URL (see the `nouri-api` repo) |
+
+The USDA API key is no longer shipped in the app. Food search, barcode lookup and
+the calorie diary are served by the Nouri backend, which holds those credentials
+server-side.
 
 The Supabase schema lives in [docs/supabase-schema.sql](docs/supabase-schema.sql).
 

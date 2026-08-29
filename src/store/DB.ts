@@ -16,7 +16,7 @@ import {
   saveUserSettings,
   updateAdaptiveCalorieRecommendation,
   upsertUser,
-} from "./supabaseUserStore";
+} from "./userStore";
 import {
   addFoodItem,
   createUserCustomMeal,
@@ -38,7 +38,7 @@ import {
   setFoodItemFavorite,
   updateUserCustomMeal,
   updateUserRecipe,
-} from "./supabaseFoodStore";
+} from "./libraryStore";
 import {
   addQuickAddFoodLog as addQuickAddFoodLogBase,
   addUserFoodLog as addUserFoodLogBase,

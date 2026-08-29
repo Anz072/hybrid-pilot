@@ -146,14 +146,13 @@ All **retained in PostgreSQL**, unchanged:
 
 ### 3.2 Client privilege revocation
 
-Migration `20260829090100` revokes all table, sequence and function privileges
-in `public` from `authenticated` and `anon`, and revokes default privileges so
+The same migration revokes all table, sequence and function privileges in
+`public` from `authenticated` and `anon`, and revokes default privileges so
 future tables do not silently re-grant.
 
-**Ordering is load-bearing** and documented in the migration header: apply only
-after the role migration and after the API is deployed with
-`DATABASE_AUTHENTICATED_ROLE=nouri_app_backend`. Applying it early breaks any
-client still doing direct CRUD. A rollback is included.
+This is stated as one migration rather than a phased cutover because the app has
+no users and no deployed client does direct CRUD — there is nothing to
+transition. Once the app ships, a future privilege change *would* need phasing.
 
 Explicitly unaffected: Supabase Auth (GoTrue owns `auth`), `handle_new_user()`
 (SECURITY DEFINER, runs as owner), and `service_role` (break-glass, retained).
@@ -220,12 +219,25 @@ one-shot server-side import is the right tool if that data still matters.
 
 ---
 
-## 7. Remaining blockers
+## 7. Remaining work
 
-| # | Blocker | Impact |
+The app is pre-launch: no users, no provisioned Supabase project, no distributed
+builds. Several items previously tracked as blockers assumed a production
+database that does not exist, and are closed.
+
+| # | Item | Status |
 | --- | --- | --- |
-| B1 | Supabase project `vaodobwfbxzancdctkzs` returns NXDOMAIN | No live verification of anything |
-| B2 | No GCP credentials / API not deployed | No end-to-end runtime verification |
-| B3 | Production GRANTs never captured (baseline blocker) | The revocation migration's starting state is unverified |
-| B4 | **Rotate the USDA key** | It shipped in every prior build |
-| B5 | Adaptive engine still client-side | Business rule remains unenforceable server-side |
+| 1 | Provision a Supabase project and `db push` | ⬜ |
+| 2 | Choose the Supabase region, then measure the Cloud Run pairing | ⬜ a decision, not a discovery |
+| 3 | Deploy the API and run the latency probes | ⬜ |
+| 4 | Confirm real JWT claim shape against a live token | ⬜ follows from (1) |
+| 5 | Adaptive TDEE engine still client-side | 🟠 needs a dual-run diff before porting |
+| 6 | Mobile refresh on `AUTH_TOKEN_EXPIRED` | ⬜ |
+
+**Closed as moot:** verifying the baseline against production; capturing
+production GRANTs; non-destructively adopting an existing database; auditing
+`auth.users` for missing profiles.
+
+**USDA key:** confirmed never committed to git history, and no builds were
+distributed, so it was never exposed. Rotating it is optional hygiene rather
+than an incident. It is no longer in the app either way.

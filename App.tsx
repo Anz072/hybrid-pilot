@@ -24,6 +24,7 @@ import { store } from "./src/store/appStore";
 import { applyFontDefaults } from "./src/theme/applyFontDefaults";
 import { appColors } from "./src/theme/colors";
 import { loadDisplayPreferences } from "./src/preferences/displayPreferences";
+import { registerSupabaseAuthLifecycle } from "./src/API/supabase/client";
 
 applyFontDefaults();
 
@@ -41,6 +42,12 @@ export default function App() {
       active = false;
     };
   }, []);
+
+  // Drives Supabase's token refresh from the app lifecycle: the refresh timer
+  // is a JS interval that cannot fire in the background, so it is started on
+  // foreground (which also refreshes immediately if the token went stale while
+  // away) and stopped on background.
+  React.useEffect(() => registerSupabaseAuthLifecycle(), []);
 
   const [plexSansLoaded, plexSansError] = usePlexSansFonts({
     IBMPlexSans_400Regular,

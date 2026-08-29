@@ -1,5 +1,6 @@
 import {
   getSupabaseSession,
+  refreshSupabaseSession,
   SUPABASE_SESSION_REQUIRED_MESSAGE,
 } from "../supabase/client";
 
@@ -97,22 +98,11 @@ type ErrorEnvelope = {
   error?: { code?: string; message?: string; requestId?: string };
 };
 
-export const apiRequest = async <T>(
+const performRequest = async <T>(
   path: string,
-  options: RequestOptions = {},
+  options: RequestOptions,
+  accessToken: string,
 ): Promise<T> => {
-  const session = await getSupabaseSession();
-  const accessToken = session?.access_token;
-
-  if (!accessToken) {
-    throw new NouriApiError(
-      "AUTH_REQUIRED",
-      SUPABASE_SESSION_REQUIRED_MESSAGE,
-      401,
-      null,
-    );
-  }
-
   const controller = new AbortController();
   const timeout = setTimeout(
     () => controller.abort(),
@@ -171,6 +161,73 @@ export const apiRequest = async <T>(
   }
 
   return payload as T;
+};
+
+/**
+ * Sends a request, and on an expired access token refreshes once and retries
+ * once.
+ *
+ * ## Why retrying a mutation is safe here
+ *
+ * `AUTH_TOKEN_EXPIRED` is produced by the API's `onRequest` hook, before body
+ * parsing, validation or any route handler. A request rejected with that code
+ * therefore had no effect on the server — verified end-to-end against a real
+ * expired token: a POST that came back 401 wrote no row, and the same POST
+ * succeeded after refresh. So this retry is not a gamble about whether the
+ * write landed; the server has told us it did not.
+ *
+ * That reasoning does **not** extend to `NETWORK_ERROR`, where the request may
+ * well have been processed and only the response was lost. Those are never
+ * retried here — they surface to the caller, which relies on the existing
+ * client-generated ids for idempotency if it chooses to retry.
+ *
+ * ## Loop safety
+ *
+ * At most one refresh and one retry per call. If the retry fails again — for
+ * any reason, including another 401 — the error is thrown. A malformed or
+ * tampered token yields `AUTH_INVALID_TOKEN`, not `AUTH_TOKEN_EXPIRED`, and so
+ * never triggers a refresh at all. A failed refresh throws
+ * `AUTH_REQUIRED`, the existing signed-out path.
+ */
+export const apiRequest = async <T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> => {
+  const session = await getSupabaseSession();
+  const accessToken = session?.access_token;
+
+  if (!accessToken) {
+    throw new NouriApiError(
+      "AUTH_REQUIRED",
+      SUPABASE_SESSION_REQUIRED_MESSAGE,
+      401,
+      null,
+    );
+  }
+
+  try {
+    return await performRequest<T>(path, options, accessToken);
+  } catch (error) {
+    if (!(error instanceof NouriApiError) || !error.isExpiredToken) {
+      throw error;
+    }
+
+    // Single-flighted, so a burst of simultaneous 401s shares one refresh
+    // rather than racing to spend the same rotating refresh token.
+    const refreshedToken = await refreshSupabaseSession();
+
+    if (!refreshedToken) {
+      throw new NouriApiError(
+        "AUTH_REQUIRED",
+        SUPABASE_SESSION_REQUIRED_MESSAGE,
+        401,
+        error.requestId,
+      );
+    }
+
+    // Exactly one retry. Whatever this throws propagates untouched.
+    return await performRequest<T>(path, options, refreshedToken);
+  }
 };
 
 // The device's IANA zone. The API needs it to reproduce the meal-slot grouping

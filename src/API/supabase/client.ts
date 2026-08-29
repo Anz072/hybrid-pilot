@@ -5,6 +5,7 @@ import {
   type User,
 } from "@supabase/supabase-js";
 import * as SecureStore from "expo-secure-store";
+import { AppState, type AppStateStatus } from "react-native";
 
 const SUPABASE_STORAGE_KEY = "dribsnis-auth";
 export const SUPABASE_SESSION_REQUIRED_MESSAGE =
@@ -58,7 +59,14 @@ export const getSupabaseClient = () => {
   if (!cachedClient) {
     cachedClient = createClient(url, publishableKey, {
       auth: {
-        autoRefreshToken: false,
+        // Access tokens live one hour. Without this the app kept using a token
+        // past its expiry and every request failed with AUTH_TOKEN_EXPIRED,
+        // which is the most likely source of the "randomly logged out" reports:
+        // nothing was wrong with the session, only with the access token.
+        //
+        // supabase-js refreshes on a timer that only runs while the app is in
+        // the foreground, so it is paired with the AppState wiring below.
+        autoRefreshToken: true,
         detectSessionInUrl: false,
         persistSession: true,
         storage: supabaseStorage,
@@ -68,6 +76,87 @@ export const getSupabaseClient = () => {
   }
 
   return cachedClient;
+};
+
+/**
+ * Starts and stops supabase-js's refresh timer with the app lifecycle.
+ *
+ * The timer is a JS interval, so it does not fire while the app is backgrounded
+ * — and a timer that fires in the background would be refreshing a token
+ * nothing is about to use. On foreground, `startAutoRefresh` refreshes
+ * immediately if the token is stale, which is exactly the moment it matters:
+ * the user has just come back and is about to make requests.
+ *
+ * Returns an unsubscribe function. Safe to call when Supabase is unconfigured.
+ */
+export const registerSupabaseAuthLifecycle = (): (() => void) => {
+  if (!isSupabaseConfigured()) {
+    return () => {};
+  }
+
+  let supabase: SupabaseClient;
+  try {
+    supabase = getSupabaseClient();
+  } catch {
+    return () => {};
+  }
+
+  const apply = (state: AppStateStatus) => {
+    if (state === "active") {
+      void supabase.auth.startAutoRefresh();
+    } else {
+      void supabase.auth.stopAutoRefresh();
+    }
+  };
+
+  apply(AppState.currentState);
+  const subscription = AppState.addEventListener("change", apply);
+
+  return () => {
+    subscription.remove();
+    void supabase.auth.stopAutoRefresh();
+  };
+};
+
+/**
+ * Refreshes the session, collapsing concurrent callers onto one request.
+ *
+ * Several screens can be in flight at once, so an expired token typically
+ * produces a burst of simultaneous 401s. Without single-flighting, each would
+ * start its own refresh; because Supabase rotates the refresh token on every
+ * use, the second and later calls would present an already-spent token and
+ * fail, signing the user out during what should have been a silent recovery.
+ *
+ * Returns the new access token, or null when the session cannot be renewed —
+ * which callers must treat as "genuinely signed out", not "try again".
+ */
+let inFlightRefresh: Promise<string | null> | null = null;
+
+export const refreshSupabaseSession = async (): Promise<string | null> => {
+  if (inFlightRefresh) {
+    return inFlightRefresh;
+  }
+
+  inFlightRefresh = (async () => {
+    try {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error) {
+        return null;
+      }
+      return data.session?.access_token ?? null;
+    } catch {
+      return null;
+    } finally {
+      // Cleared in a microtask so callers that awaited this promise all observe
+      // the same result before a fresh refresh can start.
+      queueMicrotask(() => {
+        inFlightRefresh = null;
+      });
+    }
+  })();
+
+  return inFlightRefresh;
 };
 
 export const getSupabaseSession = async (): Promise<Session | null> => {

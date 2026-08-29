@@ -164,14 +164,18 @@ export const upsertSupabaseAuthUserAccount = async (
     existingUser?.displayName,
   );
 
-  // App profiles are created by the final onboarding Account step, which
-  // persists the complete nutrition profile. Authentication may update an
-  // existing profile, but must never synthesize an incomplete one.
+  // The profile row is created by the `handle_new_user()` database trigger,
+  // atomically with the auth user, so a signed-in user always has one. This
+  // guard therefore no longer means "onboarding is incomplete" — it means the
+  // session did not resolve (absent session, or an id that does not match the
+  // token subject), which is why the message no longer blames onboarding.
+  //
+  // A genuinely missing profile row does not reach here at all: GET /v1/me
+  // reports it as PROFILE_MISSING, a data-integrity fault, rather than letting
+  // it masquerade as an authentication failure.
   if (!existingUser) {
     await getSupabaseClient().auth.signOut();
-    throw new Error(
-      "No app account exists for this email yet. Finish onboarding first to create one.",
-    );
+    throw new Error("Could not load your account. Please sign in again.");
   }
 
   const createdAt =

@@ -128,6 +128,16 @@ export const getFoodItemByBarcode = async (
 };
 
 // Resolve a single food by the ref returned in search results.
+/**
+ * Fetches a food from the backend **unconditionally**.
+ *
+ * Deliberately has no Expo Go dev-mode guard: it is the remote half of a
+ * cache-then-refresh pair, and every caller resolves the session first, so
+ * reaching it already means "not in offline dev mode". Calling it directly from
+ * a screen would make an HTTP request in a mode that is supposed to be
+ * offline — `scripts/expo-go-bypass.test.cjs` fails if any unguarded caller
+ * appears.
+ */
 export const getFoodByRefRemote = async (
   ref: string | number,
 ): Promise<DBFoodItem | null> => {

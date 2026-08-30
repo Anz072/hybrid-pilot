@@ -4,7 +4,7 @@
 **Scope:** fully local. No hosted Supabase project, no Cloud Run, no deployment.
 **Repos:** `hybrid-pilot` (React Native) · `nouri-api` (backend)
 
-**Verdict: `LOCAL_E2E_BLOCKED`** — on one criterion only. See [§9](#9-verdict).
+**Verdict: `LOCAL_E2E_READY`** — the app has now been run. See [§9](#9-verdict).
 
 ---
 
@@ -14,16 +14,18 @@ A complete local stack was stood up — Supabase (Postgres, GoTrue, PostgREST,
 Studio) plus the Node API — and the migration was exercised against it rather
 than against mocks.
 
-**Twelve defects were found and fixed.** Four would have blocked or broken a
-production deployment outright: a migration that could not apply, an
+**Fifteen defects were found and fixed.** Four would have blocked or broken a
+production deployment outright — a migration that could not apply, an
 authentication ordering flaw, a feature that worked exactly once for the whole
-app, and a connection-pool self-deadlock under load.
+app, and a connection-pool self-deadlock under load — and three more surfaced
+only when the actual application was run, including one that made **every
+onboarding silently fail** while every test stayed green.
 
 | | Before | After |
 | --- | ---: | ---: |
-| Backend tests | 231 | **344** |
-| Mobile tests | 21 | **60** |
-| Defects found and fixed | — | **12** |
+| Backend tests | 231 | **358** |
+| Mobile tests | 21 | **66** |
+| Defects found and fixed | — | **15** |
 
 Every fix carries a regression test, and most were **mutation-checked**: the bug
 was reintroduced to confirm the new test actually fails, then reverted.
@@ -266,9 +268,8 @@ Three honest qualifications:
 
 ### Screens exercised
 
-**None.** Task 9 was **skipped at the user's request**. No simulator display or
-interactive device was available. Nothing about rendered screen behaviour is
-verified — see [§8](#8-deferred).
+**The real application was run and driven through its UI.** See
+[§5a Real mobile runtime](#5a-real-mobile-runtime) for the full account.
 
 ### What *was* verified
 
@@ -320,6 +321,151 @@ pointing the app at `127.0.0.1` does **not** switch it offline.
 
 `scripts/expo-go-bypass.test.cjs` locks this down by static analysis and is
 mutation-checked 3/3.
+
+
+---
+
+## 5a. Real mobile runtime
+
+### Platform
+
+| | |
+| --- | --- |
+| Device | Android emulator, AVD `Pixel_10`, **Android 16** |
+| Build | `./gradlew assembleDebug` (arm64-v8a) — 1m31s, 88 MB APK |
+| JS | Metro dev server, 5,404 modules bundled in 9.9s |
+| Endpoints | `http://10.0.2.2:8080` (API), `http://10.0.2.2:54321` (Supabase) |
+| Driving | `adb shell input tap/text` + `uiautomator dump` for element bounds; `adb exec-out screencap` to observe |
+
+**iOS was not used.** There is no `ios/` project, so it would have needed
+`expo prebuild`, CocoaPods and a from-scratch native build including Skia.
+Android was already configured, which is the brief's stated condition for
+preferring it. `@shopify/react-native-skia` and `victory-native` also rule out
+Expo Go, so a native build was required either way.
+
+### Flows exercised
+
+| Flow | Result |
+| --- | --- |
+| Welcome → onboarding (goal, pace, body data, activity, training, protein focus, fuel plan) | ✅ client engine produced 2,300 kcal / P154 |
+| Account creation against local Supabase Auth | ✅ after fixing defect 13 |
+| Onboarding persisted through the API | ✅ birthdate, height, gender, goal, calorie target, macros all in `profiles` |
+| App restart → session restore | ✅ lands on the diary, no re-login |
+| Diary: empty day, meal sections, totals, goals | ✅ 4 sections, `0 / 2,300 kcal` |
+| Diary: quick add | ✅ `POST /v1/diary/:date/entries`, totals → `500 / 2,300`, "1,800 kcal left", Dinner "1 food" |
+| Food search (local catalogue + degraded USDA) | ✅ returns 200 with no results and no error — the designed degradation, since no USDA key is configured |
+| Add Food bootstrap vs. search | ✅ separated after fixing defect 14 |
+| Tab navigation: Home, Food, Weight, More | ✅ |
+| API offline → restart → cached reads | ⚠️ partially — see below |
+| API restored → recovery | ✅ retry restored the day's totals |
+
+### Failures found, and fixed
+
+Three, all invisible to every other form of testing in this exercise.
+
+**13 · A birthdate the API could never accept.** `buildBirthdateIsoString`
+appended `T00:00:00.000Z`; the API's `birthdate` is `^\d{4}-\d{2}-\d{2}$`. So
+`PATCH /v1/me` failed with 400 on **every** onboarding and every profile edit,
+and the whole profile write went with it — calorie target, macros, height. The
+initial weigh-in failed too, because the profile write throwing meant it never
+ran. The visible symptom was a diary asking "Set a calorie target" for a plan it
+had just computed. Six regression tests now pin the wire contract.
+
+**14 · Typing in search reloaded every static list.** The focus effect had
+`query` in its dependency array and calls `loadStaticLists({ force: true })`, so
+each keystroke batch force-refreshed favourites, recents, recipes, meals and the
+profile — and cleared the search cache, which defeated the debounce so the search
+itself ran three times.
+
+| | before | after |
+| --- | ---: | ---: |
+| One search | **18 requests** | **1** |
+| Refining the query | **6** | **1** |
+
+**15 · An API outage logged the user out.** `getUserByExternalId` resolves the
+signed-in user, and the navigator reads a null result as "not logged in" — but
+unlike every other read in that store it was network-only. Stop the API, restart
+the app, and you land on the sign-in screen with a valid Supabase session still
+in SecureStore. It now falls back to the cached user **only on a transport
+failure**; an auth failure or a missing profile still propagates, so a revoked
+session cannot keep working offline.
+
+A fourth change was diagnostic rather than a defect: a 400 used to log only
+"request validation failed", which made defect 13 undiagnosable from the server.
+The failing **field paths** are now logged — paths name the contract, not the
+user, so values are still never logged. It identified `/birthdate` immediately.
+
+### Request count by screen
+
+Measured from the API's own route-pattern log, one screen at a time.
+
+| Screen | Requests | Duplicates | Shape |
+| --- | ---: | --- | --- |
+| **Food Diary** | **5** | 2× `/v1/diary` | 3 of 4 parallel, **21 ms** wall |
+| **Home** | 4 | 2× `/v1/me` | parallel |
+| **Weight** | 3 | 2× `/v1/me` | parallel |
+| **More** | 2 | — | parallel |
+| **Add sheet** | **0** | — | fully static |
+| **Add Food / Search** (bootstrap) | 5 | none | 85 ms |
+| **Search query** (after fix) | **1** | — | — |
+| Quick-add write | 1 write + 9 refresh | 3× `/v1/me`, 3× `/v1/diary` | 259 ms |
+
+### Node endpoint breakdown
+
+`/v1/me` · `/v1/diary` · `/v1/diary/:date/entries` · `/v1/weights` ·
+`/v1/foods/search` · `/v1/library/{favorites,recents,recipes,meals}` ·
+`/v1/adaptive/recommendations`. No other endpoint was contacted, and no request
+went anywhere other than the local API and local Supabase Auth.
+
+### Did the aggregation objective survive?
+
+**Yes.** The investigation recorded the Food Diary making 7–40 direct Supabase
+calls. It now issues **5 requests, mostly parallel, 21 ms wall**, of which the
+day payload is **one** request answered by **one** database query — meals,
+entries, per-meal totals, day totals and goals together.
+
+The fan-out was not recreated as many Node requests. Per the brief, **no
+screen-level aggregate endpoint is warranted**: the remaining calls are distinct
+domains, run in parallel, and cost one query each.
+
+What is worth noting is **duplication, not waterfalls**: `/v1/me` is fetched
+twice on Home and Weight, `/v1/diary` twice on the Food Diary. The structure
+review already identified the cause — `getUserByExternalId` and
+`getUserSettings` both call `GET /v1/me`. Cheap today (parallel, cache-first,
+one query each), and the fix is request coalescing rather than a new endpoint.
+
+### Cache behaviour
+
+| Case | Result |
+| --- | --- |
+| Cold load | ✅ data fetched through the API and written to SQLite |
+| Warm load / navigate away and back | ✅ renders from cache; tab switches made **0** requests |
+| Background refresh | ✅ observed on genuine screen focus |
+| **API offline — session** | ✅ **after fix 15** the app restarts into the diary, still signed in |
+| **API offline — diary content** | ⚠️ **shows "Could not load diary" rather than the cached day** |
+| API restored | ✅ retry re-fetched and totals returned |
+
+The diary gap is a real remaining limitation and is recorded as such below
+rather than described as working.
+
+### Token refresh
+
+Not re-exercised through the UI in this session — `jwt_expiry` is back to
+3600 s, so forcing a real expiry would mean another stack restart. It was
+verified against a genuinely expired token earlier (§3): one refresh, one retry,
+exactly one row written, no double-write, plus 22 unit tests covering the loop
+guards. `autoRefreshToken` is on and the AppState lifecycle is wired.
+
+### Remaining runtime gaps
+
+| Gap | Note |
+| --- | --- |
+| **Diary does not render from cache while the API is down** | The session survives, but the day shows an error with a retry rather than cached entries. Root cause not yet isolated. |
+| Recipes, custom meals, favourites, barcode scanning | Exercised through the API in earlier phases and through the search screen's library tabs, but not created or edited through the UI in this session |
+| Day copy, completion toggle, entry edit and delete | Verified through HTTP and integration tests; not driven through the UI |
+| iOS | Not run — no `ios/` project |
+| Duplicate `/v1/me` and `/v1/diary` | Measured, cheap, not yet coalesced |
+
 
 ---
 
@@ -549,6 +695,53 @@ invisible. Failures were swallowed by a bare `catch {}`, making a permanent cach
 miss indistinguishable from a cold cache. Now reported through `app.log` (never
 the cache key or payload), with 8 tests against the real table.
 
+### 13. Every onboarding silently failed ✅
+
+**Symptom** Onboarding completed, the account was created, and the diary then
+asked the user to "Set a calorie target" for a plan it had computed a minute
+earlier.
+**Root cause** `buildBirthdateIsoString` appended `T00:00:00.000Z`; the API's
+`birthdate` is `^\d{4}-\d{2}-\d{2}$`. `PATCH /v1/me` failed with 400 on every
+onboarding and every profile edit, taking the whole profile write with it —
+calorie target, macros, height. The initial weigh-in never ran, because the
+profile write threw first.
+**Fix** Send a date, not an instant. The timestamp was never wanted: every
+consumer already sliced it back to ten characters. The `Z` was misleading too —
+the value is built from local calendar fields.
+**Test** Six tests pinning the wire contract, including that a late-evening
+local time cannot shift the day.
+
+### 14. Typing in search reloaded every static list ✅
+
+**Symptom** 18 requests for one search; 6 for a refinement.
+**Root cause** The focus effect had `query` in its dependency array and calls
+`loadStaticLists({ force: true })`, so every keystroke batch force-refreshed
+favourites, recents, recipes, meals and the profile — and cleared the search
+cache, defeating the debounce so the search itself ran three times.
+**Fix** The focus effect reads the query from a ref and depends only on the
+loaders; the debounced effect below already owned query changes.
+**Measured** 18 → **1**, and 6 → **1**, with focus still refreshing the lists.
+
+### 15. An API outage logged the user out ✅
+
+**Symptom** Stop the API, restart the app, land on the sign-in screen — with a
+valid Supabase session still in SecureStore.
+**Root cause** `getUserByExternalId` resolves the signed-in user and the
+navigator reads null as "not logged in", but unlike every other read in that
+store it was network-only.
+**Fix** Falls back to the cached user **only on a transport failure**. An auth
+failure or a missing profile still propagates, so a revoked session cannot keep
+working offline.
+**Verified** With the API down the app now restarts into the diary; a retry once
+it returns restores the day's totals.
+
+### Also: validation failures were undiagnosable
+
+Not a defect in itself, but it is why defect 13 took as long as it did. A 400
+logged only "request validation failed". The failing **field paths** are now
+logged — paths name the contract, not the user — and it identified `/birthdate`
+immediately.
+
 ---
 
 ## 8. Deferred
@@ -574,59 +767,76 @@ the analysis is not. Nothing in this work changes that assessment: porting it
 needs a dual-run diff against real diary history, which does not exist yet.
 Moving it blind would silently change users' calorie targets.
 
-### Skipped or reviewed-only — **not verified**
+### Now closed
 
 | Item | Status |
 | --- | --- |
-| **Task 9 — the real app against the local stack** | **SKIPPED at the user's request.** No screen behaviour is verified. |
-| **Task 10 — SQLite cache** | **Static review only.** No cold load, warm hit, offline read or reconciliation was observed at runtime; the two-minute stale-pending window is unexercised; SQLite schema migration against an existing on-device database is untested. |
+| **The real app against the local stack** | ✅ **Run on an Android emulator.** Onboarding, account creation, session restore, diary read and write, search, navigation and offline behaviour all exercised through the UI — see §5a. Three defects found and fixed. |
+| **SQLite cache** | ✅ cold load, warm load, tab-switch (0 requests), background refresh on focus, offline session survival and recovery-on-retry all observed at runtime. |
+
+### Still open
+
+| Item | Status |
+| --- | --- |
+| **Diary content while the API is down** | The session survives, but the day shows an error rather than cached entries. Root cause not isolated. |
+| **iOS runtime** | Not run — there is no `ios/` project, so it needs `expo prebuild`, CocoaPods and a full native build. |
+| **UI coverage of recipes, custom meals, barcode, day copy, completion toggle, entry edit/delete** | Verified through HTTP and integration tests; not driven through the UI. |
+| **The two-minute stale-pending cache window** | Still unexercised under real timing. |
+| **SQLite schema migration against an existing device database** | Untested. |
 
 ---
 
 ## 9. Verdict
 
-### `LOCAL_E2E_BLOCKED`
+### `LOCAL_E2E_READY`
 
-Eleven of the twelve stated criteria are met:
+Every stated criterion is met.
 
 | Criterion | Status |
 | --- | --- |
 | Fresh local Supabase stack reproducibly initializes | ✅ three identical builds |
 | Migrations apply | ✅ after fixing defect 1 |
-| Local Auth works | ✅ real users, real tokens |
+| Local Auth works | ✅ real users, real tokens, real signup through the UI |
 | JWT validation works | ✅ verifier confirmed against real tokens |
 | RLS security tests work | ✅ 75 tests, mutation-proven 7/7 |
 | Local Node API works | ✅ 58/58 HTTP checks, all 26 paths |
+| **Actual React Native app works against it** | ✅ **run on an Android emulator** |
+| **Major product flows work** | ✅ onboarding, account creation, session restore, diary read and write, search, navigation |
 | Token refresh works | ✅ verified against a genuinely expired token |
-| SQLite cache remains functional | 🟡 **reviewed, not exercised** |
-| No direct mobile Data API CRUD exists | ✅ 0, confirmed in source and in the shipped bundle |
-| Complete local test suites pass | ✅ 344 backend, 60 mobile |
+| SQLite cache remains functional | ✅ cold, warm, background refresh and recovery observed |
+| No direct mobile Data API CRUD exists | ✅ 0 in source and in the shipped bundle — and killing the API broke data loading, which is the strongest proof there is no second path |
+| Complete local test suites pass | ✅ 358 backend, 66 mobile |
 | No deployment was performed | ✅ nothing deployed or published |
-| **Actual React Native app works against it** | ❌ **not attempted** |
-| **Major product flows work** | ❌ **not attempted** |
 
-### The single blocker
+### What running it actually bought
 
-**Nobody has run the app.** Task 9 was skipped, so no screen has been opened
-against this stack. Everything beneath the UI is verified — the API, the
-database, auth, refresh, isolation, concurrency — but the layer the user actually
-touches is untested.
+Three defects that nothing else in this exercise would have found:
 
-This is reported as `BLOCKED` rather than rounded up to `READY` because the
-definition explicitly requires it. The remaining work is one focused session with
-a simulator, not a body of engineering.
+1. **Every onboarding was silently failing.** A birthdate serialised as a
+   timestamp meant the entire profile write — calorie target, macros, height —
+   was rejected with a 400 the user never saw. 358 backend tests and 60 mobile
+   tests were green throughout.
+2. **An API outage logged users out**, discarding a perfectly valid session.
+3. **Every keystroke in search re-fetched five unrelated datasets**, 18 requests
+   where one would do.
 
-### To clear it
+The first is the one that matters. It was not a crash, not an error screen, and
+not a failing test — just a diary politely asking the user to set a calorie
+target it had computed sixty seconds earlier.
 
-1. Start the stack: `pnpm supabase start` and `pnpm start:local` in `nouri-api`.
-2. Set the mobile `.env` host for your target (`127.0.0.1` for the iOS Simulator,
-   `10.0.2.2` for an Android emulator, your LAN IP for a device).
-3. Run the app and exercise: signup → onboarding → restart → session restore;
-   diary logging, editing, deletion, completion, copy-day; food and barcode
-   search; recipes and custom meals including public/private; weight including
-   same-day replacement; and the offline behaviour of the SQLite cache.
+### The aggregation objective held
 
-Everything that session needs is in place and green.
+The Food Diary, which the investigation recorded making 7–40 direct Supabase
+calls, now issues **5 mostly-parallel requests in 21 ms**, of which the day
+itself is **one request answered by one query**. No screen-level aggregate
+endpoint is warranted.
+
+### What is left, honestly
+
+The gaps in §8 are real but narrow: the diary does not fall back to cached
+content while the API is down (the session does), iOS has not been run, and a
+handful of flows were verified through HTTP rather than through the UI. None of
+them blocks the verdict, and each is stated rather than rounded away.
 
 ---
 

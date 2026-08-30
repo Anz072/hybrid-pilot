@@ -1,0 +1,1300 @@
+{
+  "version": 1,
+  "description": "Conformance corpus for domain logic implemented independently in the React Native app and in nouri-api. Inputs and expected outputs only: no framework types, no HTTP, no database. Both repositories run these cases against their own implementation, so the two cannot drift apart while both test suites stay green.",
+  "notes": [
+    "Expected values encode the CURRENT agreed product contract, not an independent proof of correctness. A case exists to stop the two sides diverging; changing one deliberately means changing the fixture, which makes the change visible in review.",
+    "Rounding follows JavaScript Math.round: halves go toward positive infinity, so 2.5 -> 3 and -2.5 -> -2. Cases below pin that explicitly.",
+    "Time-of-day cases are fixed to UTC so both runtimes can evaluate them without a timezone argument the mobile helper does not take."
+  ],
+  "suites": {
+    "roundNutrient": [
+      {
+        "name": "integer is unchanged",
+        "input": {
+          "value": 5,
+          "places": 1
+        },
+        "expected": 5
+      },
+      {
+        "name": "one decimal place by default",
+        "input": {
+          "value": 1.24,
+          "places": 1
+        },
+        "expected": 1.2
+      },
+      {
+        "name": "rounds up at the half",
+        "input": {
+          "value": 1.25,
+          "places": 1
+        },
+        "expected": 1.3
+      },
+      {
+        "name": "half rounds toward positive infinity",
+        "input": {
+          "value": 2.5,
+          "places": 0
+        },
+        "expected": 3
+      },
+      {
+        "name": "negative half also rounds toward positive infinity",
+        "input": {
+          "value": -2.5,
+          "places": 0
+        },
+        "expected": -2
+      },
+      {
+        "name": "negative one-decimal half",
+        "input": {
+          "value": -1.25,
+          "places": 1
+        },
+        "expected": -1.2
+      },
+      {
+        "name": "zero",
+        "input": {
+          "value": 0,
+          "places": 1
+        },
+        "expected": 0
+      },
+      {
+        "name": "zero places truncates to integer",
+        "input": {
+          "value": 123.6,
+          "places": 0
+        },
+        "expected": 124
+      },
+      {
+        "name": "very small value collapses to zero at one place",
+        "input": {
+          "value": 0.04,
+          "places": 1
+        },
+        "expected": 0
+      },
+      {
+        "name": "very small value survives at two places",
+        "input": {
+          "value": 0.04,
+          "places": 2
+        },
+        "expected": 0.04
+      },
+      {
+        "name": "large value",
+        "input": {
+          "value": 123456.789,
+          "places": 1
+        },
+        "expected": 123456.8
+      }
+    ],
+    "getFoodResolvedServing": [
+      {
+        "name": "per-100g with no explicit serving falls back to 100 g",
+        "input": {
+          "nutritionBasis": "100g",
+          "servingSizeValue": null,
+          "servingSizeUnit": null
+        },
+        "expected": {
+          "value": 100,
+          "unit": "g"
+        }
+      },
+      {
+        "name": "per-100ml falls back to 100 ml",
+        "input": {
+          "nutritionBasis": "100ml",
+          "servingSizeValue": null,
+          "servingSizeUnit": null
+        },
+        "expected": {
+          "value": 100,
+          "unit": "ml"
+        }
+      },
+      {
+        "name": "per-serving falls back to 1 serving",
+        "input": {
+          "nutritionBasis": "serving",
+          "servingSizeValue": null,
+          "servingSizeUnit": null
+        },
+        "expected": {
+          "value": 1,
+          "unit": "serving"
+        }
+      },
+      {
+        "name": "an explicit serving size wins",
+        "input": {
+          "nutritionBasis": "100g",
+          "servingSizeValue": 30,
+          "servingSizeUnit": "g"
+        },
+        "expected": {
+          "value": 30,
+          "unit": "g"
+        }
+      },
+      {
+        "name": "a decimal serving size is kept",
+        "input": {
+          "nutritionBasis": "100g",
+          "servingSizeValue": 12.5,
+          "servingSizeUnit": "g"
+        },
+        "expected": {
+          "value": 12.5,
+          "unit": "g"
+        }
+      },
+      {
+        "name": "zero serving size is not a serving size",
+        "input": {
+          "nutritionBasis": "100g",
+          "servingSizeValue": 0,
+          "servingSizeUnit": "g"
+        },
+        "expected": {
+          "value": 100,
+          "unit": "g"
+        }
+      },
+      {
+        "name": "negative serving size falls back",
+        "input": {
+          "nutritionBasis": "100g",
+          "servingSizeValue": -5,
+          "servingSizeUnit": "g"
+        },
+        "expected": {
+          "value": 100,
+          "unit": "g"
+        }
+      },
+      {
+        "name": "blank unit falls back to the basis unit",
+        "input": {
+          "nutritionBasis": "100ml",
+          "servingSizeValue": 250,
+          "servingSizeUnit": "   "
+        },
+        "expected": {
+          "value": 250,
+          "unit": "ml"
+        }
+      },
+      {
+        "name": "unit is trimmed",
+        "input": {
+          "nutritionBasis": "100g",
+          "servingSizeValue": 30,
+          "servingSizeUnit": "  slice "
+        },
+        "expected": {
+          "value": 30,
+          "unit": "slice"
+        }
+      },
+      {
+        "name": "an unknown basis degrades to per-100g",
+        "input": {
+          "nutritionBasis": "per_bottle",
+          "servingSizeValue": null,
+          "servingSizeUnit": null
+        },
+        "expected": {
+          "value": 100,
+          "unit": "g"
+        }
+      }
+    ],
+    "getQuantityScaleFactor": [
+      {
+        "name": "quantity equals serving",
+        "input": {
+          "quantity": 100,
+          "servingSize": 100
+        },
+        "expected": 1
+      },
+      {
+        "name": "one and a half servings",
+        "input": {
+          "quantity": 150,
+          "servingSize": 100
+        },
+        "expected": 1.5
+      },
+      {
+        "name": "zero quantity",
+        "input": {
+          "quantity": 0,
+          "servingSize": 100
+        },
+        "expected": 0
+      },
+      {
+        "name": "very small quantity",
+        "input": {
+          "quantity": 0.5,
+          "servingSize": 100
+        },
+        "expected": 0.005
+      },
+      {
+        "name": "very large quantity",
+        "input": {
+          "quantity": 100000,
+          "servingSize": 100
+        },
+        "expected": 1000
+      },
+      {
+        "name": "zero serving size degrades to 1",
+        "input": {
+          "quantity": 100,
+          "servingSize": 0
+        },
+        "expected": 1
+      },
+      {
+        "name": "null serving size degrades to 1",
+        "input": {
+          "quantity": 100,
+          "servingSize": null
+        },
+        "expected": 1
+      },
+      {
+        "name": "negative serving size degrades to 1",
+        "input": {
+          "quantity": 100,
+          "servingSize": -100
+        },
+        "expected": 1
+      },
+      {
+        "name": "per-serving food, two servings",
+        "input": {
+          "quantity": 2,
+          "servingSize": 1
+        },
+        "expected": 2
+      }
+    ],
+    "scaleFoodNutritionForQuantity": [
+      {
+        "name": "per-100g at 100 g is the stored value",
+        "input": {
+          "food": {
+            "nutritionBasis": "100g",
+            "servingSizeValue": null,
+            "servingSizeUnit": null,
+            "calories": 250,
+            "proteinG": 10,
+            "carbsG": 30,
+            "fatG": 8
+          },
+          "quantity": 100
+        },
+        "expected": {
+          "calories": 250,
+          "proteinG": 10,
+          "carbsG": 30,
+          "fatG": 8
+        }
+      },
+      {
+        "name": "per-100g at 150 g scales by 1.5",
+        "input": {
+          "food": {
+            "nutritionBasis": "100g",
+            "servingSizeValue": null,
+            "servingSizeUnit": null,
+            "calories": 250,
+            "proteinG": 10,
+            "carbsG": 30,
+            "fatG": 8
+          },
+          "quantity": 150
+        },
+        "expected": {
+          "calories": 375,
+          "proteinG": 15,
+          "carbsG": 45,
+          "fatG": 12
+        }
+      },
+      {
+        "name": "per-100g at 33 g produces fractional macros",
+        "input": {
+          "food": {
+            "nutritionBasis": "100g",
+            "servingSizeValue": null,
+            "servingSizeUnit": null,
+            "calories": 250,
+            "proteinG": 10,
+            "carbsG": 30,
+            "fatG": 8
+          },
+          "quantity": 33
+        },
+        "expected": {
+          "calories": 83,
+          "proteinG": 3.3,
+          "carbsG": 9.9,
+          "fatG": 2.6
+        }
+      },
+      {
+        "name": "zero quantity yields zeros",
+        "input": {
+          "food": {
+            "nutritionBasis": "100g",
+            "servingSizeValue": null,
+            "servingSizeUnit": null,
+            "calories": 250,
+            "proteinG": 10,
+            "carbsG": 30,
+            "fatG": 8
+          },
+          "quantity": 0
+        },
+        "expected": {
+          "calories": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        }
+      },
+      {
+        "name": "custom serving size scales against that serving",
+        "input": {
+          "food": {
+            "nutritionBasis": "100g",
+            "servingSizeValue": 30,
+            "servingSizeUnit": "g",
+            "calories": 160,
+            "proteinG": 6,
+            "carbsG": 4,
+            "fatG": 14
+          },
+          "quantity": 60
+        },
+        "expected": {
+          "calories": 320,
+          "proteinG": 12,
+          "carbsG": 8,
+          "fatG": 28
+        }
+      },
+      {
+        "name": "per-serving food, three servings",
+        "input": {
+          "food": {
+            "nutritionBasis": "serving",
+            "servingSizeValue": null,
+            "servingSizeUnit": null,
+            "calories": 120,
+            "proteinG": 3.5,
+            "carbsG": 20,
+            "fatG": 2.5
+          },
+          "quantity": 3
+        },
+        "expected": {
+          "calories": 360,
+          "proteinG": 10.5,
+          "carbsG": 60,
+          "fatG": 7.5
+        }
+      },
+      {
+        "name": "missing macros are treated as zero",
+        "input": {
+          "food": {
+            "nutritionBasis": "100g",
+            "servingSizeValue": null,
+            "servingSizeUnit": null,
+            "calories": null,
+            "proteinG": null,
+            "carbsG": null,
+            "fatG": null
+          },
+          "quantity": 150
+        },
+        "expected": {
+          "calories": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        }
+      },
+      {
+        "name": "a tiny quantity rounds calories to zero but keeps a macro decimal",
+        "input": {
+          "food": {
+            "nutritionBasis": "100g",
+            "servingSizeValue": null,
+            "servingSizeUnit": null,
+            "calories": 250,
+            "proteinG": 10,
+            "carbsG": 30,
+            "fatG": 8
+          },
+          "quantity": 1
+        },
+        "expected": {
+          "calories": 3,
+          "proteinG": 0.1,
+          "carbsG": 0.3,
+          "fatG": 0.1
+        }
+      }
+    ],
+    "calculateLoggedNutrition": [
+      {
+        "name": "a food entry scales by quantity over serving",
+        "input": {
+          "entrySource": "food_item",
+          "quantity": 150,
+          "servingSize": 100,
+          "calories": 250,
+          "proteinG": 10,
+          "carbsG": 30,
+          "fatG": 8
+        },
+        "expected": {
+          "calories": 375,
+          "proteinG": 15,
+          "carbsG": 45,
+          "fatG": 12
+        }
+      },
+      {
+        "name": "a quick add is never scaled",
+        "input": {
+          "entrySource": "quick_add",
+          "quantity": 999,
+          "servingSize": 1,
+          "calories": 420,
+          "proteinG": 30,
+          "carbsG": 40,
+          "fatG": 12
+        },
+        "expected": {
+          "calories": 420,
+          "proteinG": 30,
+          "carbsG": 40,
+          "fatG": 12
+        }
+      },
+      {
+        "name": "nulls are zeros",
+        "input": {
+          "entrySource": "food_item",
+          "quantity": 100,
+          "servingSize": 100,
+          "calories": null,
+          "proteinG": null,
+          "carbsG": null,
+          "fatG": null
+        },
+        "expected": {
+          "calories": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        }
+      }
+    ],
+    "getLoggedCaloriesRaw": [
+      {
+        "name": "returns the UNROUNDED value, so aggregates do not accumulate error",
+        "input": {
+          "entrySource": "food_item",
+          "quantity": 33,
+          "servingSize": 100,
+          "calories": 250,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "expected": 82.5
+      },
+      {
+        "name": "quick add returns its stored calories unscaled",
+        "input": {
+          "entrySource": "quick_add",
+          "quantity": 5,
+          "servingSize": 1,
+          "calories": 137.4,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "expected": 137.4
+      }
+    ],
+    "sumLoggedNutrition": [
+      {
+        "name": "empty day",
+        "input": {
+          "entries": []
+        },
+        "expected": {
+          "calories": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        }
+      },
+      {
+        "name": "sums unrounded then rounds once — three 0.4 kcal entries total 1, not 0",
+        "input": {
+          "entries": [
+            {
+              "entrySource": "food_item",
+              "quantity": 100,
+              "servingSize": 100,
+              "calories": 0.4,
+              "proteinG": 0,
+              "carbsG": 0,
+              "fatG": 0
+            },
+            {
+              "entrySource": "food_item",
+              "quantity": 100,
+              "servingSize": 100,
+              "calories": 0.4,
+              "proteinG": 0,
+              "carbsG": 0,
+              "fatG": 0
+            },
+            {
+              "entrySource": "food_item",
+              "quantity": 100,
+              "servingSize": 100,
+              "calories": 0.4,
+              "proteinG": 0,
+              "carbsG": 0,
+              "fatG": 0
+            }
+          ]
+        },
+        "expected": {
+          "calories": 1,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        }
+      },
+      {
+        "name": "macro decimals accumulate before rounding",
+        "input": {
+          "entries": [
+            {
+              "entrySource": "food_item",
+              "quantity": 100,
+              "servingSize": 100,
+              "calories": 0,
+              "proteinG": 0.05,
+              "carbsG": 0,
+              "fatG": 0
+            },
+            {
+              "entrySource": "food_item",
+              "quantity": 100,
+              "servingSize": 100,
+              "calories": 0,
+              "proteinG": 0.05,
+              "carbsG": 0,
+              "fatG": 0
+            }
+          ]
+        },
+        "expected": {
+          "calories": 0,
+          "proteinG": 0.1,
+          "carbsG": 0,
+          "fatG": 0
+        }
+      },
+      {
+        "name": "a mixed day",
+        "input": {
+          "entries": [
+            {
+              "entrySource": "food_item",
+              "quantity": 150,
+              "servingSize": 100,
+              "calories": 250,
+              "proteinG": 10,
+              "carbsG": 30,
+              "fatG": 8
+            },
+            {
+              "entrySource": "quick_add",
+              "quantity": 1,
+              "servingSize": 1,
+              "calories": 420,
+              "proteinG": 30,
+              "carbsG": 40,
+              "fatG": 12
+            }
+          ]
+        },
+        "expected": {
+          "calories": 795,
+          "proteinG": 45,
+          "carbsG": 85,
+          "fatG": 24
+        }
+      }
+    ],
+    "calculateQuickAddCaloriesFromMacros": [
+      {
+        "name": "Atwater 4/4/9",
+        "input": {
+          "proteinG": 10,
+          "carbsG": 20,
+          "fatG": 5,
+          "alcoholG": 0
+        },
+        "expected": 165
+      },
+      {
+        "name": "alcohol at 7 kcal/g",
+        "input": {
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0,
+          "alcoholG": 10
+        },
+        "expected": 70
+      },
+      {
+        "name": "all zero",
+        "input": {
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0,
+          "alcoholG": 0
+        },
+        "expected": 0
+      },
+      {
+        "name": "all null",
+        "input": {
+          "proteinG": null,
+          "carbsG": null,
+          "fatG": null,
+          "alcoholG": null
+        },
+        "expected": 0
+      },
+      {
+        "name": "omitted fields are zero",
+        "input": {},
+        "expected": 0
+      },
+      {
+        "name": "fractional macros round to a whole calorie",
+        "input": {
+          "proteinG": 0.1,
+          "carbsG": 0.1,
+          "fatG": 0.1,
+          "alcoholG": 0
+        },
+        "expected": 2
+      },
+      {
+        "name": "a fractional total lands on the rounding half",
+        "input": {
+          "proteinG": 1.5,
+          "carbsG": 2.5,
+          "fatG": 0.5,
+          "alcoholG": 0
+        },
+        "expected": 21
+      },
+      {
+        "name": "large values",
+        "input": {
+          "proteinG": 300,
+          "carbsG": 500,
+          "fatG": 200,
+          "alcoholG": 0
+        },
+        "expected": 5000
+      }
+    ],
+    "clampCalorieTarget": [
+      {
+        "name": "a normal target passes through",
+        "input": {
+          "value": 2300
+        },
+        "expected": 2300
+      },
+      {
+        "name": "below the floor clamps up",
+        "input": {
+          "value": 799
+        },
+        "expected": 800
+      },
+      {
+        "name": "exactly the floor",
+        "input": {
+          "value": 800
+        },
+        "expected": 800
+      },
+      {
+        "name": "exactly the ceiling",
+        "input": {
+          "value": 7000
+        },
+        "expected": 7000
+      },
+      {
+        "name": "above the ceiling clamps down",
+        "input": {
+          "value": 7001
+        },
+        "expected": 7000
+      },
+      {
+        "name": "zero clamps to the floor",
+        "input": {
+          "value": 0
+        },
+        "expected": 800
+      },
+      {
+        "name": "negative clamps to the floor",
+        "input": {
+          "value": -500
+        },
+        "expected": 800
+      },
+      {
+        "name": "a decimal is rounded",
+        "input": {
+          "value": 1724.6
+        },
+        "expected": 1725
+      },
+      {
+        "name": "a decimal on the half rounds up",
+        "input": {
+          "value": 1724.5
+        },
+        "expected": 1725
+      },
+      {
+        "name": "rounding happens before the ceiling check",
+        "input": {
+          "value": 7000.4
+        },
+        "expected": 7000
+      }
+    ],
+    "getEffectiveCalorieTargetForDate": [
+      {
+        "name": "no overrides falls back to the base target",
+        "input": {
+          "dateKey": "2026-08-30",
+          "baseCalories": 2300,
+          "overrides": null
+        },
+        "expected": 2300
+      },
+      {
+        "name": "an empty override list falls back",
+        "input": {
+          "dateKey": "2026-08-30",
+          "baseCalories": 2300,
+          "overrides": []
+        },
+        "expected": 2300
+      },
+      {
+        "name": "an all-null override list falls back",
+        "input": {
+          "dateKey": "2026-08-30",
+          "baseCalories": 2300,
+          "overrides": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        "expected": 2300
+      },
+      {
+        "name": "Sunday reads the seventh slot",
+        "input": {
+          "dateKey": "2026-08-30",
+          "baseCalories": 2300,
+          "overrides": [
+            1800,
+            1800,
+            1800,
+            1800,
+            1800,
+            2600,
+            2900
+          ]
+        },
+        "expected": 2900
+      },
+      {
+        "name": "Monday reads the first slot",
+        "input": {
+          "dateKey": "2026-08-31",
+          "baseCalories": 2300,
+          "overrides": [
+            1800,
+            1800,
+            1800,
+            1800,
+            1800,
+            2600,
+            2900
+          ]
+        },
+        "expected": 1800
+      },
+      {
+        "name": "a zero override is not an override",
+        "input": {
+          "dateKey": "2026-08-30",
+          "baseCalories": 2300,
+          "overrides": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "expected": 2300
+      },
+      {
+        "name": "no base and no override yields nothing",
+        "input": {
+          "dateKey": "2026-08-30",
+          "baseCalories": null,
+          "overrides": null
+        },
+        "expected": null
+      },
+      {
+        "name": "a zero base yields nothing",
+        "input": {
+          "dateKey": "2026-08-30",
+          "baseCalories": 0,
+          "overrides": null
+        },
+        "expected": null
+      },
+      {
+        "name": "an override applies even with no base",
+        "input": {
+          "dateKey": "2026-08-30",
+          "baseCalories": null,
+          "overrides": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            2100
+          ]
+        },
+        "expected": 2100
+      }
+    ],
+    "getMondayFirstDayIndex": [
+      {
+        "name": "Monday is 0",
+        "input": {
+          "dateKey": "2026-08-31"
+        },
+        "expected": 0
+      },
+      {
+        "name": "Tuesday is 1",
+        "input": {
+          "dateKey": "2026-09-01"
+        },
+        "expected": 1
+      },
+      {
+        "name": "Saturday is 5",
+        "input": {
+          "dateKey": "2026-08-29"
+        },
+        "expected": 5
+      },
+      {
+        "name": "Sunday is 6",
+        "input": {
+          "dateKey": "2026-08-30"
+        },
+        "expected": 6
+      },
+      {
+        "name": "leap day",
+        "input": {
+          "dateKey": "2024-02-29"
+        },
+        "expected": 3
+      },
+      {
+        "name": "new year",
+        "input": {
+          "dateKey": "2026-01-01"
+        },
+        "expected": 3
+      }
+    ],
+    "getMealSlotForHour": [
+      {
+        "name": "midnight is breakfast",
+        "input": {
+          "hour": 0
+        },
+        "expected": "breakfast"
+      },
+      {
+        "name": "last breakfast hour",
+        "input": {
+          "hour": 10
+        },
+        "expected": "breakfast"
+      },
+      {
+        "name": "lunch begins at 11",
+        "input": {
+          "hour": 11
+        },
+        "expected": "lunch"
+      },
+      {
+        "name": "last lunch hour",
+        "input": {
+          "hour": 15
+        },
+        "expected": "lunch"
+      },
+      {
+        "name": "dinner begins at 16",
+        "input": {
+          "hour": 16
+        },
+        "expected": "dinner"
+      },
+      {
+        "name": "last dinner hour",
+        "input": {
+          "hour": 20
+        },
+        "expected": "dinner"
+      },
+      {
+        "name": "snacks begin at 21",
+        "input": {
+          "hour": 21
+        },
+        "expected": "snacks"
+      },
+      {
+        "name": "last hour of the day",
+        "input": {
+          "hour": 23
+        },
+        "expected": "snacks"
+      }
+    ],
+    "getMealSlotFromLabel": [
+      {
+        "name": "exact label",
+        "input": {
+          "value": "breakfast"
+        },
+        "expected": "breakfast"
+      },
+      {
+        "name": "case and padding are ignored",
+        "input": {
+          "value": "  LUNCH  "
+        },
+        "expected": "lunch"
+      },
+      {
+        "name": "a label containing the slot name matches",
+        "input": {
+          "value": "Late dinner"
+        },
+        "expected": "dinner"
+      },
+      {
+        "name": "singular snack maps to snacks",
+        "input": {
+          "value": "snack"
+        },
+        "expected": "snacks"
+      },
+      {
+        "name": "plural snacks",
+        "input": {
+          "value": "Snacks"
+        },
+        "expected": "snacks"
+      },
+      {
+        "name": "an unrelated label is not a slot",
+        "input": {
+          "value": "brunch"
+        },
+        "expected": null
+      },
+      {
+        "name": "empty string",
+        "input": {
+          "value": ""
+        },
+        "expected": null
+      },
+      {
+        "name": "whitespace only",
+        "input": {
+          "value": "   "
+        },
+        "expected": null
+      },
+      {
+        "name": "null",
+        "input": {
+          "value": null
+        },
+        "expected": null
+      }
+    ],
+    "buildDuplicateKey": [
+      {
+        "name": "a food entry keys on source, food, time, quantity and meal",
+        "input": {
+          "entry": {
+            "entrySource": "food_item",
+            "foodId": 42,
+            "loggedAt": "2026-08-30T08:30:00.000Z",
+            "createdAt": "2026-08-30T08:30:00.000Z",
+            "quantityValue": 150,
+            "mealType": "Breakfast",
+            "displayName": "Oats",
+            "quickAddName": null,
+            "calories": 375,
+            "proteinG": 15,
+            "carbsG": 45,
+            "fatG": 12,
+            "alcoholG": null,
+            "systemCalculatedCalories": null,
+            "isEnergyManuallySet": false
+          },
+          "tz": "UTC"
+        },
+        "expected": "food_item|42|08:30:00|150|Breakfast"
+      },
+      {
+        "name": "a different second is a different entry",
+        "input": {
+          "entry": {
+            "entrySource": "food_item",
+            "foodId": 42,
+            "loggedAt": "2026-08-30T08:30:01.000Z",
+            "createdAt": "2026-08-30T08:30:00.000Z",
+            "quantityValue": 150,
+            "mealType": "Breakfast",
+            "displayName": "Oats",
+            "quickAddName": null,
+            "calories": 375,
+            "proteinG": 15,
+            "carbsG": 45,
+            "fatG": 12,
+            "alcoholG": null,
+            "systemCalculatedCalories": null,
+            "isEnergyManuallySet": false
+          },
+          "tz": "UTC"
+        },
+        "expected": "food_item|42|08:30:01|150|Breakfast"
+      },
+      {
+        "name": "a missing time is explicit, not empty",
+        "input": {
+          "entry": {
+            "entrySource": "food_item",
+            "foodId": 42,
+            "loggedAt": null,
+            "createdAt": null,
+            "quantityValue": 150,
+            "mealType": "Breakfast",
+            "displayName": "Oats",
+            "quickAddName": null,
+            "calories": 375,
+            "proteinG": 15,
+            "carbsG": 45,
+            "fatG": 12,
+            "alcoholG": null,
+            "systemCalculatedCalories": null,
+            "isEnergyManuallySet": false
+          },
+          "tz": "UTC"
+        },
+        "expected": "food_item|42|no-time|150|Breakfast"
+      },
+      {
+        "name": "createdAt is the fallback when loggedAt is absent",
+        "input": {
+          "entry": {
+            "entrySource": "food_item",
+            "foodId": 42,
+            "loggedAt": null,
+            "createdAt": "2026-08-30T08:30:00.000Z",
+            "quantityValue": 150,
+            "mealType": "Breakfast",
+            "displayName": "Oats",
+            "quickAddName": null,
+            "calories": 375,
+            "proteinG": 15,
+            "carbsG": 45,
+            "fatG": 12,
+            "alcoholG": null,
+            "systemCalculatedCalories": null,
+            "isEnergyManuallySet": false
+          },
+          "tz": "UTC"
+        },
+        "expected": "food_item|42|08:30:00|150|Breakfast"
+      },
+      {
+        "name": "a null quantity is an empty field",
+        "input": {
+          "entry": {
+            "entrySource": "food_item",
+            "foodId": 42,
+            "loggedAt": "2026-08-30T08:30:00.000Z",
+            "createdAt": "2026-08-30T08:30:00.000Z",
+            "quantityValue": null,
+            "mealType": "Breakfast",
+            "displayName": "Oats",
+            "quickAddName": null,
+            "calories": 375,
+            "proteinG": 15,
+            "carbsG": 45,
+            "fatG": 12,
+            "alcoholG": null,
+            "systemCalculatedCalories": null,
+            "isEnergyManuallySet": false
+          },
+          "tz": "UTC"
+        },
+        "expected": "food_item|42|08:30:00||Breakfast"
+      },
+      {
+        "name": "meal type is trimmed but not lowercased",
+        "input": {
+          "entry": {
+            "entrySource": "food_item",
+            "foodId": 42,
+            "loggedAt": "2026-08-30T08:30:00.000Z",
+            "createdAt": "2026-08-30T08:30:00.000Z",
+            "quantityValue": 150,
+            "mealType": "  Breakfast  ",
+            "displayName": "Oats",
+            "quickAddName": null,
+            "calories": 375,
+            "proteinG": 15,
+            "carbsG": 45,
+            "fatG": 12,
+            "alcoholG": null,
+            "systemCalculatedCalories": null,
+            "isEnergyManuallySet": false
+          },
+          "tz": "UTC"
+        },
+        "expected": "food_item|42|08:30:00|150|Breakfast"
+      },
+      {
+        "name": "a quick add includes its name and full macro payload",
+        "input": {
+          "entry": {
+            "entrySource": "quick_add",
+            "foodId": null,
+            "loggedAt": "2026-08-30T08:30:00.000Z",
+            "createdAt": "2026-08-30T08:30:00.000Z",
+            "quantityValue": 150,
+            "mealType": "Breakfast",
+            "displayName": "Protein shake",
+            "quickAddName": "Protein shake",
+            "calories": 180,
+            "proteinG": 25,
+            "carbsG": 5,
+            "fatG": 2,
+            "alcoholG": 0,
+            "systemCalculatedCalories": 148,
+            "isEnergyManuallySet": true
+          },
+          "tz": "UTC"
+        },
+        "expected": "quick_add||08:30:00|150|Breakfast|Protein shake|180|25|5|2|0|148|1"
+      },
+      {
+        "name": "two quick adds differing only in manual-energy flag are distinct",
+        "input": {
+          "entry": {
+            "entrySource": "quick_add",
+            "foodId": null,
+            "loggedAt": "2026-08-30T08:30:00.000Z",
+            "createdAt": "2026-08-30T08:30:00.000Z",
+            "quantityValue": 150,
+            "mealType": "Breakfast",
+            "displayName": "Protein shake",
+            "quickAddName": "Protein shake",
+            "calories": 180,
+            "proteinG": 25,
+            "carbsG": 5,
+            "fatG": 2,
+            "alcoholG": 0,
+            "systemCalculatedCalories": 148,
+            "isEnergyManuallySet": false
+          },
+          "tz": "UTC"
+        },
+        "expected": "quick_add||08:30:00|150|Breakfast|Protein shake|180|25|5|2|0|148|0"
+      }
+    ]
+  }
+}

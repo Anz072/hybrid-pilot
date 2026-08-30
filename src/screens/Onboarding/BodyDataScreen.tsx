@@ -23,7 +23,7 @@ import {
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import { formatGoalStrategyMeta } from "../../engine/goalStrategy";
 import {
-  buildBirthdateIsoString,
+  buildBirthdateValue,
   formatDateToYmd,
   getAgeToday,
   parseBirthdateValue,
@@ -107,7 +107,7 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
     }
 
     const bodyData: BodyData = {
-      birthdate: buildBirthdateIsoString(selectedBirthdate),
+      birthdate: buildBirthdateValue(selectedBirthdate),
       heightCm: parsedHeight,
       weightKg: parsedWeight,
       sex,

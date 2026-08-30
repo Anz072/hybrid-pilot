@@ -10,7 +10,7 @@ import {
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
-  buildBirthdateIsoString,
+  buildBirthdateValue,
   getAgeToday,
   parseBirthdateValue,
 } from "../../helpers";
@@ -185,7 +185,7 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
         user,
         patch: {
           displayName: trimmedDisplayName,
-          birthdate: parsedBirthdate ? buildBirthdateIsoString(parsedBirthdate) : null,
+          birthdate: parsedBirthdate ? buildBirthdateValue(parsedBirthdate) : null,
           heightCm: parsedHeight,
           gender: selectedGender,
         },

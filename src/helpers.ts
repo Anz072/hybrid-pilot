@@ -21,8 +21,20 @@ export const formatDateToYmd = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
-export const buildBirthdateIsoString = (date: Date): string =>
-  `${formatDateToYmd(date)}T00:00:00.000Z`;
+/**
+ * A birthdate is a calendar date, not an instant.
+ *
+ * This used to append `T00:00:00.000Z`, which broke every profile write: the
+ * API's `birthdate` is `^\d{4}-\d{2}-\d{2}$`, so onboarding and profile edits
+ * both failed with 400 and the calorie target was silently never saved. The
+ * timestamp was also never wanted — every consumer already sliced it back off
+ * to ten characters.
+ *
+ * The `Z` was actively misleading too: the date is built from the device's
+ * local calendar fields, so labelling it UTC could shift the day by one either
+ * side of midnight.
+ */
+export const buildBirthdateValue = (date: Date): string => formatDateToYmd(date);
 
 export const parseBirthdateValue = (
   value: string | null | undefined,

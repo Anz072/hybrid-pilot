@@ -31,7 +31,46 @@ The USDA API key is no longer shipped in the app. Food search, barcode lookup an
 the calorie diary are served by the Nouri backend, which holds those credentials
 server-side.
 
-The Supabase schema lives in [docs/supabase-schema.sql](docs/supabase-schema.sql).
+Supabase and the API must point at the **same** environment — both local, or both
+deployed. The app checks this on startup in development and logs a clear error if
+they disagree, because the symptom otherwise is unexplained 401s: a local Supabase
+signs tokens with its own key, which a deployed API will not accept.
+
+### Running against a fully local stack
+
+```bash
+cd ../nouri-api
+pnpm supabase start          # Postgres, Auth, Studio  (Docker)
+pnpm supabase status -o env  # prints the publishable key
+pnpm start:local             # the API on :8080
+```
+
+Then set the mobile env to match. **The host depends on where the app runs**, so
+there is no single correct value — this is why it is configuration rather than a
+constant, and why no developer's address belongs in committed source:
+
+| Running on | Host to use | Why |
+| --- | --- | --- |
+| iOS Simulator | `127.0.0.1` | shares the host's network namespace |
+| Android Emulator | `10.0.2.2` | `127.0.0.1` is the emulator itself; `10.0.2.2` is the host machine |
+| Physical device / Expo Go | your machine's LAN IP | the device is a separate host on the network |
+
+Find the LAN address with `ipconfig getifaddr en0` on macOS. For a physical
+device the API must also listen beyond loopback — `HOST=0.0.0.0` is already the
+default in `nouri-api`.
+
+```bash
+EXPO_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321      # or 10.0.2.2 / <lan-ip>
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<from supabase status>
+EXPO_PUBLIC_API_BASE_URL=http://127.0.0.1:8080       # same host as above
+```
+
+The backend enforces the other half of this: it refuses to start if
+`SUPABASE_JWT_ISSUER` is a local Auth service while `DATABASE_URL` points
+somewhere remote, so a locally minted token can never reach a real database.
+
+The Supabase schema lives in the `nouri-api` repository, under
+`supabase/migrations/`.
 
 ## Run on Android (emulator or device)
 

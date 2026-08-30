@@ -25,8 +25,15 @@ import { applyFontDefaults } from "./src/theme/applyFontDefaults";
 import { appColors } from "./src/theme/colors";
 import { loadDisplayPreferences } from "./src/preferences/displayPreferences";
 import { registerSupabaseAuthLifecycle } from "./src/API/supabase/client";
+import { assertConsistentEnvironment } from "./src/config/environmentGuard";
 
 applyFontDefaults();
+
+// Catches a half-local `.env` (local Auth + deployed API, or the reverse) at
+// startup, where the cause is obvious, rather than as unexplained 401s later.
+if (__DEV__) {
+  assertConsistentEnvironment();
+}
 
 export default function App() {
   const [preferencesReady, setPreferencesReady] = React.useState(false);

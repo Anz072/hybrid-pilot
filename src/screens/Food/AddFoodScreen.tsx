@@ -368,6 +368,19 @@ const AddFoodScreen = () => {
   const lastSavedSearchRef = React.useRef<string | null>(null);
   const activeSearchCacheKeyRef = React.useRef<string | null>(null);
 
+  // Mirrors of the live search state, read by the focus effect below.
+  //
+  // The focus effect must refresh the static lists when the screen is focused,
+  // and must NOT re-run when the query changes — the debounced search effect
+  // already owns that. Depending on `query` directly made every keystroke
+  // force-reload favourites, recents, recipes, meals and the profile, and clear
+  // the search cache on the way through. Measured on a real device: six
+  // requests per search round instead of one.
+  const queryRef = React.useRef(query);
+  const searchModeRef = React.useRef(searchMode);
+  queryRef.current = query;
+  searchModeRef.current = searchMode;
+
   const applyStaticListsSnapshot = useCallback(
     (snapshot: AddFoodStaticListsSnapshot) => {
       setUser(snapshot.user);
@@ -536,13 +549,13 @@ const AddFoodScreen = () => {
         const hasCachedLists = Boolean(getCachedAddFoodStaticLists());
         searchCacheRef.current.clear();
         localOnlySearchCacheRef.current.clear();
-        const normalized = query.trim();
+        const normalized = queryRef.current.trim();
         const staticListsPromise = loadStaticLists({
           force: true,
           silent: hasCachedLists,
         });
         const searchPromise = normalized
-          ? searchFoods(normalized, searchMode)
+          ? searchFoods(normalized, searchModeRef.current)
           : Promise.resolve<SearchFoodResult[] | null>(null);
 
         if (normalized) {
@@ -577,7 +590,7 @@ const AddFoodScreen = () => {
       return () => {
         active = false;
       };
-    }, [loadStaticLists, query, searchFoods, searchMode]),
+    }, [loadStaticLists, searchFoods]),
   );
 
   useEffect(() => {

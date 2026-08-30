@@ -253,7 +253,26 @@ export const getUserByExternalId = async (
     return null;
   }
 
-  const me = await measureDiaryRequest(perfTrace, "profile", "supabase", () => getMe());
+  let me: ApiMe;
+  try {
+    me = await measureDiaryRequest(perfTrace, "profile", "supabase", () => getMe());
+  } catch (error) {
+    // This resolves the signed-in user, and the navigator treats a null result
+    // as "not logged in". Every other read in this store is cache-first; this
+    // one was not, so an unreachable API dropped the user back to the sign-in
+    // screen even though the Supabase session was still valid. Verified on a
+    // device: stop the API, restart the app, and you are logged out.
+    //
+    // Only a transport failure falls back. An auth failure or a missing
+    // profile is a real answer and must still propagate, or a revoked session
+    // would keep working offline forever.
+    if (error instanceof NouriApiError && error.code === "NETWORK_ERROR") {
+      const cached = await getUserByExternalIdLocal(externalId);
+      if (cached) return cached;
+    }
+    throw error;
+  }
+
   const user = toDbUser(me, localAccount);
   await upsertUserLocal(user);
 

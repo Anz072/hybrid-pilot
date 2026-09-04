@@ -24,7 +24,9 @@ export type FoodStackParamList = {
     loggedAt?: string | null;
     contextLabel?: string | null;
   };
-  EditFoodEntry: { entryId: number };
+  // The diary day is part of the address: an entry is reachable only through
+  // the day that holds it, and the caller is always looking at that day.
+  EditFoodEntry: { entryId: number; date: string };
   CreateCustomFood: {
     date: string;
     mealType?: string | null;

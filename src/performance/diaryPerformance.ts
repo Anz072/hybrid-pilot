@@ -10,11 +10,15 @@ export type DiaryPerfReason =
 
 export type DiaryPerfVisit = "first" | "repeat";
 export type DiaryPerfOutcome = "success" | "failed" | "obsolete";
-export type DiaryPerfRequestSource =
-  | "logical"
-  | "sqlite"
-  | "supabase"
-  | "background-supabase";
+/**
+ * Where a measured operation got its data.
+ *
+ * `sqlite`, `supabase` and `background-supabase` are gone with the on-device
+ * database and the direct Data API. Domain reads now have exactly one source,
+ * so keeping names for a cache-then-refresh architecture that no longer exists
+ * would only make old traces look like current ones.
+ */
+export type DiaryPerfRequestSource = "logical" | "node-api";
 
 type DiaryPerfStep = {
   count: number;
@@ -32,7 +36,6 @@ export type DiaryPerfTrace = {
   usefulAtMs: number | null;
   steps: Record<string, DiaryPerfStep>;
   requestCounts: Record<string, number>;
-  cachePaths: Record<string, string>;
   rowCounts: Record<string, number>;
   renderCount: number;
   renderTotalMs: number;
@@ -70,7 +73,6 @@ export const startDiaryTrace = (input: {
     usefulAtMs: null,
     steps: {},
     requestCounts: {},
-    cachePaths: {},
     rowCounts: {},
     renderCount: 0,
     renderTotalMs: 0,
@@ -154,16 +156,6 @@ export const measureDiaryRequest = async <T>(
   }
 };
 
-export const recordDiaryCachePath = (
-  trace: DiaryPerfTrace | null | undefined,
-  operationName: string,
-  cachePath: string,
-) => {
-  if (trace) {
-    trace.cachePaths[operationName] = cachePath;
-  }
-};
-
 export const recordDiaryRows = (
   trace: DiaryPerfTrace | null | undefined,
   operationName: string,
@@ -231,7 +223,6 @@ export const finishDiaryTrace = (
     usefulContentMs:
       trace.usefulAtMs == null ? null : roundMs(trace.usefulAtMs),
     requestCounts: trace.requestCounts,
-    cachePaths: trace.cachePaths,
     rowCounts: trace.rowCounts,
     render: {
       count: trace.renderCount,

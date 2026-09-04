@@ -8,7 +8,6 @@ import type {
   GoalStrategy,
   ProteinFocus,
 } from "../../navigation/onboardingTypes";
-import { getLocalAccount, saveLocalAccount } from "../../storage/localStore";
 import { DB } from "../../store/DB";
 import type { AppDispatch } from "../../store/appStore";
 import type { DBUser } from "../../store/DB_TYPES";
@@ -30,24 +29,10 @@ export const saveUserProfileChanges = async ({
   };
 
   await DB.addUser(nextUser);
+  // Re-read rather than trusting the patch: the server normalizes and clamps,
+  // and the profile it returns is the one the rest of the app must show.
   const savedUser = await DB.getUser();
   const resolvedUser = savedUser ?? nextUser;
-  const localAccount = await getLocalAccount();
-
-  await saveLocalAccount({
-    id: resolvedUser.externalId,
-    provider:
-      localAccount?.provider === "email" || resolvedUser.provider === "email"
-        ? "email"
-        : "local",
-    displayName:
-      resolvedUser.displayName ??
-      localAccount?.displayName ??
-      "Nouri User",
-    email: resolvedUser.email ?? localAccount?.email ?? null,
-    birthdate: resolvedUser.birthdate ?? localAccount?.birthdate ?? null,
-    createdAt: localAccount?.createdAt ?? resolvedUser.createdAt,
-  });
 
   dispatch(setCurrentUser(resolvedUser));
   return resolvedUser;

@@ -17,21 +17,20 @@ import {
   updateRecipe,
 } from "../API/nouri/libraryApi";
 import { getFoodByRefRemote } from "./foodSearchStore";
-import { getSupabaseSessionUser } from "../API/supabase/client";
-import { shouldUseExpoGoDevLocalStore } from "../dev/expoGoDevAuth";
+// Recipes and custom meals come back as normalized Food objects carrying the
+// synthetic negative ids the app already uses, so callers keep treating them as
+// foods. The encoding is shared with the backend and pinned by the conformance
+// corpus; see src/domain/syntheticFoodIds.ts.
+import {
+  fromSyntheticMealFoodId as fromSyntheticMealId,
+  fromSyntheticRecipeFoodId as fromSyntheticRecipeId,
+  isSyntheticMealFoodId as isSyntheticMealId,
+} from "../domain/syntheticFoodIds";
 import {
   measureDiaryRequest,
-  measureDiaryStep,
-  recordDiaryCachePath,
   recordDiaryRows,
   type DiaryPerfTrace,
 } from "../performance/diaryPerformance";
-import {
-  getRecentCachedFoodItems,
-  replaceCachedFavoriteFoodIds,
-  touchCachedFoodItems,
-  upsertCachedFoodItems,
-} from "./cacheRepository";
 import type {
   CreateUserCustomMealInput,
   CreateUserRecipeInput,
@@ -43,68 +42,19 @@ import type {
   UpdateUserCustomMealInput,
   UpdateUserRecipeInput,
 } from "./DB_TYPES";
-import {
-  addFoodItem as addFoodItemLocal,
-  deleteFoodItem as deleteFoodItemLocal,
-  getFavoriteFoodIds as getFavoriteFoodIdsLocal,
-  getFavoriteFoodItems as getFavoriteFoodItemsLocal,
-  getFoodItemById as getFoodItemByIdLocal,
-  getFoodItemsByIds as getFoodItemsByIdsLocal,
-  getRecentFoodItems as getRecentFoodItemsLocal,
-  listFoodItems as listFoodItemsLocal,
-  saveFoodItem as saveFoodItemLocal,
-  setFoodItemFavorite as setFoodItemFavoriteLocal,
-} from "./foodRepository";
-import {
-  createUserRecipe as createUserRecipeLocal,
-  deleteUserRecipe as deleteUserRecipeLocal,
-  getUserRecipeDetailsById as getUserRecipeDetailsByIdLocal,
-  updateUserRecipe as updateUserRecipeLocal,
-} from "./recipeRepository";
 
-// Food library — favourites, recents, catalogue, recipes and custom meals —
-// served by the Nouri API. Replaces supabaseFoodStore.ts.
+// The user's food library — catalogue, favourites, recents, recipes and custom
+// meals — served by the Nouri API.
 //
-// Recipes and custom meals come back as normalized Food objects carrying the
-// synthetic negative ids the app already uses, so callers keep treating them as
-// foods.
-
-const SYNTHETIC_MEAL_OFFSET = 1_000_000_000;
-
-const fromSyntheticRecipeId = (foodId: number) => Math.abs(foodId);
-const fromSyntheticMealId = (foodId: number) => Math.abs(foodId) - SYNTHETIC_MEAL_OFFSET;
-const isSyntheticMealId = (foodId: number) =>
-  Number.isInteger(foodId) && Math.abs(foodId) >= SYNTHETIC_MEAL_OFFSET;
-
-const resolveUserId = async (
-  userExternalId?: string | null,
-): Promise<string | null> => {
-  if (await shouldUseExpoGoDevLocalStore(userExternalId)) {
-    return null;
-  }
-  const sessionUser = await getSupabaseSessionUser();
-  return sessionUser?.id ?? null;
-};
-
-const cacheFoods = async (foods: DBFoodItem[]): Promise<DBFoodItem[]> => {
-  const persistable = foods.filter((food) => food.id !== 0);
-  if (persistable.length > 0) {
-    await upsertCachedFoodItems(persistable);
-    await touchCachedFoodItems(persistable.map((food) => food.id));
-  }
-  return foods;
-};
+// Nothing here is stored on the device. Favourites and recents in particular
+// used to be written locally and reconciled later; they are now simply whatever
+// the server says, which is the only way the two can agree by construction.
 
 const mapFoods = (foods: ApiFood[]): DBFoodItem[] => foods.map(toDbFoodItem);
 
 // --- Catalogue -------------------------------------------------------------
 
 export const saveFoodItem = async (input: SaveFoodItemInput): Promise<number> => {
-  const userId = await resolveUserId();
-  if (!userId) {
-    return saveFoodItemLocal(input);
-  }
-
   const food = await createCatalogueFood({
     name: input.name,
     brand: input.brand ?? null,
@@ -124,245 +74,108 @@ export const saveFoodItem = async (input: SaveFoodItemInput): Promise<number> =>
     alcoholG: input.alcoholG ?? null,
     isComplete: Boolean(input.isComplete),
   });
-
-  await cacheFoods([toDbFoodItem(food)]);
   return food.id ?? 0;
 };
 
 export const addFoodItem = saveFoodItem;
 
-export const getFoodItemById = async (id: number): Promise<DBFoodItem | null> => {
-  const userId = await resolveUserId();
-  if (!userId) {
-    return getFoodItemByIdLocal(id);
-  }
-
-  const cached = await getFoodItemByIdLocal(id);
-  if (cached) {
-    void getFoodByRefRemote(id)
-      .then((food) => (food ? cacheFoods([food]) : undefined))
-      .catch(() => undefined);
-    return cached;
-  }
-
-  const food = await getFoodByRefRemote(id);
-  if (!food) return null;
-  await cacheFoods([food]);
-  return food;
-};
+export const getFoodItemById = async (id: number): Promise<DBFoodItem | null> =>
+  getFoodByRefRemote(id);
 
 export const getFoodItemsByIds = async (ids: number[]): Promise<DBFoodItem[]> => {
   const unique = [...new Set(ids.filter((id) => Number.isInteger(id)))];
   if (unique.length === 0) return [];
-
-  const userId = await resolveUserId();
-  if (!userId) {
-    return getFoodItemsByIdsLocal(unique);
-  }
-
-  const cached = await getFoodItemsByIdsLocal(unique);
-  if (cached.length === unique.length) {
-    // One batch request in the background rather than one per food.
-    void getFoodsByIds(unique)
-      .then(({ foods }) => cacheFoods(mapFoods(foods)))
-      .catch(() => undefined);
-    return cached;
-  }
-
   const { foods } = await getFoodsByIds(unique);
-  const mapped = mapFoods(foods);
-  await cacheFoods(mapped);
-
-  const byId = new Map([...cached, ...mapped].map((food) => [food.id, food]));
-  return unique
-    .map((id) => byId.get(id) ?? null)
-    .filter((food): food is DBFoodItem => food != null);
+  return mapFoods(foods);
 };
 
-export const deleteFoodItem = async (foodId: number): Promise<void> => {
-  const userId = await resolveUserId();
-  if (!userId) {
-    return deleteFoodItemLocal(foodId);
-  }
+export const deleteFoodItem = async (_foodId: number): Promise<void> => {
   // Unchanged behaviour: the shared catalogue is insert-only. This is now also
   // enforced by GRANT, not just by the absence of an RLS policy.
   throw new Error("Shared catalogue items are read-only in the app.");
 };
 
 export const listFoodItems = async ({
-  query,
   limit = 120,
   source = null,
 }: ListFoodItemsInput = {}): Promise<DBFoodItem[]> => {
-  const userId = await resolveUserId();
-  if (!userId) {
-    return listFoodItemsLocal({ query, limit, source });
-  }
-
   // The two "list" sources the app uses are the user's own recipes and meals;
-  // both have dedicated endpoints now.
-  if (source === "recipe") {
-    const { foods } = await listRecipes(limit);
-    return cacheFoods(mapFoods(foods));
-  }
-  if (source === "custom_meal") {
-    const { foods } = await listMeals(limit);
-    return cacheFoods(mapFoods(foods));
-  }
-
-  const { foods } = await listRecents(limit);
-  return cacheFoods(mapFoods(foods));
+  // both have dedicated endpoints.
+  if (source === "recipe") return mapFoods((await listRecipes(limit)).foods);
+  if (source === "custom_meal") return mapFoods((await listMeals(limit)).foods);
+  return mapFoods((await listRecents(limit)).foods);
 };
 
 // --- Favourites ------------------------------------------------------------
 
 export const setFoodItemFavorite = async (
-  userExternalId: string,
+  _userExternalId: string,
   foodId: number,
   isFavorite: boolean,
 ): Promise<void> => {
-  const userId = await resolveUserId(userExternalId);
-  if (!userId) {
-    return setFoodItemFavoriteLocal(userExternalId, foodId, isFavorite);
-  }
   if (foodId < 0) {
     // Recipes and custom meals are not favouritable; the table references
     // food_items only.
     return;
   }
-
-  await setFoodItemFavoriteLocal(userExternalId, foodId, isFavorite);
   await setFavorite(foodId, isFavorite);
 };
 
 export const getFavoriteFoodIds = async (
-  userExternalId: string,
+  _userExternalId: string,
   perfTrace?: DiaryPerfTrace,
 ): Promise<number[]> => {
-  const userId = await measureDiaryStep(perfTrace, "favorites.resolve-session", () =>
-    resolveUserId(userExternalId),
+  const { foodIds } = await measureDiaryRequest(perfTrace, "favorite-ids", "node-api", () =>
+    listFavoriteIds(),
   );
-  if (!userId) {
-    return getFavoriteFoodIdsLocal(userExternalId);
-  }
-
-  const cached = await measureDiaryRequest(perfTrace, "favorite-ids", "sqlite", () =>
-    getFavoriteFoodIdsLocal(userExternalId),
-  );
-
-  const refresh = async () => {
-    const { foodIds } = await listFavoriteIds();
-    await replaceCachedFavoriteFoodIds(userExternalId, foodIds);
-    return foodIds;
-  };
-
-  if (cached.length > 0) {
-    recordDiaryCachePath(perfTrace, "favorites", "sqlite-nonempty-hit");
-    void refresh().catch(() => undefined);
-    return cached;
-  }
-
-  recordDiaryCachePath(perfTrace, "favorites", "empty-or-unknown");
-  return refresh();
+  return foodIds;
 };
 
 export const getFavoriteFoodItems = async (
-  userExternalId: string,
+  _userExternalId: string,
   limit = 30,
   perfTrace?: DiaryPerfTrace,
 ): Promise<DBFoodItem[]> => {
-  const userId = await measureDiaryStep(perfTrace, "favorites.resolve-session", () =>
-    resolveUserId(userExternalId),
+  // Two requests: the ids, then a single batch hydrate — not one per favourite.
+  const { foodIds } = await measureDiaryRequest(perfTrace, "favorite-ids", "node-api", () =>
+    listFavoriteIds(),
   );
-  if (!userId) {
-    return getFavoriteFoodItemsLocal(userExternalId, limit);
-  }
+  const limited = foodIds.slice(0, limit);
+  if (limited.length === 0) return [];
 
-  const cached = await measureDiaryRequest(perfTrace, "favorite-foods", "sqlite", () =>
-    getFavoriteFoodItemsLocal(userExternalId, limit),
+  const { foods } = await measureDiaryRequest(perfTrace, "favorite-foods", "node-api", () =>
+    getFoodsByIds(limited),
   );
-
-  // Two requests total (ids, then a single batch hydrate) rather than one per
-  // favourite.
-  const refresh = async () => {
-    const { foodIds } = await listFavoriteIds();
-    await replaceCachedFavoriteFoodIds(userExternalId, foodIds);
-    const limited = foodIds.slice(0, limit);
-    if (limited.length === 0) return [];
-    const { foods } = await getFoodsByIds(limited);
-    const mapped = mapFoods(foods);
-    await cacheFoods(mapped);
-    const byId = new Map(mapped.map((food) => [food.id, food]));
-    return limited
-      .map((id) => byId.get(id) ?? null)
-      .filter((food): food is DBFoodItem => food != null);
-  };
-
-  if (cached.length > 0) {
-    recordDiaryCachePath(perfTrace, "favorite-foods", "sqlite-nonempty-hit");
-    recordDiaryRows(perfTrace, "favorite-foods", cached.length);
-    void refresh().catch(() => undefined);
-    return cached;
-  }
-
-  recordDiaryCachePath(perfTrace, "favorite-foods", "empty-or-unknown");
-  const foods = await refresh();
-  recordDiaryRows(perfTrace, "favorite-foods", foods.length);
-  return foods;
+  const byId = new Map(mapFoods(foods).map((food) => [food.id, food]));
+  const ordered = limited
+    .map((id) => byId.get(id) ?? null)
+    .filter((food): food is DBFoodItem => food != null);
+  recordDiaryRows(perfTrace, "favorite-foods", ordered.length);
+  return ordered;
 };
 
 // --- Recents ---------------------------------------------------------------
 
 export const getRecentFoodItems = async (
-  userExternalId: string,
+  _userExternalId: string,
   limit = 20,
   perfTrace?: DiaryPerfTrace,
 ): Promise<DBFoodItem[]> => {
-  const userId = await measureDiaryStep(perfTrace, "recents.resolve-session", () =>
-    resolveUserId(userExternalId),
-  );
-  if (!userId) {
-    return getRecentFoodItemsLocal(userExternalId, limit);
-  }
-
-  const cached = await measureDiaryRequest(perfTrace, "recent-foods", "sqlite", () =>
-    getRecentCachedFoodItems(userExternalId, limit),
-  );
-
   // ONE request. This path used to be up to ~36 sequential Supabase queries.
-  const refresh = async (source: "supabase" | "background-supabase") => {
-    const { foods } = await measureDiaryRequest(perfTrace, "recent-foods", source, () =>
-      listRecents(limit),
-    );
-    return cacheFoods(mapFoods(foods));
-  };
-
-  if (cached.length > 0) {
-    recordDiaryCachePath(perfTrace, "recent-foods", "sqlite-nonempty-hit");
-    recordDiaryRows(perfTrace, "recent-foods", cached.length);
-    void refresh("background-supabase").catch(() => undefined);
-    return cached;
-  }
-
-  recordDiaryCachePath(perfTrace, "recent-foods", "empty-or-unknown");
-  const foods = await refresh("supabase");
-  recordDiaryRows(perfTrace, "recent-foods", foods.length);
-  return foods;
+  const { foods } = await measureDiaryRequest(perfTrace, "recent-foods", "node-api", () =>
+    listRecents(limit),
+  );
+  const mapped = mapFoods(foods);
+  recordDiaryRows(perfTrace, "recent-foods", mapped.length);
+  return mapped;
 };
 
 // --- Recipes ---------------------------------------------------------------
 
 export const listUserCreatedRecipeFoods = async (
-  userExternalId: string,
+  _userExternalId: string,
   limit = 200,
-): Promise<DBFoodItem[]> => {
-  const userId = await resolveUserId(userExternalId);
-  if (!userId) {
-    return listFoodItemsLocal({ source: "recipe", limit });
-  }
-  const { foods } = await listRecipes(limit);
-  return cacheFoods(mapFoods(foods));
-};
+): Promise<DBFoodItem[]> => mapFoods((await listRecipes(limit)).foods);
 
 const toRecipeBody = (
   input: CreateUserRecipeInput | UpdateUserRecipeInput,
@@ -373,6 +186,11 @@ const toRecipeBody = (
   prepTimeMin: input.prepTimeMin ?? null,
   cookTimeMin: input.cookTimeMin ?? null,
   servings: input.servings,
+  // The user's measurement of the finished dish. It was accepted by the editor
+  // and held in the input type, but never put in the request body — so a stew
+  // weighed after cooking was portioned by its raw ingredient weight instead.
+  // Nothing on the server can derive this, so it has to be sent.
+  preparedFoodWeightG: input.preparedFoodWeightG ?? null,
   steps: input.steps ?? [],
   isPublic: input.isPublic ?? true,
   ingredients: input.ingredients.map((ingredient) => ({
@@ -385,14 +203,7 @@ const toRecipeBody = (
 export const createUserRecipe = async (
   input: CreateUserRecipeInput,
 ): Promise<DBRecipe> => {
-  const userId = await resolveUserId(input.userExternalId);
-  if (!userId) {
-    return createUserRecipeLocal(input);
-  }
-
   const food = await createRecipe(toRecipeBody(input));
-  await cacheFoods([toDbFoodItem(food)]);
-
   return {
     id: fromSyntheticRecipeId(food.id ?? 0),
     createdByUserExternalId: input.userExternalId,
@@ -412,20 +223,60 @@ export const createUserRecipe = async (
 
 export const getUserRecipeDetailsById = async (
   recipeId: number,
+  userExternalId = "",
 ): Promise<DBRecipeDetails | null> => {
-  const userId = await resolveUserId();
-  if (!userId) {
-    return getUserRecipeDetailsByIdLocal(recipeId);
-  }
-
   try {
     // Recipe, ingredients and each ingredient's food arrive together.
-    const detail = await getRecipeDetail(fromSyntheticRecipeId(recipeId));
-    return detail as unknown as DBRecipeDetails;
+    const { recipe, ingredients } = await getRecipeDetail(
+      fromSyntheticRecipeId(recipeId),
+    );
+
+    // Mapped field by field. This was `detail as unknown as DBRecipeDetails`,
+    // which compiled and was wrong: every name differed from what the API
+    // actually sent, so the editor loaded a recipe with its prepared weight,
+    // times, link, description and visibility all blank.
+    return {
+      id: recipe.id,
+      userExternalId,
+      createdByUserExternalId: recipe.createdByUserExternalId,
+      linkedFoodId: recipe.linkedFoodId,
+      isPublic: recipe.isPublic,
+      // The server has no column for this: it is a client-side entry mode, and
+      // always was. Derived from what the recipe actually holds rather than
+      // invented, so reopening a linked recipe reopens it in link mode.
+      buildMethod: recipe.linkUrl ? "link" : "scratch",
+      name: recipe.name,
+      description: recipe.description,
+      linkUrl: recipe.linkUrl,
+      prepTimeMin: recipe.prepTimeMin,
+      cookTimeMin: recipe.cookTimeMin,
+      servings: recipe.servings,
+      steps: recipe.steps,
+      createdAt: recipe.createdAt,
+      updatedAt: recipe.updatedAt,
+      ingredientTotalWeightG: recipe.ingredientTotalWeightG,
+      preparedFoodWeightG: recipe.preparedFoodWeightG,
+      effectiveRecipeWeightG: recipe.effectiveRecipeWeightG,
+      gramsPerServing: recipe.gramsPerServing,
+      ingredients: ingredients.flatMap((ingredient) =>
+        ingredient.food
+          ? [
+              {
+                id: ingredient.id,
+                recipeId: ingredient.recipeId,
+                foodId: ingredient.foodId,
+                amount: ingredient.amount,
+                amountUnit: ingredient.amountUnit,
+                sortOrder: ingredient.sortOrder,
+                createdAt: recipe.createdAt,
+                food: toDbFoodItem(ingredient.food),
+              },
+            ]
+          : [],
+      ),
+    };
   } catch (error) {
-    if (error instanceof NouriApiError && error.isNotFound) {
-      return null;
-    }
+    if (error instanceof NouriApiError && error.isNotFound) return null;
     throw error;
   }
 };
@@ -433,17 +284,10 @@ export const getUserRecipeDetailsById = async (
 export const updateUserRecipe = async (
   input: UpdateUserRecipeInput,
 ): Promise<DBRecipe> => {
-  const userId = await resolveUserId(input.userExternalId);
-  if (!userId) {
-    return updateUserRecipeLocal(input);
-  }
-
   const food = await updateRecipe(
     fromSyntheticRecipeId(input.recipeId),
     toRecipeBody(input),
   );
-  await cacheFoods([toDbFoodItem(food)]);
-
   return {
     id: fromSyntheticRecipeId(food.id ?? 0),
     createdByUserExternalId: input.userExternalId,
@@ -456,11 +300,6 @@ export const updateUserRecipe = async (
 };
 
 export const deleteUserRecipe = async (recipeId: number): Promise<void> => {
-  const userId = await resolveUserId();
-  if (!userId) {
-    return deleteUserRecipeLocal(recipeId);
-  }
-
   try {
     await deleteRecipe(fromSyntheticRecipeId(recipeId));
   } catch (error) {
@@ -474,26 +313,13 @@ export const deleteUserRecipe = async (recipeId: number): Promise<void> => {
 // --- Custom meals ----------------------------------------------------------
 
 export const listUserCreatedCustomMealFoods = async (
-  userExternalId: string,
+  _userExternalId: string,
   limit = 200,
-): Promise<DBFoodItem[]> => {
-  const userId = await resolveUserId(userExternalId);
-  if (!userId) {
-    return listFoodItemsLocal({ source: "recipe", limit });
-  }
-  const { foods } = await listMeals(limit);
-  return cacheFoods(mapFoods(foods));
-};
+): Promise<DBFoodItem[]> => mapFoods((await listMeals(limit)).foods);
 
 export const getUserCustomMealFoodById = async (
   mealId: number,
-): Promise<DBFoodItem | null> => {
-  const userId = await resolveUserId();
-  if (!userId) {
-    return getFoodItemByIdLocal(mealId);
-  }
-  return getFoodByRefRemote(mealId);
-};
+): Promise<DBFoodItem | null> => getFoodByRefRemote(mealId);
 
 const toMealBody = (
   input: CreateUserCustomMealInput | UpdateUserCustomMealInput,
@@ -510,52 +336,14 @@ const toMealBody = (
 
 export const createUserCustomMeal = async (
   input: CreateUserCustomMealInput,
-): Promise<DBFoodItem> => {
-  const userId = await resolveUserId(input.userExternalId);
-  if (!userId) {
-    const foodId = await saveFoodItemLocal({
-      source: "recipe", sourceId: null, barcode: null, name: input.name,
-      brand: null, imageUrl: null, quantityValue: input.servingSizeG,
-      quantityUnit: "g", servingSizeValue: input.servingSizeG,
-      servingSizeUnit: "g", nutritionBasis: "serving", calories: input.calories,
-      proteinG: input.proteinG ?? 0, carbsG: input.carbsG ?? 0,
-      fatG: input.fatG ?? 0, ingredientsText: input.description ?? null,
-      rawPayload: JSON.stringify({ entityType: "custom_meal" }),
-      verified: false, isComplete: true, isPublic: input.isPublic ?? true,
-    });
-    const food = await getFoodItemByIdLocal(foodId);
-    if (!food) throw new Error("Custom meal could not be saved.");
-    return food;
-  }
-
-  const food = await createMeal(toMealBody(input));
-  const mapped = toDbFoodItem(food);
-  await cacheFoods([mapped]);
-  return mapped;
-};
+): Promise<DBFoodItem> => toDbFoodItem(await createMeal(toMealBody(input)));
 
 export const updateUserCustomMeal = async (
   input: UpdateUserCustomMealInput,
-): Promise<DBFoodItem> => {
-  const userId = await resolveUserId(input.userExternalId);
-  if (!userId) {
-    const food = await getFoodItemByIdLocal(input.mealId);
-    if (!food) throw new Error("Custom meal could not be found.");
-    return food;
-  }
-
-  const food = await updateMeal(fromSyntheticMealId(input.mealId), toMealBody(input));
-  const mapped = toDbFoodItem(food);
-  await cacheFoods([mapped]);
-  return mapped;
-};
+): Promise<DBFoodItem> =>
+  toDbFoodItem(await updateMeal(fromSyntheticMealId(input.mealId), toMealBody(input)));
 
 export const deleteUserCustomMeal = async (mealId: number): Promise<void> => {
-  const userId = await resolveUserId();
-  if (!userId) {
-    return deleteFoodItemLocal(mealId);
-  }
-
   const rawId = isSyntheticMealId(mealId) ? fromSyntheticMealId(mealId) : mealId;
   try {
     await deleteMeal(rawId);
@@ -566,6 +354,3 @@ export const deleteUserCustomMeal = async (mealId: number): Promise<void> => {
     throw error;
   }
 };
-
-// Kept for the Expo Go local path only.
-export { addFoodItemLocal };

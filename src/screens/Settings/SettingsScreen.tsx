@@ -7,18 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import {
-  BugIcon,
-  DatabaseIcon,
-  BroomIcon,
-  PlantIcon,
-} from "phosphor-react-native";
-import {
-  getDebugTableCounts,
-  resetDb,
-  seedDebugData,
-  type TableCount,
-} from "../../storage/sqlite";
+import { BugIcon } from "phosphor-react-native";
 import { DB } from "../../store/DB";
 import { useAppSelector } from "../../store/hooks";
 import {
@@ -81,64 +70,7 @@ const getPresetLabel = (preset: WeightSeedPreset): string => {
 
 const SettingsScreen = () => {
   const user = useAppSelector((state) => state.user.currentUser);
-  const [counts, setCounts] = React.useState<TableCount[]>([]);
   const [busy, setBusy] = React.useState(false);
-
-  const handleRefresh = async () => {
-    setBusy(true);
-
-    try {
-      const next = await getDebugTableCounts();
-      setCounts(next);
-    } catch {
-      Alert.alert("Could not read DB", "Try restarting the app.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleSeed = async () => {
-    setBusy(true);
-
-    try {
-      await seedDebugData();
-      await handleRefresh();
-      Alert.alert("Done", "Sample user and weight logs added.");
-    } catch (error) {
-      Alert.alert(
-        "Seed failed",
-        error instanceof Error ? error.message : "Unknown error",
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleReset = async () => {
-    Alert.alert("Reset database?", "This removes all local tables and data.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Reset",
-        style: "destructive",
-        onPress: async () => {
-          setBusy(true);
-
-          try {
-            await resetDb();
-            await handleRefresh();
-            Alert.alert("Database reset", "Migrations reapplied successfully.");
-          } catch (error) {
-            Alert.alert(
-              "Reset failed",
-              error instanceof Error ? error.message : "Unknown error",
-            );
-          } finally {
-            setBusy(false);
-          }
-        },
-      },
-    ]);
-  };
 
   const runWeightPreset = async (preset: WeightSeedPreset) => {
     if (!user?.externalId) {
@@ -188,7 +120,6 @@ const SettingsScreen = () => {
         // Keep debug preset generation usable even if adaptive refresh fails.
       }
 
-      await handleRefresh();
       Alert.alert(
         "Weight history ready",
         `Added ${WEIGHT_PRESET_ENTRY_COUNT} ${getPresetLabel(
@@ -222,10 +153,6 @@ const SettingsScreen = () => {
     );
   };
 
-  React.useEffect(() => {
-    void handleRefresh();
-  }, []);
-
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.headerRow}>
@@ -234,37 +161,10 @@ const SettingsScreen = () => {
       </View>
 
       <Text style={styles.subtitle}>
-        Inspect local SQLite data while developing.
+        The presets below write through the API, exactly as the app does. There
+        is no local database to inspect, seed or reset — every row they create
+        lands in Supabase and comes back on the next read.
       </Text>
-
-      <View style={styles.buttonRow}>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => void handleRefresh()}
-          disabled={busy}
-        >
-          <DatabaseIcon size={18} color={appColors.white} weight="fill" />
-          <Text style={styles.buttonText}>Refresh Counts</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.button, styles.seedButton]}
-          onPress={() => void handleSeed()}
-          disabled={busy}
-        >
-          <PlantIcon size={18} color={appColors.white} weight="fill" />
-          <Text style={styles.buttonText}>Seed Sample</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.button, styles.resetButton]}
-          onPress={handleReset}
-          disabled={busy}
-        >
-          <BroomIcon size={18} color={appColors.white} weight="fill" />
-          <Text style={styles.buttonText}>Reset DB</Text>
-        </TouchableOpacity>
-      </View>
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Weight Debug Presets</Text>
@@ -299,20 +199,6 @@ const SettingsScreen = () => {
             <Text style={styles.buttonText}>Generate Maintain-ish</Text>
           </TouchableOpacity>
         </View>
-      </View>
-
-      <View style={{ ...styles.card, marginTop: 16 }}>
-        <Text style={styles.cardTitle}>Table Row Counts</Text>
-        {counts.length === 0 ? (
-          <Text style={styles.empty}>No data yet.</Text>
-        ) : (
-          counts.map((item) => (
-            <View key={item.table} style={styles.row}>
-              <Text style={styles.table}>{item.table}</Text>
-              <Text style={styles.count}>{item.count}</Text>
-            </View>
-          ))
-        )}
       </View>
 
       {/* 

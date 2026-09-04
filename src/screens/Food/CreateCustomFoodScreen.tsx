@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
+import { getFoodDefaultLogAmount } from "../../engine/nutrition";
 import { DB } from "../../store/DB";
 import { useAppSelector } from "../../store/hooks";
 import FoodScreenHeader from "./FoodScreenHeader";
@@ -506,12 +507,17 @@ const CreateCustomFoodScreen = () => {
         }
 
         if (mode === "save_and_add") {
+          // One serving of the meal — NOT `parsedServing`, which is the meal's
+          // default serving in grams. A custom meal comes back from the API as
+          // a one-serving food (`servingSizeValue: 1`, unit "serving") whose
+          // macros are already per serving, so passing 100 there scaled it by
+          // 100: a 450 kcal meal logged as 45,000.
           await DB.addUserFoodLog({
             userExternalId: user.externalId,
             foodId: mealFood.id,
             date,
             loggedAt: resolvedLoggedAt,
-            quantityG: parsedServing,
+            quantityG: getFoodDefaultLogAmount(mealFood),
             mealType: MEAL_SLOT_LABELS[selectedMeal],
           });
         }

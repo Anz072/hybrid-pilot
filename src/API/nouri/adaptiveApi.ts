@@ -2,9 +2,15 @@ import { apiRequest } from "./client";
 
 // Adaptive calorie recommendations.
 //
-// Only the data access lives behind the API. The 28-day TDEE analysis still
-// runs on the device (src/engine/adaptiveCalories.ts); moving it needs a
-// dual-run comparison against historical data before it can be trusted.
+// The 28-day TDEE analysis runs on the server. `refreshAdaptive` below asks it
+// to look at the caller's diary days, entries and weigh-ins and answer with
+// what their calorie target should be — one request, where the app used to
+// fetch a month of data and compute the answer itself.
+//
+// The app keeps its own copy of the engine for previews and for the weekly
+// review screen, and the two are held equal by the shared conformance corpus
+// plus a dual-run diff (test/adaptiveDualRun.test.ts). What the server says is
+// what gets stored.
 
 export type ApiRecommendationStatus =
   | "proposed" | "accepted" | "rejected" | "applied" | "superseded";
@@ -61,4 +67,29 @@ export const patchRecommendation = (
   apiRequest<ApiRecommendation>(`/v1/adaptive/recommendations/${id}`, {
     method: "PATCH",
     body: patch,
+  });
+
+export type ApiAdaptiveRefreshResult = {
+  status: "disabled" | "insufficient" | "unchanged" | "ready";
+  reason: string;
+  confidence: "low" | "medium" | "high" | null;
+  estimatedTdee: number | null;
+  recommendedBaseCalories: number | null;
+  summary: Record<string, unknown> | null;
+  recommendation: ApiRecommendation | null;
+};
+
+/**
+ * Runs the engine server-side.
+ *
+ * `force` is the explicit "recalculate now" action. Without it an identical
+ * open recommendation is left alone rather than superseded by a copy of itself,
+ * which would reset the user's chance to respond to it.
+ */
+export const refreshAdaptive = (
+  options: { force?: boolean } = {},
+): Promise<ApiAdaptiveRefreshResult> =>
+  apiRequest<ApiAdaptiveRefreshResult>("/v1/adaptive/refresh", {
+    method: "POST",
+    body: { force: options.force ?? false },
   });

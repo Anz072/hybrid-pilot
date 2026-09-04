@@ -7,6 +7,7 @@ import {
   listWeightEntries,
   listWeightEntriesBetween,
   listAdaptiveCalorieRecommendations,
+  refreshAdaptiveCalories,
   saveWeightEntry as saveWeightEntryBase,
   saveWeightGoal as saveWeightGoalBase,
   softDeleteWeightEntry as softDeleteWeightEntryBase,
@@ -60,13 +61,6 @@ import {
   searchFoodItems,
 } from "./foodSearchStore";
 import { notifyAppDataChanged } from "./dataChangeEvents";
-import {
-  clearPublicFoodCache,
-  clearUserCache,
-  getCachedBarcodeLookup,
-  getCacheHealth,
-  saveCachedBarcodeMiss,
-} from "./cacheRepository";
 
 type AddUserFoodLogInput = Parameters<typeof addUserFoodLogBase>[0];
 type AddQuickAddFoodLogInput = Parameters<typeof addQuickAddFoodLogBase>[0];
@@ -94,19 +88,6 @@ const notifyWeightChanged = (userExternalId?: string | null) => {
   });
 };
 
-const getFoodLogChangeContext = async (id: number) => {
-  try {
-    const entry = await getUserFoodLogEntryById(id);
-    return entry
-      ? { date: entry.date, userExternalId: entry.userExternalId }
-      : undefined;
-  } catch {
-    // A failed context lookup must not prevent the requested write. Consumers
-    // still receive the broad food-log notification after it succeeds.
-    return undefined;
-  }
-};
-
 const addUserFoodLog = async (input: AddUserFoodLogInput) => {
   const result = await addUserFoodLogBase(input);
   notifyFoodLogChanged({
@@ -125,25 +106,25 @@ const addQuickAddFoodLog = async (input: AddQuickAddFoodLogInput) => {
   return result;
 };
 
+// The mutation's own response carries the affected day, so no lookup precedes
+// the write.
+
 const updateUserFoodLog = async (input: UpdateUserFoodLogInput) => {
-  const changeContext = await getFoodLogChangeContext(input.id);
-  const result = await updateUserFoodLogBase(input);
-  notifyFoodLogChanged(changeContext);
-  return result;
+  const date = await updateUserFoodLogBase(input);
+  notifyFoodLogChanged({ date });
+  return date;
 };
 
 const updateQuickAddFoodLog = async (input: UpdateQuickAddFoodLogInput) => {
-  const changeContext = await getFoodLogChangeContext(input.id);
-  const result = await updateQuickAddFoodLogBase(input);
-  notifyFoodLogChanged(changeContext);
-  return result;
+  const date = await updateQuickAddFoodLogBase(input);
+  notifyFoodLogChanged({ date });
+  return date;
 };
 
 const deleteUserFoodLog = async (id: number) => {
-  const changeContext = await getFoodLogChangeContext(id);
-  const result = await deleteUserFoodLogBase(id);
-  notifyFoodLogChanged(changeContext);
-  return result;
+  const date = await deleteUserFoodLogBase(id);
+  notifyFoodLogChanged({ date });
+  return date;
 };
 
 const copyFoodLogsFromDateWithNotify = async (
@@ -188,17 +169,6 @@ const clearAllWeightData = async (userExternalId: string) => {
   return result;
 };
 
-const refreshUserCache = async (userExternalId: string) => {
-  await Promise.allSettled([
-    getUserSettings(userExternalId),
-    listAdaptiveCalorieRecommendations({ userExternalId, limit: 20 }),
-    listWeightEntries(userExternalId),
-    getWeightGoal(userExternalId),
-    getFavoriteFoodItems(userExternalId, 30),
-    getRecentFoodItems(userExternalId, 30),
-  ]);
-};
-
 export const DB = {
   addUser: upsertUser,
   getUser: getFirstUser,
@@ -208,6 +178,7 @@ export const DB = {
   listAdaptiveCalorieRecommendations,
   getLatestAdaptiveCalorieRecommendation,
   createAdaptiveCalorieRecommendation,
+  refreshAdaptiveCalories,
   updateAdaptiveCalorieRecommendation,
   listWeightEntries,
   listWeightEntriesBetween,
@@ -253,10 +224,4 @@ export const DB = {
   listDiaryDayStatusesBetween,
   saveDiaryDayStatus,
   copyFoodLogsFromDate: copyFoodLogsFromDateWithNotify,
-  refreshUserCache,
-  clearUserCache,
-  clearPublicFoodCache,
-  getCacheHealth,
-  getCachedBarcodeLookup,
-  saveCachedBarcodeMiss,
 };

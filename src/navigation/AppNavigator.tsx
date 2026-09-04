@@ -25,7 +25,6 @@ import {
   isSupabaseConfigured,
 } from "../API/supabase/client";
 import { getOnboardingComplete } from "../storage/localStore";
-import { shouldUseExpoGoDevLocalStore } from "../dev/expoGoDevAuth";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { clearCurrentUser, hydrateUserFromDb } from "../store/userSlice";
 import type { FoodStackParamList } from "./foodTypes";
@@ -64,18 +63,10 @@ const AppNavigator = () => {
       const onboardingDone = await getOnboardingComplete();
       setHasCompletedOnboarding(onboardingDone);
 
-      if (await shouldUseExpoGoDevLocalStore()) {
-        const result = await dispatch(hydrateUserFromDb());
-
-        if (hydrateUserFromDb.rejected.match(result)) {
-          setBootstrapError(
-            result.error.message ?? "Could not load your dev profile.",
-          );
-        }
-
-        return;
-      }
-
+      // There is no development bypass. Expo Go used to sign in against a
+      // device-local user with a device-local database behind it, which meant
+      // the path developers exercised every day was the one path that never
+      // touched the API. A real session is now the only way in.
       const sessionUser = await getValidatedSupabaseSessionUser();
       if (!sessionUser) {
         dispatch(clearCurrentUser());
@@ -119,13 +110,7 @@ const AppNavigator = () => {
         return;
       }
 
-      void (async () => {
-        if (await shouldUseExpoGoDevLocalStore()) {
-          return;
-        }
-
-        dispatch(clearCurrentUser());
-      })();
+      dispatch(clearCurrentUser());
     });
 
     return () => subscription.unsubscribe();

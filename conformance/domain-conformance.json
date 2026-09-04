@@ -561,7 +561,7 @@
         }
       },
       {
-        "name": "sums unrounded then rounds once — three 0.4 kcal entries total 1, not 0",
+        "name": "sums unrounded then rounds once \u2014 three 0.4 kcal entries total 1, not 0",
         "input": {
           "entries": [
             {
@@ -1294,6 +1294,1724 @@
           "tz": "UTC"
         },
         "expected": "quick_add||08:30:00|150|Breakfast|Protein shake|180|25|5|2|0|148|0"
+      }
+    ],
+    "decodeFoodId": [
+      {
+        "name": "a plain catalogue id is a food item",
+        "input": {
+          "foodId": 42
+        },
+        "expected": {
+          "kind": "food_item",
+          "id": 42,
+          "foodId": 42
+        }
+      },
+      {
+        "name": "id 1 is a food item",
+        "input": {
+          "foodId": 1
+        },
+        "expected": {
+          "kind": "food_item",
+          "id": 1,
+          "foodId": 1
+        }
+      },
+      {
+        "name": "a negative id below the meal offset is a recipe",
+        "input": {
+          "foodId": -7
+        },
+        "expected": {
+          "kind": "custom_recipe",
+          "id": 7,
+          "foodId": -7
+        }
+      },
+      {
+        "name": "the largest recipe id is one below the offset",
+        "input": {
+          "foodId": -999999999
+        },
+        "expected": {
+          "kind": "custom_recipe",
+          "id": 999999999,
+          "foodId": -999999999
+        }
+      },
+      {
+        "name": "a negative id at the meal offset is meal 0",
+        "input": {
+          "foodId": -1000000000
+        },
+        "expected": {
+          "kind": "custom_meal",
+          "id": 0,
+          "foodId": -1000000000
+        }
+      },
+      {
+        "name": "a negative id above the offset is a custom meal",
+        "input": {
+          "foodId": -1000000006
+        },
+        "expected": {
+          "kind": "custom_meal",
+          "id": 6,
+          "foodId": -1000000006
+        }
+      },
+      {
+        "name": "a POSITIVE id at the meal offset is still a catalogue food",
+        "input": {
+          "foodId": 1000000000
+        },
+        "expected": {
+          "kind": "food_item",
+          "id": 1000000000,
+          "foodId": 1000000000
+        }
+      },
+      {
+        "name": "a POSITIVE id far above the meal offset is still a catalogue food",
+        "input": {
+          "foodId": 9000000006
+        },
+        "expected": {
+          "kind": "food_item",
+          "id": 9000000006,
+          "foodId": 9000000006
+        }
+      },
+      {
+        "name": "zero is a food item, not a meal",
+        "input": {
+          "foodId": 0
+        },
+        "expected": {
+          "kind": "food_item",
+          "id": 0,
+          "foodId": 0
+        }
+      },
+      {
+        "name": "a non-integer id is never synthetic",
+        "input": {
+          "foodId": 12.5
+        },
+        "expected": {
+          "kind": "food_item",
+          "id": 12.5,
+          "foodId": 12.5
+        }
+      }
+    ],
+    "computeRecipeNutrition": [
+      {
+        "name": "a single 100g-basis ingredient at its basis weight",
+        "input": {
+          "ingredients": [
+            {
+              "amountValue": 100,
+              "food": {
+                "nutritionBasis": "100g",
+                "servingSizeValue": null,
+                "servingSizeUnit": null,
+                "calories": 100,
+                "proteinG": 5,
+                "carbsG": 20,
+                "fatG": 2
+              }
+            }
+          ],
+          "servings": 1,
+          "preparedFoodWeightG": null
+        },
+        "expected": {
+          "ingredientTotalWeightG": 100,
+          "preparedFoodWeightG": null,
+          "effectiveRecipeWeightG": 100,
+          "gramsPerServing": 100,
+          "caloriesPerServing": 100,
+          "proteinGPerServing": 5,
+          "carbsGPerServing": 20,
+          "fatGPerServing": 2
+        }
+      },
+      {
+        "name": "double the amount doubles the nutrition",
+        "input": {
+          "ingredients": [
+            {
+              "amountValue": 200,
+              "food": {
+                "nutritionBasis": "100g",
+                "servingSizeValue": null,
+                "servingSizeUnit": null,
+                "calories": 100,
+                "proteinG": 5,
+                "carbsG": 20,
+                "fatG": 2
+              }
+            }
+          ],
+          "servings": 1,
+          "preparedFoodWeightG": null
+        },
+        "expected": {
+          "ingredientTotalWeightG": 200,
+          "preparedFoodWeightG": null,
+          "effectiveRecipeWeightG": 200,
+          "gramsPerServing": 200,
+          "caloriesPerServing": 200,
+          "proteinGPerServing": 10,
+          "carbsGPerServing": 40,
+          "fatGPerServing": 4
+        }
+      },
+      {
+        "name": "servings divide the totals",
+        "input": {
+          "ingredients": [
+            {
+              "amountValue": 400,
+              "food": {
+                "nutritionBasis": "100g",
+                "servingSizeValue": null,
+                "servingSizeUnit": null,
+                "calories": 100,
+                "proteinG": 10,
+                "carbsG": 0,
+                "fatG": 0
+              }
+            }
+          ],
+          "servings": 4,
+          "preparedFoodWeightG": null
+        },
+        "expected": {
+          "ingredientTotalWeightG": 400,
+          "preparedFoodWeightG": null,
+          "effectiveRecipeWeightG": 400,
+          "gramsPerServing": 100,
+          "caloriesPerServing": 100,
+          "proteinGPerServing": 10,
+          "carbsGPerServing": 0,
+          "fatGPerServing": 0
+        }
+      },
+      {
+        "name": "several ingredients sum",
+        "input": {
+          "ingredients": [
+            {
+              "amountValue": 100,
+              "food": {
+                "nutritionBasis": "100g",
+                "servingSizeValue": null,
+                "servingSizeUnit": null,
+                "calories": 100,
+                "proteinG": 5,
+                "carbsG": 20,
+                "fatG": 2
+              }
+            },
+            {
+              "amountValue": 50,
+              "food": {
+                "nutritionBasis": "100g",
+                "servingSizeValue": null,
+                "servingSizeUnit": null,
+                "calories": 200,
+                "proteinG": 0,
+                "carbsG": 0,
+                "fatG": 10
+              }
+            }
+          ],
+          "servings": 2,
+          "preparedFoodWeightG": null
+        },
+        "expected": {
+          "ingredientTotalWeightG": 150,
+          "preparedFoodWeightG": null,
+          "effectiveRecipeWeightG": 150,
+          "gramsPerServing": 75,
+          "caloriesPerServing": 100,
+          "proteinGPerServing": 2.5,
+          "carbsGPerServing": 10,
+          "fatGPerServing": 3.5
+        }
+      },
+      {
+        "name": "a prepared weight changes grams per serving, not the macros",
+        "input": {
+          "ingredients": [
+            {
+              "amountValue": 1000,
+              "food": {
+                "nutritionBasis": "100g",
+                "servingSizeValue": null,
+                "servingSizeUnit": null,
+                "calories": 100,
+                "proteinG": 10,
+                "carbsG": 0,
+                "fatG": 0
+              }
+            }
+          ],
+          "servings": 4,
+          "preparedFoodWeightG": 800
+        },
+        "expected": {
+          "ingredientTotalWeightG": 1000,
+          "preparedFoodWeightG": 800,
+          "effectiveRecipeWeightG": 800,
+          "gramsPerServing": 200,
+          "caloriesPerServing": 250,
+          "proteinGPerServing": 25,
+          "carbsGPerServing": 0,
+          "fatGPerServing": 0
+        }
+      },
+      {
+        "name": "a serving-basis ingredient scales by its stored serving size",
+        "input": {
+          "ingredients": [
+            {
+              "amountValue": 60,
+              "food": {
+                "nutritionBasis": "serving",
+                "servingSizeValue": 30,
+                "servingSizeUnit": "g",
+                "calories": 120,
+                "proteinG": 6,
+                "carbsG": 12,
+                "fatG": 4
+              }
+            }
+          ],
+          "servings": 1,
+          "preparedFoodWeightG": null
+        },
+        "expected": {
+          "ingredientTotalWeightG": 60,
+          "preparedFoodWeightG": null,
+          "effectiveRecipeWeightG": 60,
+          "gramsPerServing": 60,
+          "caloriesPerServing": 240,
+          "proteinGPerServing": 12,
+          "carbsGPerServing": 24,
+          "fatGPerServing": 8
+        }
+      },
+      {
+        "name": "no ingredients yields null nutrition, not zero",
+        "input": {
+          "ingredients": [],
+          "servings": 4,
+          "preparedFoodWeightG": null
+        },
+        "expected": {
+          "ingredientTotalWeightG": null,
+          "preparedFoodWeightG": null,
+          "effectiveRecipeWeightG": null,
+          "gramsPerServing": null,
+          "caloriesPerServing": null,
+          "proteinGPerServing": null,
+          "carbsGPerServing": null,
+          "fatGPerServing": null
+        }
+      },
+      {
+        "name": "zero-amount ingredients contribute nothing and do not count as ingredients",
+        "input": {
+          "ingredients": [
+            {
+              "amountValue": 0,
+              "food": {
+                "nutritionBasis": "100g",
+                "servingSizeValue": null,
+                "servingSizeUnit": null,
+                "calories": 500,
+                "proteinG": 50,
+                "carbsG": 50,
+                "fatG": 50
+              }
+            }
+          ],
+          "servings": 1,
+          "preparedFoodWeightG": null
+        },
+        "expected": {
+          "ingredientTotalWeightG": null,
+          "preparedFoodWeightG": null,
+          "effectiveRecipeWeightG": null,
+          "gramsPerServing": null,
+          "caloriesPerServing": null,
+          "proteinGPerServing": null,
+          "carbsGPerServing": null,
+          "fatGPerServing": null
+        }
+      },
+      {
+        "name": "zero servings is treated as one rather than dividing by zero",
+        "input": {
+          "ingredients": [
+            {
+              "amountValue": 100,
+              "food": {
+                "nutritionBasis": "100g",
+                "servingSizeValue": null,
+                "servingSizeUnit": null,
+                "calories": 100,
+                "proteinG": 5,
+                "carbsG": 20,
+                "fatG": 2
+              }
+            }
+          ],
+          "servings": 0,
+          "preparedFoodWeightG": null
+        },
+        "expected": {
+          "ingredientTotalWeightG": 100,
+          "preparedFoodWeightG": null,
+          "effectiveRecipeWeightG": 100,
+          "gramsPerServing": 100,
+          "caloriesPerServing": 100,
+          "proteinGPerServing": 5,
+          "carbsGPerServing": 20,
+          "fatGPerServing": 2
+        }
+      },
+      {
+        "name": "a zero prepared weight is ignored in favour of the ingredient total",
+        "input": {
+          "ingredients": [
+            {
+              "amountValue": 250,
+              "food": {
+                "nutritionBasis": "100g",
+                "servingSizeValue": null,
+                "servingSizeUnit": null,
+                "calories": 100,
+                "proteinG": 0,
+                "carbsG": 0,
+                "fatG": 0
+              }
+            }
+          ],
+          "servings": 1,
+          "preparedFoodWeightG": 0
+        },
+        "expected": {
+          "ingredientTotalWeightG": 250,
+          "preparedFoodWeightG": null,
+          "effectiveRecipeWeightG": 250,
+          "gramsPerServing": 250,
+          "caloriesPerServing": 250,
+          "proteinGPerServing": 0,
+          "carbsGPerServing": 0,
+          "fatGPerServing": 0
+        }
+      },
+      {
+        "name": "calories round to whole numbers, macros to one decimal",
+        "input": {
+          "ingredients": [
+            {
+              "amountValue": 33,
+              "food": {
+                "nutritionBasis": "100g",
+                "servingSizeValue": null,
+                "servingSizeUnit": null,
+                "calories": 100,
+                "proteinG": 3.33,
+                "carbsG": 0,
+                "fatG": 0
+              }
+            }
+          ],
+          "servings": 1,
+          "preparedFoodWeightG": null
+        },
+        "expected": {
+          "ingredientTotalWeightG": 33,
+          "preparedFoodWeightG": null,
+          "effectiveRecipeWeightG": 33,
+          "gramsPerServing": 33,
+          "caloriesPerServing": 33,
+          "proteinGPerServing": 1.1,
+          "carbsGPerServing": 0,
+          "fatGPerServing": 0
+        }
+      },
+      {
+        "name": "a food with null macros contributes weight only",
+        "input": {
+          "ingredients": [
+            {
+              "amountValue": 100,
+              "food": {
+                "nutritionBasis": "100g",
+                "servingSizeValue": null,
+                "servingSizeUnit": null,
+                "calories": null,
+                "proteinG": null,
+                "carbsG": null,
+                "fatG": null
+              }
+            }
+          ],
+          "servings": 1,
+          "preparedFoodWeightG": null
+        },
+        "expected": {
+          "ingredientTotalWeightG": 100,
+          "preparedFoodWeightG": null,
+          "effectiveRecipeWeightG": 100,
+          "gramsPerServing": 100,
+          "caloriesPerServing": 0,
+          "proteinGPerServing": 0,
+          "carbsGPerServing": 0,
+          "fatGPerServing": 0
+        }
+      },
+      {
+        "name": "calories round to whole numbers even when the split is fractional",
+        "input": {
+          "ingredients": [
+            {
+              "amountValue": 100,
+              "food": {
+                "nutritionBasis": "100g",
+                "servingSizeValue": null,
+                "servingSizeUnit": null,
+                "calories": 350,
+                "proteinG": 12,
+                "carbsG": 60,
+                "fatG": 7
+              }
+            },
+            {
+              "amountValue": 50,
+              "food": {
+                "nutritionBasis": "100g",
+                "servingSizeValue": null,
+                "servingSizeUnit": null,
+                "calories": 130,
+                "proteinG": 0,
+                "carbsG": 0,
+                "fatG": 0
+              }
+            }
+          ],
+          "servings": 2,
+          "preparedFoodWeightG": null
+        },
+        "expected": {
+          "ingredientTotalWeightG": 150,
+          "preparedFoodWeightG": null,
+          "effectiveRecipeWeightG": 150,
+          "gramsPerServing": 75,
+          "caloriesPerServing": 208,
+          "proteinGPerServing": 6,
+          "carbsGPerServing": 30,
+          "fatGPerServing": 3.5
+        }
+      },
+      {
+        "name": "a macro that needs more than one decimal is rounded to one",
+        "input": {
+          "ingredients": [
+            {
+              "amountValue": 100,
+              "food": {
+                "nutritionBasis": "100g",
+                "servingSizeValue": null,
+                "servingSizeUnit": null,
+                "calories": 100,
+                "proteinG": 3.33,
+                "carbsG": 7.77,
+                "fatG": 1.11
+              }
+            }
+          ],
+          "servings": 3,
+          "preparedFoodWeightG": null
+        },
+        "expected": {
+          "ingredientTotalWeightG": 100,
+          "preparedFoodWeightG": null,
+          "effectiveRecipeWeightG": 100,
+          "gramsPerServing": 33.3,
+          "caloriesPerServing": 33,
+          "proteinGPerServing": 1.1,
+          "carbsGPerServing": 2.6,
+          "fatGPerServing": 0.4
+        }
+      }
+    ],
+    "resolveGoalStrategy": [
+      {
+        "name": "a matching goal and strategy is kept",
+        "input": {
+          "goal": "lose_fat",
+          "goalStrategy": "deficit_light"
+        },
+        "expected": "deficit_light"
+      },
+      {
+        "name": "maintain always resolves to maintain",
+        "input": {
+          "goal": "maintain",
+          "goalStrategy": "deficit_aggressive"
+        },
+        "expected": "maintain"
+      },
+      {
+        "name": "a strategy from the wrong goal falls back to that goal's default",
+        "input": {
+          "goal": "build_muscle",
+          "goalStrategy": "deficit_normal"
+        },
+        "expected": "surplus_normal"
+      },
+      {
+        "name": "a missing strategy falls back to the goal's default",
+        "input": {
+          "goal": "lose_fat",
+          "goalStrategy": null
+        },
+        "expected": "deficit_normal"
+      },
+      {
+        "name": "an unknown goal keeps a recognisable strategy",
+        "input": {
+          "goal": "nonsense",
+          "goalStrategy": "surplus_light"
+        },
+        "expected": "surplus_light"
+      },
+      {
+        "name": "an unknown goal and an unknown strategy resolve to nothing",
+        "input": {
+          "goal": null,
+          "goalStrategy": null
+        },
+        "expected": null
+      },
+      {
+        "name": "an unknown goal with an unknown strategy is null",
+        "input": {
+          "goal": "nonsense",
+          "goalStrategy": "nonsense"
+        },
+        "expected": null
+      },
+      {
+        "name": "build_muscle default",
+        "input": {
+          "goal": "build_muscle",
+          "goalStrategy": null
+        },
+        "expected": "surplus_normal"
+      }
+    ],
+    "getGoalCalorieOffset": [
+      {
+        "name": "light deficit",
+        "input": {
+          "goal": "lose_fat",
+          "goalStrategy": "deficit_light"
+        },
+        "expected": -275
+      },
+      {
+        "name": "normal deficit",
+        "input": {
+          "goal": "lose_fat",
+          "goalStrategy": "deficit_normal"
+        },
+        "expected": -550
+      },
+      {
+        "name": "aggressive deficit",
+        "input": {
+          "goal": "lose_fat",
+          "goalStrategy": "deficit_aggressive"
+        },
+        "expected": -800
+      },
+      {
+        "name": "maintain is zero",
+        "input": {
+          "goal": "maintain",
+          "goalStrategy": "maintain"
+        },
+        "expected": 0
+      },
+      {
+        "name": "light surplus",
+        "input": {
+          "goal": "build_muscle",
+          "goalStrategy": "surplus_light"
+        },
+        "expected": 150
+      },
+      {
+        "name": "normal surplus",
+        "input": {
+          "goal": "build_muscle",
+          "goalStrategy": "surplus_normal"
+        },
+        "expected": 250
+      },
+      {
+        "name": "aggressive surplus",
+        "input": {
+          "goal": "build_muscle",
+          "goalStrategy": "surplus_aggressive"
+        },
+        "expected": 350
+      },
+      {
+        "name": "a mismatched strategy uses the goal's default offset",
+        "input": {
+          "goal": "build_muscle",
+          "goalStrategy": "deficit_aggressive"
+        },
+        "expected": 250
+      },
+      {
+        "name": "no goal is zero",
+        "input": {
+          "goal": null,
+          "goalStrategy": null
+        },
+        "expected": 0
+      }
+    ],
+    "estimateAdaptiveTdee": [
+      {
+        "name": "no weight change means maintenance equals intake",
+        "input": {
+          "avgLoggedCalories": 2200,
+          "trendStartKg": 80,
+          "trendEndKg": 80,
+          "daySpan": 21
+        },
+        "expected": 2200
+      },
+      {
+        "name": "losing weight puts maintenance above intake",
+        "input": {
+          "avgLoggedCalories": 2000,
+          "trendStartKg": 82,
+          "trendEndKg": 81.252,
+          "daySpan": 21
+        },
+        "expected": 2274.2666666666682
+      },
+      {
+        "name": "gaining weight puts maintenance below intake",
+        "input": {
+          "avgLoggedCalories": 3000,
+          "trendStartKg": 80,
+          "trendEndKg": 81,
+          "daySpan": 14
+        },
+        "expected": 2450
+      },
+      {
+        "name": "a zero span has no answer",
+        "input": {
+          "avgLoggedCalories": 2000,
+          "trendStartKg": 80,
+          "trendEndKg": 79,
+          "daySpan": 0
+        },
+        "expected": null
+      },
+      {
+        "name": "a negative span has no answer",
+        "input": {
+          "avgLoggedCalories": 2000,
+          "trendStartKg": 80,
+          "trendEndKg": 79,
+          "daySpan": -3
+        },
+        "expected": null
+      }
+    ],
+    "getAdaptiveRecommendationConfidence": [
+      {
+        "name": "high needs 24 days, 8 weigh-ins and a 21-day span",
+        "input": {
+          "completeDaysUsed": 24,
+          "weighInsUsed": 8,
+          "daySpan": 21
+        },
+        "expected": "high"
+      },
+      {
+        "name": "one day short of high is medium",
+        "input": {
+          "completeDaysUsed": 23,
+          "weighInsUsed": 8,
+          "daySpan": 21
+        },
+        "expected": "medium"
+      },
+      {
+        "name": "one weigh-in short of high is medium",
+        "input": {
+          "completeDaysUsed": 24,
+          "weighInsUsed": 7,
+          "daySpan": 21
+        },
+        "expected": "medium"
+      },
+      {
+        "name": "one span-day short of high is medium",
+        "input": {
+          "completeDaysUsed": 24,
+          "weighInsUsed": 8,
+          "daySpan": 20
+        },
+        "expected": "medium"
+      },
+      {
+        "name": "medium at its own floor",
+        "input": {
+          "completeDaysUsed": 18,
+          "weighInsUsed": 6,
+          "daySpan": 18
+        },
+        "expected": "medium"
+      },
+      {
+        "name": "one short of medium is low",
+        "input": {
+          "completeDaysUsed": 17,
+          "weighInsUsed": 6,
+          "daySpan": 18
+        },
+        "expected": "low"
+      },
+      {
+        "name": "low at its floor",
+        "input": {
+          "completeDaysUsed": 14,
+          "weighInsUsed": 5,
+          "daySpan": 14
+        },
+        "expected": "low"
+      },
+      {
+        "name": "one complete day short of low is nothing",
+        "input": {
+          "completeDaysUsed": 13,
+          "weighInsUsed": 5,
+          "daySpan": 14
+        },
+        "expected": null
+      },
+      {
+        "name": "one weigh-in short of low is nothing",
+        "input": {
+          "completeDaysUsed": 14,
+          "weighInsUsed": 4,
+          "daySpan": 14
+        },
+        "expected": null
+      },
+      {
+        "name": "one span-day short of low is nothing",
+        "input": {
+          "completeDaysUsed": 14,
+          "weighInsUsed": 5,
+          "daySpan": 13
+        },
+        "expected": null
+      }
+    ],
+    "applyAdaptiveRecommendationToTargets": [
+      {
+        "name": "no current target adopts the recommendation outright",
+        "input": {
+          "currentBaseCalories": null,
+          "dailyCalorieOverrides": null,
+          "recommendedBaseCalories": 2300
+        },
+        "expected": {
+          "calorieAllowance": 2300,
+          "dailyCalorieOverrides": null,
+          "appliedDelta": 0
+        }
+      },
+      {
+        "name": "a small move is applied in full",
+        "input": {
+          "currentBaseCalories": 2200,
+          "dailyCalorieOverrides": null,
+          "recommendedBaseCalories": 2300
+        },
+        "expected": {
+          "calorieAllowance": 2300,
+          "dailyCalorieOverrides": null,
+          "appliedDelta": 100
+        }
+      },
+      {
+        "name": "an upward move is capped at 150",
+        "input": {
+          "currentBaseCalories": 2000,
+          "dailyCalorieOverrides": null,
+          "recommendedBaseCalories": 2400
+        },
+        "expected": {
+          "calorieAllowance": 2150,
+          "dailyCalorieOverrides": null,
+          "appliedDelta": 150
+        }
+      },
+      {
+        "name": "a downward move is capped at -150",
+        "input": {
+          "currentBaseCalories": 2400,
+          "dailyCalorieOverrides": null,
+          "recommendedBaseCalories": 2000
+        },
+        "expected": {
+          "calorieAllowance": 2250,
+          "dailyCalorieOverrides": null,
+          "appliedDelta": -150
+        }
+      },
+      {
+        "name": "per-day overrides move with the base, keeping their offsets",
+        "input": {
+          "currentBaseCalories": 2000,
+          "dailyCalorieOverrides": [
+            2300,
+            null,
+            1800,
+            null,
+            null,
+            null,
+            null
+          ],
+          "recommendedBaseCalories": 2100
+        },
+        "expected": {
+          "calorieAllowance": 2100,
+          "dailyCalorieOverrides": [
+            2400,
+            null,
+            1900,
+            null,
+            null,
+            null,
+            null
+          ],
+          "appliedDelta": 100
+        }
+      },
+      {
+        "name": "overrides are clamped to the allowed range",
+        "input": {
+          "currentBaseCalories": 2000,
+          "dailyCalorieOverrides": [
+            6950,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "recommendedBaseCalories": 2100
+        },
+        "expected": {
+          "calorieAllowance": 2100,
+          "dailyCalorieOverrides": [
+            7000,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "appliedDelta": 100
+        }
+      },
+      {
+        "name": "with no current target the overrides do not move",
+        "input": {
+          "currentBaseCalories": null,
+          "dailyCalorieOverrides": [
+            2300,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "recommendedBaseCalories": 2500
+        },
+        "expected": {
+          "calorieAllowance": 2500,
+          "dailyCalorieOverrides": [
+            2300,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "appliedDelta": 0
+        }
+      }
+    ],
+    "buildAdaptiveRecommendation": [
+      {
+        "name": "adaptive calories turned off",
+        "input": {
+          "scenario": {
+            "asOfDate": "2026-08-30",
+            "completeDays": 20,
+            "daysWithEntries": 20,
+            "caloriesPerDay": 2000,
+            "weighIns": 8,
+            "spanDays": 21,
+            "fromKg": 82,
+            "toKg": 81
+          },
+          "profile": {
+            "goal": "lose_fat",
+            "goalStrategy": "deficit_light",
+            "calorieAllowance": 1900
+          },
+          "adaptiveCaloriesEnabled": false
+        },
+        "expected": {
+          "status": "disabled",
+          "confidence": null,
+          "estimatedTdee": null,
+          "recommendedBaseCalories": null,
+          "recommendedDelta": null,
+          "completeDaysUsed": null,
+          "weighInsUsed": null,
+          "daySpan": null,
+          "avgLoggedCalories": null,
+          "trendStartKg": null,
+          "trendEndKg": null,
+          "observedWeeklyChangeKg": null
+        }
+      },
+      {
+        "name": "nothing logged at all",
+        "input": {
+          "scenario": {
+            "asOfDate": "2026-08-30",
+            "completeDays": 0,
+            "daysWithEntries": 0,
+            "caloriesPerDay": 2000,
+            "weighIns": 0,
+            "spanDays": 0,
+            "fromKg": 82,
+            "toKg": 81
+          },
+          "profile": {
+            "goal": "lose_fat",
+            "goalStrategy": "deficit_light",
+            "calorieAllowance": 1900
+          },
+          "adaptiveCaloriesEnabled": true
+        },
+        "expected": {
+          "status": "insufficient",
+          "confidence": null,
+          "estimatedTdee": null,
+          "recommendedBaseCalories": null,
+          "recommendedDelta": null,
+          "completeDaysUsed": 0,
+          "weighInsUsed": 0,
+          "daySpan": 0,
+          "avgLoggedCalories": null,
+          "trendStartKg": null,
+          "trendEndKg": null,
+          "observedWeeklyChangeKg": null
+        }
+      },
+      {
+        "name": "one short of the 14 complete-day minimum",
+        "input": {
+          "scenario": {
+            "asOfDate": "2026-08-30",
+            "completeDays": 13,
+            "daysWithEntries": 13,
+            "caloriesPerDay": 2000,
+            "weighIns": 8,
+            "spanDays": 21,
+            "fromKg": 82,
+            "toKg": 81
+          },
+          "profile": {
+            "goal": "lose_fat",
+            "goalStrategy": "deficit_light",
+            "calorieAllowance": 1900
+          },
+          "adaptiveCaloriesEnabled": true
+        },
+        "expected": {
+          "status": "insufficient",
+          "confidence": null,
+          "estimatedTdee": null,
+          "recommendedBaseCalories": null,
+          "recommendedDelta": null,
+          "completeDaysUsed": 13,
+          "weighInsUsed": 8,
+          "daySpan": 21,
+          "avgLoggedCalories": 2000,
+          "trendStartKg": 82,
+          "trendEndKg": 81.252,
+          "observedWeeklyChangeKg": -0.249
+        }
+      },
+      {
+        "name": "enough days, one short of the 5 weigh-in minimum",
+        "input": {
+          "scenario": {
+            "asOfDate": "2026-08-30",
+            "completeDays": 20,
+            "daysWithEntries": 20,
+            "caloriesPerDay": 2000,
+            "weighIns": 4,
+            "spanDays": 21,
+            "fromKg": 82,
+            "toKg": 81
+          },
+          "profile": {
+            "goal": "lose_fat",
+            "goalStrategy": "deficit_light",
+            "calorieAllowance": 1900
+          },
+          "adaptiveCaloriesEnabled": true
+        },
+        "expected": {
+          "status": "insufficient",
+          "confidence": null,
+          "estimatedTdee": null,
+          "recommendedBaseCalories": null,
+          "recommendedDelta": null,
+          "completeDaysUsed": 20,
+          "weighInsUsed": 4,
+          "daySpan": 21,
+          "avgLoggedCalories": 2000,
+          "trendStartKg": 82,
+          "trendEndKg": 81.449,
+          "observedWeeklyChangeKg": -0.184
+        }
+      },
+      {
+        "name": "enough days and weigh-ins, one short of the 14-day span",
+        "input": {
+          "scenario": {
+            "asOfDate": "2026-08-30",
+            "completeDays": 20,
+            "daysWithEntries": 20,
+            "caloriesPerDay": 2000,
+            "weighIns": 8,
+            "spanDays": 13,
+            "fromKg": 82,
+            "toKg": 81
+          },
+          "profile": {
+            "goal": "lose_fat",
+            "goalStrategy": "deficit_light",
+            "calorieAllowance": 1900
+          },
+          "adaptiveCaloriesEnabled": true
+        },
+        "expected": {
+          "status": "insufficient",
+          "confidence": null,
+          "estimatedTdee": null,
+          "recommendedBaseCalories": null,
+          "recommendedDelta": null,
+          "completeDaysUsed": 20,
+          "weighInsUsed": 8,
+          "daySpan": 13,
+          "avgLoggedCalories": 2000,
+          "trendStartKg": 82,
+          "trendEndKg": 81.258,
+          "observedWeeklyChangeKg": -0.4
+        }
+      },
+      {
+        "name": "exactly at every minimum: low confidence",
+        "input": {
+          "scenario": {
+            "asOfDate": "2026-08-30",
+            "completeDays": 14,
+            "daysWithEntries": 14,
+            "caloriesPerDay": 2000,
+            "weighIns": 5,
+            "spanDays": 14,
+            "fromKg": 82,
+            "toKg": 81
+          },
+          "profile": {
+            "goal": "lose_fat",
+            "goalStrategy": "deficit_light",
+            "calorieAllowance": 1900
+          },
+          "adaptiveCaloriesEnabled": true
+        },
+        "expected": {
+          "status": "ready",
+          "confidence": "low",
+          "estimatedTdee": 2346,
+          "recommendedBaseCalories": 2050,
+          "recommendedDelta": 150,
+          "completeDaysUsed": 14,
+          "weighInsUsed": 5,
+          "daySpan": 14,
+          "avgLoggedCalories": 2000,
+          "trendStartKg": 82,
+          "trendEndKg": 81.37,
+          "observedWeeklyChangeKg": -0.315
+        }
+      },
+      {
+        "name": "high confidence needs 24 days, 8 weigh-ins and a 21-day span",
+        "input": {
+          "scenario": {
+            "asOfDate": "2026-08-30",
+            "completeDays": 24,
+            "daysWithEntries": 24,
+            "caloriesPerDay": 2000,
+            "weighIns": 8,
+            "spanDays": 21,
+            "fromKg": 82,
+            "toKg": 81
+          },
+          "profile": {
+            "goal": "lose_fat",
+            "goalStrategy": "deficit_light",
+            "calorieAllowance": 1500
+          },
+          "adaptiveCaloriesEnabled": true
+        },
+        "expected": {
+          "status": "ready",
+          "confidence": "high",
+          "estimatedTdee": 2274,
+          "recommendedBaseCalories": 1650,
+          "recommendedDelta": 150,
+          "completeDaysUsed": 24,
+          "weighInsUsed": 8,
+          "daySpan": 21,
+          "avgLoggedCalories": 2000,
+          "trendStartKg": 82,
+          "trendEndKg": 81.252,
+          "observedWeeklyChangeKg": -0.249
+        }
+      },
+      {
+        "name": "losing weight raises the target, capped at +150",
+        "input": {
+          "scenario": {
+            "asOfDate": "2026-08-30",
+            "completeDays": 20,
+            "daysWithEntries": 20,
+            "caloriesPerDay": 2000,
+            "weighIns": 8,
+            "spanDays": 21,
+            "fromKg": 82,
+            "toKg": 81
+          },
+          "profile": {
+            "goal": "lose_fat",
+            "goalStrategy": "deficit_light",
+            "calorieAllowance": 1900
+          },
+          "adaptiveCaloriesEnabled": true
+        },
+        "expected": {
+          "status": "ready",
+          "confidence": "medium",
+          "estimatedTdee": 2274,
+          "recommendedBaseCalories": 2000,
+          "recommendedDelta": 100,
+          "completeDaysUsed": 20,
+          "weighInsUsed": 8,
+          "daySpan": 21,
+          "avgLoggedCalories": 2000,
+          "trendStartKg": 82,
+          "trendEndKg": 81.252,
+          "observedWeeklyChangeKg": -0.249
+        }
+      },
+      {
+        "name": "gaining weight lowers the target, capped at -150",
+        "input": {
+          "scenario": {
+            "asOfDate": "2026-08-30",
+            "completeDays": 20,
+            "daysWithEntries": 20,
+            "caloriesPerDay": 2000,
+            "weighIns": 8,
+            "spanDays": 21,
+            "fromKg": 80,
+            "toKg": 81.5
+          },
+          "profile": {
+            "goal": "lose_fat",
+            "goalStrategy": "deficit_light",
+            "calorieAllowance": 2600
+          },
+          "adaptiveCaloriesEnabled": true
+        },
+        "expected": {
+          "status": "ready",
+          "confidence": "medium",
+          "estimatedTdee": 1589,
+          "recommendedBaseCalories": 2450,
+          "recommendedDelta": -150,
+          "completeDaysUsed": 20,
+          "weighInsUsed": 8,
+          "daySpan": 21,
+          "avgLoggedCalories": 2000,
+          "trendStartKg": 80,
+          "trendEndKg": 81.122,
+          "observedWeeklyChangeKg": 0.374
+        }
+      },
+      {
+        "name": "no current target adopts the recommendation outright",
+        "input": {
+          "scenario": {
+            "asOfDate": "2026-08-30",
+            "completeDays": 20,
+            "daysWithEntries": 20,
+            "caloriesPerDay": 2000,
+            "weighIns": 8,
+            "spanDays": 21,
+            "fromKg": 82,
+            "toKg": 81
+          },
+          "profile": {
+            "goal": "lose_fat",
+            "goalStrategy": "deficit_light",
+            "calorieAllowance": null
+          },
+          "adaptiveCaloriesEnabled": true
+        },
+        "expected": {
+          "status": "ready",
+          "confidence": "medium",
+          "estimatedTdee": 2274,
+          "recommendedBaseCalories": 2000,
+          "recommendedDelta": 0,
+          "completeDaysUsed": 20,
+          "weighInsUsed": 8,
+          "daySpan": 21,
+          "avgLoggedCalories": 2000,
+          "trendStartKg": 82,
+          "trendEndKg": 81.252,
+          "observedWeeklyChangeKg": -0.249
+        }
+      },
+      {
+        "name": "a target already close to the trend is left unchanged",
+        "input": {
+          "scenario": {
+            "asOfDate": "2026-08-30",
+            "completeDays": 20,
+            "daysWithEntries": 20,
+            "caloriesPerDay": 2000,
+            "weighIns": 8,
+            "spanDays": 21,
+            "fromKg": 82,
+            "toKg": 81
+          },
+          "profile": {
+            "goal": "lose_fat",
+            "goalStrategy": "deficit_light",
+            "calorieAllowance": 2050
+          },
+          "adaptiveCaloriesEnabled": true
+        },
+        "expected": {
+          "status": "unchanged",
+          "confidence": "medium",
+          "estimatedTdee": 2274,
+          "recommendedBaseCalories": 2000,
+          "recommendedDelta": null,
+          "completeDaysUsed": 20,
+          "weighInsUsed": 8,
+          "daySpan": 21,
+          "avgLoggedCalories": 2000,
+          "trendStartKg": 82,
+          "trendEndKg": 81.252,
+          "observedWeeklyChangeKg": -0.249
+        }
+      },
+      {
+        "name": "maintain applies no goal offset",
+        "input": {
+          "scenario": {
+            "asOfDate": "2026-08-30",
+            "completeDays": 20,
+            "daysWithEntries": 20,
+            "caloriesPerDay": 2000,
+            "weighIns": 8,
+            "spanDays": 21,
+            "fromKg": 82,
+            "toKg": 81
+          },
+          "profile": {
+            "goal": "maintain",
+            "goalStrategy": "maintain",
+            "calorieAllowance": 1800
+          },
+          "adaptiveCaloriesEnabled": true
+        },
+        "expected": {
+          "status": "ready",
+          "confidence": "medium",
+          "estimatedTdee": 2274,
+          "recommendedBaseCalories": 1950,
+          "recommendedDelta": 150,
+          "completeDaysUsed": 20,
+          "weighInsUsed": 8,
+          "daySpan": 21,
+          "avgLoggedCalories": 2000,
+          "trendStartKg": 82,
+          "trendEndKg": 81.252,
+          "observedWeeklyChangeKg": -0.249
+        }
+      },
+      {
+        "name": "a bulking goal with a cutting strategy uses the bulking default",
+        "input": {
+          "scenario": {
+            "asOfDate": "2026-08-30",
+            "completeDays": 20,
+            "daysWithEntries": 20,
+            "caloriesPerDay": 2000,
+            "weighIns": 8,
+            "spanDays": 21,
+            "fromKg": 82,
+            "toKg": 81
+          },
+          "profile": {
+            "goal": "build_muscle",
+            "goalStrategy": "deficit_aggressive",
+            "calorieAllowance": 1800
+          },
+          "adaptiveCaloriesEnabled": true
+        },
+        "expected": {
+          "status": "ready",
+          "confidence": "medium",
+          "estimatedTdee": 2274,
+          "recommendedBaseCalories": 1950,
+          "recommendedDelta": 150,
+          "completeDaysUsed": 20,
+          "weighInsUsed": 8,
+          "daySpan": 21,
+          "avgLoggedCalories": 2000,
+          "trendStartKg": 82,
+          "trendEndKg": 81.252,
+          "observedWeeklyChangeKg": -0.249
+        }
+      },
+      {
+        "name": "complete days with nothing logged count as genuine zeros",
+        "input": {
+          "scenario": {
+            "asOfDate": "2026-08-30",
+            "completeDays": 20,
+            "daysWithEntries": 10,
+            "caloriesPerDay": 2000,
+            "weighIns": 8,
+            "spanDays": 21,
+            "fromKg": 82,
+            "toKg": 81
+          },
+          "profile": {
+            "goal": "lose_fat",
+            "goalStrategy": "deficit_light",
+            "calorieAllowance": 1900
+          },
+          "adaptiveCaloriesEnabled": true
+        },
+        "expected": {
+          "status": "ready",
+          "confidence": "medium",
+          "estimatedTdee": 1274,
+          "recommendedBaseCalories": 1750,
+          "recommendedDelta": -150,
+          "completeDaysUsed": 20,
+          "weighInsUsed": 8,
+          "daySpan": 21,
+          "avgLoggedCalories": 1000,
+          "trendStartKg": 82,
+          "trendEndKg": 81.252,
+          "observedWeeklyChangeKg": -0.249
+        }
+      },
+      {
+        "name": "an unset goal applies no offset",
+        "input": {
+          "scenario": {
+            "asOfDate": "2026-08-30",
+            "completeDays": 20,
+            "daysWithEntries": 20,
+            "caloriesPerDay": 2000,
+            "weighIns": 8,
+            "spanDays": 21,
+            "fromKg": 82,
+            "toKg": 81
+          },
+          "profile": {
+            "goal": null,
+            "goalStrategy": null,
+            "calorieAllowance": 1800
+          },
+          "adaptiveCaloriesEnabled": true
+        },
+        "expected": {
+          "status": "ready",
+          "confidence": "medium",
+          "estimatedTdee": 2274,
+          "recommendedBaseCalories": 1950,
+          "recommendedDelta": 150,
+          "completeDaysUsed": 20,
+          "weighInsUsed": 8,
+          "daySpan": 21,
+          "avgLoggedCalories": 2000,
+          "trendStartKg": 82,
+          "trendEndKg": 81.252,
+          "observedWeeklyChangeKg": -0.249
+        }
+      }
+    ],
+    "getEntryScaleFactor": [
+      {
+        "name": "a food entry scales by quantity over serving size",
+        "input": {
+          "entrySource": "food_item",
+          "quantity": 250,
+          "servingSize": 100
+        },
+        "expected": 2.5
+      },
+      {
+        "name": "a whole serving is a factor of one",
+        "input": {
+          "entrySource": "food_item",
+          "quantity": 100,
+          "servingSize": 100
+        },
+        "expected": 1
+      },
+      {
+        "name": "a quick add is always one, whatever the numbers say",
+        "input": {
+          "entrySource": "quick_add",
+          "quantity": 250,
+          "servingSize": 100
+        },
+        "expected": 1
+      },
+      {
+        "name": "a zero serving size degrades to one rather than dividing by zero",
+        "input": {
+          "entrySource": "food_item",
+          "quantity": 250,
+          "servingSize": 0
+        },
+        "expected": 1
+      },
+      {
+        "name": "a negative serving size degrades to one",
+        "input": {
+          "entrySource": "food_item",
+          "quantity": 250,
+          "servingSize": -100
+        },
+        "expected": 1
+      }
+    ],
+    "encodeFoodId": [
+      {
+        "name": "a recipe encodes to its negated id",
+        "input": {
+          "kind": "recipe",
+          "id": 7
+        },
+        "expected": -7
+      },
+      {
+        "name": "a recipe id of 1",
+        "input": {
+          "kind": "recipe",
+          "id": 1
+        },
+        "expected": -1
+      },
+      {
+        "name": "a meal encodes below the offset",
+        "input": {
+          "kind": "meal",
+          "id": 6
+        },
+        "expected": -1000000006
+      },
+      {
+        "name": "meal 0 lands exactly on the offset",
+        "input": {
+          "kind": "meal",
+          "id": 0
+        },
+        "expected": -1000000000
+      },
+      {
+        "name": "an already-negative recipe id is not double-negated",
+        "input": {
+          "kind": "recipe",
+          "id": -7
+        },
+        "expected": -7
+      },
+      {
+        "name": "an already-negative meal id is not double-negated",
+        "input": {
+          "kind": "meal",
+          "id": -6
+        },
+        "expected": -1000000006
+      }
+    ],
+    "formatGoalStrategyMeta": [
+      {
+        "name": "a deficit shows its daily offset",
+        "input": {
+          "goal": "lose_fat",
+          "goalStrategy": "deficit_normal"
+        },
+        "expected": "Normal deficit (-550 kcal/day)"
+      },
+      {
+        "name": "a surplus shows a signed offset",
+        "input": {
+          "goal": "build_muscle",
+          "goalStrategy": "surplus_light"
+        },
+        "expected": "Light surplus (+150 kcal/day)"
+      },
+      {
+        "name": "maintain shows no offset",
+        "input": {
+          "goal": "maintain",
+          "goalStrategy": "maintain"
+        },
+        "expected": "Maintain"
+      },
+      {
+        "name": "a mismatched strategy is described as the goal's default",
+        "input": {
+          "goal": "build_muscle",
+          "goalStrategy": "deficit_normal"
+        },
+        "expected": "Normal surplus (+250 kcal/day)"
+      },
+      {
+        "name": "no goal is not set",
+        "input": {
+          "goal": null,
+          "goalStrategy": null
+        },
+        "expected": "Not set"
+      }
+    ],
+    "getDailyCalorieOverrideForDate": [
+      {
+        "name": "Monday is index 0",
+        "input": {
+          "dateKey": "2026-08-31",
+          "overrides": [
+            2100,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        "expected": 2100
+      },
+      {
+        "name": "Sunday is index 6",
+        "input": {
+          "dateKey": "2026-08-30",
+          "overrides": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            2600
+          ]
+        },
+        "expected": 2600
+      },
+      {
+        "name": "a null entry means no override",
+        "input": {
+          "dateKey": "2026-08-31",
+          "overrides": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        "expected": null
+      },
+      {
+        "name": "no overrides at all",
+        "input": {
+          "dateKey": "2026-08-31",
+          "overrides": null
+        },
+        "expected": null
+      },
+      {
+        "name": "a short array does not throw",
+        "input": {
+          "dateKey": "2026-08-30",
+          "overrides": [
+            2100
+          ]
+        },
+        "expected": null
       }
     ]
   }

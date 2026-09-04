@@ -1,11 +1,7 @@
+import { coalesce } from "../../API/nouri/coalesce";
 import { getEffectiveCalorieTargetForDate } from "../../engine/calorieTargets";
 import { DB } from "../../store/DB";
 import type { DBUser } from "../../store/DB_TYPES";
-import {
-  clearCachedHomeSummary as clearPersistedHomeSummary,
-  getCachedHomeSummary,
-  saveCachedHomeSummary,
-} from "../../store/cacheRepository";
 import type { FoodNutritionTotals } from "../Food/foodUtils";
 import {
   collapseEntriesByLocalDate,
@@ -31,6 +27,14 @@ export type HomeDashboardSummary = {
   sevenDayAverageWeightKg: number | null;
 };
 
+// The last summary this process computed, kept so returning to Home paints
+// immediately while the fresh one loads. It lives for the lifetime of the app
+// process and is dropped on sign-out.
+//
+// It used to also be written to disk, which meant a cold start could show a
+// calorie total computed from a previous day's diary with no indication that it
+// was stale. A summary is derived from server data; the way to have a current
+// one is to ask for it.
 const summaryCache = new Map<string, HomeDashboardSummary>();
 
 export const getCachedHomeDashboardSummary = (userExternalId: string) =>
@@ -38,19 +42,6 @@ export const getCachedHomeDashboardSummary = (userExternalId: string) =>
 
 export const clearCachedHomeDashboardSummary = (userExternalId: string) => {
   summaryCache.delete(userExternalId);
-  void clearPersistedHomeSummary(userExternalId).catch(() => undefined);
-};
-
-export const getPersistedHomeDashboardSummary = async (
-  userExternalId: string,
-) => {
-  const summary =
-    await getCachedHomeSummary<HomeDashboardSummary>(userExternalId);
-  if (summary) {
-    summaryCache.set(userExternalId, summary);
-  }
-
-  return summary;
 };
 
 const buildSummaryFromSnapshot = async ({
@@ -94,22 +85,25 @@ const buildSummaryFromSnapshot = async ({
   };
 };
 
-export const loadHomeDashboardSummary = async (
+export const loadHomeDashboardSummary = (
   user: DBUser,
-): Promise<HomeDashboardSummary> => {
-  const todayDate = new Date();
-  const todaySnapshot = await loadNutritionSnapshot(
-    user.externalId,
-    buildRecentDateKeys(1, todayDate),
-    { forceRefresh: true },
-  );
-  const summary = await buildSummaryFromSnapshot({
-    todayDate,
-    todaySnapshot,
-    user,
-  });
+): Promise<HomeDashboardSummary> =>
+  // Home's focus effect, its pull-to-refresh and the data-change listener can
+  // all ask at once; each load is roughly a dozen requests, so three of them
+  // racing is worth avoiding. Coalesced by user, not cached: once it settles the
+  // next caller starts a fresh one.
+  coalesce(`home:summary:${user.externalId}`, async () => {
+    const todayDate = new Date();
+    const todaySnapshot = await loadNutritionSnapshot(
+      user.externalId,
+      buildRecentDateKeys(1, todayDate),
+    );
+    const summary = await buildSummaryFromSnapshot({
+      todayDate,
+      todaySnapshot,
+      user,
+    });
 
-  summaryCache.set(user.externalId, summary);
-  await saveCachedHomeSummary(user.externalId, summary, summary.loadedAt);
-  return summary;
-};
+    summaryCache.set(user.externalId, summary);
+    return summary;
+  });

@@ -7,18 +7,33 @@ import type {
   ProteinFocus,
   TrainingSelection,
 } from "../navigation/onboardingTypes";
-import { getDb, initDb } from "./sqlite";
+import { readJsonKv, readKv, writeJsonKv, writeKv } from "./kv";
+
+// Local, non-domain state.
+//
+// What lives here has to earn it. Three things do:
+//
+//   * `onboardingComplete` — decides the first screen, before any session or
+//     network call exists, so it cannot come from the server.
+//   * `OnboardingProfile` — the answers collected *before* an account exists.
+//     There is nowhere to send them until signup, so they are held on device and
+//     posted with the profile.
+//   * UI preferences — section expansion, fast-log, the last adaptive
+//     recommendation the user saw. These describe this device's chrome, not the
+//     user's nutrition data, and there is no server column for them.
+//
+// What used to live here and no longer does:
+//
+//   * `LocalAccount` — a device-local identity, written alongside the Supabase
+//     session. Two records of who is signed in is one too many; the Supabase
+//     session is the only answer.
+//   * `shortcutRecents` and `foodRecentSearches` — see below: memory-only.
 
 const KEY_ONBOARDING_COMPLETE = "onboardingComplete";
-const KEY_LOCAL_ACCOUNT = "localAccount";
 const KEY_ONBOARDING_PROFILE = "onboardingProfile";
 const KEY_FOOD_SEARCH_SECTION_STATE = "foodSearchSectionState";
 const KEY_FOOD_TRACKING_PREFERENCES = "foodTrackingPreferences";
 const KEY_ADAPTIVE_RECOMMENDATION_SEEN = "adaptiveRecommendationSeen";
-const KEY_SHORTCUT_RECENTS = "shortcutRecents";
-const KEY_FOOD_RECENT_SEARCHES = "foodRecentSearches";
-
-export type AuthProvider = "local" | "email";
 
 export type OnboardingProfile = {
   goal: GoalType;
@@ -39,21 +54,6 @@ export type FoodTrackingPreferences = {
   fastLogEnabled: boolean;
 };
 
-export type LocalAccount = {
-  id: string;
-  provider: AuthProvider;
-  displayName: string;
-  email: string | null;
-  birthdate: string | null;
-  createdAt: string;
-};
-
-export type BuildLocalAccountInput = {
-  displayName: string;
-  email?: string | null;
-  birthdate?: string | null;
-};
-
 const DEFAULT_FOOD_SEARCH_SECTION_STATE: FoodSearchSectionState = {
   favoritesExpanded: true,
   recentExpanded: true,
@@ -66,153 +66,59 @@ const DEFAULT_FOOD_TRACKING_PREFERENCES: FoodTrackingPreferences = {
 const getAdaptiveRecommendationSeenKey = (userExternalId: string) =>
   `${KEY_ADAPTIVE_RECOMMENDATION_SEEN}:${userExternalId}`;
 
-const safeParse = <T>(raw: string | null): T | null => {
-  if (!raw) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
-};
-
-const setKv = async (key: string, value: string): Promise<void> => {
-  await initDb();
-  const db = await getDb();
-
-  await db.runAsync(
-    `
-    INSERT INTO app_kv (key, value)
-    VALUES (?, ?)
-    ON CONFLICT(key) DO UPDATE SET value = excluded.value
-    `,
-    key,
-    value,
-  );
-};
-
-const getKv = async (key: string): Promise<string | null> => {
-  await initDb();
-  const db = await getDb();
-
-  const row = await db.getFirstAsync<{ value: string }>(
-    `SELECT value FROM app_kv WHERE key = ? LIMIT 1`,
-    key,
-  );
-
-  return row?.value ?? null;
-};
-
-const removeKv = async (key: string): Promise<void> => {
-  await initDb();
-  const db = await getDb();
-
-  await db.runAsync(`DELETE FROM app_kv WHERE key = ?`, key);
-};
+// --- Onboarding ------------------------------------------------------------
 
 export const setOnboardingComplete = async (value: boolean): Promise<void> => {
-  await setKv(KEY_ONBOARDING_COMPLETE, JSON.stringify(value));
+  await writeJsonKv(KEY_ONBOARDING_COMPLETE, value);
 };
 
-export const getOnboardingComplete = async (): Promise<boolean> => {
-  const value = await getKv(KEY_ONBOARDING_COMPLETE);
-  return value ? JSON.parse(value) === true : false;
+export const getOnboardingComplete = async (): Promise<boolean> =>
+  (await readJsonKv<boolean>(KEY_ONBOARDING_COMPLETE)) === true;
+
+export const saveOnboardingProfile = async (
+  profile: OnboardingProfile,
+): Promise<void> => {
+  await writeJsonKv(KEY_ONBOARDING_PROFILE, profile);
 };
 
-export const saveLocalAccount = async (account: LocalAccount): Promise<void> => {
-  await setKv(KEY_LOCAL_ACCOUNT, JSON.stringify(account));
-};
+export const getOnboardingProfile = async (): Promise<OnboardingProfile | null> =>
+  readJsonKv<OnboardingProfile>(KEY_ONBOARDING_PROFILE);
 
-export const getLocalAccount = async (): Promise<LocalAccount | null> => {
-  const value = await getKv(KEY_LOCAL_ACCOUNT);
-  return safeParse<LocalAccount>(value);
-};
-
-export const clearLocalAccount = async (): Promise<void> => {
-  await removeKv(KEY_LOCAL_ACCOUNT);
-};
-
-export const saveOnboardingProfile = async (profile: OnboardingProfile): Promise<void> => {
-  await setKv(KEY_ONBOARDING_PROFILE, JSON.stringify(profile));
-};
-
-export const getOnboardingProfile = async (): Promise<OnboardingProfile | null> => {
-  const value = await getKv(KEY_ONBOARDING_PROFILE);
-  return safeParse<OnboardingProfile>(value);
-};
+// --- UI preferences --------------------------------------------------------
 
 export const saveFoodSearchSectionState = async (
   state: FoodSearchSectionState,
 ): Promise<void> => {
-  await setKv(KEY_FOOD_SEARCH_SECTION_STATE, JSON.stringify(state));
+  await writeJsonKv(KEY_FOOD_SEARCH_SECTION_STATE, state);
 };
 
 export const getFoodSearchSectionState = async (): Promise<FoodSearchSectionState> => {
-  const value = await getKv(KEY_FOOD_SEARCH_SECTION_STATE);
-  const parsed = safeParse<Partial<FoodSearchSectionState>>(value);
+  const parsed = await readJsonKv<Partial<FoodSearchSectionState>>(
+    KEY_FOOD_SEARCH_SECTION_STATE,
+  );
 
-  return {
-    ...DEFAULT_FOOD_SEARCH_SECTION_STATE,
-    ...(parsed ?? {}),
-  };
+  return { ...DEFAULT_FOOD_SEARCH_SECTION_STATE, ...(parsed ?? {}) };
 };
 
 export const saveFoodTrackingPreferences = async (
   preferences: FoodTrackingPreferences,
 ): Promise<void> => {
-  await setKv(KEY_FOOD_TRACKING_PREFERENCES, JSON.stringify(preferences));
+  await writeJsonKv(KEY_FOOD_TRACKING_PREFERENCES, preferences);
 };
 
 export const getFoodTrackingPreferences = async (): Promise<FoodTrackingPreferences> => {
-  const value = await getKv(KEY_FOOD_TRACKING_PREFERENCES);
-  const parsed = safeParse<Partial<FoodTrackingPreferences>>(value);
+  const parsed = await readJsonKv<Partial<FoodTrackingPreferences>>(
+    KEY_FOOD_TRACKING_PREFERENCES,
+  );
 
-  return {
-    ...DEFAULT_FOOD_TRACKING_PREFERENCES,
-    ...(parsed ?? {}),
-  };
-};
-
-export const saveShortcutRecents = async (
-  shortcuts: string[],
-): Promise<void> => {
-  await setKv(KEY_SHORTCUT_RECENTS, JSON.stringify(shortcuts.slice(0, 2)));
-};
-
-export const getShortcutRecents = async (): Promise<string[]> => {
-  const value = await getKv(KEY_SHORTCUT_RECENTS);
-  const parsed = safeParse<string[]>(value);
-
-  return Array.isArray(parsed) ? parsed.slice(0, 2) : [];
-};
-
-export const saveFoodRecentSearches = async (
-  searches: string[],
-): Promise<void> => {
-  const normalized = searches
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .slice(0, 6);
-
-  await setKv(KEY_FOOD_RECENT_SEARCHES, JSON.stringify(normalized));
-};
-
-export const getFoodRecentSearches = async (): Promise<string[]> => {
-  const value = await getKv(KEY_FOOD_RECENT_SEARCHES);
-  const parsed = safeParse<string[]>(value);
-
-  return Array.isArray(parsed)
-    ? parsed.map((item) => item.trim()).filter(Boolean).slice(0, 6)
-    : [];
+  return { ...DEFAULT_FOOD_TRACKING_PREFERENCES, ...(parsed ?? {}) };
 };
 
 export const markAdaptiveRecommendationSeen = async (
   userExternalId: string,
   recommendationId: number,
 ): Promise<void> => {
-  await setKv(
+  await writeKv(
     getAdaptiveRecommendationSeenKey(userExternalId),
     String(recommendationId),
   );
@@ -221,21 +127,42 @@ export const markAdaptiveRecommendationSeen = async (
 export const getLastSeenAdaptiveRecommendationId = async (
   userExternalId: string,
 ): Promise<number | null> => {
-  const value = await getKv(getAdaptiveRecommendationSeenKey(userExternalId));
+  const value = await readKv(getAdaptiveRecommendationSeenKey(userExternalId));
   const parsed = Number.parseInt(value ?? "", 10);
 
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-export const buildLocalAccount = (input: BuildLocalAccountInput): LocalAccount => {
-  const timestamp = Date.now();
+// --- Session-scoped hints --------------------------------------------------
+//
+// Recently used tab shortcuts and recent search terms. These were persisted,
+// which made them the only two lists in the app whose contents outlived the
+// process without the server ever knowing about them. They are hints about the
+// current session, not data: the server has no column for them and does not
+// need one, so they live in memory and are gone when the app is.
 
-  return {
-    id: `local-${timestamp}`,
-    provider: "local",
-    displayName: input.displayName,
-    email: input.email ?? null,
-    birthdate: input.birthdate ?? null,
-    createdAt: new Date(timestamp).toISOString(),
-  };
+let shortcutRecents: string[] = [];
+let foodRecentSearches: string[] = [];
+
+export const saveShortcutRecents = async (shortcuts: string[]): Promise<void> => {
+  shortcutRecents = shortcuts.slice(0, 2);
+};
+
+export const getShortcutRecents = async (): Promise<string[]> =>
+  shortcutRecents.slice(0, 2);
+
+export const saveFoodRecentSearches = async (searches: string[]): Promise<void> => {
+  foodRecentSearches = searches
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 6);
+};
+
+export const getFoodRecentSearches = async (): Promise<string[]> =>
+  foodRecentSearches.slice(0, 6);
+
+/** Test seam: drops the in-memory session hints. */
+export const resetSessionHints = (): void => {
+  shortcutRecents = [];
+  foodRecentSearches = [];
 };

@@ -469,6 +469,218 @@ guards. `autoRefreshToken` is on and the AppState lifecycle is wired.
 
 ---
 
+---
+
+## 5b. Real mobile runtime — the remaining flows (30 August, later)
+
+§5a ran the app for the first time and covered sign-in, the diary, food search,
+logging and weight. The flows it could not reach then have now been driven
+through the real UI on the emulator, against the local Supabase stack, with
+every result read back out of PostgreSQL.
+
+They found five defects. None of them was visible to any test suite, because
+each one lived in the gap between two components that each behaved correctly.
+
+### What was run
+
+| Flow | Result |
+| --- | --- |
+| Create a recipe with an ingredient, log it | Recipe row + `custom_recipe_ingredients` row + diary entry at **100 kcal** |
+| Reopen the recipe, change servings 1 → 2, save | `grams_per_serving` 100 → 50, `calories_per_serving` 100 → **50**, `is_public` preserved |
+| Create a custom meal (450 kcal / 30P / 55C / 12F), log it | Meal row + diary entry at **450 kcal**, 1 serving |
+| Copy a day (3 entries, Aug 30 → Aug 31) | All 3 copied with types, meals and amounts intact |
+| Copy the same day again | *"Aug 31 already has matching 3 entries"* — 3 and 3, unchanged |
+| Barcode lookup (`3017620422003`, manual entry) | API queried Open Food Facts, promoted **Nutella (539 kcal)** into `food_items`, logged 100 g |
+| Day total after all of it | **1,589 / 2,300 kcal** — 100 + 450 + 500 + 539, exactly |
+
+The barcode flow also settles a point §5a could only infer: the app sent one
+request to `nouri-api` and got a catalogue food back with a real id. It has no
+Open Food Facts credentials and made no request of its own.
+
+### Defect 1 — a recipe logged at zero calories
+
+Creating a recipe left every derived column NULL — `ingredient_total_weight_g`,
+`grams_per_serving`, `calories_per_serving`, all of them — and logging it
+produced a diary entry at 0 kcal.
+
+The API accepted `caloriesPerServing` from the request body and stored it
+without ever looking at the ingredients. The mobile client did not send it. Both
+were behaving as written; nothing had ever checked that one of them was
+supposed to.
+
+Fixed by making the backend derive it — see §5c.
+
+### Defect 2 — opening a recipe to edit it emptied the recipe
+
+`GET /v1/library/recipes/:id` returned the raw query result: `to_jsonb(r)`
+straight out of PostgreSQL, in snake_case, behind a `z.record(z.unknown())`
+response schema. The mobile side cast it with `as unknown as DBRecipeDetails`
+and read `preparedFoodWeightG`, `prepTimeMin`, `cookTimeMin`, `linkUrl`,
+`description` and `isPublic` off it — every one of them spelled differently from
+what was actually sent.
+
+So the editor opened with those fields blank, and saving wrote the blanks back.
+Two `unknown`s, one at each end, agreeing to ask no questions.
+
+Fixed with a named `RecipeDetailDto`, a real response schema, a typed
+`ApiRecipeDetail`, and a field-by-field mapper on the client. The ingredient's
+embedded food now goes through the same catalogue → DTO mapper every other
+endpoint uses, rather than being handed over as a raw row.
+
+### Defect 3 — none of your own recipes were yours
+
+The library screen decided ownership by parsing a `createdByUserExternalId` out
+of `rawPayload` — a Supabase-era field the API mapper sets to `null` on every
+food. So the answer was always "no": a user's own recipes were filed under
+*"Public recipes from other users. Add-only."*, the *"Yours"* section read *"No
+recipes from you yet"*, and the edit affordance that section carries was
+unreachable for the recipes it was built for.
+
+The API had been sending `isOwn` on every food the whole time. `DBFoodItem` now
+carries it, and the screen asks the server.
+
+### Defect 4 — "edit this recipe" requested recipe 0
+
+With defect 3 fixed and the edit button finally reachable, it failed
+immediately: `GET /v1/library/recipes/:id failed: VALIDATION_FAILED status=400`.
+
+The screen derived the recipe id from `sourceId`, which the API mapper produces
+by splitting `ref` on a colon. A recipe's `ref` is its synthetic id and contains
+no colon, so `sourceId` was `null`, `Number(null)` was `0`, and the request
+asked for recipe 0 — which the route's `positive()` rejected.
+
+Both ids now come from `decodeFoodId`, the shared encoding pinned by the
+conformance corpus.
+
+That diagnostic line is itself new, and is the reason this took one round trip
+instead of an afternoon — see §5d.
+
+### Defect 5 — a 450 kcal meal logged as 45,000
+
+Saving a custom meal with "Save and add" logged it, and the day total read
+**45,600 kcal against a 2,300 target**.
+
+The meal editor passed its "default serving" field — a number of *grams*, 100 —
+as the log quantity. A custom meal comes back from the API as a one-serving food
+(`servingSizeValue: 1`, unit `"serving"`) whose macros are already per serving.
+The scale factor became 100/1.
+
+Every other log path in the app already used `getFoodDefaultLogAmount`, which
+answers this correctly for both shapes. This one did not.
+`scripts/log-quantity.test.cjs` now asserts that every `quantityG:` in every
+food-logging screen comes from the food, from an amount the user typed, or is an
+explicit `1` — and reproduces the 45,000 arithmetic so the failure is legible
+rather than asserted.
+
+---
+
+## 5c. Backend-authoritative recipe nutrition
+
+A recipe's per-serving values are no longer supplied by the client.
+`computeRecipeNutrition` derives them from the ingredients the server already
+holds, and the create and update paths store its answer.
+
+The client still computes the same numbers — the recipe editor shows grams and
+calories per serving live, before anything is saved — but it no longer sends
+them, and the route no longer accepts them. A body claiming
+`caloriesPerServing: 1` is ignored, and a test asserts exactly that.
+
+The one number the user still owns is `preparedFoodWeightG`: nothing on the
+server can know how much water a stew lost. It changes how many grams a serving
+is; it does not change the macros. (It was also, until now, silently dropped —
+the mobile client held it in its input type and never put it in the request
+body.)
+
+**Why the server has to own it.** The value is copied, not referenced. Logging a
+recipe reads `calories_per_serving` once and writes it into
+`user_food_entries.calories`, where it stays. A wrong value is therefore not a
+display glitch that a later edit repairs — it is already in every entry logged
+while it was wrong, and correcting the recipe afterwards fixes none of them.
+
+Both implementations run the same corpus: `computeRecipeNutrition`, 12 cases,
+covering the prepared-weight substitution, serving-basis ingredients, the
+rounding split (calories to whole numbers, macros to one decimal), zero
+servings, and the distinction between *no ingredients* (null — the recipe does
+not carry the information) and *zero calories* (a claim).
+
+Verified end to end: the editor previewed 100 g / 100 kcal per serving, the
+saved row read 100 / 100, the edit to 2 servings produced 50 / 50, and the diary
+entry logged at exactly what the preview showed.
+
+---
+
+## 5d. Failures now say what happened
+
+Forty-five `catch` blocks surfaced a failure to the user — *"Could not log
+food"*, *"Please try again"* — and discarded the cause. From the device, a 404
+from a mis-decoded food id was indistinguishable from a 500, a timeout, or a
+validation error.
+
+They are not edited. The API client reports every failure once, from the one
+place that sees all of them:
+
+```
+[nouri-api] GET /v1/library/recipes/:id failed: VALIDATION_FAILED status=400 requestId=7406e5cd-…
+```
+
+Code, HTTP status, request id, and the route with identifiers removed
+(`/v1/diary/entries/42` → `/v1/diary/entries/:id`). Never a message body, a
+field value, a payload or an id — a client log is not a place for a user's
+weight, diary or nutrition data, and a test asserts that a rejected weight write
+puts neither the value nor the note anywhere near it.
+
+Two details worth stating:
+
+* An expired token that refreshes and succeeds reports **nothing**. It is the
+  normal path, and logging it would train everyone to ignore these lines. A
+  retry that then fails reports once, not twice.
+* A 404 is written with `console.log`, not `console.warn`. Several stores treat
+  "not found" as `null` and carry on, and in a development build every
+  `console.warn` becomes a full-screen LogBox — a diagnostic that interrupts the
+  work is one people turn off. It is still written, because the bug that
+  motivated all of this *was* a 404 that left no trace.
+
+Defect 4 above was diagnosed from that one line.
+
+---
+
+## 5e. Request coalescing
+
+Three screens had grown their own in-flight de-duplication, and one that needed
+it had none. They now share `src/API/nouri/coalesce.ts`.
+
+| | Before | After |
+| --- | --- | --- |
+| Food diary week | A `useRef` Map — per mounted instance, so two instances did not share | Module-scoped, keyed by user and range |
+| Add-food static lists | Bespoke promise + sequence counter, with a `force` flag that *bypassed* the join | Shared; no `force` |
+| Home dashboard summary | None — focus, pull-to-refresh and the data-change listener could each start ~12 requests | Coalesced per user |
+
+The `force` flag is gone deliberately. It existed to bypass the in-flight join,
+which is the one thing that should never be bypassed: two identical requests
+racing to set the same state is not a fresher answer, it is a coin toss between
+two answers.
+
+This is **not a cache**, and the distinction is the whole reason it is allowed
+to exist after [remote-only-data.md](../architecture/remote-only-data.md).
+Nothing is retained once a request settles — a caller arriving a millisecond
+later gets a fresh request. Joining a request that has not answered yet is not a
+copy of anything. Sign-out drops every entry, so a request started by the
+previous user cannot resolve into the next user's screen; a late-settling stale
+request removes only its own entry, never the live one.
+
+Eight tests cover it, and three mutations were applied to check they were not
+vacuous. A fourth mutation — removing a generation counter — was *not* caught,
+because `clear()` already did the work. The counter was removed rather than
+given a test: dead state that cannot fail is not defended by adding an assertion
+about it.
+
+Honest limitation: on the local stack the requests complete too quickly to
+provoke a race by hand. Bouncing between days produced traces with exactly one
+of each request and no `week-load.coalesced` step — which is the correct
+outcome, and is evidence that nothing duplicates, not that the join was
+exercised. The join itself is covered by the unit tests.
+
+
 ## 6. Security
 
 ### User A / User B isolation
@@ -837,6 +1049,21 @@ The gaps in §8 are real but narrow: the diary does not fall back to cached
 content while the API is down (the session does), iOS has not been run, and a
 handful of flows were verified through HTTP rather than through the UI. None of
 them blocks the verdict, and each is stated rather than rounded away.
+
+**Updated 30 August, later.** The last of those gaps is closed: §5b drove
+recipes, custom meals, copy-day and barcode through the real UI. It found five
+defects that no test suite could have caught, because each lived in the gap
+between two components that were individually correct — a request body the
+server accepted and the client never sent, a payload in one casing read in
+another, an ownership flag sent and ignored, an id parsed out of a field that
+does not exist, and a serving in grams used as a count of servings.
+
+The cache fallback is no longer a gap either, but for a different reason: the
+device-side cache is gone entirely (see
+[remote-only-data.md](../architecture/remote-only-data.md)), and an unreachable
+API now says so instead of showing a stale day or an empty sign-in screen.
+
+iOS remains unrun.
 
 ---
 

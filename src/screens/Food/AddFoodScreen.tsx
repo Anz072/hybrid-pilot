@@ -27,6 +27,7 @@ import {
 } from "phosphor-react-native";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
+import { decodeFoodId } from "../../domain/syntheticFoodIds";
 import { DB } from "../../store/DB";
 import type { DBFoodItem, DBUser } from "../../store/DB_TYPES";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
@@ -194,40 +195,58 @@ const isRecipeResult = (
   food: Pick<SearchFoodResult, "source" | "sourceId" | "rawPayload">,
 ) => food.source === "recipe" && !isCustomMealResult(food);
 
-const getLibraryOwnerUserId = (
-  food: Pick<SearchFoodResult, "rawPayload">,
-) => {
-  const value = parseLibraryPayload(food)?.createdByUserExternalId;
-  return typeof value === "string" && value.trim() ? value : null;
-};
-
+/**
+ * Whether the signed-in user owns this recipe or custom meal.
+ *
+ * The API says so, on every food it returns. This used to parse a
+ * `createdByUserExternalId` out of `rawPayload` — a field the API mapper always
+ * sets to null — so the answer was always "no": every recipe a user created was
+ * filed under "Public recipes from other users", the "Yours" section read "No
+ * recipes from you yet", and the edit affordance that section carries was
+ * unreachable for your own recipes.
+ */
 const isOwnedLibraryResult = (
-  food: Pick<SearchFoodResult, "rawPayload">,
+  food: Pick<SearchFoodResult, "isOwn">,
   userExternalId?: string | null,
-) => {
-  if (!userExternalId) {
-    return false;
-  }
+) => Boolean(userExternalId) && food.isOwn === true;
 
-  return getLibraryOwnerUserId(food) === userExternalId;
-};
-
+/**
+ * The underlying recipe / custom-meal row id behind a library result.
+ *
+ * Decoded from the synthetic food id, which is where the API actually puts it.
+ * These used to read `sourceId` — parsed out of `ref` by splitting on a colon —
+ * and a recipe's `ref` is just its synthetic id with no colon in it, so
+ * `sourceId` was null, `Number(null)` was 0, and "edit this recipe" requested
+ * recipe 0 and got a validation error.
+ *
+ * `decodeFoodId` is the shared encoding, pinned by the conformance corpus.
+ */
 const getRecipeIdFromResult = (
-  food: Pick<SearchFoodResult, "sourceId" | "source" | "rawPayload">,
+  food: Pick<SearchFoodResult, "localId" | "sourceId" | "source" | "rawPayload">,
 ) => {
   if (!isRecipeResult(food)) {
     return null;
   }
 
+  if (food.localId != null) {
+    const decoded = decodeFoodId(food.localId);
+    if (decoded.kind === "custom_recipe") return decoded.id;
+  }
+
   const recipeId = Number(food.sourceId);
-  return Number.isFinite(recipeId) ? recipeId : null;
+  return Number.isFinite(recipeId) && recipeId > 0 ? recipeId : null;
 };
 
 const getMealIdFromResult = (
-  food: Pick<SearchFoodResult, "sourceId" | "source" | "rawPayload">,
+  food: Pick<SearchFoodResult, "localId" | "sourceId" | "source" | "rawPayload">,
 ) => {
   if (!isCustomMealResult(food)) {
     return null;
+  }
+
+  if (food.localId != null) {
+    const decoded = decodeFoodId(food.localId);
+    if (decoded.kind === "custom_meal") return decoded.id;
   }
 
   if (food.sourceId?.startsWith("meal:")) {
@@ -235,8 +254,7 @@ const getMealIdFromResult = (
     return Number.isFinite(mealId) ? mealId : null;
   }
 
-  const payloadMealId = Number(parseLibraryPayload(food)?.mealId);
-  return Number.isFinite(payloadMealId) ? payloadMealId : null;
+  return null;
 };
 
 const getLibrarySourceLabel = (
@@ -393,10 +411,8 @@ const AddFoodScreen = () => {
   );
 
   const loadStaticLists = useCallback(async ({
-    force = false,
     silent = false,
   }: {
-    force?: boolean;
     silent?: boolean;
   } = {}) => {
     const cachedSnapshot = getCachedAddFoodStaticLists();
@@ -409,7 +425,7 @@ const AddFoodScreen = () => {
     }
 
     try {
-      const nextSnapshot = await refreshAddFoodStaticLists({ force });
+      const nextSnapshot = await refreshAddFoodStaticLists();
       applyStaticListsSnapshot(nextSnapshot);
       return nextSnapshot;
     } finally {
@@ -550,10 +566,7 @@ const AddFoodScreen = () => {
         searchCacheRef.current.clear();
         localOnlySearchCacheRef.current.clear();
         const normalized = queryRef.current.trim();
-        const staticListsPromise = loadStaticLists({
-          force: true,
-          silent: hasCachedLists,
-        });
+        const staticListsPromise = loadStaticLists({ silent: hasCachedLists });
         const searchPromise = normalized
           ? searchFoods(normalized, searchModeRef.current)
           : Promise.resolve<SearchFoodResult[] | null>(null);
@@ -812,7 +825,7 @@ const AddFoodScreen = () => {
     searchCacheRef.current.clear();
     localOnlySearchCacheRef.current.clear();
     await Promise.all([
-      loadStaticLists({ force: true }),
+      loadStaticLists(),
       query.trim()
         ? searchFoods(query.trim(), searchMode).then(setResults)
         : Promise.resolve(),
@@ -850,6 +863,8 @@ const AddFoodScreen = () => {
       });
       navigation.goBack();
     } catch {
+      // The cause is reported by the API client, from the one place that sees
+      // every failure. This block owns the user-facing copy, nothing more.
       Alert.alert("Could not log food", "Please review the food and try again.");
     } finally {
       quickLoggingKeysRef.current.delete(food.key);

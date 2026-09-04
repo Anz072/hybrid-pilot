@@ -1,4 +1,4 @@
-import { getDb, initDb } from "../storage/sqlite";
+import { readJsonKv, writeJsonKv } from "../storage/kv";
 
 // Display-only preferences. These control how values are shown/entered, not how
 // they are stored: weights are always persisted in kg, heights in cm, times in
@@ -61,23 +61,14 @@ export const subscribeToDisplayPreferences = (listener: Listener): (() => void) 
 };
 
 export const loadDisplayPreferences = async (): Promise<DisplayPreferences> => {
-  try {
-    await initDb();
-    const db = await getDb();
-    const row = await db.getFirstAsync<{ value: string }>(
-      `SELECT value FROM app_kv WHERE key = ? LIMIT 1`,
-      STORAGE_KEY,
-    );
+  const stored = await readJsonKv<Partial<DisplayPreferences>>(STORAGE_KEY);
 
-    if (row?.value) {
-      currentPreferences = normalize(JSON.parse(row.value));
-    }
-  } catch {
-    currentPreferences = { ...DEFAULT_DISPLAY_PREFERENCES };
-  } finally {
-    hydrated = true;
-    notify();
+  if (stored) {
+    currentPreferences = normalize(stored);
   }
+
+  hydrated = true;
+  notify();
 
   return currentPreferences;
 };
@@ -88,21 +79,8 @@ export const saveDisplayPreferences = async (
   currentPreferences = normalize({ ...currentPreferences, ...patch });
   notify();
 
-  try {
-    await initDb();
-    const db = await getDb();
-    await db.runAsync(
-      `
-      INSERT INTO app_kv (key, value)
-      VALUES (?, ?)
-      ON CONFLICT(key) DO UPDATE SET value = excluded.value
-      `,
-      STORAGE_KEY,
-      JSON.stringify(currentPreferences),
-    );
-  } catch {
-    // Best-effort persistence; the in-memory snapshot still reflects the choice.
-  }
+  // Best-effort persistence; the in-memory snapshot already reflects the choice.
+  await writeJsonKv(STORAGE_KEY, currentPreferences);
 
   return currentPreferences;
 };

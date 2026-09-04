@@ -61,10 +61,6 @@ export type NutritionSnapshot = {
   trackedMicronutrientCount: number;
 };
 
-type LoadNutritionSnapshotOptions = {
-  forceRefresh?: boolean;
-};
-
 export const MICRONUTRIENT_META: MicronutrientMeta[] = [
   { key: "vitaminAUg", label: "Vitamin A", unit: "ug", group: "Vitamins" },
   { key: "vitaminCMg", label: "Vitamin C", unit: "mg", group: "Vitamins" },
@@ -220,17 +216,15 @@ export const formatMicronutrientValue = (
 export const loadNutritionSnapshot = async (
   userExternalId: string,
   dates: string[],
-  options: LoadNutritionSnapshotOptions = {},
 ): Promise<NutritionSnapshot> => {
   const safeDates = dates.length > 0 ? dates : [formatFoodDateKey(new Date())];
   const sortedDates = [...safeDates].sort();
   const requestedDateSet = new Set(safeDates);
-  const readOptions = options.forceRefresh ? { forceRefresh: true } : undefined;
+  // There is no `forceRefresh`: the read is a request, so it is always fresh.
   const entriesInRange = await DB.getUserFoodLogEntriesBetween(
     userExternalId,
     sortedDates[0],
     sortedDates[sortedDates.length - 1],
-    readOptions,
   );
   const entries = entriesInRange.filter((entry) =>
     requestedDateSet.has(entry.date),

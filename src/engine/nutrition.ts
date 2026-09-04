@@ -1,4 +1,4 @@
-import type { DBFoodItem, DBUserFoodLogEntry } from "../store/DB_TYPES";
+import type { NutritionBasis, UserFoodLogSource } from "../domain/types";
 
 // Authoritative nutrition scaling + rounding for the whole app.
 //
@@ -42,13 +42,27 @@ export type ResolvedFoodServing = {
   unit: string;
 };
 
-type FoodServingFields = Pick<
-  DBFoodItem,
-  "nutritionBasis" | "servingSizeValue" | "servingSizeUnit"
->;
+/**
+ * The fields these functions actually read.
+ *
+ * Declared here rather than `Pick`ed from `DBFoodItem`, so this module states
+ * what it needs instead of borrowing the shape of a stored record. A
+ * `DBFoodItem` satisfies it structurally, so every existing caller is
+ * unaffected — and the equivalent module in nouri-api declares the same two
+ * interfaces, which is what lets the shared conformance corpus run against both.
+ */
+export type FoodServingFields = {
+  nutritionBasis: NutritionBasis;
+  servingSizeValue: number | null;
+  servingSizeUnit: string | null;
+};
 
-type FoodMacroFields = FoodServingFields &
-  Pick<DBFoodItem, "calories" | "proteinG" | "carbsG" | "fatG">;
+export type FoodMacroFields = FoodServingFields & {
+  calories: number | null;
+  proteinG: number | null;
+  carbsG: number | null;
+  fatG: number | null;
+};
 
 // The serving the food's stored macros describe. A missing, zero, or negative
 // stored serving size falls back to the nutrition basis (100 g / 100 ml /
@@ -121,22 +135,22 @@ export const scaleFoodNutritionForQuantity = (
 };
 
 export const getEntryScaleFactor = (
-  entry: Pick<DBUserFoodLogEntry, "entrySource" | "quantityG" | "servingSize">,
+  entry: Pick<LoggedNutritionEntry, "entrySource" | "quantityG" | "servingSize">,
 ): number =>
   entry.entrySource === "quick_add"
     ? 1
     : getQuantityScaleFactor(entry.quantityG, entry.servingSize);
 
-type LoggedNutritionEntry = Pick<
-  DBUserFoodLogEntry,
-  | "entrySource"
-  | "quantityG"
-  | "servingSize"
-  | "calories"
-  | "proteinG"
-  | "carbsG"
-  | "fatG"
->;
+/** The fields a logged diary entry contributes to a nutrition total. */
+export type LoggedNutritionEntry = {
+  entrySource: UserFoodLogSource;
+  quantityG: number;
+  servingSize: number;
+  calories: number | null;
+  proteinG: number | null;
+  carbsG: number | null;
+  fatG: number | null;
+};
 
 const getLoggedNutritionRaw = (
   entry: LoggedNutritionEntry,

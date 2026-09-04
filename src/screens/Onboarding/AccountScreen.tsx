@@ -23,10 +23,8 @@ import { DB } from "../../store/DB";
 import { useAppDispatch } from "../../store/hooks";
 import { setCurrentUser } from "../../store/userSlice";
 import {
-  saveLocalAccount,
   saveOnboardingProfile,
   setOnboardingComplete,
-  type LocalAccount,
 } from "../../storage/localStore";
 import { appColors } from "../../theme/colors";
 import { appBorders, appSpacing, appSurfaces } from "../../theme/tokens";
@@ -61,6 +59,18 @@ const validateEmailPassword = (email: string, password: string) => {
   }
 };
 
+// The account Supabase just created, carried from the signup call into profile
+// setup. It is not persisted: the Supabase session is the record of who is
+// signed in, and the profile row is the record of who they are.
+type SignedUpAccount = {
+  id: string;
+  provider: "email";
+  displayName: string;
+  email: string | null;
+  birthdate: string | null;
+  createdAt: string;
+};
+
 const AccountScreen = ({ navigation, route }: Props) => {
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
@@ -71,9 +81,9 @@ const AccountScreen = ({ navigation, route }: Props) => {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const isSaving = isSubmitting;
 
-  const completeOnboardingAccount = async (account: LocalAccount) => {
+  const completeOnboardingAccount = async (account: SignedUpAccount) => {
     const onboarding = route.params.onboarding;
-    const persistedAccount: LocalAccount = {
+    const persistedAccount: SignedUpAccount = {
       ...account,
       birthdate: onboarding.bodyData.birthdate,
     };
@@ -119,7 +129,6 @@ const AccountScreen = ({ navigation, route }: Props) => {
       deviceId: generateUuid(),
     });
 
-    await saveLocalAccount(persistedAccount);
     await saveOnboardingProfile(onboarding);
     await setOnboardingComplete(true);
 
@@ -161,7 +170,7 @@ const AccountScreen = ({ navigation, route }: Props) => {
         return;
       }
 
-      const account: LocalAccount = {
+      const account: SignedUpAccount = {
         id: result.session.user.id,
         provider: "email",
         displayName: resolvedDisplayName,

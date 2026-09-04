@@ -43,7 +43,6 @@ import {
 import {
   clearCachedHomeDashboardSummary,
   getCachedHomeDashboardSummary,
-  getPersistedHomeDashboardSummary,
   loadHomeDashboardSummary,
   type HomeDashboardSummary,
 } from "./homeDashboardSummary";
@@ -243,17 +242,6 @@ const HomeScreen = () => {
       setError(null);
       const sequence = refreshSequenceRef.current + 1;
       refreshSequenceRef.current = sequence;
-
-      if (preferCache && !cachedSummary) {
-        const persistedSummary = await getPersistedHomeDashboardSummary(
-          user.externalId,
-        ).catch(() => null);
-
-        if (persistedSummary && refreshSequenceRef.current === sequence) {
-          applySummary(persistedSummary);
-          setIsLoading(false);
-        }
-      }
 
       try {
         const summary = await loadHomeDashboardSummary(user);

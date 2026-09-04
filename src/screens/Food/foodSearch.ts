@@ -4,6 +4,8 @@ export type FoodSearchResult = SaveFoodItemInput & {
   key: string;
   localId: number | null;
   localFood: DBFoodItem | null;
+  /** Whether the signed-in user created this recipe or custom meal. Server-decided. */
+  isOwn?: boolean;
 };
 
 type FoodSearchScoreOptions = {
@@ -100,7 +102,9 @@ export const toSearchFoodResult = (
   food: SaveFoodItemInput,
   localId: number | null,
   localFood: DBFoodItem | null = null,
+  isOwn = false,
 ): FoodSearchResult => ({
+  isOwn,
   ...food,
   key: `${getFoodIdentityKey({
     source: food.source,
@@ -120,10 +124,14 @@ export const fromDbFoodItem = (
     id,
     createdAt: _createdAt,
     updatedAt: _updatedAt,
+    isOwn,
     ...saveInput
   } = food;
 
-  return toSearchFoodResult(saveInput, id, includeLocalFood ? food : null);
+  // `isOwn` is passed explicitly rather than riding along in the spread: it is
+  // not part of `SaveFoodItemInput` (a client does not get to assert ownership),
+  // so relying on it surviving a rest-spread would be a runtime-only guarantee.
+  return toSearchFoodResult(saveInput, id, includeLocalFood ? food : null, isOwn);
 };
 
 export const getSearchDedupeKeys = (

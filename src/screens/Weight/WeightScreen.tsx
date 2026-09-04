@@ -26,7 +26,6 @@ import {
   PlusIcon,
   TargetIcon,
   TrashIcon,
-  WarningCircleIcon,
   XIcon,
 } from "phosphor-react-native";
 import type {
@@ -551,8 +550,6 @@ const WeightScreen = ({
       updatedAt: now,
       deletedAt: null,
       version: (targetEntry?.version ?? 0) + 1,
-      syncStatus: "pending",
-      syncError: null,
     };
 
     const optimisticDeletedEntries = overwrittenEntries.map((entry) => ({
@@ -560,21 +557,15 @@ const WeightScreen = ({
       deletedAt: now,
       updatedAt: now,
       version: entry.version + 1,
-      syncStatus: "pending" as const,
-      syncError: null,
     }));
 
     replaceLocalEntries([optimisticEntry, ...optimisticDeletedEntries]);
     setSelectedEntryId(optimisticEntry.id);
     closeModal();
-    setSnackbar({
-      message:
-        sameDayEntries.length > 0
-          ? "Daily entry updated - same-day save replaced the earlier entry"
-          : baseEntry
-            ? "Entry updated locally"
-            : "Saved locally",
-    });
+    // The row on screen is optimistic: it is what the save is expected to
+    // produce, not a record that exists yet. Saying "saved" here would be a
+    // claim about the server that has not been made.
+    setSnackbar({ message: baseEntry ? "Updating…" : "Saving…" });
 
     try {
       const saved = await DB.saveWeightEntry({
@@ -595,11 +586,9 @@ const WeightScreen = ({
       setSelectedEntryId(saved.id);
       setSnackbar({
         message:
-          saved.syncStatus === "synced"
-            ? "Synced"
-            : sameDayEntries.length > 0
-              ? "Saved locally - same-day entry replaced"
-              : "Saved locally",
+          sameDayEntries.length > 0
+            ? "Saved - same-day entry replaced"
+            : "Saved",
       });
       try {
         await refreshAdaptiveRecommendationForUser({
@@ -632,7 +621,6 @@ const WeightScreen = ({
       deletedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       version: entry.version + 1,
-      syncStatus: "pending",
     };
 
     replaceLocalEntry(optimisticDeleted);
@@ -1137,14 +1125,8 @@ const WeightScreen = ({
           const selected = item.id === selectedEntryId;
           const isFirst = index === 0;
           const isLast = index === section.data.length - 1;
-          const statusLabel =
-            item.syncStatus === "error"
-              ? "Needs review"
-              : item.syncStatus === "pending"
-                ? "Saved locally"
-                : "Synced";
           const sourceLabel = toTitleCase(item.source);
-          const hasSecondaryRow = Boolean(item.notes || item.syncError);
+          const hasSecondaryRow = Boolean(item.notes);
 
           return (
             <Swipeable
@@ -1199,18 +1181,6 @@ const WeightScreen = ({
                     <AppText style={styles.historySourceText} numberOfLines={1} variant="label">
                       {sourceLabel}
                     </AppText>
-                    <AppText
-                      color={
-                        item.syncStatus === "error"
-                          ? "error"
-                          : item.syncStatus === "synced"
-                            ? "success"
-                            : "muted"
-                      }
-                      variant="micro"
-                    >
-                      {statusLabel}
-                    </AppText>
                   </View>
 
                   <View style={styles.historyActionColumn}>
@@ -1228,18 +1198,6 @@ const WeightScreen = ({
                       <AppText color="secondary" style={styles.historyNoteText} numberOfLines={2} variant="label">
                         {item.notes}
                       </AppText>
-                    ) : null}
-                    {item.syncError ? (
-                      <View style={styles.historyInlineWarning}>
-                        <WarningCircleIcon
-                          size={12}
-                          color={appColors.warning600}
-                          weight="fill"
-                        />
-                        <AppText color={appColors.warning700} style={styles.historyInlineWarningText} variant="micro">
-                          Edit and try saving again
-                        </AppText>
-                      </View>
                     ) : null}
                   </View>
                 ) : null}
@@ -1742,18 +1700,6 @@ const styles = StyleSheet.create({
   },
   historyNoteText: {
     flex: 1,
-  },
-  historyInlineWarning: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: appSpacing.xxs,
-    borderRadius: appRadius.pill,
-    backgroundColor: appColors.warningSurfaceStrong,
-    paddingHorizontal: appSpacing.xs,
-    paddingVertical: appSpacing.xxs,
-  },
-  historyInlineWarningText: {
-    flexShrink: 1,
   },
   goalModalScreen: {
     flex: 1,

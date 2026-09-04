@@ -200,9 +200,9 @@ one-shot server-side import is the right tool if that data still matters.
 | Item | Why |
 | --- | --- |
 | **Supabase Auth** | Out of scope by design. Proxying it adds latency and breaks refresh. |
-| **Adaptive TDEE engine** (573 lines) | Data access is migrated; the *analysis* is not. Porting it needs a dual-run diff against historical data before it can be trusted — moving it blind would silently change users' calorie targets. |
-| **`expo-sqlite` cache layer** | Not a Supabase dependency. It is the app's offline and perceived-performance layer, and is more valuable now. |
-| **Expo Go dev bypass** | Local-only development mode; never reaches the network. |
+| ~~**Adaptive TDEE engine**~~ (573 lines) | **Migrated 2026-08-30.** The dual-run diff this row called for was built and run: zero differences across generated scenarios covering every threshold, and the diff itself mutation-checked. See [adaptive-calories.md](../architecture/adaptive-calories.md). |
+| ~~**`expo-sqlite` cache layer**~~ | **Reversed 2026-08-30.** The reasoning below holds for a read-only cache; this one also accepted writes, which made it a second source of truth. Removed in full — see [remote-only-data.md](../architecture/remote-only-data.md). |
+| ~~**Expo Go dev bypass**~~ | **Reversed 2026-08-30.** "Never reaches the network" was the problem: the mode developers used daily was the one mode that never exercised the backend. Removed. |
 | **`activities`, `custom_meal_items`** | Unused, but dropping them is out of scope. |
 
 ---
@@ -231,7 +231,7 @@ database that does not exist, and are closed.
 | 2 | Choose the Supabase region, then measure the Cloud Run pairing | ⬜ a decision, not a discovery |
 | 3 | Deploy the API and run the latency probes | ⬜ |
 | 4 | Confirm real JWT claim shape against a live token | ⬜ follows from (1) |
-| 5 | Adaptive TDEE engine still client-side | 🟠 needs a dual-run diff before porting |
+| 5 | Adaptive TDEE engine still client-side | ✅ **done** — ported, dual-run verified, client copy deleted |
 | 6 | Mobile refresh on `AUTH_TOKEN_EXPIRED` | ⬜ |
 
 **Closed as moot:** verifying the baseline against production; capturing

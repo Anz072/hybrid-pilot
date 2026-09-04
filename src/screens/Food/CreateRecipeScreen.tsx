@@ -31,6 +31,7 @@ import {
   TrashIcon,
 } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { computeRecipeNutrition } from "../../domain/recipeNutrition";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
@@ -262,48 +263,41 @@ const CreateRecipeScreen = () => {
   const resolvedPreparedWeight =
     parsedPreparedWeight > 0 ? parsedPreparedWeight : null;
 
-  const recipeTotals = React.useMemo(() => {
-    return ingredients.reduce(
-      (accumulator, ingredient) => {
-        const { amount, factor } = calculateIngredientFactor(ingredient);
+  // Preview only. The backend recomputes all of this from the ingredients it
+  // stores and persists its own answer — see src/domain/recipeNutrition.ts. The
+  // two implementations run the same shared conformance corpus, so what this
+  // shows while editing is what will be saved.
+  const derivedNutrition = React.useMemo(
+    () =>
+      computeRecipeNutrition({
+        ingredients: ingredients.map((ingredient) => ({
+          amountValue: toSafeNumber(ingredient.amountValue),
+          food: ingredient.food,
+        })),
+        servings: resolvedServings,
+        preparedFoodWeightG: resolvedPreparedWeight,
+      }),
+    [ingredients, resolvedPreparedWeight, resolvedServings],
+  );
 
-        accumulator.calories += (ingredient.food.calories ?? 0) * factor;
-        accumulator.proteinG += (ingredient.food.proteinG ?? 0) * factor;
-        accumulator.carbsG += (ingredient.food.carbsG ?? 0) * factor;
-        accumulator.fatG += (ingredient.food.fatG ?? 0) * factor;
-        accumulator.totalWeightG += amount;
-        return accumulator;
-      },
-      { calories: 0, proteinG: 0, carbsG: 0, fatG: 0, totalWeightG: 0 },
-    );
-  }, [ingredients]);
-
-  const recipeWeightMetrics = React.useMemo(() => {
-    const ingredientTotalWeightG = recipeTotals.totalWeightG;
-    const effectiveRecipeWeightG =
-      resolvedPreparedWeight ??
-      (ingredientTotalWeightG > 0 ? ingredientTotalWeightG : null);
-    const gramsPerServing =
-      effectiveRecipeWeightG != null && effectiveRecipeWeightG > 0
-        ? effectiveRecipeWeightG / resolvedServings
-        : null;
-
-    return {
-      ingredientTotalWeightG,
-      effectiveRecipeWeightG,
-      gramsPerServing,
-      usesPreparedWeight: resolvedPreparedWeight != null,
-    };
-  }, [recipeTotals.totalWeightG, resolvedPreparedWeight, resolvedServings]);
+  const recipeWeightMetrics = React.useMemo(
+    () => ({
+      ingredientTotalWeightG: derivedNutrition.ingredientTotalWeightG ?? 0,
+      effectiveRecipeWeightG: derivedNutrition.effectiveRecipeWeightG,
+      gramsPerServing: derivedNutrition.gramsPerServing,
+      usesPreparedWeight: derivedNutrition.preparedFoodWeightG != null,
+    }),
+    [derivedNutrition],
+  );
 
   const perServingNutrition = React.useMemo(
     () => ({
-      calories: recipeTotals.calories / resolvedServings,
-      proteinG: recipeTotals.proteinG / resolvedServings,
-      carbsG: recipeTotals.carbsG / resolvedServings,
-      fatG: recipeTotals.fatG / resolvedServings,
+      calories: derivedNutrition.caloriesPerServing ?? 0,
+      proteinG: derivedNutrition.proteinGPerServing ?? 0,
+      carbsG: derivedNutrition.carbsGPerServing ?? 0,
+      fatG: derivedNutrition.fatGPerServing ?? 0,
     }),
-    [recipeTotals, resolvedServings],
+    [derivedNutrition],
   );
   const currentDraftSignature = React.useMemo(
     () =>

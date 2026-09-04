@@ -76,6 +76,62 @@ type RequestOptions = {
   timeoutMs?: number;
 };
 
+/**
+ * A one-line, loggable description of a failed request.
+ *
+ * Deliberately carries only the code, the HTTP status and the request id — the
+ * three things that let a failure be traced to a server-side log line. It never
+ * carries a message body, a field value or a payload, because a client log is
+ * not a place for a user's weight, diary or nutrition data.
+ */
+export const describeApiFailure = (error: unknown): string => {
+  if (error instanceof NouriApiError) {
+    return `${error.code} status=${error.status} requestId=${error.requestId ?? "none"}`;
+  }
+  return error instanceof Error ? error.name : "unknown";
+};
+
+/**
+ * Path with identifiers removed: `/v1/diary/entries/42` -> `/v1/diary/entries/:id`.
+ *
+ * The endpoint is the useful half of a failure report. The id is not, and a
+ * log line is a place things leak from, so it does not go in one.
+ */
+const routeOf = (path: string) =>
+  path.replace(/\/\d+(?=\/|$)/g, "/:id").replace(/\/[0-9a-f-]{36}(?=\/|$)/gi, "/:uuid");
+
+/**
+ * Every request failure is reported here, once, from the one place that sees
+ * all of them.
+ *
+ * Screens catch these to show their own copy — "Could not log food", "Please
+ * try again" — and until now that copy was the *only* trace a failure left. The
+ * cause was unrecoverable from the device: a 404 from a food id the backend
+ * decoded wrong looked exactly like a 500, a timeout, or a validation error.
+ *
+ * Putting it here rather than in 45 catch blocks means a new screen cannot
+ * forget it, and means the log line is built from fields the client controls
+ * rather than from whatever a handler happened to pass along.
+ */
+const reportFailure = (method: string, path: string, error: unknown): void => {
+  const line = `[nouri-api] ${method} ${routeOf(path)} failed: ${describeApiFailure(error)}`;
+
+  // A 404 is frequently expected control flow here — several stores treat "not
+  // found" as `null` and carry on — so it is recorded but does not raise a
+  // warning. In a development build every `console.warn` becomes a full-screen
+  // LogBox, and a diagnostic that interrupts the work is one people turn off.
+  //
+  // It is still written, because the reverse mistake is worse: the bug that
+  // motivated all of this was a 404, from a food id the backend decoded wrong,
+  // and it left no trace at all.
+  if (error instanceof NouriApiError && error.isNotFound) {
+    console.log(line);
+    return;
+  }
+
+  console.warn(line);
+};
+
 const buildUrl = (path: string, query?: RequestOptions["query"]) => {
   const base = readBaseUrl();
   if (!base) {
@@ -193,40 +249,55 @@ export const apiRequest = async <T>(
   path: string,
   options: RequestOptions = {},
 ): Promise<T> => {
+  const method = options.method ?? "GET";
   const session = await getSupabaseSession();
   const accessToken = session?.access_token;
 
   if (!accessToken) {
-    throw new NouriApiError(
+    const error = new NouriApiError(
       "AUTH_REQUIRED",
       SUPABASE_SESSION_REQUIRED_MESSAGE,
       401,
       null,
     );
+    reportFailure(method, path, error);
+    throw error;
   }
 
   try {
     return await performRequest<T>(path, options, accessToken);
   } catch (error) {
     if (!(error instanceof NouriApiError) || !error.isExpiredToken) {
+      reportFailure(method, path, error);
       throw error;
     }
+
+    // An expired token is not reported: it is the normal, expected prelude to a
+    // refresh, and the retry below is what decides whether anything failed.
 
     // Single-flighted, so a burst of simultaneous 401s shares one refresh
     // rather than racing to spend the same rotating refresh token.
     const refreshedToken = await refreshSupabaseSession();
 
     if (!refreshedToken) {
-      throw new NouriApiError(
+      const authError = new NouriApiError(
         "AUTH_REQUIRED",
         SUPABASE_SESSION_REQUIRED_MESSAGE,
         401,
         error.requestId,
       );
+      reportFailure(method, path, authError);
+      throw authError;
     }
 
-    // Exactly one retry. Whatever this throws propagates untouched.
-    return await performRequest<T>(path, options, refreshedToken);
+    // Exactly one retry. Whatever this throws propagates untouched — but is
+    // reported, because by here the refresh has already had its chance.
+    try {
+      return await performRequest<T>(path, options, refreshedToken);
+    } catch (retryError) {
+      reportFailure(method, path, retryError);
+      throw retryError;
+    }
   }
 };
 
@@ -239,3 +310,4 @@ export const getDeviceTimeZone = (): string => {
     return "UTC";
   }
 };
+

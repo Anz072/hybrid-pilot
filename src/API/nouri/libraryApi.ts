@@ -25,9 +25,49 @@ export const listRecents = (limit = 20): Promise<{ foods: ApiFood[] }> =>
 export const listRecipes = (limit = 200): Promise<{ foods: ApiFood[] }> =>
   apiRequest("/v1/library/recipes", { query: { limit } });
 
+/**
+ * Recipe, ingredients and each ingredient's food, in one round trip.
+ *
+ * Typed, not `Record<string, unknown>`. The loose type let the screen cast the
+ * payload to `DBRecipeDetails` and read camelCase fields off an object the API
+ * was sending in snake_case — so opening a recipe to edit it silently emptied
+ * its prepared weight, prep and cook times, link, description and visibility,
+ * and saving wrote the emptiness back. The API now returns this shape and
+ * validates it on the way out.
+ */
 export type ApiRecipeDetail = {
-  recipe: Record<string, unknown>;
-  ingredients: Array<Record<string, unknown>>;
+  recipe: {
+    id: number;
+    createdByUserExternalId: string;
+    linkedFoodId: number;
+    isPublic: boolean;
+    name: string;
+    description: string | null;
+    linkUrl: string | null;
+    prepTimeMin: number | null;
+    cookTimeMin: number | null;
+    servings: number;
+    steps: string[];
+    ingredientTotalWeightG: number | null;
+    preparedFoodWeightG: number | null;
+    effectiveRecipeWeightG: number | null;
+    gramsPerServing: number | null;
+    caloriesPerServing: number | null;
+    proteinGPerServing: number | null;
+    carbsGPerServing: number | null;
+    fatGPerServing: number | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+  ingredients: Array<{
+    id: number;
+    recipeId: number;
+    foodId: number;
+    amount: number;
+    amountUnit: string | null;
+    sortOrder: number;
+    food: ApiFood | null;
+  }>;
 };
 
 export const getRecipeDetail = (recipeId: number): Promise<ApiRecipeDetail> =>

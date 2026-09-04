@@ -66,6 +66,7 @@ export const toDbFoodItem = (food: ApiFood): DBFoodItem =>
     verified: food.verified,
     isComplete: food.isComplete,
     isPublic: true,
+    isOwn: food.isOwn,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }) as DBFoodItem;

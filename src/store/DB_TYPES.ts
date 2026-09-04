@@ -1,12 +1,49 @@
-export type DBIsoDateString = string;
+/**
+ * The record shapes screens and stores pass around.
+ *
+ * The name is historical: these once described rows in a device SQLite
+ * database. There is no device database any more — every one of these is a
+ * shape the Nouri API returns, mapped once at the transport boundary — but the
+ * name is load-bearing across ~45 files and renaming it is churn without a
+ * payoff.
+ *
+ * The domain's *vocabulary* — the closed sets of values, as opposed to the
+ * record shapes — lives in `src/domain/types.ts` and is re-exported here so
+ * existing imports keep working.
+ */
+import type {
+  AdaptiveCalorieMode,
+  AdaptiveCalorieRecommendationConfidence,
+  AdaptiveCalorieRecommendationStatus,
+  DBIsoDateString,
+  DBUserGender,
+  DBUserProvider,
+  FoodSource,
+  NutritionBasis,
+  RecipeBuildMethod,
+  UserFoodLogSource,
+  WeightEntrySource,
+} from "../domain/types";
+
+export type {
+  AdaptiveCalorieMode,
+  AdaptiveCalorieRecommendationConfidence,
+  AdaptiveCalorieRecommendationStatus,
+  DBIsoDateString,
+  DBUserGender,
+  DBUserProvider,
+  FoodSource,
+  NutritionBasis,
+  RecipeBuildMethod,
+  UserFoodLogSource,
+  WeightEntrySource,
+};
 
 import type {
   GoalStrategy,
   ProteinFocus,
 } from "../navigation/onboardingTypes";
 
-export type DBUserProvider = "local" | "email";
-export type DBUserGender = "male" | "female" | "other" | null;
 
 export type DBUser = {
   id: number;
@@ -31,17 +68,6 @@ export type DBUser = {
 
 export type UpsertUserInput = DBUser;
 
-export type AdaptiveCalorieMode = "recommend" | "auto_apply";
-export type AdaptiveCalorieRecommendationStatus =
-  | "proposed"
-  | "accepted"
-  | "rejected"
-  | "applied"
-  | "superseded";
-export type AdaptiveCalorieRecommendationConfidence =
-  | "low"
-  | "medium"
-  | "high";
 
 export type DBUserSettings = {
   userExternalId: string;
@@ -192,17 +218,11 @@ export type AdaptiveCalorieTargetApplyResult = {
   appliedDelta: number;
 };
 
-export type WeightEntrySource =
-  | "manual"
-  | "import"
-  | "smart_scale"
-  | "healthkit"
-  | "health_connect"
-  | "google_fit"
-  | "csv";
 
-export type WeightEntrySyncStatus = "pending" | "synced" | "error";
-
+// There is no `syncStatus` and no `syncError`. Both described a device-local
+// sync engine: a weight could be written to the phone, rejected by the server,
+// and kept in an "error" state for the user to resolve. Writes now go to the
+// server or fail, so every entry that exists is one Supabase accepted.
 export type DBWeightEntry = {
   id: string;
   userExternalId: string;
@@ -220,8 +240,6 @@ export type DBWeightEntry = {
   updatedAt: DBIsoDateString;
   deletedAt: DBIsoDateString | null;
   version: number;
-  syncStatus: WeightEntrySyncStatus;
-  syncError: string | null;
 };
 
 export type SaveWeightEntryInput = {
@@ -260,15 +278,7 @@ export type SaveWeightGoalInput = {
   goalBandKg?: number | null;
 };
 
-export type FoodSource =
-  | "custom"
-  | "manual"
-  | "open_food_facts"
-  | "import"
-  | "usda"
-  | "recipe";
 
-export type NutritionBasis = "100g" | "100ml" | "serving";
 
 export type DBFoodNutrientDetails = {
   fiberG: number | null;
@@ -369,6 +379,15 @@ export type DBFoodItem = DBFoodNutrientDetails & {
   verified: boolean; //  true for imported official-ish source, false for manual
   isComplete: boolean;
   isPublic: boolean;
+  /**
+   * Whether the signed-in user created this recipe or custom meal.
+   *
+   * The server decides. The library screen used to work it out by digging a
+   * `createdByUserExternalId` out of `rawPayload` — a Supabase-era field the
+   * API mapper always sets to null — so every recipe a user made was filed
+   * under "Public recipes from other users" and none under "Yours".
+   */
+  isOwn: boolean;
   createdAt: DBIsoDateString;
   updatedAt: DBIsoDateString;
 };
@@ -380,6 +399,9 @@ export type SaveFoodItemInput = Omit<
   | "updatedAt"
   | "rawPayload"
   | "isPublic"
+  // Not a caller's to assert: ownership is derived from who the request is
+  // authenticated as.
+  | "isOwn"
   | keyof DBFoodNutrientDetails
 > & {
   id?: number;
@@ -401,7 +423,6 @@ export type DBUserFoodFavorite = {
   createdAt: DBIsoDateString;
 };
 
-export type RecipeBuildMethod = "scratch" | "link" | "ai";
 
 export type DBRecipe = {
   id: number;
@@ -505,11 +526,6 @@ export type UpdateUserCustomMealInput = CreateUserCustomMealInput & {
   mealId: number;
 };
 
-export type UserFoodLogSource =
-  | "food_item"
-  | "custom_recipe"
-  | "custom_meal"
-  | "quick_add";
 
 export type DBUserFoodLog = {
   id: number;

@@ -75,6 +75,7 @@ import {
   getLastSeenAdaptiveRecommendationId,
   markAdaptiveRecommendationSeen,
 } from "../../storage/localStore";
+import { coalesce, isCoalescing } from "../../API/nouri/coalesce";
 import { prefetchAddFoodStaticLists } from "./addFoodStaticListsCache";
 import { useFoodDiaryDateContext } from "./foodDiaryDateContext";
 import {
@@ -82,7 +83,6 @@ import {
   markDiaryUseful,
   measureDiaryRequest,
   measureDiaryStep,
-  recordDiaryCachePath,
   recordDiaryRender,
   startDiaryTrace,
   type DiaryPerfReason,
@@ -212,12 +212,6 @@ const FoodDiaryScreen = () => {
   const diaryLoadRequestRef = useRef(0);
   const activeDiaryLoadWeekRef = useRef<string | null>(null);
   const hasLoadedDiaryRef = useRef(false);
-  const weekLoadInFlightRef = useRef(
-    new Map<
-      string,
-      Promise<[DBUserFoodLogEntry[], DBDiaryDayStatus[]]>
-    >(),
-  );
   const adaptiveRefreshInFlightRef = useRef<Promise<void> | null>(null);
   const adaptiveRefreshGenerationRef = useRef(0);
   const activeDiaryTraceRef = useRef<DiaryPerfTrace | null>(null);
@@ -308,38 +302,40 @@ const FoodDiaryScreen = () => {
       endDate: string,
       trace: DiaryPerfTrace,
     ) => {
-      const key = `${userExternalId}:${startDate}:${endDate}`;
-      const existing = weekLoadInFlightRef.current.get(key);
-      if (existing) {
-        recordDiaryCachePath(trace, "week-load", "in-flight-coalesced");
-        return measureDiaryStep(trace, "week-load.coalesced", () => existing);
-      }
+      // Keyed by user and range, and held at module scope rather than in a ref:
+      // the focus effect and the date-change effect can both ask for the same
+      // week, and a ref would only coalesce within one mounted instance.
+      const key = `diary:week:${userExternalId}:${startDate}:${endDate}`;
+      // Read before the call: afterwards this request is the in-flight one.
+      const joined = isCoalescing(key);
 
-      const request = Promise.all([
-        measureDiaryRequest(trace, "week-entries", "logical", () =>
-          DB.getUserFoodLogEntriesBetween(
-            userExternalId,
-            startDate,
-            endDate,
-            { perfTrace: trace },
+      const request = coalesce(key, () =>
+        Promise.all([
+          measureDiaryRequest(trace, "week-entries", "logical", () =>
+            DB.getUserFoodLogEntriesBetween(
+              userExternalId,
+              startDate,
+              endDate,
+              { perfTrace: trace },
+            ),
           ),
-        ),
-        measureDiaryRequest(trace, "week-statuses", "logical", () =>
-          DB.listDiaryDayStatusesBetween(
-            userExternalId,
-            startDate,
-            endDate,
-            trace,
+          measureDiaryRequest(trace, "week-statuses", "logical", () =>
+            DB.listDiaryDayStatusesBetween(
+              userExternalId,
+              startDate,
+              endDate,
+              trace,
+            ),
           ),
-        ),
-      ]);
-      const trackedRequest = request.finally(() => {
-        if (weekLoadInFlightRef.current.get(key) === trackedRequest) {
-          weekLoadInFlightRef.current.delete(key);
-        }
-      });
-      weekLoadInFlightRef.current.set(key, trackedRequest);
-      return trackedRequest;
+        ]),
+      );
+
+      // Joining a request already in flight is not reading a stored copy, and
+      // the two must not look alike in a trace: one is free, the other would be
+      // a second source of truth. The "week-load.coalesced" step marks it.
+      return joined
+        ? measureDiaryStep(trace, "week-load.coalesced", () => request)
+        : request;
     },
     [],
   );
@@ -1074,7 +1070,10 @@ const FoodDiaryScreen = () => {
         return;
       }
 
-      navigation.navigate("EditFoodEntry", { entryId: entry.id });
+      navigation.navigate("EditFoodEntry", {
+        entryId: entry.id,
+        date: entry.date,
+      });
     },
     [navigation],
   );

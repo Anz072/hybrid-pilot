@@ -104,7 +104,10 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
     setLoading(true);
 
     try {
-      const nextEntry = await DB.getUserFoodLogEntryById(route.params.entryId);
+      const nextEntry = await DB.getUserFoodLogEntryById(
+        route.params.entryId,
+        route.params.date,
+      );
 
       if (nextEntry?.entrySource === "quick_add") {
         navigation.replace("QuickAddFood", {

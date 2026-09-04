@@ -146,7 +146,7 @@ const QuickAddFoodScreen = () => {
       setLoading(true);
 
       try {
-        const nextEntry = await DB.getUserFoodLogEntryById(entryId);
+        const nextEntry = await DB.getUserFoodLogEntryById(entryId, route.params.date);
 
         if (cancelled) {
           return;

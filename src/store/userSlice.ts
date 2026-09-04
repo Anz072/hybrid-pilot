@@ -59,7 +59,15 @@ const userSlice = createSlice({
       .addCase(hydrateUserFromDb.rejected, (state, action) => {
         state.status = "failed";
         state.error = action.error.message ?? "Failed to hydrate user";
-        state.hydrated = true;
+        // `hydrated` means "we know who the user is, or that there is none".
+        // A failed load means we know neither, so it stays false and the
+        // navigator shows its error-and-retry screen.
+        //
+        // This used to be set to true, which was harmless while a local
+        // database could answer instead. With the API as the only source, it
+        // collapsed "the server is unreachable" into "signed out" — an outage
+        // presented as the welcome screen, as though the account were gone.
+        state.hydrated = false;
       });
   },
 });

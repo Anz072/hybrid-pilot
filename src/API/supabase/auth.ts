@@ -1,12 +1,8 @@
 import type { Session, User } from "@supabase/supabase-js";
 import { DB } from "../../store/DB";
 import type { DBUser } from "../../store/DB_TYPES";
-import {
-  clearLocalAccount,
-  saveLocalAccount,
-  setOnboardingComplete,
-} from "../../storage/localStore";
-import { shouldUseExpoGoDevLocalStore } from "../../dev/expoGoDevAuth";
+import { setOnboardingComplete } from "../../storage/localStore";
+import { resetCoalescedRequests } from "../nouri/coalesce";
 import { clearAddFoodStaticListsCache } from "../../screens/Food/addFoodStaticListsCache";
 import { clearCachedHomeDashboardSummary } from "../../screens/Home/homeDashboardSummary";
 import { getSupabaseClient } from "./client";
@@ -28,7 +24,6 @@ export type SignUpWithEmailPasswordResult = {
 
 type UpsertSupabaseAuthUserAccountOptions = {
   markOnboardingComplete?: boolean;
-  persistLocalAccount?: boolean;
 };
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
@@ -106,11 +101,6 @@ export const signUpWithEmailPassword = async ({
 };
 
 export const signOutSupabaseSession = async (): Promise<void> => {
-  if (await shouldUseExpoGoDevLocalStore()) {
-    await clearLocalAccount();
-    return;
-  }
-
   const supabase = getSupabaseClient();
   const {
     data: { session },
@@ -122,12 +112,15 @@ export const signOutSupabaseSession = async (): Promise<void> => {
     throw error;
   }
 
-  await clearLocalAccount();
+  // Signing out drops the in-memory lists the previous user's screens were
+  // holding, and detaches any request still in flight so its result cannot
+  // resolve into the next user's screen. There is nothing on disk to clear: the
+  // device never stored their foods, diary, weights or settings.
   clearAddFoodStaticListsCache();
+  resetCoalescedRequests();
 
   if (signedOutUserId) {
     clearCachedHomeDashboardSummary(signedOutUserId);
-    await DB.clearUserCache(signedOutUserId);
   }
 };
 
@@ -215,17 +208,6 @@ export const upsertSupabaseAuthUserAccount = async (
 
   const savedUser = await DB.getUserByExternalId(user.id);
   const resolvedUser = savedUser ?? nextUser;
-
-  if (options.persistLocalAccount !== false) {
-    await saveLocalAccount({
-      id: resolvedUser.externalId,
-      provider: "email",
-      displayName: resolvedUser.displayName ?? displayName,
-      email: resolvedUser.email,
-      birthdate: resolvedUser.birthdate,
-      createdAt: resolvedUser.createdAt,
-    });
-  }
 
   if (options.markOnboardingComplete !== false) {
     await setOnboardingComplete(true);

@@ -1,9 +1,6 @@
 import {
-  ADAPTIVE_WINDOW_DAYS,
   applyAdaptiveRecommendationToTargets,
-  buildAdaptiveRecommendation,
-  getCompleteDiaryDaysInWindow,
-} from "../../engine/adaptiveCalories";
+} from "../../domain/adaptiveTargets";
 import {
   buildMacroTargetsForCalories,
   scaleMacroTargetsToCalories,
@@ -69,37 +66,12 @@ export const getNextAdaptiveReviewDate = (
   return new Date(parsed.getTime() + ADAPTIVE_RECALCULATION_INTERVAL_MS);
 };
 
-const areRecommendationShapesEquivalent = (
-  existing: DBAdaptiveCalorieRecommendation,
-  next: NonNullable<Extract<AdaptiveRecommendationOutcome, { status: "ready" }>["recommendation"]>,
-): boolean =>
-  existing.status === "proposed" &&
-  existing.windowStart === next.windowStart &&
-  existing.windowEnd === next.windowEnd &&
-  existing.recommendedBaseCalories === next.recommendedBaseCalories &&
-  existing.estimatedTdee === next.estimatedTdee &&
-  existing.completeDaysUsed === next.completeDaysUsed &&
-  existing.weighInsUsed === next.weighInsUsed &&
-  existing.confidence === next.confidence;
-
-const buildDiaryFetchRange = (
-  asOf: Date,
-  windowDays: number,
-): { startDate: string; endDate: string } => {
-  const endDate = `${asOf.getFullYear()}-${String(asOf.getMonth() + 1).padStart(2, "0")}-${String(
-    asOf.getDate(),
-  ).padStart(2, "0")}`;
-  const start = new Date(asOf);
-  start.setDate(start.getDate() - (windowDays * 2 - 1));
-
-  return {
-    startDate: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(
-      start.getDate(),
-    ).padStart(2, "0")}`,
-    endDate,
-  };
-};
-
+/**
+ * Closes an open recommendation.
+ *
+ * Still needed after the engine moved: turning adaptive calories off, or
+ * rejecting a proposal, closes it from the app rather than from a refresh.
+ */
 const supersedeRecommendationIfPresent = async (
   recommendation: DBAdaptiveCalorieRecommendation | null,
   perfTrace?: DiaryPerfTrace,
@@ -108,16 +80,12 @@ const supersedeRecommendationIfPresent = async (
     return;
   }
 
-  await measureDiaryRequest(
-    perfTrace,
-    "adaptive-supersede",
-    "logical",
-    () =>
-      DB.updateAdaptiveCalorieRecommendation({
-        id: recommendation.id,
-        userExternalId: recommendation.userExternalId,
-        status: "superseded",
-      }),
+  await measureDiaryRequest(perfTrace, "adaptive-supersede", "logical", () =>
+    DB.updateAdaptiveCalorieRecommendation({
+      id: recommendation.id,
+      userExternalId: recommendation.userExternalId,
+      status: "superseded",
+    }),
   );
 };
 
@@ -131,58 +99,33 @@ export const supersedeOpenAdaptiveRecommendationForUser = async (
   await supersedeRecommendationIfPresent(latestRecommendation);
 };
 
-const loadAdaptiveWindowInputs = async ({
-  userExternalId,
-  asOf,
-  windowDays,
-  perfTrace,
-}: {
-  userExternalId: string;
-  asOf: Date;
-  windowDays: number;
-  perfTrace?: DiaryPerfTrace;
-}): Promise<{
-  diaryDays: DBDiaryDayStatus[];
-  windowStart: string | null;
-  windowEnd: string | null;
-}> => {
-  const range = buildDiaryFetchRange(asOf, windowDays);
-  const diaryDays = await DB.listDiaryDayStatusesBetween(
-    userExternalId,
-    range.startDate,
-    range.endDate,
-    perfTrace,
-  );
-  const summary = getCompleteDiaryDaysInWindow({
-    diaryDays,
-    asOf,
-    windowDays,
-  });
-
-  return {
-    diaryDays,
-    windowStart: summary.windowStart,
-    windowEnd: summary.windowEnd,
-  };
-};
-
+/**
+ * Asks the server what this user's calorie target should be.
+ *
+ * One request. This used to fetch a month of diary days, a month of entries and
+ * a month of weigh-ins, run the 28-day analysis on the device, and POST the
+ * result back — six round trips, and a window between the reads and the write
+ * in which any of the inputs could change. The engine now runs where the data
+ * is, so the analysis and the write see the same snapshot.
+ *
+ * The staleness gate stays here, because it is a UI cadence decision — how
+ * often to bother asking — not a fact about the data. The settings read it
+ * depends on was already happening.
+ */
 export const refreshAdaptiveRecommendationForUser = async ({
   userExternalId,
   force = false,
   asOf = new Date(),
-  windowDays = ADAPTIVE_WINDOW_DAYS,
   perfTrace,
 }: {
   userExternalId: string;
   force?: boolean;
   asOf?: Date;
+  /** Accepted and ignored: the window is the server's to choose now. */
   windowDays?: number;
   perfTrace?: DiaryPerfTrace;
 }): Promise<AdaptiveRecommendationRefreshResult> => {
-  const [user, settings, latestRecommendation] = await Promise.all([
-    measureDiaryRequest(perfTrace, "adaptive-user", "logical", () =>
-      DB.getUserByExternalId(userExternalId, perfTrace),
-    ),
+  const [settings, latestRecommendation] = await Promise.all([
     measureDiaryRequest(perfTrace, "adaptive-settings", "logical", () =>
       DB.getUserSettings(userExternalId, perfTrace),
     ),
@@ -190,22 +133,6 @@ export const refreshAdaptiveRecommendationForUser = async ({
       DB.getLatestAdaptiveCalorieRecommendation(userExternalId, "proposed"),
     ),
   ]);
-
-  if (!user) {
-    return {
-      settings,
-      latestRecommendation: null,
-      analysis: {
-        status: "disabled",
-        reason: "No active synced user was available for adaptive calories.",
-        confidence: null,
-        estimatedTdee: null,
-        recommendedBaseCalories: null,
-        summary: null,
-      },
-      wasRecalculated: false,
-    };
-  }
 
   if (!settings?.adaptiveCaloriesEnabled) {
     return {
@@ -226,7 +153,7 @@ export const refreshAdaptiveRecommendationForUser = async ({
   const shouldRecalculate =
     force ||
     isAdaptiveCalculationStale(settings, asOf) ||
-    !settings?.adaptiveLastCalculatedAt;
+    !settings.adaptiveLastCalculatedAt;
 
   if (!shouldRecalculate) {
     return {
@@ -237,92 +164,23 @@ export const refreshAdaptiveRecommendationForUser = async ({
     };
   }
 
-  const { diaryDays, windowStart, windowEnd } = await loadAdaptiveWindowInputs({
-    userExternalId,
-    asOf,
-    windowDays,
+  const { result, recommendation } = await measureDiaryRequest(
     perfTrace,
-  });
-  const [entries, weightEntries] =
-    windowStart && windowEnd
-      ? await Promise.all([
-          measureDiaryRequest(perfTrace, "adaptive-entries", "logical", () =>
-            DB.getUserFoodLogEntriesBetween(
-              userExternalId,
-              windowStart,
-              windowEnd,
-              { perfTrace },
-            ),
-          ),
-          measureDiaryRequest(perfTrace, "adaptive-weights", "logical", () =>
-            DB.listWeightEntriesBetween(userExternalId, windowStart, windowEnd),
-          ),
-        ])
-      : [[], []];
-  const analysis = buildAdaptiveRecommendation({
-    user,
-    settings,
-    entries,
-    diaryDays,
-    weightEntries,
-    asOf,
-    windowDays,
-  });
-  const now = new Date().toISOString();
+    "adaptive-refresh",
+    "node-api",
+    () => DB.refreshAdaptiveCalories(userExternalId, { force }),
+  );
 
+  // Marks when the app last asked, so the weekly cadence above has something to
+  // measure against. It is not part of the analysis, which is why the server
+  // does not own it.
   await measureDiaryRequest(perfTrace, "adaptive-save-settings", "logical", () =>
     DB.saveUserSettings({
       userExternalId,
-      adaptiveLastCalculatedAt: now,
+      adaptiveLastCalculatedAt: new Date().toISOString(),
     }),
   );
 
-  if (analysis.status !== "ready") {
-    await supersedeRecommendationIfPresent(latestRecommendation, perfTrace);
-    const refreshedSettings = await measureDiaryRequest(
-      perfTrace,
-      "adaptive-refreshed-settings",
-      "logical",
-      () => DB.getUserSettings(userExternalId, perfTrace),
-    );
-
-    return {
-      settings: refreshedSettings,
-      latestRecommendation: null,
-      analysis,
-      wasRecalculated: true,
-    };
-  }
-
-  if (
-    latestRecommendation &&
-    areRecommendationShapesEquivalent(latestRecommendation, analysis.recommendation)
-  ) {
-    const refreshedSettings = await measureDiaryRequest(
-      perfTrace,
-      "adaptive-refreshed-settings",
-      "logical",
-      () => DB.getUserSettings(userExternalId, perfTrace),
-    );
-
-    return {
-      settings: refreshedSettings,
-      latestRecommendation,
-      analysis,
-      wasRecalculated: true,
-    };
-  }
-
-  const createdRecommendation = await measureDiaryRequest(
-    perfTrace,
-    "adaptive-create-recommendation",
-    "logical",
-    () =>
-      DB.createAdaptiveCalorieRecommendation({
-        userExternalId,
-        ...analysis.recommendation,
-      }),
-  );
   const refreshedSettings = await measureDiaryRequest(
     perfTrace,
     "adaptive-refreshed-settings",
@@ -332,8 +190,16 @@ export const refreshAdaptiveRecommendationForUser = async ({
 
   return {
     settings: refreshedSettings,
-    latestRecommendation: createdRecommendation,
-    analysis,
+    latestRecommendation: recommendation,
+    analysis: {
+      status: result.status,
+      reason: result.reason,
+      confidence: result.confidence,
+      estimatedTdee: result.estimatedTdee,
+      recommendedBaseCalories: result.recommendedBaseCalories,
+      summary: (result.summary ??
+        null) as AdaptiveRecommendationOutcome["summary"],
+    } as AdaptiveRecommendationOutcome,
     wasRecalculated: true,
   };
 };

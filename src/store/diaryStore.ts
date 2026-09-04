@@ -10,33 +10,15 @@ import {
   toDbEntries,
   toDbEntry,
   updateEntry as updateEntryRequest,
-  type ApiDiaryDay,
 } from "../API/nouri/diaryApi";
 import { NouriApiError } from "../API/nouri/client";
 import { getSupabaseSessionUser } from "../API/supabase/client";
-import { getFoodResolvedServing } from "../engine/nutrition";
-import { shouldUseExpoGoDevLocalStore } from "../dev/expoGoDevAuth";
 import {
   measureDiaryRequest,
   measureDiaryStep,
-  recordDiaryCachePath,
   recordDiaryRows,
   type DiaryPerfTrace,
 } from "../performance/diaryPerformance";
-import {
-  deleteCachedFoodLogEntry,
-  getCachedDiaryDayStatus,
-  getCachedFoodLogEntriesBetween,
-  getCachedFoodLogEntriesByDate,
-  getCachedFoodLogEntryById,
-  listCachedDiaryDayStatusesBetween,
-  markCachedFoodLogEntryDeleted,
-  replaceCachedFoodLogEntriesBetween,
-  replaceCachedFoodLogEntriesForDate,
-  restoreCachedFoodLogEntry,
-  upsertCachedDiaryDayStatuses,
-  upsertCachedFoodLogEntries,
-} from "./cacheRepository";
 import type {
   AddQuickAddFoodLogInput,
   AddUserFoodLogInput,
@@ -47,92 +29,46 @@ import type {
   UpdateUserFoodLogInput,
 } from "./DB_TYPES";
 import type { FoodLogCopyResult } from "./foodLogCopyUtils";
-import { getFoodItemById as getCachedFoodItemById } from "./foodRepository";
-import {
-  addQuickAddFoodLog as addQuickAddFoodLogLocal,
-  addUserFoodLog as addUserFoodLogLocal,
-  copyFoodLogsFromDate as copyFoodLogsFromDateLocal,
-  deleteUserFoodLog as deleteUserFoodLogLocal,
-  getUserFoodLogEntriesBetween as getUserFoodLogEntriesBetweenLocal,
-  getUserFoodLogEntriesByDate as getUserFoodLogEntriesByDateLocal,
-  getUserFoodLogEntryById as getUserFoodLogEntryByIdLocal,
-  updateQuickAddFoodLog as updateQuickAddFoodLogLocal,
-  updateUserFoodLog as updateUserFoodLogLocal,
-} from "./foodLogRepository";
 
 // The diary, served by the Nouri API.
 //
-// This replaces the direct-to-Supabase implementation that used to live in
-// supabaseFoodStore.ts. The read pattern is unchanged and deliberately so:
-// answer from the local SQLite cache when it has rows, refresh in the
-// background, and only block on the network when the cache is empty. The API
-// simply replaces PostgREST as the remote.
+// Every read here is a request. There is no on-device copy of the diary to read
+// instead, and deliberately so: a second persistent store is a second thing that
+// can disagree with Supabase, and the whole point of the migration was to make
+// PostgreSQL the only place a diary entry exists.
 //
-// What did change: the server now computes meal grouping, per-meal totals, day
-// totals and goals, so one request replaces the several the app used to make.
+// When the API is unreachable, a read throws and the screen shows its existing
+// error state. It does not fall back to stale rows and present them as current,
+// and it does not sign the user out — the Supabase session is unaffected by the
+// API being down.
 //
-// There is no write fallback to Supabase. A failed write fails visibly and its
-// optimistic cache row is rolled back, exactly as before.
+// Writes await the server and return its authoritative values. Callers refresh
+// afterwards; there is no local write that later "syncs".
 
-const FOOD_LOG_READ_SOURCE = "supabase" as const;
-
-let pendingFoodLogIdSequence = 0;
-
-// Negative, monotonic ids for optimistic rows so they cannot collide with real
-// server ids and are easy to sweep if a write is interrupted.
-const nextPendingFoodLogCacheId = () => {
-  pendingFoodLogIdSequence = (pendingFoodLogIdSequence + 1) % 1000;
-  return -(Date.now() * 1000 + pendingFoodLogIdSequence);
-};
-
-// Expo Go development runs entirely against local SQLite and never reaches the
-// network. Resolving to null here short-circuits every remote path below.
-const resolveUserId = async (
-  userExternalId?: string | null,
-): Promise<string | null> => {
-  if (await shouldUseExpoGoDevLocalStore(userExternalId)) {
-    return null;
-  }
-
+const resolveUserExternalId = async (): Promise<string> => {
   const sessionUser = await getSupabaseSessionUser();
-  return sessionUser?.id ?? null;
-};
-
-const cacheDay = async (day: ApiDiaryDay, userExternalId: string) => {
-  const entries = toDbEntries(day, userExternalId);
-  await replaceCachedFoodLogEntriesForDate(userExternalId, day.date, entries);
-  await upsertCachedDiaryDayStatuses(userExternalId, [
-    toDbDiaryDayStatus(day, userExternalId),
-  ]);
-  return entries;
+  if (!sessionUser?.id) {
+    throw new NouriApiError(
+      "AUTH_REQUIRED",
+      "Your session is no longer valid. Please sign in with email and password again.",
+      401,
+      null,
+    );
+  }
+  return sessionUser.id;
 };
 
 export const getUserFoodLogEntriesByDate = async (
   userExternalId: string,
   date: string,
 ): Promise<DBUserFoodLogEntry[]> => {
-  const userId = await resolveUserId(userExternalId);
-
-  if (!userId) {
-    return getUserFoodLogEntriesByDateLocal(userExternalId, date);
-  }
-
-  const cached = await getCachedFoodLogEntriesByDate(userExternalId, date);
-  if (cached.length > 0) {
-    void getDiaryDay(date)
-      .then((day) => cacheDay(day, userExternalId))
-      .catch(() => undefined);
-    return cached;
-  }
-
   const day = await getDiaryDay(date);
-  return cacheDay(day, userExternalId);
+  return toDbEntries(day, userExternalId);
 };
 
-type FoodLogEntriesReadOptions = {
-  forceRefresh?: boolean;
-  perfTrace?: DiaryPerfTrace;
-};
+interface FoodLogEntriesReadOptions {
+  perfTrace?: DiaryPerfTrace | undefined;
+}
 
 export const getUserFoodLogEntriesBetween = async (
   userExternalId: string,
@@ -140,231 +76,81 @@ export const getUserFoodLogEntriesBetween = async (
   endDate: string,
   options: FoodLogEntriesReadOptions = {},
 ): Promise<DBUserFoodLogEntry[]> => {
-  const perfTrace = options.perfTrace;
-  const userId = await measureDiaryStep(perfTrace, "week-entries.resolve-session", () =>
-    resolveUserId(userExternalId),
+  const range = await measureDiaryRequest(
+    options.perfTrace,
+    "week-entries",
+    "node-api",
+    () => getDiaryRange(startDate, endDate),
   );
-
-  if (!userId) {
-    return getUserFoodLogEntriesBetweenLocal(userExternalId, startDate, endDate);
-  }
-
-  const cached = await measureDiaryRequest(perfTrace, "week-entries", "sqlite", () =>
-    getCachedFoodLogEntriesBetween(userExternalId, startDate, endDate),
-  );
-
-  const refresh = async (source: "supabase" | "background-supabase") => {
-    const range = await measureDiaryRequest(perfTrace, "week-entries", source, () =>
-      getDiaryRange(startDate, endDate),
-    );
-    const entries = range.days.flatMap((day) => toDbEntries(day, userExternalId));
-    await measureDiaryStep(perfTrace, "week-entries.cache-write", async () => {
-      await replaceCachedFoodLogEntriesBetween(
-        userExternalId,
-        startDate,
-        endDate,
-        entries,
-      );
-      await upsertCachedDiaryDayStatuses(
-        userExternalId,
-        range.days.map((day) => toDbDiaryDayStatus(day, userExternalId)),
-      );
-    });
-    return entries;
-  };
-
-  if (!options.forceRefresh && cached.length > 0) {
-    recordDiaryCachePath(perfTrace, "week-entries", "sqlite-nonempty-hit");
-    recordDiaryRows(perfTrace, "week-entries", cached.length);
-    void refresh("background-supabase").catch(() => undefined);
-    return cached;
-  }
-
-  recordDiaryCachePath(perfTrace, "week-entries", "empty-or-unknown");
-  const entries = await refresh(FOOD_LOG_READ_SOURCE);
-  recordDiaryRows(perfTrace, "week-entries", entries.length);
+  const entries = range.days.flatMap((day) => toDbEntries(day, userExternalId));
+  recordDiaryRows(options.perfTrace, "week-entries", entries.length);
   return entries;
 };
 
+/**
+ * Reads one entry.
+ *
+ * Entries are addressable only through the day that contains them, so the date
+ * is required. Callers navigate from a day they are already showing and have it
+ * to hand; it used to be recovered from a local index, which is exactly the kind
+ * of hidden dependency on an on-device database this change removes.
+ */
 export const getUserFoodLogEntryById = async (
   id: number,
+  date: string,
 ): Promise<DBUserFoodLogEntry | null> => {
-  const userId = await resolveUserId();
-
-  if (!userId) {
-    return getUserFoodLogEntryByIdLocal(id);
-  }
-
-  // Entries are only addressable through the day that contains them, so the
-  // cache is the lookup index. A cache miss means we do not know the date and
-  // cannot fetch the row without scanning; callers always read a day first.
-  return getCachedFoodLogEntryById(id, userId);
+  const userExternalId = await resolveUserExternalId();
+  const day = await getDiaryDay(date);
+  return toDbEntries(day, userExternalId).find((entry) => entry.id === id) ?? null;
 };
 
-export const addUserFoodLog = async (
-  input: AddUserFoodLogInput,
-): Promise<void> => {
-  const userId = await resolveUserId(input.userExternalId);
-
-  if (!userId) {
-    return addUserFoodLogLocal(input);
-  }
-
-  const loggedAt = input.loggedAt ?? new Date().toISOString();
-  const pendingId = nextPendingFoodLogCacheId();
-
-  // Optimistic row, built from the locally cached food so the diary shows the
-  // real name and a correct preview immediately. The server response replaces
-  // it with the authoritative values a moment later; the two agree because both
-  // scale the same per-serving numbers the same way.
-  const cachedFood = await getCachedFoodItemById(input.foodId).catch(() => null);
-  const optimisticServing = cachedFood
-    ? getFoodResolvedServing(cachedFood)
-    : { value: 1, unit: "g" };
-
-  await upsertCachedFoodLogEntries(
-    input.userExternalId,
-    [
-      {
-        id: pendingId,
-        userExternalId: input.userExternalId,
-        foodId: input.foodId,
-        date: input.date,
-        loggedAt,
-        quantityG: input.quantityG,
-        mealType: input.mealType ?? null,
-        createdAt: loggedAt,
-        entrySource: "food_item",
-        foodName: cachedFood?.name ?? "",
-        servingSize: optimisticServing.value,
-        servingUnit: optimisticServing.unit,
-        calories: cachedFood?.calories ?? 0,
-        proteinG: cachedFood?.proteinG ?? 0,
-        carbsG: cachedFood?.carbsG ?? 0,
-        fatG: cachedFood?.fatG ?? 0,
-        alcoholG: cachedFood?.alcoholG ?? null,
-        systemCalculatedCalories: null,
-        isEnergyManuallySet: false,
-        quickAddName: null,
-      },
-    ],
-    "pending",
-  );
-
-  try {
-    const entry = await addFoodEntry({
-      date: input.date,
-      foodId: input.foodId,
-      quantity: input.quantityG,
-      mealType: input.mealType ?? null,
-      loggedAt,
-    });
-    await deleteCachedFoodLogEntry(pendingId, input.userExternalId);
-    await upsertCachedFoodLogEntries(input.userExternalId, [
-      toDbEntry(entry, input.userExternalId),
-    ]);
-    await markDayIncompleteInCache(input.userExternalId, input.date);
-  } catch (error) {
-    // A failed add must leave no trace, or totals keep counting an entry that
-    // was never saved.
-    await deleteCachedFoodLogEntry(pendingId, input.userExternalId);
-    throw error;
-  }
+export const addUserFoodLog = async (input: AddUserFoodLogInput): Promise<void> => {
+  await addFoodEntry({
+    date: input.date,
+    foodId: input.foodId,
+    quantity: input.quantityG,
+    mealType: input.mealType ?? null,
+    loggedAt: input.loggedAt ?? new Date().toISOString(),
+  });
 };
 
 export const addQuickAddFoodLog = async (
   input: AddQuickAddFoodLogInput,
 ): Promise<number> => {
-  const userId = await resolveUserId(input.userExternalId);
-
-  if (!userId) {
-    return addQuickAddFoodLogLocal(input);
-  }
-
-  const loggedAt = input.loggedAt ?? new Date().toISOString();
-  const pendingId = nextPendingFoodLogCacheId();
-
-  await upsertCachedFoodLogEntries(
-    input.userExternalId,
-    [
-      {
-        id: pendingId,
-        userExternalId: input.userExternalId,
-        foodId: null,
-        date: input.date,
-        loggedAt,
-        quantityG: 1,
-        mealType: input.mealType ?? null,
-        createdAt: loggedAt,
-        entrySource: "quick_add",
-        foodName: input.name?.trim() || "Quick Add",
-        servingSize: 1,
-        servingUnit: "entry",
-        calories: input.calories,
-        proteinG: input.proteinG ?? 0,
-        carbsG: input.carbsG ?? 0,
-        fatG: input.fatG ?? 0,
-        alcoholG: input.alcoholG ?? 0,
-        systemCalculatedCalories: input.systemCalculatedCalories ?? null,
-        isEnergyManuallySet: Boolean(input.isEnergyManuallySet),
-        quickAddName: input.name ?? null,
-      },
-    ],
-    "pending",
-  );
-
-  try {
-    const entry = await addQuickAddEntry({
-      date: input.date,
-      name: input.name ?? null,
-      calories: input.calories,
-      proteinG: input.proteinG ?? null,
-      carbsG: input.carbsG ?? null,
-      fatG: input.fatG ?? null,
-      alcoholG: input.alcoholG ?? null,
-      mealType: input.mealType ?? null,
-      loggedAt,
-    });
-    await deleteCachedFoodLogEntry(pendingId, input.userExternalId);
-    await upsertCachedFoodLogEntries(input.userExternalId, [
-      toDbEntry(entry, input.userExternalId),
-    ]);
-    await markDayIncompleteInCache(input.userExternalId, input.date);
-    return entry.id;
-  } catch (error) {
-    await deleteCachedFoodLogEntry(pendingId, input.userExternalId);
-    throw error;
-  }
+  const entry = await addQuickAddEntry({
+    date: input.date,
+    name: input.name ?? null,
+    calories: input.calories,
+    proteinG: input.proteinG ?? null,
+    carbsG: input.carbsG ?? null,
+    fatG: input.fatG ?? null,
+    alcoholG: input.alcoholG ?? null,
+    mealType: input.mealType ?? null,
+    loggedAt: input.loggedAt ?? new Date().toISOString(),
+  });
+  return entry.id;
 };
+
+// The mutations below return the day the entry ended up on. Callers use it to
+// invalidate exactly that day. It used to be recovered by reading the entry
+// first, which cost a round trip and — because it read the state *before* the
+// write — reported the wrong day whenever an edit moved an entry across
+// midnight. The server already knows the answer and returns it.
 
 export const updateUserFoodLog = async (
   input: UpdateUserFoodLogInput,
-): Promise<void> => {
-  const userId = await resolveUserId();
-
-  if (!userId) {
-    return updateUserFoodLogLocal(input);
-  }
-
+): Promise<string> => {
   const entry = await updateEntryRequest(input.id, {
     quantity: input.quantityG,
     mealType: input.mealType ?? null,
     ...(input.loggedAt ? { loggedAt: input.loggedAt } : {}),
   });
-
-  await upsertCachedFoodLogEntries(userId, [toDbEntry(entry, userId)]);
-  await markDayIncompleteInCache(userId, entry.date);
+  return entry.date;
 };
 
 export const updateQuickAddFoodLog = async (
   input: UpdateQuickAddFoodLogInput,
-): Promise<void> => {
-  const userId = await resolveUserId();
-
-  if (!userId) {
-    return updateQuickAddFoodLogLocal(input);
-  }
-
+): Promise<string> => {
   const entry = await updateEntryRequest(input.id, {
     name: input.name ?? null,
     calories: input.calories,
@@ -375,103 +161,51 @@ export const updateQuickAddFoodLog = async (
     mealType: input.mealType ?? null,
     ...(input.loggedAt ? { loggedAt: input.loggedAt } : {}),
   });
-
-  await upsertCachedFoodLogEntries(userId, [toDbEntry(entry, userId)]);
-  await markDayIncompleteInCache(userId, entry.date);
+  return entry.date;
 };
 
-export const deleteUserFoodLog = async (id: number): Promise<void> => {
-  const userId = await resolveUserId();
-
-  if (!userId) {
-    return deleteUserFoodLogLocal(id);
-  }
-
-  // Hide optimistically, restore if the server rejects it, so local and remote
-  // state never silently diverge.
-  await markCachedFoodLogEntryDeleted(id, userId);
-
+export const deleteUserFoodLog = async (id: number): Promise<string | null> => {
   try {
-    const result = await deleteEntryRequest(id);
-    await deleteCachedFoodLogEntry(id, userId);
-    await markDayIncompleteInCache(userId, result.date);
+    const { date } = await deleteEntryRequest(id);
+    return date;
   } catch (error) {
-    if (error instanceof NouriApiError && error.isNotFound) {
-      // Already gone server-side; converge rather than resurrect it.
-      await deleteCachedFoodLogEntry(id, userId);
-      return;
-    }
-    await restoreCachedFoodLogEntry(id, userId);
+    // Already gone server-side is the outcome the caller wanted.
+    if (error instanceof NouriApiError && error.isNotFound) return null;
     throw error;
   }
 };
 
 export const copyFoodLogsFromDate = async (
-  userExternalId: string,
+  _userExternalId: string,
   fromDate: string,
   toDate: string,
-): Promise<FoodLogCopyResult> => {
-  const userId = await resolveUserId(userExternalId);
-
-  if (!userId) {
-    return copyFoodLogsFromDateLocal(userExternalId, fromDate, toDate);
-  }
-
-  const result = await copyDay(toDate, fromDate);
-
-  if (result.copiedCount > 0) {
-    const day = await getDiaryDay(toDate);
-    await cacheDay(day, userExternalId);
-  }
-
-  return result;
-};
+): Promise<FoodLogCopyResult> => copyDay(toDate, fromDate);
 
 // --- Diary day completion --------------------------------------------------
 
-const markDayIncompleteInCache = async (
+const toStatus = (
   userExternalId: string,
   date: string,
-): Promise<void> => {
-  const now = new Date().toISOString();
-  await upsertCachedDiaryDayStatuses(userExternalId, [
-    {
-      userExternalId,
-      date,
-      isComplete: false,
-      completedAt: null,
-      createdAt: now,
-      updatedAt: now,
-    },
-  ]);
+  isComplete: boolean,
+  completedAt: string | null,
+): DBDiaryDayStatus => {
+  const stamp = completedAt ?? new Date().toISOString();
+  return {
+    userExternalId,
+    date,
+    isComplete,
+    completedAt,
+    createdAt: stamp,
+    updatedAt: stamp,
+  };
 };
 
 export const getDiaryDayStatus = async (
   userExternalId: string,
   date: string,
 ): Promise<DBDiaryDayStatus | null> => {
-  const userId = await resolveUserId(userExternalId).catch(() => null);
-
-  if (!userId) {
-    return getCachedDiaryDayStatus(userExternalId, date);
-  }
-
-  const cached = await getCachedDiaryDayStatus(userExternalId, date);
-  if (cached) {
-    void getDiaryDay(date)
-      .then((day) =>
-        upsertCachedDiaryDayStatuses(userExternalId, [
-          toDbDiaryDayStatus(day, userExternalId),
-        ]),
-      )
-      .catch(() => undefined);
-    return cached;
-  }
-
   const day = await getDiaryDay(date);
-  const status = toDbDiaryDayStatus(day, userExternalId);
-  await upsertCachedDiaryDayStatuses(userExternalId, [status]);
-  return status;
+  return toDbDiaryDayStatus(day, userExternalId);
 };
 
 export const listDiaryDayStatusesBetween = async (
@@ -480,91 +214,32 @@ export const listDiaryDayStatusesBetween = async (
   endDate: string,
   perfTrace?: DiaryPerfTrace,
 ): Promise<DBDiaryDayStatus[]> => {
-  const userId = await measureDiaryStep(
-    perfTrace,
-    "week-statuses.resolve-session",
-    () => resolveUserId(userExternalId),
-  ).catch(() => null);
-
-  if (!userId) {
-    return listCachedDiaryDayStatusesBetween(userExternalId, startDate, endDate);
-  }
-
-  const cached = await measureDiaryRequest(perfTrace, "week-statuses", "sqlite", () =>
-    listCachedDiaryDayStatusesBetween(userExternalId, startDate, endDate),
+  const range = await measureDiaryRequest(perfTrace, "week-statuses", "node-api", () =>
+    getDiaryRange(startDate, endDate),
   );
-
-  const refresh = async (source: "supabase" | "background-supabase") => {
-    const range = await measureDiaryRequest(perfTrace, "week-statuses", source, () =>
-      getDiaryRange(startDate, endDate),
-    );
-    const statuses = range.days.map((day) =>
-      toDbDiaryDayStatus(day, userExternalId),
-    );
-    await upsertCachedDiaryDayStatuses(userExternalId, statuses);
-    return statuses;
-  };
-
-  if (cached.length > 0) {
-    recordDiaryCachePath(perfTrace, "week-statuses", "sqlite-nonempty-hit");
-    recordDiaryRows(perfTrace, "week-statuses", cached.length);
-    void refresh("background-supabase").catch(() => undefined);
-    return cached;
-  }
-
-  recordDiaryCachePath(perfTrace, "week-statuses", "empty-or-unknown");
-  const statuses = await refresh(FOOD_LOG_READ_SOURCE);
+  const statuses = range.days.map((day) => toDbDiaryDayStatus(day, userExternalId));
   recordDiaryRows(perfTrace, "week-statuses", statuses.length);
   return statuses;
 };
 
+/**
+ * Marks a day complete or incomplete.
+ *
+ * Throws when the server rejects it. The previous implementation swallowed the
+ * error and returned the value the caller had asked for, so a failed write was
+ * indistinguishable from a successful one and the day silently reverted on the
+ * next read.
+ */
 export const saveDiaryDayStatus = async (
   input: SaveDiaryDayStatusInput,
 ): Promise<DBDiaryDayStatus> => {
-  const now = new Date().toISOString();
-  const optimistic: DBDiaryDayStatus = {
-    userExternalId: input.userExternalId,
-    date: input.date,
-    isComplete: input.isComplete,
-    completedAt: input.isComplete ? now : null,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  const userId = await resolveUserId(input.userExternalId).catch(() => null);
-
-  if (!userId) {
-    await upsertCachedDiaryDayStatuses(input.userExternalId, [optimistic]);
-    return optimistic;
-  }
-
-  await upsertCachedDiaryDayStatuses(
+  const saved = await setDayComplete(input.date, input.isComplete);
+  return toStatus(
     input.userExternalId,
-    [optimistic],
-    "pending",
+    saved.date,
+    saved.isComplete,
+    saved.completedAt,
   );
-
-  try {
-    const saved = await setDayComplete(input.date, input.isComplete);
-    const status: DBDiaryDayStatus = {
-      userExternalId: input.userExternalId,
-      date: saved.date,
-      isComplete: saved.isComplete,
-      completedAt: saved.completedAt,
-      createdAt: saved.completedAt ?? now,
-      updatedAt: saved.completedAt ?? now,
-    };
-    await upsertCachedDiaryDayStatuses(input.userExternalId, [status]);
-    return status;
-  } catch (error) {
-    await upsertCachedDiaryDayStatuses(
-      input.userExternalId,
-      [optimistic],
-      "error",
-      error instanceof Error ? error.message : "Failed to save.",
-    );
-    return optimistic;
-  }
 };
 
 // Re-exported so screens can adopt the richer server-computed representation

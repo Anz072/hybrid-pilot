@@ -131,29 +131,16 @@ export const useBarcodeDebugScanner = (
       };
 
       try {
-        const cachedLookup = await DB.getCachedBarcodeLookup(nextValue);
-
-        if (cachedLookup?.status === "hit") {
-          resolveFood({
-            foodId: cachedLookup.food.id,
-            barcode: nextValue,
-            status: "existing",
-            foodName: cachedLookup.food.name,
-          });
-          return true;
-        }
-
-        if (cachedLookup?.status === "miss") {
-          setScannedCode(`No food found for barcode ${nextValue}.`);
-          setNotFoundBarcode(nextValue);
-          setModalVisible(true);
-          return true;
-        }
-
         // One call. The backend checks the shared catalogue, falls back to Open
         // Food Facts, and promotes any hit into the catalogue so it comes back
         // with a real, loggable id. The app no longer talks to Open Food Facts
         // itself and no longer needs to know which path answered.
+        //
+        // The device used to keep its own barcode hit/miss cache in front of
+        // this. It duplicated `external_food_cache`, which the backend already
+        // maintains and shares across every user — and it cached *misses*, so a
+        // barcode that was unknown once stayed unknown on that phone even after
+        // someone added the product.
         const food = await DB.getFoodItemByBarcode(nextValue);
 
         if (!food) {

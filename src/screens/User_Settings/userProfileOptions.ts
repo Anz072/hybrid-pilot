@@ -13,19 +13,19 @@ export const GOAL_OPTIONS: Array<{
   value: GoalType;
 }> = [
   {
-    label: "Lose weight",
+    label: "Lose fat",
     value: "lose_fat",
-    description: "Creates a calorie deficit to drive steady weight loss.",
+    description: "",
   },
   {
     label: "Maintain",
     value: "maintain",
-    description: "Keeps calories close to maintenance for stable body weight.",
+    description: "",
   },
   {
-    label: "Gain weight",
+    label: "Build muscle",
     value: "build_muscle",
-    description: "Adds a calorie surplus to support upward scale progress.",
+    description: "",
   },
 ];
 
@@ -37,12 +37,12 @@ export const ACTIVITY_LEVEL_OPTIONS: Array<{
   {
     label: "Desk mode",
     value: "sedentary",
-    description: "Mostly seated with very little non-exercise movement.",
+    description: "Mostly seated, minimal movement.",
   },
   {
     label: "Light movement",
     value: "lightly_active",
-    description: "You move through the day and get in some casual activity.",
+    description: "Daily steps with occasional activity.",
   },
   {
     label: "Regular training",
@@ -55,9 +55,9 @@ export const ACTIVITY_LEVEL_OPTIONS: Array<{
     description: "Demanding days with heavy training volume.",
   },
   {
-    label: "Beast mode",
+    label: "Athlete load",
     value: "athlete",
-    description: "Performance-first workload with consistently high output.",
+    description: "High training volume most days.",
   },
 ];
 
@@ -113,8 +113,9 @@ export const formatGoalLabel = (value: string | null | undefined): string => {
   return match?.label ?? value;
 };
 
-export const formatGoalStrategyLabel = (value: string | null | undefined): string =>
-  formatGoalStrategyLabelFromEngine(value);
+export const formatGoalStrategyLabel = (
+  value: string | null | undefined,
+): string => formatGoalStrategyLabelFromEngine(value);
 
 export const formatTrainingTypeLabel = (value: string): string => {
   const match = TRAINING_TYPE_OPTIONS.find((option) => option.value === value);

@@ -5,6 +5,8 @@ export * from "./AppInput";
 export * from "./AppScreen";
 export * from "./AppStates";
 export * from "./AppText";
+export * from "./AppSheet";
+export * from "./Disclosure";
 export * from "./CoachNote";
 export * from "./MetricLine";
 export * from "./OptionCard";

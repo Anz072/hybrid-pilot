@@ -6,32 +6,21 @@ import {
 } from "../engine/nutrition";
 
 /**
- * A recipe's weight and per-serving nutrition, derived from its ingredients.
- *
- * The app computes this to show a live preview while the recipe is being
- * edited — grams per serving, calories per serving, the macro split — before
- * anything is saved.
- *
- * It is NOT what gets stored, and it is not sent. `nouri-api` derives the same
- * values from the ingredients it holds and persists its own answer.
- *
- * The reason is that the value is copied, not referenced: logging a recipe
- * reads `calories_per_serving` once and writes it into the diary entry, which
- * keeps it. A wrong value is not a display glitch a later edit repairs — it is
- * already in every entry logged while it was wrong. The two implementations are held equal by the `computeRecipeNutrition`
- * suite in the shared conformance corpus — see
- * docs/architecture/domain-conformance.md.
+ * Recipe nutrition for the mobile preview. The API derives the stored values
+ * independently; the shared corpus keeps both calculations in agreement.
+ * Gram weights require mass information, while volume and servings can still
+ * contribute macros. A measured prepared weight can establish effective mass.
  */
-
 export type RecipeIngredientFood = FoodMacroFields;
 
-export type RecipeIngredientForNutrition = {
+export interface RecipeIngredientForNutrition {
   amountValue: number;
-  food: RecipeIngredientFood;
-};
+  amountUnit?: string | null | undefined;
+  food: FoodMacroFields;
+}
 
-export type RecipeNutrition = {
-  /** Sum of the ingredient amounts, in grams. Null when there are none. */
+export interface RecipeNutrition {
+  /** Sum of known gram weights. Null when any positive ingredient has unknown mass. */
   ingredientTotalWeightG: number | null;
   /** Cooked/plated weight when the user supplied one, else null. */
   preparedFoodWeightG: number | null;
@@ -42,16 +31,32 @@ export type RecipeNutrition = {
   proteinGPerServing: number | null;
   carbsGPerServing: number | null;
   fatGPerServing: number | null;
-};
+}
 
 const positiveOrNull = (value: number | null | undefined): number | null =>
   value != null && Number.isFinite(value) && value > 0 ? value : null;
 
-export const computeRecipeNutrition = (input: {
+/** Quantities must match the food's nutrition units; volume/count never implies mass. */
+export function resolveRecipeIngredientAmount(ingredient: RecipeIngredientForNutrition): { amount: number; grams: number | null } | null {
+  const serving = getFoodResolvedServing(ingredient.food);
+  const normalize = (unit: string): { unit: string; factor: number } => {
+    const value = unit.trim().toLowerCase();
+    if (value === "kg") return { unit: "g", factor: 1000 };
+    if (value === "l") return { unit: "ml", factor: 1000 };
+    return { unit: value, factor: 1 };
+  };
+  const target = normalize(serving.unit);
+  const supplied = normalize(ingredient.amountUnit?.trim() || serving.unit);
+  if (target.unit !== supplied.unit) return null;
+  const quantity = ingredient.amountValue * supplied.factor;
+  return { amount: quantity / target.factor, grams: supplied.unit === "g" ? quantity : null };
+}
+
+export function computeRecipeNutrition(input: {
   ingredients: readonly RecipeIngredientForNutrition[];
   servings: number;
   preparedFoodWeightG?: number | null;
-}): RecipeNutrition => {
+}): RecipeNutrition {
   // Servings divides everything below. A recipe claiming zero or a fraction of
   // a serving is a data-entry mistake, not an instruction to divide by zero.
   const servings =
@@ -59,12 +64,16 @@ export const computeRecipeNutrition = (input: {
 
   const totals = { calories: 0, proteinG: 0, carbsG: 0, fatG: 0, weightG: 0 };
 
+  let knownWeight = true;
   for (const ingredient of input.ingredients) {
-    const amount = Number.isFinite(ingredient.amountValue) ? ingredient.amountValue : 0;
-    if (amount <= 0) continue;
+    if (!Number.isFinite(ingredient.amountValue) || ingredient.amountValue <= 0) continue;
+    const resolved = resolveRecipeIngredientAmount(ingredient);
+    if (!resolved) throw new RangeError("Ingredient quantity unit must match the food nutrition unit.");
+    const amount = resolved.amount;
 
     // The same two primitives the diary uses to scale a logged food, so a
     // recipe's serving and a directly logged portion of the same food agree.
+    // Both are pinned by the shared conformance corpus.
     const serving = getFoodResolvedServing(ingredient.food);
     const factor = getQuantityScaleFactor(amount, serving.value);
 
@@ -72,10 +81,11 @@ export const computeRecipeNutrition = (input: {
     totals.proteinG += (ingredient.food.proteinG ?? 0) * factor;
     totals.carbsG += (ingredient.food.carbsG ?? 0) * factor;
     totals.fatG += (ingredient.food.fatG ?? 0) * factor;
-    totals.weightG += amount;
+    if (resolved.grams === null) knownWeight = false;
+    else totals.weightG += resolved.grams;
   }
 
-  const ingredientTotalWeightG = positiveOrNull(totals.weightG);
+  const ingredientTotalWeightG = knownWeight ? positiveOrNull(totals.weightG) : null;
   const preparedFoodWeightG = positiveOrNull(input.preparedFoodWeightG);
   // A prepared weight wins when given: a stew loses water, so its plated weight
   // is the one a serving is actually cut from. The macros do not change — only
@@ -102,4 +112,4 @@ export const computeRecipeNutrition = (input: {
     carbsGPerServing: hasIngredients ? roundNutrient(totals.carbsG / servings) : null,
     fatGPerServing: hasIngredients ? roundNutrient(totals.fatG / servings) : null,
   };
-};
+}

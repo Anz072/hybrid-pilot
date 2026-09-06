@@ -1,3 +1,4 @@
+import { useReducedMotion } from "../theme/useReducedMotion";
 import React from "react";
 import {
   Alert,
@@ -57,10 +58,7 @@ import {
   toFoodLogRouteParams,
 } from "../screens/Food/foodLogContext";
 import { FoodDiaryDateProvider } from "../screens/Food/foodDiaryDateContext";
-import {
-  getShortcutRecents,
-  saveShortcutRecents,
-} from "../storage/localStore";
+import { getShortcutRecents, saveShortcutRecents } from "../storage/localStore";
 import { refreshAdaptiveRecommendationForUser } from "../screens/User_Settings/adaptiveCaloriesActions";
 import { appColors } from "../theme/colors";
 import { appTypography } from "../theme/typography";
@@ -86,7 +84,10 @@ const FOCUSED_COLOR = appColors.textPrimary;
 const UNFOCUSED_COLOR = appColors.textMuted;
 const TAB_BAR_BACKGROUND = appColors.surfaceCard;
 const TAB_BAR_BORDER = appColors.borderSoft;
-const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.4);
+const SHEET_HEIGHT = Math.min(
+  520,
+  Math.round(Dimensions.get("window").height * 0.8),
+);
 const Tab = createBottomTabNavigator<MainTabParamList>();
 type RootNavigation = NativeStackNavigationProp<RootStackParamList>;
 type Shortcut =
@@ -105,7 +106,15 @@ const SECONDARY_SHORTCUTS: Shortcut[] = [
   "custom_meal",
   "custom_food",
 ];
-const ALL_SHORTCUTS: Shortcut[] = [...PRIMARY_SHORTCUTS, ...SECONDARY_SHORTCUTS];
+const ALL_SHORTCUTS: Shortcut[] = [
+  "search",
+  "barcode",
+  "quick_add",
+  "weight",
+  "recipe",
+  "custom_meal",
+  "custom_food",
+];
 const SHORTCUT_LABELS: Record<Shortcut, string> = {
   barcode: "Scan",
   quick_add: "Quick Add",
@@ -134,10 +143,11 @@ const ShortcutPlaceholderScreen = () => (
 const MainTabNavigator = () => {
   const rootNavigation = useNavigation<RootNavigation>();
   const insets = useSafeAreaInsets();
+  const reduceMotion = useReducedMotion();
   const [selectedFoodDiaryDateKey, setSelectedFoodDiaryDateKey] =
     React.useState(() => formatFoodDateKey(new Date()));
-  const [selectedFoodDiaryMeal, setSelectedFoodDiaryMeal] = React.useState(
-    () => getDefaultMealSlotForNow(),
+  const [selectedFoodDiaryMeal, setSelectedFoodDiaryMeal] = React.useState(() =>
+    getDefaultMealSlotForNow(),
   );
   const currentDayKeyRef = React.useRef(formatFoodDateKey(new Date()));
   const [shortcutsVisible, setShortcutsVisible] = React.useState(false);
@@ -174,10 +184,7 @@ const MainTabNavigator = () => {
       selectedFoodDiaryMeal === getDefaultMealSlotForNow();
     const loggedAt = useCurrentTime
       ? buildFoodLoggedAt(date, now.getHours(), now.getMinutes())
-      : buildFoodLoggedAt(
-          date,
-          MEAL_SLOT_DEFAULT_HOUR[selectedFoodDiaryMeal],
-        );
+      : buildFoodLoggedAt(date, MEAL_SLOT_DEFAULT_HOUR[selectedFoodDiaryMeal]);
     const mealLabel = MEAL_SLOT_LABELS[selectedFoodDiaryMeal];
 
     return resolveFoodLogContext({
@@ -224,18 +231,18 @@ const MainTabNavigator = () => {
     requestAnimationFrame(() => {
       Animated.timing(sheetProgress, {
         toValue: 1,
-        duration: 220,
+        duration: reduceMotion ? 0 : 220,
         useNativeDriver: true,
       }).start();
     });
-  }, [sheetProgress]);
+  }, [sheetProgress, reduceMotion]);
 
   const closeShortcuts = React.useCallback(
     (afterClose?: () => void) => {
       afterCloseActionRef.current = afterClose ?? null;
       Animated.timing(sheetProgress, {
         toValue: 0,
-        duration: 180,
+        duration: reduceMotion ? 0 : 180,
         useNativeDriver: true,
       }).start(({ finished }) => {
         if (finished) {
@@ -246,7 +253,7 @@ const MainTabNavigator = () => {
         }
       });
     },
-    [sheetProgress],
+    [sheetProgress, reduceMotion],
   );
 
   const handleCloseShortcuts = React.useCallback(() => {
@@ -427,7 +434,9 @@ const MainTabNavigator = () => {
         pressed && styles.pressed,
       ]}
     >
-      <View style={styles.shortcutIconWrap}>{renderShortcutIcon(shortcut, 22)}</View>
+      <View style={styles.shortcutIconWrap}>
+        {renderShortcutIcon(shortcut, 22)}
+      </View>
       <AppText style={styles.shortcutRowLabel} variant="body">
         {SHORTCUT_LABELS[shortcut]}
       </AppText>
@@ -475,111 +484,123 @@ const MainTabNavigator = () => {
             tabBarActiveTintColor: FOCUSED_COLOR,
             tabBarInactiveTintColor: UNFOCUSED_COLOR,
             tabBarLabelStyle: styles.tabBarLabel,
+            tabBarLabel: ({ color, children }) => (
+              <AppText
+                maxFontSizeMultiplier={1.3}
+                style={[styles.tabBarLabel, { color }]}
+              >
+                {children}
+              </AppText>
+            ),
             tabBarItemStyle: styles.tabBarItem,
             tabBarStyle: visibleTabBarStyle,
           }}
         >
-        <Tab.Screen
-          name="Home"
-          component={HomeScreen}
-          options={{
-            tabBarIcon: ({ focused }) => (
-              <HouseSimpleIcon
-                size={26}
-                color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
-                weight={focused ? "bold" : "regular"}
-              />
-            ),
-          }}
-        />
-        <Tab.Screen
-          name="Food"
-          component={FoodNavigator}
-          listeners={({ navigation }) => ({
-            tabPress: (event) => {
-              event.preventDefault();
-              navigation.navigate("Food", {
-                screen: "Diary",
-              });
-            },
-          })}
-          options={({ route }) => {
-            const focusedRouteName =
-              getFocusedRouteNameFromRoute(route) ?? "Diary";
-
-            return {
-              tabBarStyle:
-                focusedRouteName === "Diary"
-                  ? visibleTabBarStyle
-                  : styles.tabBarHidden,
+          <Tab.Screen
+            name="Home"
+            component={HomeScreen}
+            options={{
               tabBarIcon: ({ focused }) => (
-                <ForkKnifeIcon
+                <HouseSimpleIcon
                   size={26}
                   color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
                   weight={focused ? "bold" : "regular"}
                 />
               ),
-            };
-          }}
-        />
-        <Tab.Screen
-          name="Shortcuts"
-          component={ShortcutPlaceholderScreen}
-          options={{
-            tabBarLabel: () => null,
-            tabBarButton: () => (
-              <Pressable
-                accessibilityLabel="Open shortcuts"
-                accessibilityRole="button"
-                onPress={openShortcuts}
-                style={({ pressed }) => [
-                  styles.shortcutTabSlot,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <PlusIcon size={31} color={FOCUSED_COLOR} weight="regular" />
-                <AppText style={styles.shortcutTabLabel} variant="bodySmall">
-                  Add
-                </AppText>
-              </Pressable>
-            ),
-          }}
-        />
-        <Tab.Screen
-          name="Weight"
-          options={{
-            tabBarIcon: ({ focused }) => (
-              <ScalesIcon
-                size={26}
-                color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
-                weight={focused ? "bold" : "regular"}
-              />
-            ),
-          }}
-        >
-          {() => <WeightScreen externalRefreshToken={weightRefreshToken} />}
-        </Tab.Screen>
-        <Tab.Screen
-          name="More"
-          component={MoreNavigator}
-          listeners={({ navigation }) => ({
-            tabPress: (event) => {
-              event.preventDefault();
-              navigation.navigate("More", {
-                screen: "MoreMainScreen",
-              });
-            },
-          })}
-          options={{
-            tabBarIcon: ({ focused }) => (
-              <DotsThreeIcon
-                size={26}
-                color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
-                weight={focused ? "bold" : "regular"}
-              />
-            ),
-          }}
-        />
+            }}
+          />
+          <Tab.Screen
+            name="Food"
+            component={FoodNavigator}
+            listeners={({ navigation }) => ({
+              tabPress: (event) => {
+                event.preventDefault();
+                navigation.navigate("Food", {
+                  screen: "Diary",
+                });
+              },
+            })}
+            options={({ route }) => {
+              const focusedRouteName =
+                getFocusedRouteNameFromRoute(route) ?? "Diary";
+
+              return {
+                tabBarStyle:
+                  focusedRouteName === "Diary"
+                    ? visibleTabBarStyle
+                    : styles.tabBarHidden,
+                tabBarIcon: ({ focused }) => (
+                  <ForkKnifeIcon
+                    size={26}
+                    color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
+                    weight={focused ? "bold" : "regular"}
+                  />
+                ),
+              };
+            }}
+          />
+          <Tab.Screen
+            name="Shortcuts"
+            component={ShortcutPlaceholderScreen}
+            options={{
+              tabBarLabel: () => null,
+              tabBarButton: () => (
+                <Pressable
+                  accessibilityLabel="Open shortcuts"
+                  accessibilityRole="button"
+                  onPress={openShortcuts}
+                  style={({ pressed }) => [
+                    styles.shortcutTabSlot,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <PlusIcon size={31} color={FOCUSED_COLOR} weight="regular" />
+                  <AppText
+                    maxFontSizeMultiplier={1.3}
+                    style={styles.shortcutTabLabel}
+                    variant="bodySmall"
+                  >
+                    Add
+                  </AppText>
+                </Pressable>
+              ),
+            }}
+          />
+          <Tab.Screen
+            name="Weight"
+            options={{
+              tabBarIcon: ({ focused }) => (
+                <ScalesIcon
+                  size={26}
+                  color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
+                  weight={focused ? "bold" : "regular"}
+                />
+              ),
+            }}
+          >
+            {() => <WeightScreen externalRefreshToken={weightRefreshToken} />}
+          </Tab.Screen>
+          <Tab.Screen
+            name="More"
+            component={MoreNavigator}
+            listeners={({ navigation }) => ({
+              tabPress: (event) => {
+                event.preventDefault();
+                navigation.navigate("More", {
+                  screen: "MoreMainScreen",
+                });
+              },
+            })}
+            options={{
+              tabBarIcon: ({ focused }) => (
+                <DotsThreeIcon
+                  size={26}
+                  color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
+                  weight={focused ? "bold" : "regular"}
+                />
+              ),
+            }}
+          />
         </Tab.Navigator>
       </FoodDiaryDateProvider>
 
@@ -610,9 +631,12 @@ const MainTabNavigator = () => {
             ]}
           >
             <View style={styles.sheetHeader}>
-              <View style={styles.headerSpacer} />
-              <AppText color="secondary" style={styles.sheetTitle} variant="label">
-                SHORTCUTS
+              <AppText
+                color="secondary"
+                style={styles.sheetTitle}
+                variant="cardTitle"
+              >
+                Add
               </AppText>
 
               <IconButton
@@ -624,15 +648,16 @@ const MainTabNavigator = () => {
               </IconButton>
             </View>
 
-            <View style={styles.sheetDivider} />
-
             <ScrollView
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.shortcutScrollContent}
             >
               <View style={styles.shortcutList}>
                 {ALL_SHORTCUTS.map((shortcut, index) =>
-                  renderShortcutRow(shortcut, index === ALL_SHORTCUTS.length - 1),
+                  renderShortcutRow(
+                    shortcut,
+                    index === ALL_SHORTCUTS.length - 1,
+                  ),
                 )}
               </View>
             </ScrollView>

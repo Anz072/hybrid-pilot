@@ -57,8 +57,10 @@ import {
 import { appColors } from "../../theme/colors";
 import {
   displayNumberToWeightKg,
+  formatTimeOfDay,
   formatWeight,
   formatWeightValue,
+  weightKgToDisplayNumber,
   weightUnitLabel,
 } from "../../preferences/displayPreferences";
 import { useDisplayPreferences } from "../../preferences/usePreferences";
@@ -73,7 +75,13 @@ import {
   LoadingState,
   NumericText,
 } from "../../components/ui";
-import { appBorders, appRadius, appSpacing, appStates, appSurfaces } from "../../theme/tokens";
+import {
+  appBorders,
+  appRadius,
+  appSpacing,
+  appStates,
+  appSurfaces,
+} from "../../theme/tokens";
 import { appTypography } from "../../theme/typography";
 
 const SOFT_MIN_WEIGHT_KG = 20;
@@ -162,11 +170,9 @@ type WeightScreenProps = {
   externalRefreshToken?: number;
 };
 
-const WeightScreen = ({
-  externalRefreshToken = 0,
-}: WeightScreenProps) => {
+const WeightScreen = ({ externalRefreshToken = 0 }: WeightScreenProps) => {
   const insets = useSafeAreaInsets();
-  const { weightUnit } = useDisplayPreferences();
+  const { weightUnit, timeFormat } = useDisplayPreferences();
   const hasHydratedOnceRef = React.useRef(false);
   const lastExternalRefreshTokenRef = React.useRef(externalRefreshToken);
   const [userId, setUserId] = React.useState<string | null>(null);
@@ -195,21 +201,24 @@ const WeightScreen = ({
   const [hideInsights, setHideInsights] = React.useState(true);
   const [hideHistory, setHideHistory] = React.useState(true);
 
-  const loadWeightState = React.useCallback(async (currentUserId: string) => {
-    const [entries, nextGoal] = await Promise.all([
-      DB.listWeightEntries(currentUserId, { includeDeleted: true }),
-      DB.getWeightGoal(currentUserId),
-    ]);
+  const loadWeightState = React.useCallback(
+    async (currentUserId: string) => {
+      const [entries, nextGoal] = await Promise.all([
+        DB.listWeightEntries(currentUserId, { includeDeleted: true }),
+        DB.getWeightGoal(currentUserId),
+      ]);
 
-    setAllEntries(sortEntriesDesc(entries));
-    setGoal(nextGoal);
-    setTargetWeightValue(
-      nextGoal ? formatWeightValue(nextGoal.targetWeightKg, weightUnit) : "",
-    );
-    setTargetDate(
-      nextGoal?.targetDate ? parseDateOnly(nextGoal.targetDate) : null,
-    );
-  }, [weightUnit]);
+      setAllEntries(sortEntriesDesc(entries));
+      setGoal(nextGoal);
+      setTargetWeightValue(
+        nextGoal ? formatWeightValue(nextGoal.targetWeightKg, weightUnit) : "",
+      );
+      setTargetDate(
+        nextGoal?.targetDate ? parseDateOnly(nextGoal.targetDate) : null,
+      );
+    },
+    [weightUnit],
+  );
 
   const clearWeightState = React.useCallback(() => {
     setAllEntries([]);
@@ -338,9 +347,7 @@ const WeightScreen = ({
       : null;
   const visibleHistorySections = React.useMemo(
     () =>
-      hideHistory
-        ? []
-        : [{ title: "", key: "history", data: historyEntries }],
+      hideHistory ? [] : [{ title: "", key: "history", data: historyEntries }],
     [hideHistory, historyEntries],
   );
   const consistencyPerWeek = React.useMemo(() => {
@@ -780,7 +787,7 @@ const WeightScreen = ({
 
   const insightCards: InsightCardProps[] = [
     {
-      title: "Trend",
+      title: "Latest vs 7-day average",
       value:
         deltaVsTrend != null
           ? `${deltaVsTrend > 0 ? "+" : ""}${formatWeight(deltaVsTrend, weightUnit)}`
@@ -833,11 +840,7 @@ const WeightScreen = ({
     setExpandedInsightTitle((current) => (current === title ? null : title));
   };
 
-  const renderInsightCard = ({
-    title,
-    value,
-    explanation,
-  }: InsightCardProps) =>
+  const renderInsightCard = ({ title, value, explanation }: InsightCardProps) =>
     (() => {
       const expanded = expandedInsightTitle === title;
 
@@ -846,33 +849,49 @@ const WeightScreen = ({
           key={title}
           onPress={() => toggleInsightCard(title)}
           accessibilityState={{ expanded }}
-          style={[
-            styles.insightRow,
-            expanded && styles.insightRowExpanded,
-          ]}
+          style={[styles.insightRow, expanded && styles.insightRowExpanded]}
           variant="compact"
         >
           <View style={styles.insightTopRow}>
-            <AppText color="secondary" style={styles.insightTitle} variant="eyebrow">
+            <AppText
+              color="secondary"
+              style={styles.insightTitle}
+              variant="metadata"
+            >
               {title}
             </AppText>
             <View style={styles.insightMetaSide}>
               <View style={styles.insightValueChip}>
-                <NumericText style={styles.insightValue} variant="numberTrendDelta">
+                <NumericText
+                  style={styles.insightValue}
+                  variant="numberTrendDelta"
+                >
                   {value}
                 </NumericText>
               </View>
               {expanded ? (
-                <CaretUpIcon size={16} color={appColors.textSecondary} weight="bold" />
+                <CaretUpIcon
+                  size={16}
+                  color={appColors.textSecondary}
+                  weight="bold"
+                />
               ) : (
-                <CaretDownIcon size={16} color={appColors.textMuted} weight="bold" />
+                <CaretDownIcon
+                  size={16}
+                  color={appColors.textMuted}
+                  weight="bold"
+                />
               )}
             </View>
           </View>
 
           {expanded ? (
             <View style={styles.insightExpandedBody}>
-              <AppText color="secondary" style={styles.insightExpandedText} variant="metadata">
+              <AppText
+                color="secondary"
+                style={styles.insightExpandedText}
+                variant="metadata"
+              >
                 {explanation}
               </AppText>
             </View>
@@ -882,11 +901,17 @@ const WeightScreen = ({
     })();
 
   const listHeader = (
-    <View style={[styles.content, { paddingTop: insets.top + 24 }]}>
+    <View style={[styles.content, { paddingTop: 24 }]}>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
-          <AppText style={styles.title} variant="screenTitle">Weight</AppText>
-          <AppText color="secondary" style={styles.headerSubtitle} variant="metadata">
+          <AppText style={styles.title} variant="screenTitle">
+            Weight
+          </AppText>
+          <AppText
+            color="secondary"
+            style={styles.headerSubtitle}
+            variant="metadata"
+          >
             {currentEntry
               ? `Latest ${formatHeaderDateLabel(currentEntry.measuredAt)}`
               : "Log your first check-in"}
@@ -900,57 +925,29 @@ const WeightScreen = ({
         />
       </View>
       <View style={styles.heroSection}>
-        <View style={styles.heroOpeningRule} />
         <View style={styles.heroCurrentBlock}>
-          <AppText color="muted" style={styles.heroStatLabel} variant="eyebrow">
-            Current
-          </AppText>
           <View style={styles.heroWeightLine}>
-            <NumericText style={styles.heroStatValue} variant="numberWeightHero">
+            <NumericText
+              style={styles.heroStatValue}
+              variant="numberWeightHero"
+            >
               {currentWeightText}
             </NumericText>
-            <AppText color="secondary" style={styles.heroStatUnit} variant="body">
+            <AppText
+              color="secondary"
+              style={styles.heroStatUnit}
+              variant="body"
+            >
               {weightUnitLabel(weightUnit)}
             </AppText>
           </View>
-          <AppText color="secondary" style={styles.heroStatCaption} variant="bodySmall">
-            {currentEntry
-              ? formatHeaderDateLabel(currentEntry.measuredAt)
-              : "Need at least one entry"}
-          </AppText>
         </View>
 
         <View style={styles.heroSupportRow}>
-          <View style={styles.heroSupportPanel}>
-            <AppText color="muted" style={styles.heroStatLabel} variant="eyebrow">
-              Trend
-            </AppText>
-            <View style={styles.heroSupportValueRow}>
-              <NumericText style={styles.heroTrendValue} variant="numberWeightEntry">
-              {visibleDifferenceText}
-              </NumericText>
-              <AppText color="secondary" style={styles.heroSupportUnit} variant="metadata">
-                {weightUnitLabel(weightUnit)}
-              </AppText>
-            </View>
-            <AppText color="secondary" style={styles.heroStatCaption} variant="metadata">
-              {chartPeriodText}
-            </AppText>
-          </View>
-          <View style={styles.heroSupportPanel}>
-            <AppText color="muted" style={styles.heroStatLabel} variant="eyebrow">
-              Goal
-            </AppText>
-            <View style={styles.heroGoalLine}>
-              <TargetIcon size={14} color={appColors.textSecondary} weight="bold" />
-              <AppText style={styles.heroInfoGoalText} variant="bodySmallStrong">
-                {goalChipText}
-              </AppText>
-            </View>
-            <AppText color="secondary" style={styles.heroStatCaption} variant="metadata">
-              {goal ? goalSummaryText : "Add a target when you are ready."}
-            </AppText>
-          </View>
+          <AppText color="secondary" variant="bodySmall">
+            {visibleDifferenceText} {weightUnitLabel(weightUnit)} · selected
+            period
+          </AppText>
         </View>
 
         <WeightTrendChart
@@ -967,30 +964,54 @@ const WeightScreen = ({
       >
         <View style={styles.rowBetween}>
           <View style={styles.flexOne}>
-            <AppText style={styles.dashboardSectionTitle} variant="sectionTitle">
-              Goal & Target
+            <AppText
+              style={styles.dashboardSectionTitle}
+              variant="sectionTitle"
+            >
+              {goal ? "Weight goal" : "Set a weight goal"}
             </AppText>
-            <AppText color="secondary" style={styles.subtleText} variant="bodySmall">
-              {goalSummaryText}
-            </AppText>
+            {goal ? (
+              <AppText
+                color="secondary"
+                style={styles.subtleText}
+                variant="bodySmall"
+              >
+                {goalSummaryText}
+              </AppText>
+            ) : null}
           </View>
           <View style={styles.sectionToggle}>
-            <CaretRightIcon size={18} color={appColors.textMuted} weight="bold" />
+            <CaretRightIcon
+              size={18}
+              color={appColors.textMuted}
+              weight="bold"
+            />
           </View>
         </View>
 
         {goal ? (
           <View style={[styles.twoUp, styles.goalPreviewPanels]}>
             <AppCard variant="soft" style={styles.softPanel}>
-              <AppText color="muted" style={styles.panelLabel} variant="eyebrow">
+              <AppText
+                color="muted"
+                style={styles.panelLabel}
+                variant="metadata"
+              >
                 Target
               </AppText>
-              <NumericText style={styles.panelValue} variant="numberWeightEntry">
+              <NumericText
+                style={styles.panelValue}
+                variant="numberWeightEntry"
+              >
                 {formatWeight(goal.targetWeightKg, weightUnit)}
               </NumericText>
             </AppCard>
             <AppCard variant="soft" style={styles.softPanel}>
-              <AppText color="muted" style={styles.panelLabel} variant="eyebrow">
+              <AppText
+                color="muted"
+                style={styles.panelLabel}
+                variant="metadata"
+              >
                 Pace helper
               </AppText>
               <AppText style={styles.panelText} variant="bodySmallStrong">
@@ -1018,22 +1039,31 @@ const WeightScreen = ({
           variant="compact"
         >
           <View style={styles.sectionHeaderRow}>
-            <AppText style={styles.dashboardSectionTitle} variant="sectionTitle">
-              Insights & Data
+            <AppText
+              style={styles.dashboardSectionTitle}
+              variant="sectionTitle"
+            >
+              Insights
             </AppText>
             <View style={styles.ledgerToggle}>
               {hideInsights ? (
-                <CaretDownIcon size={18} color={appColors.textMuted} weight="bold" />
+                <CaretDownIcon
+                  size={18}
+                  color={appColors.textMuted}
+                  weight="bold"
+                />
               ) : (
-                <CaretUpIcon size={18} color={appColors.textMuted} weight="bold" />
+                <CaretUpIcon
+                  size={18}
+                  color={appColors.textMuted}
+                  weight="bold"
+                />
               )}
             </View>
           </View>
         </InteractiveCard>
         {!hideInsights && (
-          <View>
-            {insightCards.map((item) => renderInsightCard(item))}
-          </View>
+          <View>{insightCards.map((item) => renderInsightCard(item))}</View>
         )}
       </View>
 
@@ -1048,14 +1078,25 @@ const WeightScreen = ({
           variant="compact"
         >
           <View style={styles.sectionHeaderRow}>
-            <AppText style={styles.dashboardSectionTitle} variant="sectionTitle">
+            <AppText
+              style={styles.dashboardSectionTitle}
+              variant="sectionTitle"
+            >
               History
             </AppText>
             <View style={styles.ledgerToggle}>
               {hideHistory ? (
-                <CaretDownIcon size={18} color={appColors.textMuted} weight="bold" />
+                <CaretDownIcon
+                  size={18}
+                  color={appColors.textMuted}
+                  weight="bold"
+                />
               ) : (
-                <CaretUpIcon size={18} color={appColors.textMuted} weight="bold" />
+                <CaretUpIcon
+                  size={18}
+                  color={appColors.textMuted}
+                  weight="bold"
+                />
               )}
             </View>
           </View>
@@ -1075,7 +1116,7 @@ const WeightScreen = ({
   }
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <SectionList
         sections={visibleHistorySections}
         keyExtractor={(item) => item.id}
@@ -1094,7 +1135,13 @@ const WeightScreen = ({
         ListEmptyComponent={
           hideHistory ? null : (
             <EmptyState
-              icon={<ChartLineIcon size={28} color={appColors.statusSuccess} weight="bold" />}
+              icon={
+                <ChartLineIcon
+                  size={28}
+                  color={appColors.statusSuccess}
+                  weight="bold"
+                />
+              }
               title="Log your first weigh-in"
               message="Add your first weight entry to unlock trend lines, goal progress, and history."
               style={[styles.card, styles.emptyCard]}
@@ -1104,18 +1151,23 @@ const WeightScreen = ({
         renderSectionHeader={() => (
           <View style={styles.historyTableHeader}>
             <View style={[styles.historyHeaderCell, styles.historyDateColumn]}>
-              <AppText color="secondary" style={styles.historyHeaderLabel} variant="eyebrow">
+              <AppText
+                color="secondary"
+                style={styles.historyHeaderLabel}
+                variant="metadata"
+              >
                 Date
               </AppText>
             </View>
-            <View style={[styles.historyHeaderCell, styles.historyWeightColumn]}>
-              <AppText color="secondary" style={styles.historyHeaderLabel} variant="eyebrow">
-                Weight
-              </AppText>
-            </View>
-            <View style={[styles.historyHeaderCell, styles.historySourceColumn]}>
-              <AppText color="secondary" style={styles.historyHeaderLabel} variant="eyebrow">
-                Source
+            <View
+              style={[styles.historyHeaderCell, styles.historyWeightColumn]}
+            >
+              <AppText
+                color="secondary"
+                style={styles.historyHeaderLabel}
+                variant="metadata"
+              >
+                Weight ({weightUnitLabel(weightUnit)})
               </AppText>
             </View>
             <View style={styles.historyActionColumn} />
@@ -1160,27 +1212,44 @@ const WeightScreen = ({
               >
                 <View style={styles.historyRowMain}>
                   <View style={[styles.historyCell, styles.historyDateColumn]}>
-                    <AppText style={styles.historyDateText} numberOfLines={1} variant="bodySmallStrong">
+                    <AppText
+                      style={styles.historyDateText}
+                      numberOfLines={1}
+                      variant="bodySmallStrong"
+                    >
                       {formatLocalDateLabel(item.measuredAtLocalIso)}
                     </AppText>
-                    <AppText color="secondary" style={styles.historyTimeText} numberOfLines={1} variant="label">
-                      {formatHistoryTimeLabel(item.measuredAtLocalIso)}
+                    <AppText
+                      color="secondary"
+                      style={styles.historyTimeText}
+                      numberOfLines={1}
+                      variant="label"
+                    >
+                      {formatTimeOfDay(
+                        new Date(item.measuredAtLocalIso),
+                        timeFormat,
+                      )}
                     </AppText>
                   </View>
 
-                  <View style={[styles.historyCell, styles.historyWeightColumn]}>
-                    <NumericText style={styles.historyWeightText} numberOfLines={1} variant="numberWeightEntry">
-                      {formatWeightValue(item.valueKg, weightUnit)}
+                  <View
+                    style={[styles.historyCell, styles.historyWeightColumn]}
+                  >
+                    <NumericText
+                      style={styles.historyWeightText}
+                      numberOfLines={1}
+                      variant="numberWeightEntry"
+                    >
+                      {weightKgToDisplayNumber(
+                        item.valueKg,
+                        weightUnit,
+                      ).toFixed(1)}
                     </NumericText>
-                    <AppText color="secondary" style={styles.historyWeightUnit} variant="micro">
-                      {weightUnitLabel(weightUnit)}
-                    </AppText>
-                  </View>
-
-                  <View style={[styles.historyCell, styles.historySourceColumn]}>
-                    <AppText style={styles.historySourceText} numberOfLines={1} variant="label">
-                      {sourceLabel}
-                    </AppText>
+                    {item.source !== "manual" ? (
+                      <AppText color="secondary" variant="metadata">
+                        {sourceLabel}
+                      </AppText>
+                    ) : null}
                   </View>
 
                   <View style={styles.historyActionColumn}>
@@ -1195,7 +1264,12 @@ const WeightScreen = ({
                 {hasSecondaryRow ? (
                   <View style={styles.historySupplementalRow}>
                     {item.notes ? (
-                      <AppText color="secondary" style={styles.historyNoteText} numberOfLines={2} variant="label">
+                      <AppText
+                        color="secondary"
+                        style={styles.historyNoteText}
+                        numberOfLines={2}
+                        variant="label"
+                      >
                         {item.notes}
                       </AppText>
                     ) : null}
@@ -1218,10 +1292,10 @@ const WeightScreen = ({
             style={[styles.goalModalHeader, { paddingTop: insets.top + 12 }]}
           >
             <View>
-              <AppText color="secondary" style={styles.eyebrow} variant="eyebrow">
-                Goal
-              </AppText>
-              <AppText style={styles.goalModalTitle} variant="sectionTitleLarge">
+              <AppText
+                style={styles.goalModalTitle}
+                variant="sectionTitleLarge"
+              >
                 {goal ? "Edit weight goal" : "Set weight goal"}
               </AppText>
             </View>
@@ -1239,28 +1313,7 @@ const WeightScreen = ({
               { paddingBottom: insets.bottom + 24 },
             ]}
           >
-            <AppCard style={styles.card}>
-              <View style={styles.goalHeader}>
-                <View>
-                  <AppText style={styles.sectionTitle} variant="sectionTitle">
-                    Goal details
-                  </AppText>
-                  <AppText color="secondary" style={styles.subtleText} variant="bodySmall">
-                    Set a target to add a goal line and progress band to the
-                    chart.
-                  </AppText>
-                  {goal ? (
-                    <NumericText color="secondary" style={styles.goalBandMeta} variant="numberTrendDelta">
-                      Band +/-{" "}
-                      {formatWeight(
-                        goal.goalBandKg ?? DEFAULT_GOAL_BAND_KG,
-                        weightUnit,
-                      )}
-                    </NumericText>
-                  ) : null}
-                </View>
-              </View>
-
+            <AppCard style={styles.card} variant="plain">
               <View style={styles.inputRow}>
                 <AppInput
                   label="Target weight"
@@ -1290,7 +1343,10 @@ const WeightScreen = ({
                     color={appColors.textPrimary}
                     weight="bold"
                   />
-                  <AppText style={styles.inlineButtonText} variant="bodySmallStrong">
+                  <AppText
+                    style={styles.inlineButtonText}
+                    variant="bodySmallStrong"
+                  >
                     {targetDate
                       ? targetDate.toLocaleDateString(undefined, {
                           month: "short",
@@ -1320,26 +1376,11 @@ const WeightScreen = ({
                 />
               ) : null}
 
-              <View style={styles.twoUp}>
-                <AppCard variant="soft" style={styles.softPanel}>
-                  <AppText color="muted" style={styles.panelLabel} variant="eyebrow">
-                    Target
-                  </AppText>
-                  <NumericText style={styles.panelValue} variant="numberWeightEntry">
-                    {parsedTargetWeight != null
-                      ? formatWeight(parsedTargetWeight, weightUnit)
-                      : "--"}
-                  </NumericText>
-                </AppCard>
-                <AppCard variant="soft" style={styles.softPanel}>
-                  <AppText color="muted" style={styles.panelLabel} variant="eyebrow">
-                    Pace helper
-                  </AppText>
-                  <AppText style={styles.panelText} variant="bodySmallStrong">
-                    {goalPaceText ?? "Add a date to estimate weekly pace."}
-                  </AppText>
-                </AppCard>
-              </View>
+              {goalPaceText ? (
+                <AppText color="secondary" variant="bodySmall">
+                  {goalPaceText}
+                </AppText>
+              ) : null}
 
               <AppButton
                 label={goalSaving ? "Saving goal..." : "Save goal"}
@@ -1549,14 +1590,12 @@ const styles = StyleSheet.create({
     minWidth: 58,
     paddingHorizontal: appSpacing.md,
     borderRadius: appRadius.md,
-    backgroundColor: appSurfaces.ghost,
-    borderWidth: appBorders.width,
-    borderColor: appBorders.soft,
+    backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
   },
   unitText: {
-    textTransform: "uppercase",
+    color: appColors.textSecondary,
   },
   inlineRow: {
     flexDirection: "row",

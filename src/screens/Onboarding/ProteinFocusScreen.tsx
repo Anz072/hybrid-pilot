@@ -12,7 +12,9 @@ import { appColors } from "../../theme/colors";
 import { appSpacing } from "../../theme/tokens";
 import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
 import OnboardingReviewCard from "./OnboardingReviewCard";
-import OnboardingStepScreen, { onboardingStepProgress } from "./OnboardingStepScreen";
+import OnboardingStepScreen, {
+  onboardingStepProgress,
+} from "./OnboardingStepScreen";
 import {
   formatActivitySummary,
   formatBodySummary,
@@ -29,12 +31,11 @@ const ProteinFocusScreen = ({ navigation, route }: Props) => {
 
   return (
     <OnboardingStepScreen
-      eyebrow="Macro Bias"
       onBack={() => navigation.goBack()}
       progress={onboardingStepProgress(7)}
       stepLabel="Protein Focus"
-      subtitle="This changes macro targets and protein grams per kilogram, while leaving the calorie recommendation itself alone."
-      title="How protein-focused should this be?"
+      subtitle="Grams of protein per kilogram of body weight."
+      title="Choose your protein target"
       footer={
         <OnboardingPrimaryButton
           label="Continue"
@@ -51,6 +52,26 @@ const ProteinFocusScreen = ({ navigation, route }: Props) => {
         />
       }
     >
+      <View style={styles.listWrap}>
+        {PROTEIN_FOCUS_OPTIONS.map((option) => {
+          const isSelected = selectedProteinFocus === option.value;
+
+          return (
+            <OptionCard
+              key={option.value}
+              onPress={() => setSelectedProteinFocus(option.value)}
+              selected={isSelected}
+              title={option.label}
+              trailing={
+                <NumericText color="secondary" variant="numberTrendDelta">
+                  {option.gramsPerKg} g/kg
+                </NumericText>
+              }
+            />
+          );
+        })}
+      </View>
+
       <OnboardingReviewCard
         items={[
           {
@@ -96,32 +117,6 @@ const ProteinFocusScreen = ({ navigation, route }: Props) => {
           },
         ]}
       />
-
-      <View style={styles.listWrap}>
-        {PROTEIN_FOCUS_OPTIONS.map((option) => {
-          const isSelected = selectedProteinFocus === option.value;
-
-          return (
-            <OptionCard
-              icon={<BarbellIcon size={22} color={appColors.textPrimary} weight="fill" />}
-              key={option.value}
-              onPress={() => setSelectedProteinFocus(option.value)}
-              selected={isSelected}
-              subtitle={option.description}
-              title={option.label}
-              trailing={
-                <NumericText color="secondary" variant="numberTrendDelta">
-                  {option.gramsPerKg} g/kg
-                </NumericText>
-              }
-            />
-          );
-        })}
-      </View>
-
-      <AppText align="center" color="secondary" style={styles.helper} variant="metadata">
-        Current selection: {formatProteinFocusSummary(selectedProteinFocus)}
-      </AppText>
     </OnboardingStepScreen>
   );
 };

@@ -1,3 +1,4 @@
+import { Switch } from "react-native";
 import React from "react";
 import {
   ActivityIndicator,
@@ -21,7 +22,13 @@ import type {
 } from "../../store/DB_TYPES";
 import { appColors } from "../../theme/colors";
 import { appTypography } from "../../theme/typography";
-import { appBorders, appRadius, appSpacing, appStates, appSurfaces } from "../../theme/tokens";
+import {
+  appBorders,
+  appRadius,
+  appSpacing,
+  appStates,
+  appSurfaces,
+} from "../../theme/tokens";
 import { markAdaptiveRecommendationSeen } from "../../storage/localStore";
 import SettingsStackHeader from "./SettingsStackHeader";
 import {
@@ -38,10 +45,7 @@ type Props = NativeStackScreenProps<
 
 const formatRecommendationStatus = (
   status: DBAdaptiveCalorieRecommendation["status"],
-) =>
-  status
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (match) => match.toUpperCase());
+) => status.replace(/_/g, " ").replace(/\b\w/g, (match) => match.toUpperCase());
 
 const formatWindowLabel = (startDate: string, endDate: string) =>
   `${new Date(`${startDate}T12:00:00`).toLocaleDateString(undefined, {
@@ -53,7 +57,9 @@ const formatWindowLabel = (startDate: string, endDate: string) =>
   })}`;
 
 const formatSignedWeightChange = (value: number | null) =>
-  value == null ? "Not enough weigh-ins" : `${value > 0 ? "+" : ""}${value.toFixed(2)} kg/week`;
+  value == null
+    ? "Not enough weigh-ins"
+    : `${value > 0 ? "+" : ""}${value.toFixed(2)} kg/week`;
 
 const formatNextReviewValue = (settings: DBUserSettings | null) => {
   const nextReviewDate = getNextAdaptiveReviewDate(settings);
@@ -80,12 +86,11 @@ const AdaptiveCaloriesSettingsScreen = ({ navigation }: Props) => {
   const [settings, setSettings] = React.useState<DBUserSettings | null>(null);
   const [latestRecommendation, setLatestRecommendation] =
     React.useState<DBAdaptiveCalorieRecommendation | null>(null);
-  const [history, setHistory] = React.useState<DBAdaptiveCalorieRecommendation[]>(
-    [],
-  );
-  const [analysis, setAnalysis] = React.useState<AdaptiveRecommendationOutcome | null>(
-    null,
-  );
+  const [history, setHistory] = React.useState<
+    DBAdaptiveCalorieRecommendation[]
+  >([]);
+  const [analysis, setAnalysis] =
+    React.useState<AdaptiveRecommendationOutcome | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
   const [savingToggle, setSavingToggle] = React.useState(false);
@@ -146,10 +151,7 @@ const AdaptiveCaloriesSettingsScreen = ({ navigation }: Props) => {
           });
         }
       } catch {
-        Alert.alert(
-          "Could not load adaptive calories",
-          "Please try again.",
-        );
+        Alert.alert("Could not load adaptive calories", "Please try again.");
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -169,7 +171,10 @@ const AdaptiveCaloriesSettingsScreen = ({ navigation }: Props) => {
       return;
     }
 
-    void markAdaptiveRecommendationSeen(user.externalId, latestRecommendation.id);
+    void markAdaptiveRecommendationSeen(
+      user.externalId,
+      latestRecommendation.id,
+    );
   }, [latestRecommendation, user]);
 
   const handleToggleAdaptive = async () => {
@@ -245,22 +250,20 @@ const AdaptiveCaloriesSettingsScreen = ({ navigation }: Props) => {
   };
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <ScrollView
         style={styles.screen}
         contentContainerStyle={[
           styles.content,
           {
-            paddingTop: insets.top + 16,
+            paddingTop: 16,
             paddingBottom: insets.bottom + 28,
           },
         ]}
         showsVerticalScrollIndicator={false}
       >
         <SettingsStackHeader
-          eyebrow="User Settings"
           onBack={() => navigation.goBack()}
-          subtitle="Use fully completed diary days and recent weight trend to review quieter calorie-target suggestions. V1 only recommends changes and never auto-applies them."
           title="Adaptive Calories"
         />
 
@@ -274,55 +277,43 @@ const AdaptiveCaloriesSettingsScreen = ({ navigation }: Props) => {
         ) : loading ? (
           <View style={styles.loadingCard}>
             <ActivityIndicator size="small" color={appColors.brand700} />
-            <Text style={styles.cardText}>Loading adaptive calorie state...</Text>
+            <Text style={styles.cardText}>
+              Loading adaptive calorie state...
+            </Text>
           </View>
         ) : (
           <>
             <View style={styles.card}>
               <View style={styles.rowBetween}>
                 <View style={styles.copyColumn}>
-                  <Text style={styles.cardTitle}>Adaptive calories</Text>
+                  <Text style={styles.cardTitle}>Suggestions</Text>
                   <Text style={styles.cardText}>
-                    Inputs used: complete diary days, logged calorie intake, and recent weight trend.
-                  </Text>
-                  <Text style={styles.cardText}>
-                    Ignored in v1: exercise calories, push notifications, and silent auto-apply.
+                    Suggest targets from complete food logs and weight trends.
+                    You choose whether to apply each change.
                   </Text>
                 </View>
-                <Pressable
-                  onPress={handleToggleAdaptive}
+                <Switch
+                  accessibilityLabel="Adaptive calorie suggestions"
+                  value={Boolean(settings?.adaptiveCaloriesEnabled)}
+                  onValueChange={handleToggleAdaptive}
                   disabled={savingToggle}
-                  style={({ pressed }) => [
-                    styles.toggleButton,
-                    settings?.adaptiveCaloriesEnabled && styles.toggleButtonActive,
-                    pressed && !savingToggle && styles.buttonPressed,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.toggleButtonText,
-                      settings?.adaptiveCaloriesEnabled &&
-                        styles.toggleButtonTextActive,
-                    ]}
-                  >
-                    {savingToggle
-                      ? "Saving..."
-                      : settings?.adaptiveCaloriesEnabled
-                        ? "On"
-                        : "Off"}
-                  </Text>
-                </Pressable>
+                  style={{ alignSelf: "center" }}
+                  thumbColor={appColors.white}
+                  trackColor={{ true: appColors.actionPrimary }}
+                />
               </View>
 
-              <View style={styles.metaRow}>
-                <Text style={styles.metaLabel}>Mode</Text>
-                <Text style={styles.metaValue}>Recommend only</Text>
-              </View>
               <View style={styles.metaRow}>
                 <Text style={styles.metaLabel}>Last calculation</Text>
                 <Text style={styles.metaValue}>
                   {settings?.adaptiveLastCalculatedAt
-                    ? new Date(settings.adaptiveLastCalculatedAt).toLocaleString()
+                    ? new Date(
+                        settings.adaptiveLastCalculatedAt,
+                      ).toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })
                     : "Not calculated yet"}
                 </Text>
               </View>
@@ -336,9 +327,7 @@ const AdaptiveCaloriesSettingsScreen = ({ navigation }: Props) => {
               <Pressable
                 onPress={() => void handleRefreshNow()}
                 disabled={
-                  refreshing ||
-                  actionBusy ||
-                  !settings?.adaptiveCaloriesEnabled
+                  refreshing || actionBusy || !settings?.adaptiveCaloriesEnabled
                 }
                 style={({ pressed }) => [
                   styles.secondaryButton,
@@ -356,16 +345,18 @@ const AdaptiveCaloriesSettingsScreen = ({ navigation }: Props) => {
                 <Text style={styles.cardTitle}>Latest proposal</Text>
                 <Text style={styles.bigValue}>
                   {latestRecommendation.currentBaseCalories != null
-                    ? `${latestRecommendation.currentBaseCalories} -> ${latestRecommendation.recommendedBaseCalories} kcal/day`
+                    ? `${latestRecommendation.currentBaseCalories} → ${latestRecommendation.recommendedBaseCalories} kcal/day`
                     : `${latestRecommendation.recommendedBaseCalories} kcal/day`}
                 </Text>
-                <Text style={styles.cardText}>{latestRecommendation.reason}</Text>
+                <Text style={styles.cardText}>
+                  {latestRecommendation.reason}
+                </Text>
 
                 <View style={styles.metricGrid}>
                   <View style={styles.metricCard}>
                     <Text style={styles.metricLabel}>Confidence</Text>
                     <Text style={styles.metricValue}>
-                      {latestRecommendation.confidence.toUpperCase()}
+                      {latestRecommendation.confidence}
                     </Text>
                   </View>
                   <View style={styles.metricCard}>
@@ -389,14 +380,16 @@ const AdaptiveCaloriesSettingsScreen = ({ navigation }: Props) => {
                   <Text style={styles.whyTitle}>Why this changed</Text>
                   <Text style={styles.whyText}>
                     Logged intake averaged{" "}
-                    {Math.round(latestRecommendation.avgLoggedCalories)} kcal/day
-                    across {latestRecommendation.completeDaysUsed} complete days.
+                    {Math.round(latestRecommendation.avgLoggedCalories)}{" "}
+                    kcal/day across {latestRecommendation.completeDaysUsed}{" "}
+                    complete days.
                   </Text>
                   <Text style={styles.whyText}>
                     Your smoothed weight trend moved{" "}
                     {formatSignedWeightChange(
                       latestRecommendation.observedWeeklyChangeKg,
-                    )}, based on {latestRecommendation.weighInsUsed} weigh-ins.
+                    )}
+                    , based on {latestRecommendation.weighInsUsed} weigh-ins.
                   </Text>
                   <Text style={styles.whyText}>
                     Estimated maintenance is{" "}
@@ -427,7 +420,9 @@ const AdaptiveCaloriesSettingsScreen = ({ navigation }: Props) => {
                       pressed && !actionBusy && styles.buttonPressed,
                     ]}
                   >
-                    <Text style={styles.secondaryButtonText}>Keep current target</Text>
+                    <Text style={styles.secondaryButtonText}>
+                      Keep current target
+                    </Text>
                   </Pressable>
                 </View>
               </View>
@@ -486,13 +481,13 @@ const AdaptiveCaloriesSettingsScreen = ({ navigation }: Props) => {
                         </Text>
                         <Text style={styles.historyText}>
                           {item.currentBaseCalories != null
-                            ? `${item.currentBaseCalories} -> ${item.recommendedBaseCalories} kcal/day`
+                            ? `${item.currentBaseCalories} → ${item.recommendedBaseCalories} kcal/day`
                             : `${item.recommendedBaseCalories} kcal/day`}
                         </Text>
                       </View>
                       <View style={styles.historyMeta}>
                         <Text style={styles.historyConfidence}>
-                          {item.confidence.toUpperCase()}
+                          {item.confidence} confidence
                         </Text>
                         <Text style={styles.historyDate}>
                           {new Date(item.createdAt).toLocaleDateString()}
@@ -519,11 +514,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: appSpacing.gutter,
   },
   card: {
-    backgroundColor: appSurfaces.card,
-    borderRadius: appRadius.md,
-    borderWidth: appBorders.width,
-    borderColor: appBorders.soft,
-    padding: appSpacing.md,
+    backgroundColor: "transparent",
+    paddingVertical: appSpacing.md,
     marginBottom: appSpacing.md,
   },
   loadingCard: {
@@ -559,7 +551,7 @@ const styles = StyleSheet.create({
   toggleButton: {
     alignSelf: "flex-start",
     minHeight: 44,
-    borderRadius: appRadius.pill,
+    borderRadius: appRadius.md,
     paddingHorizontal: appSpacing.md,
     paddingVertical: appSpacing.xs,
     borderWidth: appBorders.width,
@@ -651,7 +643,7 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     minHeight: 44,
-    borderRadius: appRadius.pill,
+    borderRadius: appRadius.md,
     backgroundColor: appColors.actionPrimary,
     paddingHorizontal: appSpacing.md,
     paddingVertical: appSpacing.sm,
@@ -663,7 +655,7 @@ const styles = StyleSheet.create({
   secondaryButton: {
     alignSelf: "flex-start",
     minHeight: 44,
-    borderRadius: appRadius.pill,
+    borderRadius: appRadius.md,
     borderWidth: appBorders.width,
     borderColor: appBorders.soft,
     backgroundColor: appSurfaces.ghost,
@@ -685,9 +677,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: appSpacing.sm,
     justifyContent: "space-between",
-    borderRadius: appRadius.md,
-    backgroundColor: appSurfaces.soft,
-    padding: 16,
+    borderBottomWidth: appBorders.width,
+    borderBottomColor: appBorders.soft,
+    paddingVertical: 16,
   },
   historyTitle: {
     ...appTypography.bodySmallStrong,
@@ -703,8 +695,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   historyConfidence: {
-    ...appTypography.eyebrow,
-    color: appColors.actionPrimary,
+    ...appTypography.metadata,
+    color: appColors.textSecondary,
   },
   historyDate: {
     ...appTypography.metadata,

@@ -12,7 +12,11 @@ import {
   Text,
   View,
 } from "react-native";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import {
+  useFocusEffect,
+  useIsFocused,
+  useNavigation,
+} from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DB } from "../../store/DB";
@@ -61,10 +65,7 @@ import {
   shiftFoodDate,
   sumLoggedNutrition,
 } from "./foodUtils";
-import {
-  resolveFoodLogContext,
-  toFoodLogRouteParams,
-} from "./foodLogContext";
+import { resolveFoodLogContext, toFoodLogRouteParams } from "./foodLogContext";
 import { appColors } from "../../theme/colors";
 import { appStates } from "../../theme/tokens";
 import {
@@ -89,6 +90,9 @@ import {
   type DiaryPerfTrace,
 } from "../../performance/diaryPerformance";
 
+import { subscribeToAppDataChanges } from "../../store/dataChangeEvents";
+import { useDiaryScroll, type DiaryEntryReveal } from "./useDiaryScroll";
+
 type FoodDiaryNav = NativeStackNavigationProp<FoodStackParamList, "Diary">;
 
 const SNACKBAR_AUTO_DISMISS_MS = 4900;
@@ -110,7 +114,14 @@ type DiaryActionModalState = {
   message: string;
   sourceDate?: string;
   sourceDateLabel?: string;
-  stage: "checking" | "confirm" | "copying" | "success" | "empty" | "already" | "error";
+  stage:
+    | "checking"
+    | "confirm"
+    | "copying"
+    | "success"
+    | "empty"
+    | "already"
+    | "error";
   targetDate?: string;
   targetDateLabel?: string;
   title: string;
@@ -163,6 +174,10 @@ const getDiaryWeekStartKey = (date: Date) =>
 const FoodDiaryScreen = () => {
   const navigation = useNavigation<FoodDiaryNav>();
   const insets = useSafeAreaInsets();
+  const isFocused = useIsFocused();
+  const [pendingEntry, setPendingEntry] = useState<DiaryEntryReveal | null>(
+    null,
+  );
   const foodDiaryDateContext = useFoodDiaryDateContext();
   const setSharedSelectedDateKey = foodDiaryDateContext?.setSelectedDateKey;
   const setSharedSelectedMeal = foodDiaryDateContext?.setSelectedMeal;
@@ -205,8 +220,8 @@ const FoodDiaryScreen = () => {
     useState<DiaryActionModalState | null>(null);
   const [adaptiveRecommendation, setAdaptiveRecommendation] =
     useState<DBAdaptiveCalorieRecommendation | null>(null);
-  const [selectedMeal, setSelectedMeal] = useState<MealSlot>(() =>
-    foodDiaryDateContext?.selectedMeal ?? getDefaultMealSlotForNow(),
+  const [selectedMeal, setSelectedMeal] = useState<MealSlot>(
+    () => foodDiaryDateContext?.selectedMeal ?? getDefaultMealSlotForNow(),
   );
   const snackbarTranslateX = React.useRef(new Animated.Value(0)).current;
   const diaryLoadRequestRef = useRef(0);
@@ -433,9 +448,7 @@ const FoodDiaryScreen = () => {
           ? existingTrace
           : beginDiaryTrace(
               options?.reason ??
-                (hasLoadedDiaryRef.current
-                  ? "post-mutation"
-                  : "initial-focus"),
+                (hasLoadedDiaryRef.current ? "post-mutation" : "initial-focus"),
               selectedDateKeyRef.current,
               targetDateKey,
             );
@@ -457,11 +470,13 @@ const FoodDiaryScreen = () => {
           setSettings(null);
           setDayCompletionByDate({});
           setAdaptiveRecommendation(null);
-          setMainStripDays(weekDays.map((date, index) => ({
-            date,
-            dateKey: weekDateKeys[index],
-            calories: 0,
-          })));
+          setMainStripDays(
+            weekDays.map((date, index) => ({
+              date,
+              dateKey: weekDateKeys[index],
+              calories: 0,
+            })),
+          );
           setFavoriteFoods([]);
           setRecentFoods([]);
           const latestRequestedDateKey = requestedDateKeyRef.current;
@@ -485,24 +500,18 @@ const FoodDiaryScreen = () => {
           recents,
           nextSettings,
           [loadedWeekEntries, weekDayStatuses],
-        ] =
-          await Promise.all([
-            measureDiaryRequest(trace, "favorites", "logical", () =>
-              DB.getFavoriteFoodItems(currentUser.externalId, 10, trace),
-            ),
-            measureDiaryRequest(trace, "recents", "logical", () =>
-              DB.getRecentFoodItems(currentUser.externalId, 12, trace),
-            ),
-            measureDiaryRequest(trace, "settings", "logical", () =>
-              DB.getUserSettings(currentUser.externalId, trace),
-            ),
-            loadWeekData(
-              currentUser.externalId,
-              weekStart,
-              weekEnd,
-              trace,
-            ),
-          ]);
+        ] = await Promise.all([
+          measureDiaryRequest(trace, "favorites", "logical", () =>
+            DB.getFavoriteFoodItems(currentUser.externalId, 10, trace),
+          ),
+          measureDiaryRequest(trace, "recents", "logical", () =>
+            DB.getRecentFoodItems(currentUser.externalId, 12, trace),
+          ),
+          measureDiaryRequest(trace, "settings", "logical", () =>
+            DB.getUserSettings(currentUser.externalId, trace),
+          ),
+          loadWeekData(currentUser.externalId, weekStart, weekEnd, trace),
+        ]);
 
         if (!isCurrentRequest()) {
           return;
@@ -524,7 +533,8 @@ const FoodDiaryScreen = () => {
             weekDays.map((date, index) => ({
               date,
               dateKey: weekDateKeys[index],
-              calories: sumLoggedNutrition(weekEntriesByDate[index] ?? []).calories,
+              calories: sumLoggedNutrition(weekEntriesByDate[index] ?? [])
+                .calories,
             })),
           );
           setDayCompletionByDate(
@@ -542,7 +552,9 @@ const FoodDiaryScreen = () => {
           );
         });
 
-        const toQuickPick = (food: (typeof favorites)[number]): FoodDiaryFavoriteFood => {
+        const toQuickPick = (
+          food: (typeof favorites)[number],
+        ): FoodDiaryFavoriteFood => {
           const serving = getFoodResolvedServing(food);
           return {
             ...food,
@@ -571,20 +583,17 @@ const FoodDiaryScreen = () => {
         hasLoadedDiaryRef.current = true;
         if (activeDiaryTraceRef.current?.id === trace.id && !trace.finished) {
           readyDiaryTraceIdRef.current = trace.id;
-          completeDiaryTraceAfterFrame(
-            trace,
-            () =>
-              refreshAdaptiveInBackground(
-                currentUser.externalId,
-                nextSettings,
-              ),
+          completeDiaryTraceAfterFrame(trace, () =>
+            refreshAdaptiveInBackground(currentUser.externalId, nextSettings),
           );
         } else {
           refreshAdaptiveInBackground(currentUser.externalId, nextSettings);
         }
       } catch {
         if (isCurrentRequest()) {
-          setDiaryLoadError("Could not load the diary. Check your connection and try again.");
+          setDiaryLoadError(
+            "Could not load the diary. Check your connection and try again.",
+          );
           finishDiaryTrace(trace, "failed");
           if (activeDiaryTraceRef.current?.id === trace.id) {
             activeDiaryTraceRef.current = null;
@@ -717,7 +726,8 @@ const FoodDiaryScreen = () => {
     () =>
       PanResponder.create({
         onMoveShouldSetPanResponder: (_event, gestureState) =>
-          Math.abs(gestureState.dx) > 8 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
+          Math.abs(gestureState.dx) > 8 &&
+          Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
         onPanResponderMove: (_event, gestureState) => {
           snackbarTranslateX.setValue(gestureState.dx);
         },
@@ -753,7 +763,10 @@ const FoodDiaryScreen = () => {
     }
 
     snackbarTranslateX.setValue(0);
-    const timeout = setTimeout(() => dismissSnackbar(), SNACKBAR_AUTO_DISMISS_MS);
+    const timeout = setTimeout(
+      () => dismissSnackbar(),
+      SNACKBAR_AUTO_DISMISS_MS,
+    );
     return () => clearTimeout(timeout);
   }, [dismissSnackbar, snackbar, snackbarTranslateX]);
 
@@ -787,7 +800,10 @@ const FoodDiaryScreen = () => {
   const targetCaloriesByDate = useMemo(
     () =>
       Object.fromEntries(
-        mainStripDays.map((day, index) => [day.dateKey, weekTargetCalories[index] ?? null]),
+        mainStripDays.map((day, index) => [
+          day.dateKey,
+          weekTargetCalories[index] ?? null,
+        ]),
       ) as Record<string, number | null>,
     [mainStripDays, weekTargetCalories],
   );
@@ -876,6 +892,52 @@ const FoodDiaryScreen = () => {
     [dateKey, isToday],
   );
 
+  const visiblePendingEntry =
+    pendingEntry?.date === dateKey &&
+    entries.some((entry) => entry.id === pendingEntry.id)
+      ? pendingEntry
+      : null;
+  const onEntryRevealed = useCallback(() => setPendingEntry(null), []);
+  const diaryScroll = useDiaryScroll({
+    dateKey,
+    pendingEntry: visiblePendingEntry,
+    enabled: isFocused,
+    onRevealed: onEntryRevealed,
+    bottomInset: snackbar ? 88 : 12,
+  });
+
+  React.useEffect(() => {
+    setPendingEntry(null);
+  }, [user?.externalId]);
+
+  React.useEffect(
+    () =>
+      subscribeToAppDataChanges((event) => {
+        if (
+          event.kind !== "food_log" ||
+          (event.userExternalId && event.userExternalId !== user?.externalId)
+        )
+          return;
+        if (event.foodEntryId != null && event.date) {
+          setPendingEntry({ id: event.foodEntryId, date: event.date });
+          if (navigation.isFocused())
+            void loadData({ showBlockingState: false });
+        }
+      }),
+    [loadData, navigation, user?.externalId],
+  );
+
+  React.useEffect(() => {
+    if (
+      isFocused &&
+      pendingEntry &&
+      pendingEntry.date !== dateKey &&
+      pendingEntry.date !== requestedDateKey
+    ) {
+      requestDiaryDate(parseFoodDateKey(pendingEntry.date), "date-select");
+    }
+  }, [isFocused, pendingEntry, dateKey, requestedDateKey, requestDiaryDate]);
+
   const buildMealFoodLogRouteParams = useCallback(
     (slot: MealSlot) =>
       toFoodLogRouteParams(
@@ -891,6 +953,7 @@ const FoodDiaryScreen = () => {
 
   const openAddFoodAtMeal = useCallback(
     (slot: MealSlot) => {
+      setSelectedMeal(slot);
       prefetchAddFoodStaticLists();
       navigation.navigate("AddFood", {
         ...buildMealFoodLogRouteParams(slot),
@@ -926,7 +989,7 @@ const FoodDiaryScreen = () => {
       quickLoggingKeysRef.current.add(quickLogKey);
 
       try {
-        await DB.addUserFoodLog({
+        const savedEntry = await DB.addUserFoodLog({
           userExternalId: user.externalId,
           foodId: food.id,
           date: dateKey,
@@ -934,56 +997,59 @@ const FoodDiaryScreen = () => {
           quantityG: getFoodDefaultLogAmount(food),
           mealType: MEAL_SLOT_LABELS[slot],
         });
-        await loadData({ showBlockingState: false });
         setSnackbar({
           message: `${food.name} logged to ${MEAL_SLOT_LABELS[slot]}`,
           actionLabel: "Edit",
-          onAction: () => openFavoriteEditorAtMeal(food, slot),
+          onAction: () =>
+            navigation.navigate("EditFoodEntry", {
+              entryId: savedEntry.id,
+              date: savedEntry.date,
+            }),
         });
       } catch {
-        Alert.alert("Could not log food", "Please review the food and try again.");
+        Alert.alert(
+          "Could not log food",
+          "Please review the food and try again.",
+        );
       } finally {
         quickLoggingKeysRef.current.delete(quickLogKey);
       }
     },
-    [buildMealLoggedAt, dateKey, loadData, openFavoriteEditorAtMeal, user],
+    [buildMealLoggedAt, dateKey, navigation, user],
   );
 
-  const restoreDeletedEntry = useCallback(
-    async (entry: DBUserFoodLogEntry) => {
-      if (entry.entrySource === "quick_add") {
-        await DB.addQuickAddFoodLog({
-          userExternalId: entry.userExternalId,
-          date: entry.date,
-          loggedAt: entry.loggedAt ?? entry.createdAt,
-          mealType: entry.mealType ?? null,
-          name: entry.quickAddName,
-          calories: entry.calories,
-          proteinG: entry.proteinG,
-          carbsG: entry.carbsG,
-          fatG: entry.fatG,
-          alcoholG: entry.alcoholG ?? 0,
-          systemCalculatedCalories: entry.systemCalculatedCalories,
-          isEnergyManuallySet: entry.isEnergyManuallySet,
-        });
-        return;
-      }
-
-      if (entry.foodId == null) {
-        throw new Error("That food entry cannot be restored.");
-      }
-
-      await DB.addUserFoodLog({
+  const restoreDeletedEntry = useCallback(async (entry: DBUserFoodLogEntry) => {
+    if (entry.entrySource === "quick_add") {
+      await DB.addQuickAddFoodLog({
         userExternalId: entry.userExternalId,
-        foodId: entry.foodId,
         date: entry.date,
         loggedAt: entry.loggedAt ?? entry.createdAt,
-        quantityG: entry.quantityG,
         mealType: entry.mealType ?? null,
+        name: entry.quickAddName,
+        calories: entry.calories,
+        proteinG: entry.proteinG,
+        carbsG: entry.carbsG,
+        fatG: entry.fatG,
+        alcoholG: entry.alcoholG ?? 0,
+        systemCalculatedCalories: entry.systemCalculatedCalories,
+        isEnergyManuallySet: entry.isEnergyManuallySet,
       });
-    },
-    [],
-  );
+      return;
+    }
+
+    if (entry.foodId == null) {
+      throw new Error("That food entry cannot be restored.");
+    }
+
+    await DB.addUserFoodLog({
+      userExternalId: entry.userExternalId,
+      foodId: entry.foodId,
+      date: entry.date,
+      loggedAt: entry.loggedAt ?? entry.createdAt,
+      quantityG: entry.quantityG,
+      mealType: entry.mealType ?? null,
+    });
+  }, []);
 
   const deleteEntry = useCallback(
     (entry: DBUserFoodLogEntry) => {
@@ -1188,7 +1254,7 @@ const FoodDiaryScreen = () => {
       const confirmationMessage =
         preview.destinationCount > 0
           ? `${sourceDateLabel} has ${formatEntryCountLabel(preview.sourceCount)} in ${mealLabel}. ${targetDateLabel} already has ${formatEntryCountLabel(preview.destinationCount)}, so duplicate protection will skip ${formatEntryCountLabel(preview.skippedDuplicates)} and copy ${formatEntryCountLabel(preview.copiedCount)}.`
-          : `Repeat ${formatEntryCountLabel(preview.sourceCount)} from ${sourceDateLabel} ${mealLabel}.`;
+          : `Repeat ${formatEntryCountLabel(preview.sourceCount)} from ${sourceDateLabel} ${mealLabel} into ${targetDateLabel} ${mealLabel.toLowerCase()}.`;
 
       setDiaryActionModal({
         action: "repeatMeal",
@@ -1208,7 +1274,8 @@ const FoodDiaryScreen = () => {
         action: "repeatMeal",
         mealLabel,
         mealSlot: slot,
-        message: "Could not check yesterday's diary. Check your connection and try again.",
+        message:
+          "Could not check yesterday's diary. Check your connection and try again.",
         sourceDate,
         sourceDateLabel,
         stage: "error",
@@ -1219,13 +1286,7 @@ const FoodDiaryScreen = () => {
     } finally {
       setIsRepeatingYesterdayMeal(false);
     }
-  }, [
-    dateKey,
-    isRepeatingYesterdayMeal,
-    selectedDate,
-    selectedMeal,
-    user,
-  ]);
+  }, [dateKey, isRepeatingYesterdayMeal, selectedDate, selectedMeal, user]);
 
   const copyYesterday = useCallback(async () => {
     if (!user || isCopyingYesterday) {
@@ -1289,12 +1350,13 @@ const FoodDiaryScreen = () => {
         stage: "confirm",
         targetDate: dateKey,
         targetDateLabel,
-        title: "Copy yesterday?",
+        title: "Copy day?",
       });
     } catch {
       setDiaryActionModal({
         action: "copyDay",
-        message: "Could not check yesterday's diary. Check your connection and try again.",
+        message:
+          "Could not check yesterday's diary. Check your connection and try again.",
         sourceDate,
         sourceDateLabel,
         stage: "error",
@@ -1387,7 +1449,8 @@ const FoodDiaryScreen = () => {
         setDiaryActionModal({
           action,
           copiedCount,
-          message: "The copy did not finish. No confirmation was received, so refresh the diary or try again before adding duplicates manually.",
+          message:
+            "The copy did not finish. No confirmation was received, so refresh the diary or try again before adding duplicates manually.",
           sourceDate,
           sourceDateLabel,
           stage: "error",
@@ -1470,7 +1533,8 @@ const FoodDiaryScreen = () => {
         copiedCount,
         mealLabel,
         mealSlot,
-        message: "The repeat did not finish. No confirmation was received, so refresh the diary or try again before adding duplicates manually.",
+        message:
+          "The repeat did not finish. No confirmation was received, so refresh the diary or try again before adding duplicates manually.",
         sourceDate,
         sourceDateLabel,
         stage: "error",
@@ -1505,11 +1569,11 @@ const FoodDiaryScreen = () => {
       return;
     }
 
-    (parentNavigation as {
-      navigate: (routeName: string, params?: object) => void;
-    }).navigate("More", {
-      screen: "WeeklyReviewScreen",
-    });
+    (
+      parentNavigation as {
+        navigate: (routeName: string, params?: object) => void;
+      }
+    ).navigate("WeeklyReviewScreen");
   }, [adaptiveRecommendation, navigation, user]);
 
   const toggleDayComplete = useCallback(async () => {
@@ -1545,12 +1609,21 @@ const FoodDiaryScreen = () => {
       : `Copy ${diaryActionModal?.copiedCount ?? ""}`.trim();
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <ScrollView
+        ref={diaryScroll.scrollRef}
+        onScroll={diaryScroll.onScroll}
+        scrollEventThrottle={16}
+        onLayout={diaryScroll.onLayout}
+        onContentSizeChange={diaryScroll.reveal}
         style={styles.screen}
         contentContainerStyle={[
           styles.content,
-          { paddingTop: insets.top + 14, paddingBottom: insets.bottom + 36 },
+          {
+            paddingTop: 8,
+            paddingBottom: insets.bottom + 36,
+            minHeight: diaryScroll.anchorHeight,
+          },
         ]}
         keyboardShouldPersistTaps="handled"
       >
@@ -1567,15 +1640,29 @@ const FoodDiaryScreen = () => {
           onRender={handleDiaryProfilerRender}
         >
           <FoodDiaryMainStrip
+            onBeforeMealToggle={diaryScroll.preservePosition}
+            revealEntryId={isFocused ? (visiblePendingEntry?.id ?? null) : null}
+            highlightedEntryId={diaryScroll.highlightedEntryId}
+            registerEntry={diaryScroll.registerEntry}
+            onEntryLayout={diaryScroll.reveal}
             days={mainStripDays}
             selectedDate={selectedDate}
             selectedTargetCalories={selectedTargetCalories}
             targetCaloriesByDate={targetCaloriesByDate}
             weeklyBudgetCalories={weeklyBudgetCalories}
             weeklyConsumedCalories={weeklyConsumedCalories}
-            onNextWeek={() => shiftDiaryWeek(7)}
-            onPreviousWeek={() => shiftDiaryWeek(-7)}
-            onSelectDate={selectDiaryDate}
+            onNextWeek={() => {
+              setPendingEntry(null);
+              shiftDiaryWeek(7);
+            }}
+            onPreviousWeek={() => {
+              setPendingEntry(null);
+              shiftDiaryWeek(-7);
+            }}
+            onSelectDate={(date) => {
+              setPendingEntry(null);
+              selectDiaryDate(date);
+            }}
             totals={totals}
             user={user}
             mealBuckets={mealBuckets}
@@ -1627,10 +1714,7 @@ const FoodDiaryScreen = () => {
         <View style={styles.actionModalBackdrop}>
           <View style={styles.actionModalCard}>
             {isDiaryActionModalBusy ? (
-              <ActivityIndicator
-                color={appColors.actionPrimary}
-                size="small"
-              />
+              <ActivityIndicator color={appColors.actionPrimary} size="small" />
             ) : null}
             <Text style={styles.actionModalTitle}>
               {diaryActionModal?.title}
@@ -1675,8 +1759,7 @@ const FoodDiaryScreen = () => {
                 >
                   <Text style={styles.actionModalSecondaryText}>Close</Text>
                 </Pressable>
-                {diaryActionModal.sourceDate &&
-                diaryActionModal.targetDate ? (
+                {diaryActionModal.sourceDate && diaryActionModal.targetDate ? (
                   <Pressable
                     onPress={() => {
                       if (diaryActionModal.copiedCount != null) {

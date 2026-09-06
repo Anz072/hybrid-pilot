@@ -56,28 +56,31 @@ import {
   updateQuickAddFoodLog as updateQuickAddFoodLogBase,
   updateUserFoodLog as updateUserFoodLogBase,
 } from "./diaryStore";
-import {
-  getFoodItemByBarcode,
-  searchFoodItems,
-} from "./foodSearchStore";
+import { getFoodItemByBarcode, searchFoodItems } from "./foodSearchStore";
 import { notifyAppDataChanged } from "./dataChangeEvents";
 
 type AddUserFoodLogInput = Parameters<typeof addUserFoodLogBase>[0];
 type AddQuickAddFoodLogInput = Parameters<typeof addQuickAddFoodLogBase>[0];
 type UpdateUserFoodLogInput = Parameters<typeof updateUserFoodLogBase>[0];
-type UpdateQuickAddFoodLogInput = Parameters<typeof updateQuickAddFoodLogBase>[0];
+type UpdateQuickAddFoodLogInput = Parameters<
+  typeof updateQuickAddFoodLogBase
+>[0];
 type SaveWeightEntryInput = Parameters<typeof saveWeightEntryBase>[0];
-type SoftDeleteWeightEntryInput = Parameters<typeof softDeleteWeightEntryBase>[0];
+type SoftDeleteWeightEntryInput = Parameters<
+  typeof softDeleteWeightEntryBase
+>[0];
 type SaveWeightGoalInput = Parameters<typeof saveWeightGoalBase>[0];
 
 const notifyFoodLogChanged = (input?: {
   date?: string | null;
   userExternalId?: string | null;
+  foodEntryId?: number;
 }) => {
   notifyAppDataChanged({
     kind: "food_log",
     userExternalId: input?.userExternalId,
     date: input?.date,
+    foodEntryId: input?.foodEntryId,
   });
 };
 
@@ -92,7 +95,8 @@ const addUserFoodLog = async (input: AddUserFoodLogInput) => {
   const result = await addUserFoodLogBase(input);
   notifyFoodLogChanged({
     userExternalId: input.userExternalId,
-    date: input.date,
+    date: result.date,
+    foodEntryId: result.id,
   });
   return result;
 };
@@ -101,9 +105,10 @@ const addQuickAddFoodLog = async (input: AddQuickAddFoodLogInput) => {
   const result = await addQuickAddFoodLogBase(input);
   notifyFoodLogChanged({
     userExternalId: input.userExternalId,
-    date: input.date,
+    date: result.date,
+    foodEntryId: result.id,
   });
-  return result;
+  return result.id;
 };
 
 // The mutation's own response carries the affected day, so no lookup precedes
@@ -111,13 +116,13 @@ const addQuickAddFoodLog = async (input: AddQuickAddFoodLogInput) => {
 
 const updateUserFoodLog = async (input: UpdateUserFoodLogInput) => {
   const date = await updateUserFoodLogBase(input);
-  notifyFoodLogChanged({ date });
+  notifyFoodLogChanged({ date, foodEntryId: input.id });
   return date;
 };
 
 const updateQuickAddFoodLog = async (input: UpdateQuickAddFoodLogInput) => {
   const date = await updateQuickAddFoodLogBase(input);
-  notifyFoodLogChanged({ date });
+  notifyFoodLogChanged({ date, foodEntryId: input.id });
   return date;
 };
 

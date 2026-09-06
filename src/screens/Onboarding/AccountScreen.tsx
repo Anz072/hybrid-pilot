@@ -10,9 +10,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { AppButton, AppCard, AppInput, AppText } from "../../components/ui";
-import {
-  signUpWithEmailPassword,
-} from "../../API/supabase/auth";
+import { signUpWithEmailPassword } from "../../API/supabase/auth";
 import {
   getSupabaseConfigError,
   isSupabaseConfigured,
@@ -199,16 +197,16 @@ const AccountScreen = ({ navigation, route }: Props) => {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       enabled
       keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
-      style={styles.screen}
+      style={[styles.screen, { paddingTop: insets.top }]}
     >
       <KeyboardAwareScrollView
         contentContainerStyle={[
           styles.content,
           {
-            paddingTop: insets.top + appSpacing.md,
+            paddingTop: appSpacing.md,
             paddingBottom: insets.bottom + appSpacing.xl,
           },
         ]}
@@ -220,18 +218,79 @@ const AccountScreen = ({ navigation, route }: Props) => {
           stepLabel="Account"
         />
         <View style={styles.header}>
-          <AppText color="coral" variant="eyebrow">
-            Final Step
-          </AppText>
           <AppText variant="sectionTitleLarge">Create your account</AppText>
           <AppText color="secondary" variant="bodySmall">
-            Finish with a Supabase-backed email account so your plan, logs, and
-            progress stay tied to one profile.
+            Save your plan and progress.
           </AppText>
         </View>
 
+        <AppCard style={styles.formCard} variant="plain">
+          <AppInput
+            editable={!isSaving}
+            label="Name"
+            onChangeText={(value) => {
+              setDisplayName(value);
+              setStatusMessage(null);
+            }}
+            placeholder="Your name"
+            returnKeyType="next"
+            value={displayName}
+          />
+          <AppInput
+            autoCapitalize="none"
+            autoCorrect={false}
+            editable={!isSaving}
+            keyboardType="email-address"
+            label="Email"
+            onChangeText={(value) => {
+              setEmail(value);
+              setStatusMessage(null);
+            }}
+            placeholder="you@example.com"
+            returnKeyType="next"
+            textContentType="emailAddress"
+            value={email}
+          />
+          <AppInput
+            autoCapitalize="none"
+            autoCorrect={false}
+            editable={!isSaving}
+            label="Password"
+            onChangeText={(value) => {
+              setPassword(value);
+              setStatusMessage(null);
+            }}
+            onSubmitEditing={() => {
+              void handleCreateEmailAccount();
+            }}
+            placeholder="Minimum 6 characters"
+            returnKeyType="done"
+            secureTextEntry
+            textContentType="newPassword"
+            value={password}
+          />
+
+          <AppButton
+            disabled={isSaving}
+            icon={
+              isSaving ? (
+                <ActivityIndicator color={appColors.white} />
+              ) : undefined
+            }
+            label={isSaving ? "Creating account..." : "Create account"}
+            onPress={() => {
+              void handleCreateEmailAccount();
+            }}
+          />
+
+          {statusMessage ? (
+            <AppText color="secondary" variant="bodySmall">
+              {statusMessage}
+            </AppText>
+          ) : null}
+        </AppCard>
         <OnboardingReviewCard
-          title="Review onboarding"
+          title="Review your answers"
           items={[
             {
               label: "Goal",
@@ -295,68 +354,6 @@ const AccountScreen = ({ navigation, route }: Props) => {
             },
           ]}
         />
-
-        <AppCard style={styles.formCard}>
-          <AppInput
-            editable={!isSaving}
-            label="Name"
-            onChangeText={(value) => {
-              setDisplayName(value);
-              setStatusMessage(null);
-            }}
-            placeholder="Your name"
-            returnKeyType="next"
-            value={displayName}
-          />
-          <AppInput
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!isSaving}
-            keyboardType="email-address"
-            label="Email"
-            onChangeText={(value) => {
-              setEmail(value);
-              setStatusMessage(null);
-            }}
-            placeholder="you@example.com"
-            returnKeyType="next"
-            textContentType="emailAddress"
-            value={email}
-          />
-          <AppInput
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!isSaving}
-            label="Password"
-            onChangeText={(value) => {
-              setPassword(value);
-              setStatusMessage(null);
-            }}
-            onSubmitEditing={() => {
-              void handleCreateEmailAccount();
-            }}
-            placeholder="Minimum 6 characters"
-            returnKeyType="done"
-            secureTextEntry
-            textContentType="newPassword"
-            value={password}
-          />
-
-          <AppButton
-            disabled={isSaving}
-            icon={isSaving ? <ActivityIndicator color={appColors.white} /> : undefined}
-            label={isSaving ? "Creating account..." : "Create account"}
-            onPress={() => {
-              void handleCreateEmailAccount();
-            }}
-          />
-
-          {statusMessage ? (
-            <AppText color="secondary" variant="bodySmall">
-              {statusMessage}
-            </AppText>
-          ) : null}
-        </AppCard>
       </KeyboardAwareScrollView>
     </KeyboardAvoidingView>
   );
@@ -378,7 +375,7 @@ const styles = StyleSheet.create({
   formCard: {
     gap: appSpacing.md,
     marginBottom: appSpacing.md,
-    borderWidth: appBorders.width,
+    borderWidth: 0,
     borderColor: appColors.borderSoft,
   },
 });

@@ -59,6 +59,7 @@ export const saveFoodItem = async (input: SaveFoodItemInput): Promise<number> =>
     name: input.name,
     brand: input.brand ?? null,
     barcode: input.barcode ?? null,
+    sourceId: ["usda", "open_food_facts"].includes(input.source) ? input.sourceId : null,
     // The catalogue's `source` CHECK does not include "recipe"; user recipes
     // live in their own table, so map that case to "custom" as before.
     source: input.source === "recipe" ? "custom" : input.source,

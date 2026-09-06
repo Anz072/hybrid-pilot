@@ -8,7 +8,13 @@ import {
   type ViewProps,
   type ViewStyle,
 } from "react-native";
-import { appBorders, appRadius, appSpacing, appStates, appSurfaces } from "../../theme/tokens";
+import {
+  appBorders,
+  appRadius,
+  appSpacing,
+  appStates,
+  appSurfaces,
+} from "../../theme/tokens";
 
 /**
  * Bright Editorial card tones. A contained panel is never naked white on the
@@ -19,6 +25,7 @@ import { appBorders, appRadius, appSpacing, appStates, appSurfaces } from "../..
  * screens that haven't migrated to the new tone names yet.
  */
 type CardVariant =
+  | "plain"
   | "surface"
   | "subtle"
   | "spotlight"
@@ -66,7 +73,10 @@ export const InteractiveCard = ({
 }: InteractiveCardProps) => (
   <Pressable
     accessibilityRole="button"
-    accessibilityState={{ disabled: Boolean(disabled), selected: Boolean(selected) }}
+    accessibilityState={{
+      disabled: Boolean(disabled),
+      selected: Boolean(selected),
+    }}
     disabled={disabled}
     {...props}
     style={({ pressed }) => [
@@ -97,7 +107,10 @@ export const ListRow = ({
   style,
   ...props
 }: ListRowProps) => (
-  <View {...props} style={[styles.listRow, divider && styles.listRowDivider, style]}>
+  <View
+    {...props}
+    style={[styles.listRow, divider && styles.listRowDivider, style]}
+  >
     {children}
   </View>
 );
@@ -108,6 +121,12 @@ const styles = StyleSheet.create({
     borderRadius: appRadius.lg,
     borderWidth: appBorders.width,
     borderColor: appBorders.soft,
+  },
+  plain: {
+    padding: 0,
+    borderWidth: 0,
+    backgroundColor: "transparent",
+    borderRadius: 0,
   },
   surface: {
     padding: appSpacing.md,
@@ -153,7 +172,6 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: appStates.pressedOpacity,
-    transform: [{ scale: appStates.pressedScale }],
   },
   disabled: {
     opacity: appStates.disabledOpacity,

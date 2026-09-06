@@ -1,3 +1,4 @@
+import { AppButton, Disclosure } from "../../components/ui";
 import React from "react";
 import {
   Alert,
@@ -203,9 +204,6 @@ const CreateCustomFoodScreen = () => {
 
     return 1;
   }, [calories, macroCalculatedCalories]);
-  const caloriesHelperText = isCaloriesManuallySet
-    ? `System calculates ${macroCalculatedCalories.toFixed(0)} kcal from macros.`
-    : `Macro sum is ${macroCalculatedCalories.toFixed(0)} kcal.`;
 
   const canEditMeal =
     !isEditing ||
@@ -305,12 +303,13 @@ const CreateCustomFoodScreen = () => {
           typeof payload?.createdByUserExternalId === "string" &&
           payload.createdByUserExternalId.trim()
             ? payload.createdByUserExternalId
-            : null;
+            : meal.isOwn === true
+              ? (user?.externalId ?? null)
+              : null;
 
         if (
-          user?.externalId &&
-          ownerUserId &&
-          ownerUserId !== user.externalId
+          !ownerUserId ||
+          (user?.externalId && ownerUserId && ownerUserId !== user.externalId)
         ) {
           throw new Error("Only your own custom meals can be edited here.");
         }
@@ -321,18 +320,28 @@ const CreateCustomFoodScreen = () => {
 
         const loadedDescription =
           typeof payload?.description === "string" ? payload.description : "";
+        const servingWeight =
+          meal.quantityUnit === "g"
+            ? meal.quantityValue
+            : meal.servingSizeUnit === "g"
+              ? meal.servingSizeValue
+              : null;
         const loadedServingSize =
-          Number.isFinite(meal.servingSizeValue ?? NaN)
-            ? String(meal.servingSizeValue)
+          Number.isFinite(servingWeight ?? NaN) && servingWeight! > 0
+            ? String(servingWeight)
             : "100";
-        const loadedCalories =
-          Number.isFinite(meal.calories ?? NaN) ? String(meal.calories) : "0";
-        const loadedProtein =
-          Number.isFinite(meal.proteinG ?? NaN) ? String(meal.proteinG) : "0";
-        const loadedCarbs =
-          Number.isFinite(meal.carbsG ?? NaN) ? String(meal.carbsG) : "0";
-        const loadedFat =
-          Number.isFinite(meal.fatG ?? NaN) ? String(meal.fatG) : "0";
+        const loadedCalories = Number.isFinite(meal.calories ?? NaN)
+          ? String(meal.calories)
+          : "0";
+        const loadedProtein = Number.isFinite(meal.proteinG ?? NaN)
+          ? String(meal.proteinG)
+          : "0";
+        const loadedCarbs = Number.isFinite(meal.carbsG ?? NaN)
+          ? String(meal.carbsG)
+          : "0";
+        const loadedFat = Number.isFinite(meal.fatG ?? NaN)
+          ? String(meal.fatG)
+          : "0";
         const loadedCalculatedCalories = calculateQuickAddCaloriesFromMacros({
           proteinG: meal.proteinG ?? 0,
           carbsG: meal.carbsG ?? 0,
@@ -598,12 +607,6 @@ const CreateCustomFoodScreen = () => {
   const renderEditor = () => (
     <>
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Meal Details</Text>
-        <Text style={styles.sectionSubtitle}>
-          Save the name, optional notes, and default serving for this custom
-          meal.
-        </Text>
-
         <Text style={styles.fieldLabel}>Meal name</Text>
         <TextInput
           style={styles.input}
@@ -614,7 +617,6 @@ const CreateCustomFoodScreen = () => {
             setName(value);
             setFormError(null);
           }}
-          autoFocus={!isEditing}
         />
 
         <Text style={[styles.fieldLabel, styles.fieldLabelSpacing]}>
@@ -654,38 +656,11 @@ const CreateCustomFoodScreen = () => {
             </Pressable>
           ))}
         </View>
-
-        <View style={styles.optionalPanel}>
-          <Text style={[styles.fieldLabel, styles.optionalFieldLabel]}>
-            Description (optional)
-          </Text>
-          <TextInput
-            style={[styles.input, styles.textArea, styles.optionalInput]}
-            placeholder="Optional notes, ingredients, or prep details"
-            placeholderTextColor={appColors.textMuted}
-            value={description}
-            onChangeText={(value) => {
-              setDescription(value);
-              setFormError(null);
-            }}
-            multiline
-            textAlignVertical="top"
-          />
-          <PublicVisibilityCheckbox
-            checked={isPublic}
-            onChange={(value) => {
-              setIsPublic(value);
-              setFormError(null);
-            }}
-          />
-        </View>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Nutrition Per Serving</Text>
-        <Text style={styles.sectionSubtitle}>
-          Enter the macros for the saved serving size above.
-        </Text>
+        <Text style={styles.sectionTitle}>Nutrition per serving</Text>
+
         <View style={styles.mainCell}>
           <Text style={styles.fieldLabel}>Calories</Text>
           <TextInput
@@ -701,7 +676,6 @@ const CreateCustomFoodScreen = () => {
             onBlur={handleCaloriesBlur}
             keyboardType="decimal-pad"
           />
-          <Text style={styles.helperText}>{caloriesHelperText}</Text>
           {isCaloriesManuallySet && macroCalculatedCalories > 0 ? (
             <Pressable
               onPress={() => {
@@ -715,7 +689,7 @@ const CreateCustomFoodScreen = () => {
               ]}
             >
               <Text style={styles.inlineQuietButtonText}>
-                Use macro calories
+                Use {macroCalculatedCalories.toFixed(0)} kcal from macros
               </Text>
             </Pressable>
           ) : null}
@@ -765,20 +739,41 @@ const CreateCustomFoodScreen = () => {
           </View>
         </View>
       </View>
+      <Disclosure title="Notes">
+        <TextInput
+          accessibilityLabel="Notes"
+          style={[styles.input, styles.textArea]}
+          placeholder="Optional notes"
+          value={description}
+          onChangeText={(value) => {
+            setDescription(value);
+            setFormError(null);
+          }}
+          multiline
+          textAlignVertical="top"
+        />
+      </Disclosure>
+      <PublicVisibilityCheckbox
+        checked={isPublic}
+        onChange={(value) => {
+          setIsPublic(value);
+          setFormError(null);
+        }}
+      />
     </>
   );
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <KeyboardAvoidingView
-        style={styles.screen}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={[styles.screen, { overflow: "hidden" }]}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
       >
         <KeyboardAwareScrollView
           contentContainerStyle={[
             styles.content,
-            { paddingBottom: Math.max(176, insets.bottom + 152) },
+            { paddingBottom: Math.max(112, insets.bottom + 88) },
           ]}
           focusedInputBottomOffset={132}
         >
@@ -786,7 +781,7 @@ const CreateCustomFoodScreen = () => {
             eyebrow="Custom Meal"
             title={isEditing ? "Edit custom meal" : "Create custom meal"}
             subtitle={foodLogContext.dateLabel}
-            onBack={() => navigation.goBack()}
+            onBack={handleCancel}
           />
           {!isEditing ? (
             <MealBucketSelect
@@ -817,95 +812,50 @@ const CreateCustomFoodScreen = () => {
               ) : null}
             </>
           )}
+          {isEditing && canEditMeal && !loadingMeal && !mealLoadError ? (
+            <AppButton
+              label={deleting ? "Deleting..." : "Delete custom meal"}
+              onPress={handleDeleteMeal}
+              disabled={saving || deleting}
+              variant="ghost"
+            />
+          ) : null}
         </KeyboardAwareScrollView>
 
         {!loadingMeal && !mealLoadError ? (
           <View
             style={[
               styles.footer,
-              { paddingBottom: Math.max(insets.bottom, 16) },
+              {
+                flexDirection: "row",
+                paddingBottom: Math.max(insets.bottom, 16),
+              },
             ]}
           >
-            {isEditing && canEditMeal ? (
-              <Pressable
-                onPress={handleDeleteMeal}
-                disabled={deleting || saving}
-                style={({ pressed }) => [
-                  styles.secondaryButton,
-                  styles.deleteButton,
-                  (deleting || saving) && styles.disabled,
-                  pressed && !deleting && !saving && styles.cardPressed,
-                ]}
-              >
-                <Text
-                  style={[styles.secondaryButtonText, styles.deleteButtonText]}
-                >
-                  {deleting ? "Deleting..." : "Delete custom meal"}
-                </Text>
-              </Pressable>
-            ) : null}
-
-            <View style={styles.footerRow}>
-              <Pressable
-                onPress={handleCancel}
-                disabled={saving || deleting}
-                style={({ pressed }) => [
-                  styles.secondaryButton,
-                  styles.footerButton,
-                  (saving || deleting) && styles.disabled,
-                  pressed && !saving && !deleting && styles.cardPressed,
-                ]}
-              >
-                <Text style={styles.secondaryButtonText}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  void handleSave("save");
-                }}
-                disabled={saving || deleting}
-                style={({ pressed }) => [
-                  isEditing ? styles.primaryButton : styles.secondaryButton,
-                  styles.footerButton,
-                  (saving || deleting) && styles.disabled,
-                  pressed && !saving && !deleting && styles.cardPressed,
-                ]}
-              >
-                <Text
-                  style={
-                    isEditing
-                      ? styles.primaryButtonText
-                      : styles.secondaryButtonText
-                  }
-                >
-                  {saving && saveMode === "save"
-                    ? isEditing
-                      ? "Saving changes..."
-                      : "Saving..."
-                    : isEditing
-                      ? "Save changes"
-                      : "Save only"}
-                </Text>
-              </Pressable>
-            </View>
-
+            <AppButton
+              style={{ flex: 1 }}
+              label={
+                saving && saveMode === "save"
+                  ? "Saving..."
+                  : isEditing
+                    ? "Save changes"
+                    : "Save only"
+              }
+              onPress={() => void handleSave("save")}
+              disabled={saving || deleting}
+              variant={isEditing ? "primary" : "secondary"}
+            />
             {!isEditing ? (
-              <Pressable
-                onPress={() => {
-                  void handleSave("save_and_add");
-                }}
+              <AppButton
+                style={{ flex: 1 }}
+                label={
+                  saving && saveMode === "save_and_add"
+                    ? "Saving..."
+                    : "Save and add"
+                }
+                onPress={() => void handleSave("save_and_add")}
                 disabled={saving || deleting}
-                style={({ pressed }) => [
-                  styles.primaryButton,
-                  (saving || deleting) && styles.disabled,
-                  pressed && !saving && !deleting && styles.cardPressed,
-                ]}
-              >
-                <Text style={styles.primaryButtonText}>
-                  {saving && saveMode === "save_and_add"
-                    ? "Saving and adding..."
-                    : "Save and add"}
-                </Text>
-              </Pressable>
+              />
             ) : null}
           </View>
         ) : null}
@@ -944,12 +894,6 @@ const styles = StyleSheet.create({
   textArea: {
     minHeight: 96,
   },
-  helperText: {
-    color: appColors.textSecondary,
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 8,
-  },
   formError: {
     color: appColors.danger700,
     fontSize: 12,
@@ -959,6 +903,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   inlineQuietButton: {
+    minHeight: 48,
+    justifyContent: "center",
     alignSelf: "flex-start",
     borderRadius: 999,
     borderWidth: 1,
@@ -991,10 +937,15 @@ const styles = StyleSheet.create({
   },
   presetRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
     marginTop: 10,
   },
   presetChip: {
+    minHeight: 48,
+    minWidth: 48,
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: 999,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
@@ -1015,6 +966,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   grid: {
+    marginTop: 16,
     display: "flex",
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1029,7 +981,7 @@ const styles = StyleSheet.create({
   footer: {
     ...sharedStyleValues.footer,
     gap: 8,
-    marginBottom: 16
+    marginBottom: 16,
   },
   footerRow: sharedStyleValues.footerRow,
   footerButton: sharedStyleValues.footerButton,

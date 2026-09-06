@@ -1,4 +1,8 @@
-import type { DBFoodItem, FoodSource, NutritionBasis } from "../../store/DB_TYPES";
+import type {
+  DBFoodItem,
+  FoodSource,
+  NutritionBasis,
+} from "../../store/DB_TYPES";
 import { apiRequest } from "./client";
 
 // Food search transport.
@@ -29,6 +33,8 @@ export type ApiFood = {
   verified: boolean;
   isComplete: boolean;
   isOwn: boolean;
+  isPublic?: boolean;
+  description?: string | null;
 };
 
 export type ApiFoodSearchResponse = {
@@ -46,7 +52,7 @@ export const toDbFoodItem = (food: ApiFood): DBFoodItem =>
   ({
     id: food.id ?? 0,
     source: food.source,
-    sourceId: food.ref.includes(":") ? food.ref.split(":")[1] ?? null : null,
+    sourceId: food.ref.includes(":") ? (food.ref.split(":")[1] ?? null) : null,
     barcode: food.barcode,
     name: food.name,
     brand: food.brand,
@@ -62,10 +68,13 @@ export const toDbFoodItem = (food: ApiFood): DBFoodItem =>
     fatG: food.fatG,
     alcoholG: food.alcoholG,
     ingredientsText: null,
-    rawPayload: null,
+    rawPayload:
+      food.description != null
+        ? JSON.stringify({ description: food.description })
+        : null,
     verified: food.verified,
     isComplete: food.isComplete,
-    isPublic: true,
+    isPublic: food.isPublic ?? true,
     isOwn: food.isOwn,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),

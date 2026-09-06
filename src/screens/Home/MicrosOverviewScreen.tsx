@@ -1,9 +1,5 @@
 import React from "react";
-import {
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { XIcon } from "phosphor-react-native";
@@ -91,8 +87,7 @@ const computeAge = (birthdate: string | null | undefined): number | null => {
   let age = now.getFullYear() - parsed.getFullYear();
   const birthdayHasPassed =
     now.getMonth() > parsed.getMonth() ||
-    (now.getMonth() === parsed.getMonth() &&
-      now.getDate() >= parsed.getDate());
+    (now.getMonth() === parsed.getMonth() && now.getDate() >= parsed.getDate());
 
   if (!birthdayHasPassed) {
     age -= 1;
@@ -154,9 +149,8 @@ const MicrosOverviewScreen = () => {
   const navigation = useNavigation<RootNavigation>();
   const insets = useSafeAreaInsets();
   const user = useAppSelector((state) => state.user.currentUser);
-  const [selectedMode, setSelectedMode] = React.useState<MicrosRangeMode>(
-    "today",
-  );
+  const [selectedMode, setSelectedMode] =
+    React.useState<MicrosRangeMode>("today");
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [todaySnapshot, setTodaySnapshot] = React.useState<Awaited<
@@ -229,7 +223,11 @@ const MicrosOverviewScreen = () => {
       weekSnapshot?.micronutrients ?? createEmptyMicronutrientTotals(),
       7,
     );
-  }, [selectedMode, todaySnapshot?.micronutrients, weekSnapshot?.micronutrients]);
+  }, [
+    selectedMode,
+    todaySnapshot?.micronutrients,
+    weekSnapshot?.micronutrients,
+  ]);
 
   const trackedCount = React.useMemo(
     () => countTrackedMicronutrients(selectedMicros),
@@ -319,56 +317,46 @@ const MicrosOverviewScreen = () => {
     return 0;
   };
 
-  const renderNutrientRow = (item: MicronutrientRowWithTarget, isLast: boolean) => {
+  const renderNutrientRow = (
+    item: MicronutrientRowWithTarget,
+    isLast: boolean,
+  ) => {
     return (
-      <View key={item.key} style={[styles.nutrientRow, !isLast && styles.nutrientRowDivider]}>
+      <View
+        key={item.key}
+        style={[styles.nutrientRow, !isLast && styles.nutrientRowDivider]}
+      >
         <MacroBar
           accent={getMacroBarAccent(item)}
-          consumed={item.value}
+          consumed={trackedCount ? item.value : null}
           label={item.label}
           places={getMacroBarPlaces(item)}
           target={item.target}
           unit={item.unit}
         />
-        <View style={styles.nutrientMetaRow}>
-          <AppText color="secondary" style={styles.nutrientMetaText} variant="bodySmall">
-            {item.basis} target: {formatMicronutrientValue(item.target, item.unit)}
-          </AppText>
-          <NumericText color="secondary" variant="numberTrendDelta">
-            {item.progressPercent.toLocaleString(undefined, {
-              maximumFractionDigits: item.progressPercent >= 100 ? 0 : 1,
-            })}
-            % reached
-          </NumericText>
-        </View>
-        <AppText color="secondary" style={styles.nutrientMetaText} variant="bodySmall">
-          {item.statusText}
-        </AppText>
       </View>
     );
   };
 
   return (
-    <View style={styles.screen}>
+    <View
+      style={[
+        styles.screen,
+        { paddingTop: insets.top, paddingBottom: insets.bottom },
+      ]}
+    >
       <ScrollView
         style={styles.screen}
         contentContainerStyle={[
           styles.content,
-          { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 32 },
+          { paddingTop: 12, paddingBottom: insets.bottom + 32 },
         ]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.headerRow}>
           <View style={styles.headerCopy}>
-            <AppText color="secondary" style={styles.eyebrow} variant="eyebrow">
-              Micros
-            </AppText>
             <AppText style={styles.title} variant="sectionTitleLarge">
               Micronutrients
-            </AppText>
-            <AppText color="secondary" style={styles.subtitle} variant="bodySmall">
-              Totals come from foods with micronutrient data. Quick adds do not
-              contribute here.
             </AppText>
           </View>
           <IconButton
@@ -404,30 +392,24 @@ const MicrosOverviewScreen = () => {
             />
           ) : (
             <>
-              <View style={styles.heroValueRow}>
-                <NumericText adjustsFontSizeToFit numberOfLines={1} variant="numberDisplay">
-                  {coveredCount}
-                </NumericText>
-                <AppText color="secondary" style={styles.heroValueLabel} variant="label">
-                  of {visibleRows.length} targets covered
+              {trackedCount > 0 ? (
+                <AppText color="secondary" variant="bodySmall">
+                  {headlineText}
                 </AppText>
-              </View>
-              <AppText color="secondary" variant="bodySmall">
-                {headlineText}
-              </AppText>
-              <AppText color="muted" style={styles.heroRangeLabel} variant="bodySmall">
+              ) : null}
+              <AppText
+                color="muted"
+                style={styles.heroRangeLabel}
+                variant="bodySmall"
+              >
                 {selectedMode === "today"
                   ? rangeLabel
                   : `${rangeLabel} per-day average`}
                 {" · "}
                 {selectedMode === "today"
-                  ? todaySnapshot?.entries.length ?? 0
-                  : weekSnapshot?.entries.length ?? 0}{" "}
+                  ? (todaySnapshot?.entries.length ?? 0)
+                  : (weekSnapshot?.entries.length ?? 0)}{" "}
                 food logs
-              </AppText>
-
-              <AppText color="secondary" style={styles.referenceNoteText} variant="bodySmall">
-                {referenceCopy}
               </AppText>
             </>
           )}
@@ -436,18 +418,17 @@ const MicrosOverviewScreen = () => {
         {!loading && !error ? (
           <>
             {trackedCount === 0 ? (
-              <AppText color="secondary" style={styles.infoText} variant="bodySmall">
-                Everything is at zero so far. The targets are still shown below
-                so you can see what daily intake you're aiming for even before
-                richer micronutrient foods are logged.
+              <AppText
+                color="secondary"
+                style={styles.infoText}
+                variant="bodySmall"
+              >
+                No nutrient data logged. Missing data does not mean zero intake.
               </AppText>
             ) : null}
 
             <View style={styles.sectionCard}>
-              <SectionHeader
-                subtitle={`Daily intake compared against ${micronutrientProfile ? "your" : "general"} RDA.`}
-                title="Vitamins"
-              />
+              <SectionHeader title="Vitamins" />
               <View style={styles.sectionStack}>
                 {vitamins.map((item, index) =>
                   renderNutrientRow(item, index === vitamins.length - 1),
@@ -456,10 +437,7 @@ const MicrosOverviewScreen = () => {
             </View>
 
             <View style={styles.sectionCard}>
-              <SectionHeader
-                subtitle="A quick read on what's covered, what's low, and what's already above target."
-                title="Minerals"
-              />
+              <SectionHeader title="Minerals" />
               <View style={styles.sectionStack}>
                 {minerals.map((item, index) =>
                   renderNutrientRow(item, index === minerals.length - 1),
@@ -496,8 +474,7 @@ const styles = StyleSheet.create({
   title: {
     marginBottom: appSpacing.xs,
   },
-  subtitle: {
-  },
+  subtitle: {},
   heroCard: {
     marginBottom: appSpacing.md,
   },

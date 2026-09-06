@@ -15,6 +15,7 @@ const FoodScreenHeader = ({
 }: FoodScreenHeaderProps) => (
   <ScreenHeader
     eyebrow={eyebrow}
+    safeTop={false}
     onBack={onBack}
     subtitle={subtitle}
     title={title}

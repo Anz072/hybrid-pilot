@@ -1,11 +1,6 @@
+import { Disclosure } from "../../components/ui";
 import React from "react";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type {
   CompositeNavigationProp,
@@ -110,6 +105,8 @@ const FoodReadOnlyScreen = () => {
         if (!cancelled) {
           setFood(nextFood);
         }
+      } catch {
+        if (!cancelled) setFood(null);
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -142,7 +139,7 @@ const FoodReadOnlyScreen = () => {
 
   if (loading) {
     return (
-      <View style={styles.screen}>
+      <View style={[styles.screen, { paddingTop: insets.top }]}>
         <View style={styles.content}>
           <FoodScreenHeader
             eyebrow="Ingredient"
@@ -162,7 +159,7 @@ const FoodReadOnlyScreen = () => {
 
   if (!food || !serving) {
     return (
-      <View style={styles.screen}>
+      <View style={[styles.screen, { paddingTop: insets.top }]}>
         <View style={styles.content}>
           <FoodScreenHeader
             eyebrow="Ingredient"
@@ -185,7 +182,7 @@ const FoodReadOnlyScreen = () => {
   }
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <ScrollView
         style={styles.screen}
         contentContainerStyle={[
@@ -195,72 +192,20 @@ const FoodReadOnlyScreen = () => {
         keyboardShouldPersistTaps="handled"
       >
         <FoodScreenHeader
-          eyebrow="Ingredient"
-          title="Ingredient details"
-          subtitle={formatFoodShortDate(date)}
+          title={food.name}
+          subtitle={`${formatFoodNumber(quantity, ` ${serving.unit}`)} in recipe`}
           onBack={() => navigation.goBack()}
         />
-
-        <View style={styles.heroCard}>
-          <View style={styles.heroHeaderCopy}>
-            <Text style={styles.heroEyebrow}>Read Only</Text>
-            <Text style={styles.heroTitle}>{food.name}</Text>
-            <Text style={styles.heroMeta}>
-              {`${food.brand ? `${food.brand} · ` : ""}${formatFoodSourceLabel(
-                food.source,
-              )} · Serving ${formatFoodItemServing(food)}`}
-            </Text>
-          </View>
-
-          <View style={styles.previewStrip}>
-            <Text style={styles.previewValue}>
-              {preview ? `${preview.calories.toFixed(0)} kcal` : "--"}
-            </Text>
-            <Text style={styles.previewText}>
-              {preview
-                ? `${formatFoodMacro(preview.proteinG, "P")} · ${formatFoodMacro(
-                    preview.carbsG,
-                    "C",
-                  )} · ${formatFoodMacro(preview.fatG, "F")}`
-                : "Nutrition preview unavailable for this amount"}
-            </Text>
-            <Text style={styles.previewSubtext}>
-              {`At ${formatFoodNumber(quantity, ` ${serving.unit}`, 1)}`}
-            </Text>
-          </View>
-        </View>
-
+        <Text style={[styles.heroMeta, { marginBottom: 24 }]}>
+          {[food.brand, formatFoodSourceLabel(food.source)]
+            .filter(Boolean)
+            .join(" · ")}
+        </Text>
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Recipe Amount</Text>
-          <Text style={styles.sectionSubtitle}>
-            This view is read-only and uses the amount currently entered in your
-            recipe.
-          </Text>
-
-          <View style={styles.readOnlyRow}>
-            <Text style={styles.readOnlyLabel}>Amount in recipe</Text>
-            <Text style={styles.readOnlyValue}>
-              {formatFoodNumber(quantity, ` ${serving.unit}`, 1)}
-            </Text>
-          </View>
-
-          <View style={styles.readOnlyRow}>
-            <Text style={styles.readOnlyLabel}>Context</Text>
-            <Text style={styles.readOnlyValue} numberOfLines={1}>
-              {resolvedContextLabel}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Preview</Text>
-          <Text style={styles.sectionSubtitle}>
-            Nutrition shown at the recipe amount above.
-          </Text>
           <View style={styles.nutritionGrid}>
             {[
               {
-                label: "Calories",
+                label: "kcal",
                 value: preview ? preview.calories.toFixed(0) : "--",
               },
               {
@@ -284,26 +229,29 @@ const FoodReadOnlyScreen = () => {
           </View>
         </View>
 
-        <Text style={styles.title}>Micronutrients</Text>
-        {(
-          Object.entries(microTargets ?? MICRONUTRIENT_TARGETS.generic) as [
-            OpenFoodMapMicronutrientKey,
-            number,
-          ][]
-        ).map(([key, target]) => (
-          <MacroBar
-            key={key}
-            accent={appColors.brand500}
-            consumed={Number(food[key] ?? 0) * micronutrientFactor}
-            target={target}
-            label={key
-              .slice(0, -2)
-              .split(/(?=[A-Z])/)
-              .map((word) => word[0].toUpperCase() + word.slice(1))
-              .join(" ")}
-            unit={key.endsWith("Ug") ? "ug" : "mg"}
-          />
-        ))}
+        <Disclosure title="Micronutrients">
+          {(
+            Object.entries(microTargets ?? MICRONUTRIENT_TARGETS.generic) as [
+              OpenFoodMapMicronutrientKey,
+              number,
+            ][]
+          )
+            .filter(([key]) => food?.[key] != null)
+            .map(([key, target]) => (
+              <MacroBar
+                key={key}
+                accent={appColors.brand500}
+                consumed={Number(food[key] ?? 0) * micronutrientFactor}
+                target={target}
+                label={key
+                  .slice(0, -2)
+                  .split(/(?=[A-Z])/)
+                  .map((word) => word[0].toUpperCase() + word.slice(1))
+                  .join(" ")}
+                unit={key.endsWith("Ug") ? "ug" : "mg"}
+              />
+            ))}
+        </Disclosure>
       </ScrollView>
     </View>
   );
@@ -381,16 +329,9 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "right",
   },
-  nutritionGrid: sharedStyleValues.nutritionGrid,
-  nutritionCell: sharedStyleValues.nutritionCell,
-  nutritionLabel: {
-    color: appColors.slate300,
-    fontSize: 11,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-    marginBottom: 6,
-  },
+  nutritionGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  nutritionCell: { flex: 1, minWidth: 60 },
+  nutritionLabel: { ...sharedStyleValues.metaText, marginBottom: 4 },
   nutritionValue: sharedStyleValues.nutritionValue,
   primaryButton: {
     ...sharedStyleValues.buttonBase,

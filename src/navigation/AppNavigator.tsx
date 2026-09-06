@@ -1,3 +1,5 @@
+import WeeklyReviewScreen from "../screens/User_Settings/WeeklyReviewScreen";
+import AdaptiveCaloriesSettingsScreen from "../screens/User_Settings/AdaptiveCaloriesSettingsScreen";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -37,6 +39,8 @@ export type RootStackParamList = {
   Main: undefined;
   Login: undefined;
   MicrosOverview: undefined;
+  WeeklyReviewScreen: undefined;
+  AdaptiveCaloriesSettingsScreen: undefined;
   AddFood: FoodStackParamList["AddFood"];
   ScannedFood: FoodStackParamList["ScannedFood"];
   FoodReadOnly: FoodStackParamList["FoodReadOnly"];
@@ -169,6 +173,14 @@ const AppNavigator = () => {
         {isLoggedIn ? (
           <>
             <Stack.Screen name="Main" component={MainTabNavigator} />
+            <Stack.Screen
+              name="WeeklyReviewScreen"
+              component={WeeklyReviewScreen}
+            />
+            <Stack.Screen
+              name="AdaptiveCaloriesSettingsScreen"
+              component={AdaptiveCaloriesSettingsScreen}
+            />
             <Stack.Screen
               name="MicrosOverview"
               component={MicrosOverviewScreen}

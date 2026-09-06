@@ -1,6 +1,11 @@
+import {
+  getCustomMealEditorId,
+  getLibraryFoodIdentity,
+} from "../../domain/libraryFoodIdentity";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  AccessibilityInfo,
   Alert,
   Pressable,
   StyleSheet,
@@ -8,7 +13,11 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
+import {
+  useFocusEffect,
+  useNavigation,
+  useRoute,
+} from "@react-navigation/native";
 import type {
   CompositeNavigationProp,
   RouteProp,
@@ -17,8 +26,10 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   ArrowLeftIcon,
   BarcodeIcon,
+  CheckIcon,
   CaretRightIcon,
   LightningIcon,
+  PlusIcon,
   MagnifyingGlassIcon,
   PencilSimpleIcon,
   StarIcon,
@@ -32,7 +43,6 @@ import { DB } from "../../store/DB";
 import type { DBFoodItem, DBUser } from "../../store/DB_TYPES";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import FoodBarcodeScannerModal from "./FoodBarcodeScannerModal";
-import FoodLogContextBar from "./FoodLogContextBar";
 import type { ScannedFoodLookupResult } from "./FoodBarcodeScannerShared";
 import {
   formatFoodItemServing,
@@ -41,18 +51,26 @@ import {
   formatFoodSourceLabel,
   getFoodDefaultLogAmount,
 } from "./foodUtils";
-import {
-  resolveFoodLogContext,
-  toFoodLogRouteParams,
-} from "./foodLogContext";
+import { resolveFoodLogContext, toFoodLogRouteParams } from "./foodLogContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   getFoodRecentSearches,
   saveFoodRecentSearches,
 } from "../../storage/localStore";
 import { appColors } from "../../theme/colors";
-import { appBorders, appRadius, appSpacing, appStates } from "../../theme/tokens";
-import { AppText, IconButton, SectionHeader, SegmentedControl } from "../../components/ui";
+import {
+  appBorders,
+  appRadius,
+  appSpacing,
+  appStates,
+} from "../../theme/tokens";
+import {
+  AppText,
+  AppButton,
+  IconButton,
+  SectionHeader,
+  SegmentedControl,
+} from "../../components/ui";
 import {
   fromDbFoodItem,
   searchFoodResults,
@@ -64,6 +82,8 @@ import {
   type AddFoodStaticListsSnapshot,
 } from "./addFoodStaticListsCache";
 
+import { subscribeToAppDataChanges } from "../../store/dataChangeEvents";
+
 type AddFoodRoute = RouteProp<FoodStackParamList, "AddFood">;
 type AddFoodNav = CompositeNavigationProp<
   NativeStackNavigationProp<FoodStackParamList, "AddFood">,
@@ -73,10 +93,7 @@ type AddFoodNav = CompositeNavigationProp<
 type SearchFoodResult = FoodSearchResult;
 
 type FoodSearchMode = "all" | "recipes" | "custom_meals";
-type SearchResultCategory =
-  | "custom_foods"
-  | "common_foods"
-  | "branded_foods";
+type SearchResultCategory = "custom_foods" | "common_foods" | "branded_foods";
 type SearchResultSection = {
   key: SearchResultCategory;
   title: string;
@@ -178,22 +195,10 @@ const parseLibraryPayload = (food: Pick<SearchFoodResult, "rawPayload">) => {
 };
 
 const isCustomMealResult = (
-  food: Pick<SearchFoodResult, "source" | "sourceId" | "rawPayload">,
-) => {
-  if (food.source !== "recipe") {
-    return false;
-  }
-
-  if (food.sourceId?.startsWith("meal:")) {
-    return true;
-  }
-
-  return parseLibraryPayload(food)?.entityType === "custom_meal";
-};
-
-const isRecipeResult = (
-  food: Pick<SearchFoodResult, "source" | "sourceId" | "rawPayload">,
-) => food.source === "recipe" && !isCustomMealResult(food);
+  food: Parameters<typeof getLibraryFoodIdentity>[0],
+) => getLibraryFoodIdentity(food)?.kind === "custom_meal";
+const isRecipeResult = (food: Parameters<typeof getLibraryFoodIdentity>[0]) =>
+  getLibraryFoodIdentity(food)?.kind === "custom_recipe";
 
 /**
  * Whether the signed-in user owns this recipe or custom meal.
@@ -221,45 +226,15 @@ const isOwnedLibraryResult = (
  *
  * `decodeFoodId` is the shared encoding, pinned by the conformance corpus.
  */
-const getRecipeIdFromResult = (
-  food: Pick<SearchFoodResult, "localId" | "sourceId" | "source" | "rawPayload">,
-) => {
-  if (!isRecipeResult(food)) {
-    return null;
-  }
-
-  if (food.localId != null) {
-    const decoded = decodeFoodId(food.localId);
-    if (decoded.kind === "custom_recipe") return decoded.id;
-  }
-
-  const recipeId = Number(food.sourceId);
-  return Number.isFinite(recipeId) && recipeId > 0 ? recipeId : null;
+const getRecipeIdFromResult = (food: SearchFoodResult) => {
+  const identity = getLibraryFoodIdentity(food);
+  return identity?.kind === "custom_recipe" ? identity.id : null;
+};
+const getMealIdFromResult = (food: SearchFoodResult) => {
+  return getCustomMealEditorId(food);
 };
 
-const getMealIdFromResult = (
-  food: Pick<SearchFoodResult, "localId" | "sourceId" | "source" | "rawPayload">,
-) => {
-  if (!isCustomMealResult(food)) {
-    return null;
-  }
-
-  if (food.localId != null) {
-    const decoded = decodeFoodId(food.localId);
-    if (decoded.kind === "custom_meal") return decoded.id;
-  }
-
-  if (food.sourceId?.startsWith("meal:")) {
-    const mealId = Number(food.sourceId.slice("meal:".length));
-    return Number.isFinite(mealId) ? mealId : null;
-  }
-
-  return null;
-};
-
-const getLibrarySourceLabel = (
-  food: Pick<SearchFoodResult, "source" | "sourceId" | "rawPayload">,
-) => {
+const getLibrarySourceLabel = (food: SearchFoodResult) => {
   if (isCustomMealResult(food)) {
     return "Custom Meal";
   }
@@ -316,7 +291,7 @@ const buildLibrarySections = ({
     });
   }
 
-  if (!hasQuery || publicItems.length > 0) {
+  if (publicItems.length > 0) {
     sections.push({
       key: "public",
       title: "Public",
@@ -348,6 +323,19 @@ const AddFoodScreen = () => {
   const navigation = useNavigation<AddFoodNav>();
   const insets = useSafeAreaInsets();
   const initialStaticListsRef = React.useRef(getCachedAddFoodStaticLists());
+  const frequentOrderRef = React.useRef(
+    new Map(
+      Array.from(
+        new Set(
+          [
+            ...(initialStaticListsRef.current?.favorites ?? []),
+            ...(initialStaticListsRef.current?.recent ?? []),
+          ].map((food) => food.id),
+        ),
+        (id, index) => [id, index],
+      ),
+    ),
+  );
 
   const { contextLabel, date, loggedAt, mealType } = route.params;
 
@@ -381,6 +369,32 @@ const AddFoodScreen = () => {
     () => new Set(),
   );
   const quickLoggingKeysRef = React.useRef(new Set<string>());
+  const [justLoggedKeys, setJustLoggedKeys] = useState(new Set<string>());
+  const [savedEntryIds, setSavedEntryIds] = useState(new Set<number>());
+  const feedbackTimers = React.useRef(new Set<ReturnType<typeof setTimeout>>());
+  const mountedRef = React.useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      feedbackTimers.current.forEach(clearTimeout);
+    };
+  }, []);
+  useEffect(
+    () =>
+      subscribeToAppDataChanges((event) => {
+        if (
+          event.kind === "food_log" &&
+          event.foodEntryId != null &&
+          (!event.userExternalId || event.userExternalId === user?.externalId)
+        ) {
+          setSavedEntryIds((current) =>
+            new Set(current).add(event.foodEntryId!),
+          );
+        }
+      }),
+    [user?.externalId],
+  );
   const searchCacheRef = React.useRef(new Map<string, SearchFoodResult[]>());
   const localOnlySearchCacheRef = React.useRef(new Set<string>());
   const lastSavedSearchRef = React.useRef<string | null>(null);
@@ -401,6 +415,13 @@ const AddFoodScreen = () => {
 
   const applyStaticListsSnapshot = useCallback(
     (snapshot: AddFoodStaticListsSnapshot) => {
+      // Returning from a quantity editor must not move the next tap target.
+      // Refresh values, but retain the order of foods already seen this session.
+      for (const food of [...snapshot.favorites, ...snapshot.recent]) {
+        if (!frequentOrderRef.current.has(food.id)) {
+          frequentOrderRef.current.set(food.id, frequentOrderRef.current.size);
+        }
+      }
       setUser(snapshot.user);
       setRecent(snapshot.recent);
       setFavorites(snapshot.favorites);
@@ -410,28 +431,31 @@ const AddFoodScreen = () => {
     [],
   );
 
-  const loadStaticLists = useCallback(async ({
-    silent = false,
-  }: {
-    silent?: boolean;
-  } = {}) => {
-    const cachedSnapshot = getCachedAddFoodStaticLists();
+  const loadStaticLists = useCallback(
+    async ({
+      silent = false,
+    }: {
+      silent?: boolean;
+    } = {}) => {
+      const cachedSnapshot = getCachedAddFoodStaticLists();
 
-    if (cachedSnapshot) {
-      applyStaticListsSnapshot(cachedSnapshot);
-      setIsStaticListsLoading(false);
-    } else if (!silent) {
-      setIsStaticListsLoading(true);
-    }
+      if (cachedSnapshot) {
+        applyStaticListsSnapshot(cachedSnapshot);
+        setIsStaticListsLoading(false);
+      } else if (!silent) {
+        setIsStaticListsLoading(true);
+      }
 
-    try {
-      const nextSnapshot = await refreshAddFoodStaticLists();
-      applyStaticListsSnapshot(nextSnapshot);
-      return nextSnapshot;
-    } finally {
-      setIsStaticListsLoading(false);
-    }
-  }, [applyStaticListsSnapshot]);
+      try {
+        const nextSnapshot = await refreshAddFoodStaticLists();
+        applyStaticListsSnapshot(nextSnapshot);
+        return nextSnapshot;
+      } finally {
+        setIsStaticListsLoading(false);
+      }
+    },
+    [applyStaticListsSnapshot],
+  );
 
   const searchFoods = useCallback(
     async (normalizedQuery: string, mode: FoodSearchMode) => {
@@ -439,7 +463,9 @@ const AddFoodScreen = () => {
       activeSearchCacheKeyRef.current = cacheKey;
       const cachedResults = searchCacheRef.current.get(cacheKey);
       if (cachedResults) {
-        setIsUsingLocalSearchOnly(localOnlySearchCacheRef.current.has(cacheKey));
+        setIsUsingLocalSearchOnly(
+          localOnlySearchCacheRef.current.has(cacheKey),
+        );
         return cachedResults;
       }
 
@@ -595,7 +621,6 @@ const AddFoodScreen = () => {
             setIsSearching(false);
           }
         }
-
       };
 
       void refresh();
@@ -666,17 +691,23 @@ const AddFoodScreen = () => {
   const frequentResults = useMemo(() => {
     const seen = new Set<string>();
 
-    return [...favoriteResults, ...recentResults].filter((food) => {
-      const key =
-        food.localId != null ? `local:${food.localId}` : `remote:${food.key}`;
+    return [...favoriteResults, ...recentResults]
+      .filter((food) => {
+        const key =
+          food.localId != null ? `local:${food.localId}` : `remote:${food.key}`;
 
-      if (seen.has(key)) {
-        return false;
-      }
+        if (seen.has(key)) {
+          return false;
+        }
 
-      seen.add(key);
-      return true;
-    });
+        seen.add(key);
+        return true;
+      })
+      .sort(
+        (a, b) =>
+          (frequentOrderRef.current.get(a.localId!) ?? Infinity) -
+          (frequentOrderRef.current.get(b.localId!) ?? Infinity),
+      );
   }, [favoriteResults, recentResults]);
   const recipeResults = useMemo(
     () => recipes.map((food) => fromDbFoodItem(food)),
@@ -841,7 +872,10 @@ const AddFoodScreen = () => {
       return;
     }
 
-    if (quickLoggingKeysRef.current.has(food.key)) {
+    if (
+      quickLoggingKeysRef.current.has(food.key) ||
+      justLoggedKeys.has(food.key)
+    ) {
       return;
     }
 
@@ -861,18 +895,36 @@ const AddFoodScreen = () => {
         quantityG: getFoodDefaultLogAmount(food),
         mealType: foodLogContext.mealType,
       });
-      navigation.goBack();
+      if (!mountedRef.current) return;
+      setJustLoggedKeys((current) => new Set(current).add(food.key));
+      AccessibilityInfo.announceForAccessibility(
+        `${food.name} added to ${foodLogContext.mealType ?? "diary"}`,
+      );
+      const timer = setTimeout(() => {
+        setJustLoggedKeys((current) => {
+          const next = new Set(current);
+          next.delete(food.key);
+          return next;
+        });
+        feedbackTimers.current.delete(timer);
+      }, 1600);
+      feedbackTimers.current.add(timer);
     } catch {
       // The cause is reported by the API client, from the one place that sees
       // every failure. This block owns the user-facing copy, nothing more.
-      Alert.alert("Could not log food", "Please review the food and try again.");
+      Alert.alert(
+        "Could not log food",
+        "Please review the food and try again.",
+      );
     } finally {
       quickLoggingKeysRef.current.delete(food.key);
-      setQuickLoggingKeys((current) => {
-        const next = new Set(current);
-        next.delete(food.key);
-        return next;
-      });
+      if (mountedRef.current) {
+        setQuickLoggingKeys((current) => {
+          const next = new Set(current);
+          next.delete(food.key);
+          return next;
+        });
+      }
     }
   };
 
@@ -890,7 +942,14 @@ const AddFoodScreen = () => {
     }
 
     return frequentResults;
-  }, [customMealResults, frequentResults, query, recipeResults, results, searchMode]);
+  }, [
+    customMealResults,
+    frequentResults,
+    query,
+    recipeResults,
+    results,
+    searchMode,
+  ]);
   const categorizedQueryResults = useMemo(
     () =>
       query.trim() && searchMode === "all"
@@ -925,13 +984,14 @@ const AddFoodScreen = () => {
     const isOwnedLibraryItem =
       isLibraryItem && isOwnedLibraryResult(food, user?.externalId);
     const isQuickLogging = quickLoggingKeys.has(food.key);
+    const justLogged = justLoggedKeys.has(food.key);
     const defaultAmount = formatFoodItemServing(food);
     const sourceLabel = getLibrarySourceLabel(food);
 
     const metaText = [
-      sourceLabel,
-      isLibraryItem ? (isOwnedLibraryItem ? "Yours" : "Public") : null,
-      food.brand || null,
+      food.brand && food.brand.toLowerCase() !== food.name.toLowerCase()
+        ? food.brand
+        : null,
       defaultAmount,
     ]
       .filter(Boolean)
@@ -953,11 +1013,6 @@ const AddFoodScreen = () => {
           </View>
           <Text style={styles.supportingMeta} numberOfLines={1}>
             {metaText}
-          </Text>
-          <Text style={styles.foodMacroText}>
-            {formatFoodMacro(food.proteinG, "P")} ·{" "}
-            {formatFoodMacro(food.carbsG, "C")} ·{" "}
-            {formatFoodMacro(food.fatG, "F")}
           </Text>
         </Pressable>
         <View style={styles.foodActionColumn}>
@@ -983,7 +1038,9 @@ const AddFoodScreen = () => {
             <Pressable
               onPress={() => void toggleFavorite(food, isFavorite)}
               accessibilityLabel={
-                isFavorite ? `Remove ${food.name} bookmark` : `Save ${food.name}`
+                isFavorite
+                  ? `Remove ${food.name} bookmark`
+                  : `Save ${food.name}`
               }
               hitSlop={8}
               style={({ pressed }) => [
@@ -993,15 +1050,24 @@ const AddFoodScreen = () => {
             >
               <StarIcon
                 size={16}
-                color={isFavorite ? appColors.actionPrimary : appColors.textMuted}
+                color={
+                  isFavorite ? appColors.actionPrimary : appColors.textMuted
+                }
                 weight={isFavorite ? "fill" : "bold"}
               />
             </Pressable>
           )}
           <Pressable
-            disabled={isQuickLogging}
+            disabled={isQuickLogging || justLogged}
+            accessibilityRole="button"
+            accessibilityState={{
+              disabled: isQuickLogging || justLogged,
+              busy: isQuickLogging,
+            }}
             onPress={() => void quickLogFood(food)}
-            accessibilityLabel={`Quick log ${food.name}`}
+            accessibilityLabel={
+              justLogged ? `${food.name} added` : `Quick log ${food.name}`
+            }
             style={({ pressed }) => [
               styles.quickLogAction,
               isQuickLogging && styles.primaryActionLoading,
@@ -1012,8 +1078,11 @@ const AddFoodScreen = () => {
               <ActivityIndicator color={appColors.white} size="small" />
             ) : (
               <>
-                <LightningIcon size={16} color={appColors.white} weight="fill" />
-                <Text style={styles.quickLogText}>Log</Text>
+                {justLogged ? (
+                  <CheckIcon size={20} color={appColors.white} weight="bold" />
+                ) : (
+                  <PlusIcon size={20} color={appColors.white} weight="bold" />
+                )}
               </>
             )}
           </Pressable>
@@ -1050,7 +1119,7 @@ const AddFoodScreen = () => {
 
     return (
       <View style={styles.sectionCard}>
-        <SectionHeader subtitle={headerSubtitle} title={title} />
+        <SectionHeader title={title} />
         <View style={styles.sectionStack}>
           {options?.loading ? (
             renderSkeletonRows()
@@ -1070,9 +1139,6 @@ const AddFoodScreen = () => {
                   <View style={styles.moreCopy}>
                     <AppText variant="cardTitle">
                       {options?.emptyCta?.title}
-                    </AppText>
-                    <AppText color="secondary" variant="bodySmall">
-                      {options?.emptyCta?.text}
                     </AppText>
                   </View>
                   <CaretRightIcon
@@ -1102,20 +1168,20 @@ const AddFoodScreen = () => {
         ? isSearching
           ? "Searching recipes..."
           : null
-        : "Saved and public recipes."
+        : null
       : searchMode === "custom_meals"
         ? query.trim()
           ? isSearching
             ? "Searching meals..."
             : null
-          : "Saved and public meals."
+          : null
         : query.trim()
           ? isSearching
             ? "Searching foods..."
             : activeResults.length > 0
               ? null
               : "No matches yet."
-          : "Frequent foods ready to log.";
+          : null;
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top + 14 }]}>
@@ -1124,7 +1190,7 @@ const AddFoodScreen = () => {
         contentContainerStyle={styles.content}
       >
         <View style={styles.heroCard}>
-          <View style={styles.headerRow}>
+          <View style={styles.searchRow}>
             <Pressable
               onPress={() => navigation.goBack()}
               accessibilityLabel="Go back"
@@ -1140,9 +1206,6 @@ const AddFoodScreen = () => {
                 weight="bold"
               />
             </Pressable>
-          </View>
-          <FoodLogContextBar context={foodLogContext} />
-          <View style={styles.searchRow}>
             <View
               style={[
                 styles.searchInputWrap,
@@ -1183,10 +1246,19 @@ const AddFoodScreen = () => {
                 accessibilityLabel="Scan a barcode"
                 onPress={() => setScannerVisible(true)}
               >
-                <BarcodeIcon size={20} color={appColors.textPrimary} weight="bold" />
+                <BarcodeIcon
+                  size={20}
+                  color={appColors.textPrimary}
+                  weight="bold"
+                />
               </IconButton>
             ) : null}
           </View>
+          <Text style={styles.contextMeta}>
+            {[foodLogContext.dateLabel, foodLogContext.mealType]
+              .filter(Boolean)
+              .join(" · ")}
+          </Text>
           <SegmentedControl
             onChange={setSearchMode}
             options={[
@@ -1323,34 +1395,34 @@ const AddFoodScreen = () => {
               { loading: true },
             )
           ) : (
-          <>
-            {librarySections.map((section) => (
-              <React.Fragment key={section.key}>
-                {renderSection(
-                  section.title,
-                  section.subtitle,
-                  section.items,
-                  section.emptyText,
-                  section.key === "yours"
-                    ? {
-                        emptyCta:
-                          searchMode === "recipes"
-                            ? {
-                                onPress: openCreateRecipe,
-                                title: "Create recipe",
-                                text: `Save a recipe for ${resolvedContextLabel}.`,
-                              }
-                            : {
-                                onPress: openCreateCustomMeal,
-                                title: "Create custom meal",
-                                text: `Build a reusable meal for ${resolvedContextLabel}.`,
-                              },
-                      }
-                    : undefined,
-                )}
-              </React.Fragment>
-            ))}
-          </>
+            <>
+              {librarySections.map((section) => (
+                <React.Fragment key={section.key}>
+                  {renderSection(
+                    section.title,
+                    section.subtitle,
+                    section.items,
+                    section.emptyText,
+                    section.key === "yours"
+                      ? {
+                          emptyCta:
+                            searchMode === "recipes"
+                              ? {
+                                  onPress: openCreateRecipe,
+                                  title: "Create recipe",
+                                  text: `Save a recipe for ${resolvedContextLabel}.`,
+                                }
+                              : {
+                                  onPress: openCreateCustomMeal,
+                                  title: "Create custom meal",
+                                  text: `Build a reusable meal for ${resolvedContextLabel}.`,
+                                },
+                        }
+                      : undefined,
+                  )}
+                </React.Fragment>
+              ))}
+            </>
           )
         ) : (
           renderSection(
@@ -1370,6 +1442,27 @@ const AddFoodScreen = () => {
         )}
       </KeyboardAwareScrollView>
 
+      <View
+        style={[
+          styles.doneBar,
+          { paddingBottom: Math.max(insets.bottom, appSpacing.xs) },
+        ]}
+      >
+        <AppText
+          color="secondary"
+          variant="bodySmall"
+          accessibilityLiveRegion="polite"
+        >
+          {savedEntryIds.size ? `${savedEntryIds.size} added` : ""}
+        </AppText>
+        <AppButton
+          label="Done"
+          onPress={() => navigation.goBack()}
+          disabled={quickLoggingKeys.size > 0}
+          style={styles.doneButton}
+        />
+      </View>
+
       <FoodBarcodeScannerModal
         visible={scannerVisible}
         onClose={() => setScannerVisible(false)}
@@ -1381,6 +1474,17 @@ const AddFoodScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  doneBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: appSpacing.gutter,
+    paddingTop: appSpacing.xs,
+    borderTopWidth: appBorders.width,
+    borderTopColor: appBorders.soft,
+    backgroundColor: appColors.surfaceCanvas,
+  },
+  doneButton: { minWidth: 112 },
   screen: {
     flex: 1,
     backgroundColor: appColors.surfaceCanvas,
@@ -1399,19 +1503,23 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   backButton: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 999,
-    backgroundColor: appColors.surfaceField,
-    borderWidth: appBorders.width,
-    borderColor: appBorders.soft,
+    backgroundColor: "transparent",
   },
   moreCopy: {
     flex: 1,
   },
   searchModeRow: {
+    marginTop: 12,
+  },
+  contextMeta: {
+    color: appColors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
     marginTop: 12,
   },
   searchRow: {
@@ -1561,19 +1669,20 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   foodActionColumn: {
+    flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
     gap: 8,
   },
   secondaryIconAction: {
-    width: 32,
-    height: 32,
+    width: 48,
+    height: 48,
     alignItems: "center",
     justifyContent: "center",
   },
   quickLogAction: {
-    minWidth: 70,
-    height: 44,
+    minWidth: 48,
+    height: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",

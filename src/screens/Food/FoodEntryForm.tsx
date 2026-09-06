@@ -1,10 +1,12 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import type { KeyboardTypeOptions } from "react-native";
-import { ArrowLeftIcon } from "phosphor-react-native";
+import { ArrowLeftIcon, PencilSimpleIcon } from "phosphor-react-native";
 import { appColors } from "../../theme/colors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { sharedStyleValues } from "../../theme/sharedStyles";
+import MealBucketSelect, { getInitialMealBucket } from "./MealBucketSelect";
+import { MEAL_SLOT_LABELS } from "./foodUtils";
 import { NumericText } from "../../components/ui";
 
 export type FoodEntryFormHeroAction = {
@@ -114,11 +116,10 @@ const FoodEntryForm = ({
       {slot.icon ? <View style={styles.slotIcon}>{slot.icon}</View> : null}
 
       <View style={styles.slotCopy}>
-        <Text style={styles.slotLabel}>{slot.label}</Text>
         <Text style={styles.slotValue}>{slot.value}</Text>
       </View>
       {slot.onPress ? (
-        <Text style={styles.slotAction}>{slot.actionLabel ?? "Change"}</Text>
+        <PencilSimpleIcon size={16} color={appColors.textSecondary} />
       ) : slot.trailingText ? (
         <Text style={styles.slotTrailing}>{slot.trailingText}</Text>
       ) : null}
@@ -127,7 +128,7 @@ const FoodEntryForm = ({
 
   return (
     <>
-      <View style={[styles.cardX, { marginTop: insets.top + 14 }]}>
+      <View style={[styles.cardX, { marginTop: 12 }]}>
         <View style={styles.heroHeaderRow}>
           <Pressable
             accessibilityLabel="Go back"
@@ -145,12 +146,16 @@ const FoodEntryForm = ({
             />
           </Pressable>
           <View style={styles.heroHeaderCopy}>
-            <Text style={styles.heroEyebrow}>{heroEyebrow}</Text>
             <Text style={styles.heroTitle}>{heroTitle}</Text>
             <Text style={styles.heroMeta}>{heroMeta}</Text>
           </View>
           {heroAction ? (
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                heroAction.active ? "Remove from favorites" : "Add to favorites"
+              }
+              accessibilityState={{ selected: Boolean(heroAction.active) }}
               onPress={heroAction.onPress}
               style={({ pressed }) => [
                 styles.heroAction,
@@ -159,22 +164,23 @@ const FoodEntryForm = ({
               ]}
             >
               {heroAction.icon}
-              <Text
-                style={[
-                  styles.heroActionText,
-                  heroAction.active && styles.heroActionTextActive,
-                ]}
-              >
-                {heroAction.label}
-              </Text>
             </Pressable>
           ) : null}
         </View>
-        <Text style={styles.sectionTitle}>{detailsTitle}</Text>
+        <View style={styles.contextRow}>
+          {headerSubtitle ? (
+            <Text style={styles.heroMeta}>{headerSubtitle}</Text>
+          ) : null}
+          <MealBucketSelect
+            value={getInitialMealBucket(labelValue)}
+            onChange={(meal) => onChangeLabel(MEAL_SLOT_LABELS[meal])}
+          />
+        </View>
 
         <Text style={styles.fieldLabel}>{amountLabel}</Text>
         <View style={styles.inputRow}>
           <TextInput
+            accessibilityLabel={amountLabel}
             style={styles.input}
             value={amountValue}
             onChangeText={onChangeAmount}
@@ -188,12 +194,11 @@ const FoodEntryForm = ({
           </View>
         </View>
 
-        <Text style={[styles.fieldLabel, styles.fieldLabelSpacing]}>
-          {slot.label}
-        </Text>
         {slot.onPress ? (
           <Pressable
             onPress={slot.onPress}
+            accessibilityRole="button"
+            accessibilityLabel={`${slot.label}, ${slot.value}. ${slot.actionLabel ?? "Change"}`}
             style={({ pressed }) => [
               styles.slotRow,
               pressed && styles.cardPressed,
@@ -208,11 +213,12 @@ const FoodEntryForm = ({
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>{previewTitle}</Text>
         <View style={styles.nutritionGrid}>
           {nutritionItems.map((item) => (
             <View key={item.label} style={styles.nutritionCell}>
-              <Text style={styles.nutritionLabel}>{item.label}</Text>
+              <Text style={styles.nutritionLabel}>
+                {item.label === "Calories" ? "kcal" : item.label}
+              </Text>
               <NumericText
                 variant="numberMacroSummary"
                 style={styles.nutritionValue}
@@ -277,28 +283,29 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   backButton: {
-    width: 38,
-    height: 38,
+    width: 48,
+    height: 48,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 999,
-    backgroundColor: appColors.surfaceGhost,
+    backgroundColor: "transparent",
     borderWidth: 1,
-    borderColor: appColors.surfaceGhostStrong,
+    borderColor: "transparent",
   },
   heroEyebrow: sharedStyleValues.eyebrow,
   heroTitle: sharedStyleValues.heroTitle,
   heroMeta: sharedStyleValues.metaText,
+  contextRow: { gap: 8, marginBottom: 16 },
   heroAction: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    backgroundColor: appColors.surfaceField,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: 24,
+    borderWidth: 0,
+    backgroundColor: "transparent",
+    width: 48,
+    height: 48,
+    justifyContent: "center",
   },
   heroActionActive: {
     backgroundColor: appColors.brand500,
@@ -328,11 +335,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    borderRadius: 10,
-    backgroundColor: appColors.surfaceField,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 12,
+    minHeight: 48,
+    marginTop: 12,
   },
   slotIcon: {
     width: 32,
@@ -340,7 +344,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.surfaceGhost,
+    backgroundColor: "transparent",
   },
   slotCopy: {
     flex: 1,
@@ -349,8 +353,7 @@ const styles = StyleSheet.create({
     color: appColors.textSecondary,
     fontSize: 11,
     fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
+
     marginBottom: 2,
   },
   slotValue: {
@@ -375,15 +378,14 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     marginTop: 10,
   },
-  nutritionGrid: sharedStyleValues.nutritionGrid,
-  nutritionCell: sharedStyleValues.nutritionCell,
+  nutritionGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  nutritionCell: { flex: 1, minWidth: 60 },
   nutritionLabel: {
     color: appColors.textSecondary,
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: 13,
+    lineHeight: 18,
     fontWeight: "500",
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
+
     marginBottom: 2,
   },
   nutritionValue: sharedStyleValues.nutritionValue,

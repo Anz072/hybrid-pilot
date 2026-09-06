@@ -101,22 +101,27 @@ export const getUserFoodLogEntryById = async (
 ): Promise<DBUserFoodLogEntry | null> => {
   const userExternalId = await resolveUserExternalId();
   const day = await getDiaryDay(date);
-  return toDbEntries(day, userExternalId).find((entry) => entry.id === id) ?? null;
+  return (
+    toDbEntries(day, userExternalId).find((entry) => entry.id === id) ?? null
+  );
 };
 
-export const addUserFoodLog = async (input: AddUserFoodLogInput): Promise<void> => {
-  await addFoodEntry({
+export const addUserFoodLog = async (
+  input: AddUserFoodLogInput,
+): Promise<DBUserFoodLogEntry> => {
+  const entry = await addFoodEntry({
     date: input.date,
     foodId: input.foodId,
     quantity: input.quantityG,
     mealType: input.mealType ?? null,
     loggedAt: input.loggedAt ?? new Date().toISOString(),
   });
+  return toDbEntry(entry, input.userExternalId);
 };
 
 export const addQuickAddFoodLog = async (
   input: AddQuickAddFoodLogInput,
-): Promise<number> => {
+): Promise<DBUserFoodLogEntry> => {
   const entry = await addQuickAddEntry({
     date: input.date,
     name: input.name ?? null,
@@ -128,7 +133,7 @@ export const addQuickAddFoodLog = async (
     mealType: input.mealType ?? null,
     loggedAt: input.loggedAt ?? new Date().toISOString(),
   });
-  return entry.id;
+  return toDbEntry(entry, input.userExternalId);
 };
 
 // The mutations below return the day the entry ended up on. Callers use it to
@@ -214,10 +219,15 @@ export const listDiaryDayStatusesBetween = async (
   endDate: string,
   perfTrace?: DiaryPerfTrace,
 ): Promise<DBDiaryDayStatus[]> => {
-  const range = await measureDiaryRequest(perfTrace, "week-statuses", "node-api", () =>
-    getDiaryRange(startDate, endDate),
+  const range = await measureDiaryRequest(
+    perfTrace,
+    "week-statuses",
+    "node-api",
+    () => getDiaryRange(startDate, endDate),
   );
-  const statuses = range.days.map((day) => toDbDiaryDayStatus(day, userExternalId));
+  const statuses = range.days.map((day) =>
+    toDbDiaryDayStatus(day, userExternalId),
+  );
   recordDiaryRows(perfTrace, "week-statuses", statuses.length);
   return statuses;
 };

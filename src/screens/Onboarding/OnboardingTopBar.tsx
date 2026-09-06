@@ -23,14 +23,22 @@ const OnboardingTopBar = ({
     <View style={styles.wrap}>
       <View style={styles.row}>
         {onBack ? (
-          <IconButton accessibilityLabel="Go back" onPress={onBack}>
-            <ArrowLeftIcon size={20} color={appColors.textPrimary} weight="bold" />
+          <IconButton
+            accessibilityLabel="Go back"
+            onPress={onBack}
+            style={{ backgroundColor: "transparent", borderWidth: 0 }}
+          >
+            <ArrowLeftIcon
+              size={20}
+              color={appColors.textPrimary}
+              weight="bold"
+            />
           </IconButton>
         ) : (
           <View style={styles.placeholder} />
         )}
         {stepLabel ? (
-          <AppText color="secondary" variant="eyebrow">
+          <AppText color="secondary" variant="metadata">
             {stepLabel}
           </AppText>
         ) : null}
@@ -74,7 +82,7 @@ const styles = StyleSheet.create({
     height: 44,
   },
   progressTrack: {
-    height: 6,
+    height: 3,
     borderRadius: appRadius.pill,
     backgroundColor: appSurfaces.soft,
     overflow: "hidden",

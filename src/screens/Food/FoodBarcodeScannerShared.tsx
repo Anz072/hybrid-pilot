@@ -301,9 +301,7 @@ export const FoodBarcodeScannerScaffold = ({
             <View style={styles.cameraFallback}>
               <ActivityIndicator size="small" color={appColors.white} />
               <Text style={styles.fallbackTitle}>Preparing camera</Text>
-              <Text style={styles.fallbackText}>
-                We are getting the barcode scanner ready for a quick read.
-              </Text>
+              <Text style={styles.fallbackText}></Text>
             </View>
           ) : (
             cameraNode
@@ -313,7 +311,7 @@ export const FoodBarcodeScannerScaffold = ({
             <View style={styles.permissionCard}>
               <Text style={styles.permissionTitle}>Camera access needed</Text>
               <Text style={styles.permissionText}>
-                Allow access so you can scan EAN and UPC barcodes here.
+                Allow camera access to scan food barcodes.
               </Text>
               <Pressable
                 onPress={() => void onRequestPermission()}
@@ -359,7 +357,9 @@ export const FoodBarcodeScannerScaffold = ({
                   >
                     <BarcodeIcon
                       size={14}
-                      color={isManualMode ? appColors.slate300 : appColors.white}
+                      color={
+                        isManualMode ? appColors.slate300 : appColors.white
+                      }
                       weight="bold"
                     />
                     <Text
@@ -381,7 +381,9 @@ export const FoodBarcodeScannerScaffold = ({
                   >
                     <KeyboardIcon
                       size={14}
-                      color={isManualMode ? appColors.white : appColors.slate300}
+                      color={
+                        isManualMode ? appColors.white : appColors.slate300
+                      }
                       weight="bold"
                     />
                     <Text
@@ -408,30 +410,27 @@ export const FoodBarcodeScannerScaffold = ({
             </View>
 
             {!isManualMode ? (
-              <View style={styles.finderWrap} pointerEvents="none">
-                <View
-                  ref={finderRef}
-                  style={styles.finderFrame}
-                  onLayout={() => reportFinderLayout()}
-                >
-                  <View style={styles.scanLine} />
+              hasPermission && !isPreparing ? (
+                <View style={styles.finderWrap} pointerEvents="none">
+                  <View
+                    ref={finderRef}
+                    style={styles.finderFrame}
+                    onLayout={() => reportFinderLayout()}
+                  >
+                    <View style={styles.scanLine} />
+                  </View>
                 </View>
-              </View>
+              ) : null
             ) : (
               <View style={styles.manualEntryWrap}>
                 <View style={styles.manualEntry}>
-                  <View style={styles.manualEntryIcon}>
-                    <KeyboardIcon
-                      size={34}
-                      color={appColors.brand300}
-                      weight="bold"
-                    />
-                  </View>
                   <Text style={styles.manualEntryTitle}>
                     Manual barcode entry
                   </Text>
                   <View style={styles.manualRow}>
                     <TextInput
+                      accessibilityLabel="Barcode number"
+                      selectionColor={appColors.brand500}
                       value={manualBarcode}
                       onChangeText={(value) => {
                         setManualBarcode(value);
@@ -444,7 +443,7 @@ export const FoodBarcodeScannerScaffold = ({
                         void handleManualBarcodeSubmit();
                       }}
                       placeholder="e.g. 737628064502"
-                      placeholderTextColor={appColors.slate400}
+                      placeholderTextColor={appColors.slate300}
                       style={[
                         styles.manualInput,
                         locked && styles.manualInputDisabled,
@@ -701,10 +700,11 @@ export const styles = StyleSheet.create({
   },
   manualInput: {
     flex: 1,
+    minHeight: 48,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: appColors.surfaceGhostStrong,
-    backgroundColor: appColors.surfaceOverlay,
+    borderColor: appColors.slate400,
+    backgroundColor: "transparent",
     color: appColors.slate50,
     fontSize: 15,
     fontWeight: "600",
@@ -715,6 +715,7 @@ export const styles = StyleSheet.create({
     opacity: 0.7,
   },
   manualButton: {
+    minHeight: 48,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 8,

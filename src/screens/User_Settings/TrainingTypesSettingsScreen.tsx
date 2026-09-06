@@ -1,31 +1,38 @@
 import React from "react";
-import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { TrainingType } from "../../navigation/onboardingTypes";
 import type { MoreParamList } from "../../navigation/MoreNavigator";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { appColors } from "../../theme/colors";
-import { AppButton, AppCard, AppText, NumericText, OptionCard } from "../../components/ui";
+import {
+  AppButton,
+  AppCard,
+  AppText,
+  NumericText,
+  OptionCard,
+} from "../../components/ui";
 import { appSpacing } from "../../theme/tokens";
 import SettingsStackHeader from "./SettingsStackHeader";
-import { formatTrainingSummary, TRAINING_TYPE_OPTIONS } from "./userProfileOptions";
+import {
+  formatTrainingSummary,
+  TRAINING_TYPE_OPTIONS,
+} from "./userProfileOptions";
 import { saveUserProfileChanges } from "./userSettingsActions";
 
-type Props = NativeStackScreenProps<MoreParamList, "TrainingTypesSettingsScreen">;
+type Props = NativeStackScreenProps<
+  MoreParamList,
+  "TrainingTypesSettingsScreen"
+>;
 
 const TrainingTypesSettingsScreen = ({ navigation }: Props) => {
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.user.currentUser);
-  const [selectedTraining, setSelectedTraining] = React.useState<TrainingType[]>(
-    (user?.trainingTypes as TrainingType[] | null) ?? [],
-  );
+  const [selectedTraining, setSelectedTraining] = React.useState<
+    TrainingType[]
+  >((user?.trainingTypes as TrainingType[] | null) ?? []);
   const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
@@ -64,27 +71,25 @@ const TrainingTypesSettingsScreen = ({ navigation }: Props) => {
   };
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <ScrollView
         style={styles.screen}
         contentContainerStyle={[
           styles.content,
           {
-            paddingTop: insets.top + 16,
+            paddingTop: 16,
             paddingBottom: insets.bottom + 28,
           },
         ]}
         showsVerticalScrollIndicator={false}
       >
         <SettingsStackHeader
-          eyebrow="User Settings"
           onBack={() => navigation.goBack()}
-          subtitle="Choose the training modes that best match your current week. You can select multiple."
           title="Training Types"
         />
 
         {!user ? (
-          <AppCard style={styles.card}>
+          <AppCard style={styles.card} variant="plain">
             <AppText variant="cardTitle">No active user</AppText>
             <AppText color="secondary" variant="bodySmall">
               Sign in to your account first before editing training settings.
@@ -92,34 +97,17 @@ const TrainingTypesSettingsScreen = ({ navigation }: Props) => {
           </AppCard>
         ) : (
           <>
-            <AppCard style={styles.card}>
-              <View style={styles.summaryRow}>
-                <View style={styles.summaryCopy}>
-                  <AppText variant="cardTitle">Current profile</AppText>
-                  <AppText color="secondary" variant="bodySmall">
-                    {formatTrainingSummary(user.trainingTypes)}
-                  </AppText>
-                </View>
-                <NumericText
-                  align="right"
-                  numberOfLines={2}
-                  style={styles.metricValue}
-                  variant="numberTrendDelta"
-                >
-                  {selectedTraining.length} selected
-                </NumericText>
-              </View>
-
+            <AppCard style={styles.card} variant="plain">
               <View style={styles.optionStack}>
                 {TRAINING_TYPE_OPTIONS.map((option) => {
                   const selected = selectedTraining.includes(option.value);
 
                   return (
                     <OptionCard
+                      selectionMode="multiple"
                       key={option.value}
                       onPress={() => toggleTraining(option.value)}
                       selected={selected}
-                      subtitle={option.description}
                       title={option.label}
                     />
                   );

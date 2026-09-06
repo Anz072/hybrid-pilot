@@ -47,36 +47,31 @@ const OnboardingStepScreen = ({
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <ScrollView
         contentContainerStyle={[
           styles.content,
           centered && styles.contentCentered,
           {
-            paddingTop: insets.top + appSpacing.md,
-            paddingBottom: footer ? appSpacing.xl : insets.bottom + appSpacing.xl,
+            paddingTop: appSpacing.md,
+            paddingBottom: footer
+              ? appSpacing.xl
+              : insets.bottom + appSpacing.xl,
           },
           contentStyle,
         ]}
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
       >
-        <OnboardingTopBar
-          onBack={onBack}
-          progress={progress}
-          stepLabel={stepLabel}
-        />
+        {onBack || progress != null ? (
+          <OnboardingTopBar
+            onBack={onBack}
+            progress={progress}
+            stepLabel={stepLabel}
+          />
+        ) : null}
         <View style={[styles.header, centered && styles.headerCentered]}>
           {headerAccessory}
-          {eyebrow ? (
-            <AppText
-              color="secondary"
-              style={centered ? styles.centeredEyebrow : styles.eyebrow}
-              variant="eyebrow"
-            >
-              {eyebrow}
-            </AppText>
-          ) : null}
           <AppText
             align={centered ? "center" : undefined}
             variant={centered ? "screenTitle" : "sectionTitleLarge"}
@@ -96,7 +91,12 @@ const OnboardingStepScreen = ({
         {children}
       </ScrollView>
       {footer ? (
-        <View style={[styles.footer, { paddingBottom: insets.bottom + appSpacing.xs }]}>
+        <View
+          style={[
+            styles.footer,
+            { paddingBottom: insets.bottom + appSpacing.xs },
+          ]}
+        >
           {footer}
         </View>
       ) : null}

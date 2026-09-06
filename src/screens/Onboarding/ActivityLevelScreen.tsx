@@ -10,11 +10,10 @@ import { appColors } from "../../theme/colors";
 import { appSpacing } from "../../theme/tokens";
 import OnboardingButton from "./onboardingButton";
 import OnboardingReviewCard from "./OnboardingReviewCard";
-import OnboardingStepScreen, { onboardingStepProgress } from "./OnboardingStepScreen";
-import {
-  formatBodySummary,
-  formatGoalSummary,
-} from "./onboardingSummary";
+import OnboardingStepScreen, {
+  onboardingStepProgress,
+} from "./OnboardingStepScreen";
+import { formatBodySummary, formatGoalSummary } from "./onboardingSummary";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "Activity">;
 
@@ -53,14 +52,32 @@ const ActivityLevelScreen = ({ navigation, route }: Props) => {
 
   return (
     <OnboardingStepScreen
-      eyebrow="Daily Baseline"
-      headerAccessory={<GaugeIcon size={24} color={appColors.actionPrimary} weight="fill" />}
       onBack={() => navigation.goBack()}
       progress={onboardingStepProgress(5)}
       stepLabel="Activity"
-      subtitle="Choose your baseline outside dedicated workouts."
+      subtitle="Include your daily movement and usual workouts."
       title="How active are you?"
     >
+      <View style={styles.listWrap}>
+        {levels.map((item) => (
+          <OnboardingButton
+            dataToSend={{
+              goal: route.params.goal,
+              goalStrategy: route.params.goalStrategy,
+              bodyData: route.params.bodyData,
+              activity: item.value,
+              training: route.params.training,
+              proteinFocus: route.params.proteinFocus,
+            }}
+            key={item.value}
+            label={item.label}
+            navGoal="Training"
+            navigation={navigation}
+            subtitle={item.note}
+            value={item.value}
+          />
+        ))}
+      </View>
       <OnboardingReviewCard
         items={[
           {
@@ -85,27 +102,6 @@ const ActivityLevelScreen = ({ navigation, route }: Props) => {
           },
         ]}
       />
-
-      <View style={styles.listWrap}>
-        {levels.map((item) => (
-          <OnboardingButton
-            dataToSend={{
-              goal: route.params.goal,
-              goalStrategy: route.params.goalStrategy,
-              bodyData: route.params.bodyData,
-              activity: item.value,
-              training: route.params.training,
-              proteinFocus: route.params.proteinFocus,
-            }}
-            key={item.value}
-            label={item.label}
-            navGoal="Training"
-            navigation={navigation}
-            subtitle={item.note}
-            value={item.value}
-          />
-        ))}
-      </View>
     </OnboardingStepScreen>
   );
 };

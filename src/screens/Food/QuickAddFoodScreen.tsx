@@ -1,3 +1,4 @@
+import { getDisplayPreferencesSnapshot } from "../../preferences/displayPreferences";
 import React from "react";
 import DateTimePicker, {
   DateTimePickerEvent,
@@ -12,11 +13,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import {
-  useNavigation,
-  useRoute,
-  StackActions,
-} from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import type {
   CompositeNavigationProp,
   RouteProp,
@@ -24,7 +21,11 @@ import type {
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import { LoadingState } from "../../components/ui";
-import { ArrowLeftIcon, FireIcon, PencilSimpleIcon } from "phosphor-react-native";
+import {
+  ArrowLeftIcon,
+  FireIcon,
+  PencilSimpleIcon,
+} from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
@@ -146,7 +147,10 @@ const QuickAddFoodScreen = () => {
       setLoading(true);
 
       try {
-        const nextEntry = await DB.getUserFoodLogEntryById(entryId, route.params.date);
+        const nextEntry = await DB.getUserFoodLogEntryById(
+          entryId,
+          route.params.date,
+        );
 
         if (cancelled) {
           return;
@@ -226,9 +230,6 @@ const QuickAddFoodScreen = () => {
 
     return 1;
   }, [entry?.calories, macroCalculatedCalories]);
-  const helperText = isEnergyManuallySet
-    ? `System calculates ${macroCalculatedCalories.toFixed(0)} kcal from macros.`
-    : `Macro sum is ${macroCalculatedCalories.toFixed(0)} kcal.`;
   const activeFoodLogContext = React.useMemo(
     () =>
       resolveFoodLogContext({
@@ -303,21 +304,9 @@ const QuickAddFoodScreen = () => {
   );
 
   const closeAfterSave = React.useCallback(() => {
-    if (route.params.entryId) {
-      navigation.goBack();
-      return;
-    }
-
-    const routes = navigation.getState().routes;
-    const previousRoute = routes[routes.length - 2];
-
-    if (previousRoute?.name === "AddFood" && routes.length >= 2) {
-      navigation.dispatch(StackActions.pop(2));
-      return;
-    }
-
+    // Keep the existing search session alive when adding several foods.
     navigation.goBack();
-  }, [navigation, route.params.entryId]);
+  }, [navigation]);
 
   const handleTimeChange = React.useCallback(
     (event: DateTimePickerEvent, nextDate?: Date) => {
@@ -469,8 +458,8 @@ const QuickAddFoodScreen = () => {
   return (
     <View style={[styles.screen, { paddingTop: insets.top + 14 }]}>
       <KeyboardAvoidingView
-        style={styles.screen}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={[styles.screen, { overflow: "hidden" }]}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
       >
         <KeyboardAwareScrollView
@@ -482,24 +471,10 @@ const QuickAddFoodScreen = () => {
           focusedInputBottomOffset={132}
         >
           <View style={styles.card}>
-            <View style={styles.heroHeaderRow}>
-              <Pressable
-                onPress={() => navigation.goBack()}
-                accessibilityLabel="Go back"
-                hitSlop={8}
-                style={({ pressed }) => [
-                  styles.backButton,
-                  pressed && styles.cardPressed,
-                ]}
-              >
-                <ArrowLeftIcon
-                  size={18}
-                  color={appColors.textPrimary}
-                  weight="bold"
-                />
-              </Pressable>
-              <Text style={styles.heroTitle}>Quick Add</Text>
-            </View>
+            <FoodScreenHeader
+              title={entry ? "Edit quick add" : "Quick add"}
+              onBack={() => navigation.goBack()}
+            />
 
             <FoodLogContextBar
               context={activeFoodLogContext}
@@ -512,14 +487,12 @@ const QuickAddFoodScreen = () => {
               value={selectedMeal}
             />
             <View style={styles.energyLabelContainer}>
-              <View style={{ marginBottom: 8 }}>
-                <FireIcon size={14} />
-              </View>
-              <Text style={styles.fieldLabel}>Energy</Text>
+              <Text style={styles.fieldLabel}>Calories</Text>
             </View>
             <View style={styles.energyRow}>
               <TextInput
                 style={styles.energyInput}
+                accessibilityLabel="Calories"
                 value={displayedEnergyValue}
                 onChangeText={(value) => {
                   setEnergyValue(value);
@@ -530,7 +503,6 @@ const QuickAddFoodScreen = () => {
                 keyboardType="decimal-pad"
                 placeholder="0"
                 placeholderTextColor={appColors.textMuted}
-                autoFocus={!route.params.entryId}
               />
               <View style={styles.unitPill}>
                 <Text style={styles.unitText}>kcal</Text>
@@ -554,7 +526,6 @@ const QuickAddFoodScreen = () => {
                 </Pressable>
               ))}
             </View>
-            <Text style={styles.helperText}>{helperText}</Text>
             {isEnergyManuallySet && macroCalculatedCalories > 0 ? (
               <Pressable
                 onPress={() => {
@@ -568,41 +539,23 @@ const QuickAddFoodScreen = () => {
                 ]}
               >
                 <Text style={styles.inlineQuietButtonText}>
-                  Use macro calories
+                  Use {macroCalculatedCalories.toFixed(0)} kcal from macros
                 </Text>
               </Pressable>
             ) : null}
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Macros</Text>
             <View style={styles.macroGrid}>
               <View style={styles.macroField}>
                 <Text style={styles.fieldLabel}>Protein</Text>
                 <View style={styles.nutrientInputWrap}>
-              <TextInput
-                style={styles.nutrientInput}
-                value={proteinValue}
-                onChangeText={(value) => {
-                  setProteinValue(value);
-                  setFormError(null);
-                }}
-                    keyboardType="decimal-pad"
-                    placeholder="0"
-                    placeholderTextColor={appColors.textMuted}
-                  />
-                  <Text style={styles.nutrientUnit}>g</Text>
-                </View>
-              </View>
-
-              <View style={styles.macroField}>
-                <Text style={styles.fieldLabel}>Fat</Text>
-                <View style={styles.nutrientInputWrap}>
                   <TextInput
                     style={styles.nutrientInput}
-                    value={fatValue}
+                    accessibilityLabel="Protein in grams"
+                    value={proteinValue}
                     onChangeText={(value) => {
-                      setFatValue(value);
+                      setProteinValue(value);
                       setFormError(null);
                     }}
                     keyboardType="decimal-pad"
@@ -618,9 +571,29 @@ const QuickAddFoodScreen = () => {
                 <View style={styles.nutrientInputWrap}>
                   <TextInput
                     style={styles.nutrientInput}
+                    accessibilityLabel="Carbohydrate in grams"
                     value={carbsValue}
                     onChangeText={(value) => {
                       setCarbsValue(value);
+                      setFormError(null);
+                    }}
+                    keyboardType="decimal-pad"
+                    placeholder="0"
+                    placeholderTextColor={appColors.textMuted}
+                  />
+                  <Text style={styles.nutrientUnit}>g</Text>
+                </View>
+              </View>
+
+              <View style={styles.macroField}>
+                <Text style={styles.fieldLabel}>Fat</Text>
+                <View style={styles.nutrientInputWrap}>
+                  <TextInput
+                    style={styles.nutrientInput}
+                    accessibilityLabel="Fat in grams"
+                    value={fatValue}
+                    onChangeText={(value) => {
+                      setFatValue(value);
                       setFormError(null);
                     }}
                     keyboardType="decimal-pad"
@@ -638,6 +611,7 @@ const QuickAddFoodScreen = () => {
               </Text>
               <TextInput
                 style={[styles.textInput, styles.optionalInput]}
+                accessibilityLabel="Name, optional"
                 value={nameValue}
                 onChangeText={(value) => {
                   setNameValue(value);
@@ -647,13 +621,16 @@ const QuickAddFoodScreen = () => {
                 placeholderTextColor={appColors.textMuted}
               />
             </View>
-            {formError ? <Text style={styles.formError}>{formError}</Text> : null}
+            {formError ? (
+              <Text style={styles.formError}>{formError}</Text>
+            ) : null}
           </View>
 
           {showTimePicker ? (
             <DateTimePicker
               value={loggedAtDate}
               mode="time"
+              is24Hour={getDisplayPreferencesSnapshot().timeFormat === "24h"}
               display={Platform.OS === "ios" ? "spinner" : "default"}
               onChange={handleTimeChange}
             />
@@ -716,9 +693,9 @@ const styles = StyleSheet.create({
     ...sharedStyleValues.heroTitleLarge,
     marginBottom: 4,
   },
-  card: sharedStyleValues.card,
+  card: { gap: 8, marginBottom: 16 },
   mealBucketSelect: {
-    marginBottom: 16,
+    marginBottom: 8,
   },
   sectionTitle: {
     ...sharedStyleValues.sectionTitle,
@@ -758,6 +735,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   inlineQuietButton: {
+    minHeight: 48,
+    justifyContent: "center",
     alignSelf: "flex-start",
     borderRadius: 999,
     borderWidth: 1,
@@ -778,6 +757,10 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   presetChip: {
+    minHeight: 48,
+    minWidth: 48,
+    justifyContent: "center",
+    alignItems: "center",
     borderRadius: 999,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
@@ -823,21 +806,9 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   textInput: sharedStyleValues.input,
-  optionalPanel: {
-    borderRadius: 10,
-    backgroundColor: appColors.surfaceField,
-    borderWidth: 1,
-    borderColor: appColors.borderSoft,
-    padding: 12,
-    marginTop: 16,
-  },
-  optionalFieldLabel: {
-    color: appColors.textMuted,
-  },
-  optionalInput: {
-    backgroundColor: appColors.surfaceCard,
-    borderColor: appColors.borderSoft,
-  },
+  optionalPanel: { marginTop: 12 },
+  optionalFieldLabel: { color: appColors.textSecondary },
+  optionalInput: {},
   formError: {
     color: appColors.danger700,
     fontSize: 12,

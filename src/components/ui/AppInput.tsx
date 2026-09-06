@@ -10,7 +10,13 @@ import {
 import { MagnifyingGlassIcon } from "phosphor-react-native";
 import { appColors } from "../../theme/colors";
 import { appTypography } from "../../theme/typography";
-import { appBorders, appRadius, appSpacing, appStates, appSurfaces } from "../../theme/tokens";
+import {
+  appBorders,
+  appRadius,
+  appSpacing,
+  appStates,
+  appSurfaces,
+} from "../../theme/tokens";
 import { AppText } from "./AppText";
 
 type AppInputProps = TextInputProps & {
@@ -34,12 +40,13 @@ export const AppInput = ({
   return (
     <View style={[styles.container, containerStyle]}>
       {label ? (
-        <AppText color="secondary" style={styles.label} variant="eyebrow">
+        <AppText color="secondary" style={styles.label} variant="metadata">
           {label}
         </AppText>
       ) : null}
       <TextInput
         placeholderTextColor={placeholderTextColor}
+        accessibilityLabel={label}
         {...props}
         onBlur={(event) => {
           setFocused(false);
@@ -57,7 +64,12 @@ export const AppInput = ({
         ]}
       />
       {error ? (
-        <AppText color="error" style={styles.error} variant="metadata">
+        <AppText
+          accessibilityRole="alert"
+          color="error"
+          style={styles.error}
+          variant="metadata"
+        >
           {error}
         </AppText>
       ) : null}
@@ -84,16 +96,21 @@ export const SearchInput = ({
   return (
     <View style={[styles.container, containerStyle]}>
       {label ? (
-        <AppText color="secondary" style={styles.label} variant="eyebrow">
+        <AppText color="secondary" style={styles.label} variant="metadata">
           {label}
         </AppText>
       ) : null}
       <View style={[styles.searchWrap, focused ? styles.inputFocused : null]}>
-        <MagnifyingGlassIcon size={20} color={appColors.textMuted} weight="bold" />
+        <MagnifyingGlassIcon
+          size={20}
+          color={appColors.textMuted}
+          weight="bold"
+        />
         <TextInput
           placeholder={placeholder}
           placeholderTextColor={placeholderTextColor}
           returnKeyType="search"
+          accessibilityLabel={label || placeholder}
           {...props}
           onBlur={(event) => {
             setFocused(false);
@@ -121,7 +138,7 @@ const styles = StyleSheet.create({
   // appears to signal focus or an error, without a layout jump.
   input: {
     minHeight: 48,
-    borderRadius: appRadius.md,
+    borderRadius: appRadius.sm,
     borderWidth: appBorders.width,
     borderColor: "transparent",
     backgroundColor: appSurfaces.soft,
@@ -138,7 +155,7 @@ const styles = StyleSheet.create({
   },
   searchWrap: {
     minHeight: 52,
-    borderRadius: appRadius.md,
+    borderRadius: appRadius.sm,
     borderWidth: appBorders.width,
     borderColor: "transparent",
     backgroundColor: appSurfaces.soft,

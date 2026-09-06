@@ -1,3 +1,4 @@
+import { AppButton, Disclosure } from "../../components/ui";
 import React from "react";
 import {
   Alert,
@@ -47,9 +48,9 @@ type CreateFoodItemNav = CompositeNavigationProp<
 type FoodItemSaveMode = "save" | "save_and_log";
 
 const NUTRITION_BASES: { basis: NutritionBasis; label: string }[] = [
-  { basis: "100g", label: "Per 100 g" },
-  { basis: "100ml", label: "Per 100 ml" },
-  { basis: "serving", label: "Per serving" },
+  { basis: "100g", label: "100 g" },
+  { basis: "100ml", label: "100 ml" },
+  { basis: "serving", label: "Serving" },
 ];
 
 const SERVING_UNIT_PRESETS = ["g", "ml", "serving", "piece"];
@@ -194,9 +195,6 @@ const CreateFoodItemScreen = () => {
 
     return 1;
   }, [calories, macroCalculatedCalories]);
-  const caloriesHelperText = isCaloriesManuallySet
-    ? `System calculates ${macroCalculatedCalories.toFixed(0)} kcal from macros.`
-    : `Macro sum is ${macroCalculatedCalories.toFixed(0)} kcal.`;
 
   const currentDraftSignature = React.useMemo(
     () =>
@@ -419,16 +417,16 @@ const CreateFoodItemScreen = () => {
   );
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <KeyboardAvoidingView
-        style={styles.screen}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={[styles.screen, { overflow: "hidden" }]}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
       >
         <KeyboardAwareScrollView
           contentContainerStyle={[
             styles.content,
-            { paddingBottom: Math.max(176, insets.bottom + 152) },
+            { paddingBottom: Math.max(112, insets.bottom + 88) },
           ]}
           focusedInputBottomOffset={132}
         >
@@ -436,7 +434,7 @@ const CreateFoodItemScreen = () => {
             eyebrow="Custom Food"
             title="Create food"
             subtitle={foodLogContext.dateLabel}
-            onBack={() => navigation.goBack()}
+            onBack={handleCancel}
           />
           <MealBucketSelect
             disabled={saving}
@@ -446,12 +444,6 @@ const CreateFoodItemScreen = () => {
           />
 
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Food Details</Text>
-            <Text style={styles.sectionSubtitle}>
-              Save the name and brand so this food is easy to find in search
-              later.
-            </Text>
-
             <Text style={styles.fieldLabel}>Food name</Text>
             <TextInput
               style={styles.input}
@@ -462,48 +454,46 @@ const CreateFoodItemScreen = () => {
                 setName(value);
                 setFormError(null);
               }}
-              autoFocus={!prefillName}
             />
 
-            <Text style={[styles.fieldLabel, styles.fieldLabelSpacing]}>
-              Brand (optional)
-            </Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Brand or store name"
-              placeholderTextColor={appColors.textMuted}
-              value={brand}
-              onChangeText={(value) => {
-                setBrand(value);
-                setFormError(null);
-              }}
-            />
+            <Disclosure
+              title="Brand & barcode"
+              initiallyOpen={Boolean(barcodeValue)}
+            >
+              <Text style={[styles.fieldLabel, styles.fieldLabelSpacing]}>
+                Brand (optional)
+              </Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Brand or store name"
+                placeholderTextColor={appColors.textMuted}
+                value={brand}
+                onChangeText={(value) => {
+                  setBrand(value);
+                  setFormError(null);
+                }}
+              />
 
-            <Text style={[styles.fieldLabel, styles.fieldLabelSpacing]}>
-              Barcode (optional)
-            </Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. 737628064502"
-              placeholderTextColor={appColors.textMuted}
-              value={barcodeValue}
-              onChangeText={(value) => {
-                setBarcodeValue(value);
-                setFormError(null);
-              }}
-              keyboardType="number-pad"
-            />
-            <Text style={styles.helperText}>
-              Add the EAN or UPC digits so scanning the package finds this food
-              next time.
-            </Text>
+              <Text style={[styles.fieldLabel, styles.fieldLabelSpacing]}>
+                Barcode (optional)
+              </Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. 737628064502"
+                placeholderTextColor={appColors.textMuted}
+                value={barcodeValue}
+                onChangeText={(value) => {
+                  setBarcodeValue(value);
+                  setFormError(null);
+                }}
+                keyboardType="number-pad"
+              />
+            </Disclosure>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Nutrition Basis</Text>
-            <Text style={styles.sectionSubtitle}>
-              Pick what the nutrition values below describe.
-            </Text>
+            <Text style={styles.fieldLabel}>Nutrition per</Text>
+
             <View style={styles.presetRow}>
               {NUTRITION_BASES.map((option) => {
                 const selected = option.basis === basis;
@@ -585,12 +575,6 @@ const CreateFoodItemScreen = () => {
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>
-              Nutrition {getBasisLabel(basis)}
-            </Text>
-            <Text style={styles.sectionSubtitle}>
-              Copy the values from the label for the basis picked above.
-            </Text>
             <View style={styles.mainCell}>
               <Text style={styles.fieldLabel}>Calories</Text>
               <TextInput
@@ -606,7 +590,6 @@ const CreateFoodItemScreen = () => {
                 onBlur={handleCaloriesBlur}
                 keyboardType="decimal-pad"
               />
-              <Text style={styles.helperText}>{caloriesHelperText}</Text>
               {isCaloriesManuallySet && macroCalculatedCalories > 0 ? (
                 <Pressable
                   onPress={() => {
@@ -620,7 +603,7 @@ const CreateFoodItemScreen = () => {
                   ]}
                 >
                   <Text style={styles.inlineQuietButtonText}>
-                    Use macro calories
+                    Use {macroCalculatedCalories.toFixed(0)} kcal from macros
                   </Text>
                 </Pressable>
               ) : null}
@@ -629,6 +612,7 @@ const CreateFoodItemScreen = () => {
               <View style={styles.gridCell}>
                 <Text style={styles.fieldLabel}>Protein (g)</Text>
                 <TextInput
+                  accessibilityLabel="Protein in grams"
                   style={styles.input}
                   placeholder="0"
                   placeholderTextColor={appColors.textMuted}
@@ -643,6 +627,7 @@ const CreateFoodItemScreen = () => {
               <View style={styles.gridCell}>
                 <Text style={styles.fieldLabel}>Carbs (g)</Text>
                 <TextInput
+                  accessibilityLabel="Carbs in grams"
                   style={styles.input}
                   placeholder="0"
                   placeholderTextColor={appColors.textMuted}
@@ -657,6 +642,7 @@ const CreateFoodItemScreen = () => {
               <View style={styles.gridCell}>
                 <Text style={styles.fieldLabel}>Fat (g)</Text>
                 <TextInput
+                  accessibilityLabel="Fat in grams"
                   style={styles.input}
                   placeholder="0"
                   placeholderTextColor={appColors.textMuted}
@@ -751,57 +737,29 @@ const CreateFoodItemScreen = () => {
         <View
           style={[
             styles.footer,
-            { paddingBottom: Math.max(insets.bottom, 16) },
+            {
+              flexDirection: "row",
+              paddingBottom: Math.max(insets.bottom, 16),
+            },
           ]}
         >
-          <View style={styles.footerRow}>
-            <Pressable
-              onPress={handleCancel}
-              disabled={saving}
-              style={({ pressed }) => [
-                styles.secondaryButton,
-                styles.footerButton,
-                saving && styles.disabled,
-                pressed && !saving && styles.cardPressed,
-              ]}
-            >
-              <Text style={styles.secondaryButtonText}>Cancel</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => {
-                void handleSave("save");
-              }}
-              disabled={saving}
-              style={({ pressed }) => [
-                styles.secondaryButton,
-                styles.footerButton,
-                saving && styles.disabled,
-                pressed && !saving && styles.cardPressed,
-              ]}
-            >
-              <Text style={styles.secondaryButtonText}>
-                {saving && saveMode === "save" ? "Saving..." : "Save only"}
-              </Text>
-            </Pressable>
-          </View>
-
-          <Pressable
-            onPress={() => {
-              void handleSave("save_and_log");
-            }}
+          <AppButton
+            style={{ flex: 1 }}
+            label={saving && saveMode === "save" ? "Saving..." : "Save only"}
+            onPress={() => void handleSave("save")}
             disabled={saving}
-            style={({ pressed }) => [
-              styles.primaryButton,
-              saving && styles.disabled,
-              pressed && !saving && styles.cardPressed,
-            ]}
-          >
-            <Text style={styles.primaryButtonText}>
-              {saving && saveMode === "save_and_log"
-                ? "Saving and logging..."
-                : "Save and log"}
-            </Text>
-          </Pressable>
+            variant="secondary"
+          />
+          <AppButton
+            style={{ flex: 1 }}
+            label={
+              saving && saveMode === "save_and_log"
+                ? "Saving..."
+                : "Save and log"
+            }
+            onPress={() => void handleSave("save_and_log")}
+            disabled={saving}
+          />
         </View>
       </KeyboardAvoidingView>
     </View>
@@ -839,12 +797,6 @@ const styles = StyleSheet.create({
     flex: 0,
     minWidth: 104,
   },
-  helperText: {
-    color: appColors.textSecondary,
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 8,
-  },
   formError: {
     color: appColors.danger700,
     fontSize: 12,
@@ -854,6 +806,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   inlineQuietButton: {
+    minHeight: 48,
+    justifyContent: "center",
     alignSelf: "flex-start",
     borderRadius: 999,
     borderWidth: 1,
@@ -878,6 +832,8 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   presetChip: {
+    minHeight: 48,
+    justifyContent: "center",
     borderRadius: 999,
     borderWidth: 1,
     borderColor: appColors.borderSoft,
@@ -898,9 +854,11 @@ const styles = StyleSheet.create({
     color: appColors.actionPrimaryPressed,
   },
   grid: {
+    marginTop: 16,
     display: "flex",
     flexDirection: "row",
     flexWrap: "wrap",
+    alignItems: "flex-end",
     gap: 10,
   },
   mainCell: {

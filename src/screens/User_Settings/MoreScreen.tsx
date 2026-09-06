@@ -19,6 +19,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -26,9 +27,7 @@ import {
   buildEffectiveCalorieTargetsForDates,
   getWeeklyCalorieBudget,
 } from "../../engine/calorieTargets";
-import {
-  resolveGoalStrategy,
-} from "../../engine/goalStrategy";
+import { resolveGoalStrategy } from "../../engine/goalStrategy";
 import type { MoreParamList } from "../../navigation/MoreNavigator";
 import { DB } from "../../store/DB";
 import { useAppSelector } from "../../store/hooks";
@@ -37,7 +36,12 @@ import { useDisplayPreferences } from "../../preferences/usePreferences";
 import { weightUnitLabel } from "../../preferences/displayPreferences";
 import { appColors } from "../../theme/colors";
 import { appTypography } from "../../theme/typography";
-import { appBorders, appRadius, appSpacing, appStates } from "../../theme/tokens";
+import {
+  appBorders,
+  appRadius,
+  appSpacing,
+  appStates,
+} from "../../theme/tokens";
 import { AppButton, ErrorState, LoadingState } from "../../components/ui";
 import CalorieBudgetChart from "./CalorieBudgetChart";
 import { seedDeveloperTestData } from "./testDataSeeder";
@@ -80,6 +84,8 @@ const MoreActionRow = ({
   title,
   value,
 }: MoreActionRowProps) => {
+  const { fontScale } = useWindowDimensions();
+  const stackedValue = fontScale > 1.3;
   return (
     <Pressable
       onPress={onPress}
@@ -92,14 +98,15 @@ const MoreActionRow = ({
       <View style={styles.actionIcon}>{icon}</View>
       <View style={styles.actionCopy}>
         <Text style={styles.actionTitle}>{title}</Text>
+        {stackedValue && value ? (
+          <Text style={styles.actionStackedValue}>{value}</Text>
+        ) : null}
       </View>
       <View style={styles.actionMeta}>
-        <Text style={styles.actionValue}>{value}</Text>
-        <CaretRightIcon
-          size={18}
-          color={appColors.textMuted}
-          weight="bold"
-        />
+        {!stackedValue && value ? (
+          <Text style={styles.actionValue}>{value}</Text>
+        ) : null}
+        <CaretRightIcon size={18} color={appColors.textMuted} weight="bold" />
       </View>
     </Pressable>
   );
@@ -142,7 +149,9 @@ const MoreScreen = () => {
     } catch {
       setSettings(null);
       setAdaptiveRecommendationReady(false);
-      setSettingsError("Could not load settings context. Check your connection and try again.");
+      setSettingsError(
+        "Could not load settings context. Check your connection and try again.",
+      );
     } finally {
       setSettingsLoading(false);
     }
@@ -222,60 +231,30 @@ const MoreScreen = () => {
   }, [isSeedingTestData, runSeedDeveloperTestData]);
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <ScrollView
         style={styles.screen}
         contentContainerStyle={[
           styles.content,
           {
-            paddingTop: insets.top + 16,
+            paddingTop: 16,
             paddingBottom: insets.bottom + 28,
           },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.heroCard}>
-          <Text style={styles.eyebrow}>Settings</Text>
-          <Text style={styles.heroTitle}>
-            {user?.displayName ? `Hello, ${user.displayName}` : "Settings"}
-          </Text>
-
-          <View style={styles.heroMetrics}>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>Avg Daily Target</Text>
-              <Text style={styles.metricValue}>
-                {settingsLoading
-                  ? "..."
-                  : weeklyBudget != null
-                    ? `${Math.round(weeklyBudget / 7)} kcal`
-                    : "--"}
-              </Text>
-            </View>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>Weekly Budget</Text>
-              <Text style={styles.metricValue}>
-                {settingsLoading
-                  ? "..."
-                  : weeklyBudget != null
-                    ? `${Math.round(weeklyBudget)} kcal`
-                    : "--"}
-              </Text>
-            </View>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>Goal</Text>
-              <Text style={styles.metricValueSmall}>
-                {formatGoalLabel(user?.goal)}
-              </Text>
-            </View>
-          </View>
-        </View>
+        <Text style={styles.heroTitle}>Settings</Text>
 
         {settingsError ? (
           <ErrorState
             title="Could not load settings"
             message={settingsError}
             action={
-              <AppButton label="Try again" onPress={() => void loadSettings()} size="sm" />
+              <AppButton
+                label="Try again"
+                onPress={() => void loadSettings()}
+                size="sm"
+              />
             }
             style={styles.stateBlock}
           />
@@ -285,15 +264,9 @@ const MoreScreen = () => {
             message="Fetching calorie schedule and review state."
             style={styles.stateBlock}
           />
-        ) : (
-          <CalorieBudgetChart
-            highlightDate={new Date()}
-            title="Weekly budget preview"
-            values={weeklyValues}
-          />
-        )}
+        ) : null}
 
-        <Text style={styles.sectionTitle}>Reviews / Automation</Text>
+        <Text style={styles.sectionTitle}>Review</Text>
         <View style={styles.sectionCard}>
           <MoreActionRow
             icon={
@@ -305,7 +278,7 @@ const MoreScreen = () => {
             }
             onPress={() => navigation.navigate("WeeklyReviewScreen")}
             title="Weekly check-in"
-            value={adaptiveRecommendationReady ? "Review ready" : "Open"}
+            value={adaptiveRecommendationReady ? "Review ready" : ""}
           />
           <MoreActionRow
             icon={
@@ -315,17 +288,19 @@ const MoreScreen = () => {
                 weight="regular"
               />
             }
-            onPress={() => navigation.navigate("AdaptiveCaloriesSettingsScreen")}
+            onPress={() =>
+              navigation.navigate("AdaptiveCaloriesSettingsScreen")
+            }
             divider={false}
             title="Adaptive calories"
             value={
               settingsLoading
                 ? "..."
                 : settings?.adaptiveCaloriesEnabled
-                ? adaptiveRecommendationReady
-                  ? "Review ready"
-                  : "On"
-                : "Off"
+                  ? adaptiveRecommendationReady
+                    ? "Review ready"
+                    : "On"
+                  : "Off"
             }
           />
         </View>
@@ -343,7 +318,7 @@ const MoreScreen = () => {
             onPress={() => navigation.navigate("ProfileSettingsScreen")}
             divider={false}
             title="Profile & account"
-            value={user?.displayName ?? "Manage"}
+            value={user?.displayName ?? ""}
           />
         </View>
 
@@ -357,7 +332,9 @@ const MoreScreen = () => {
                 weight="regular"
               />
             }
-            onPress={() => navigation.navigate("CalorieAllowanceSettingsScreen")}
+            onPress={() =>
+              navigation.navigate("CalorieAllowanceSettingsScreen")
+            }
             title="Calorie allowance"
             value={
               user?.calorieAllowance != null
@@ -432,8 +409,8 @@ const MoreScreen = () => {
               settingsLoading
                 ? "..."
                 : settings?.dailyCalorieOverrides?.some((item) => item != null)
-                ? "Custom"
-                : "Base only"
+                  ? "Custom"
+                  : "Base only"
             }
           />
         </View>
@@ -463,7 +440,7 @@ const MoreScreen = () => {
             onPress={() => navigation.navigate("DataExportScreen")}
             divider={false}
             title="Export & backup"
-            value="Open"
+            value=""
           />
         </View>
 
@@ -479,7 +456,7 @@ const MoreScreen = () => {
             }
             onPress={() => navigation.navigate("UserCreatedRecipesScreen")}
             title="Your recipes"
-            value="Manage"
+            value=""
           />
           <MoreActionRow
             icon={
@@ -492,7 +469,7 @@ const MoreScreen = () => {
             onPress={() => navigation.navigate("UserCreatedCustomMealsScreen")}
             divider={false}
             title="Your custom meals"
-            value="Manage"
+            value=""
           />
         </View>
 
@@ -510,7 +487,7 @@ const MoreScreen = () => {
                 }
                 onPress={() => navigation.navigate("SettingsScreen")}
                 title="Debug tools"
-                value="Open"
+                value=""
               />
               <MoreActionRow
                 icon={
@@ -579,7 +556,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   sectionTitle: {
-    ...appTypography.eyebrow,
+    ...appTypography.metadata,
     color: appColors.textSecondary,
     marginTop: appSpacing.xl,
     marginBottom: appSpacing.xs,
@@ -630,6 +607,11 @@ const styles = StyleSheet.create({
     ...appTypography.label,
     textAlign: "right",
     flexShrink: 1,
+  },
+  actionStackedValue: {
+    color: appColors.textSecondary,
+    ...appTypography.metadata,
+    marginTop: appSpacing.xxs,
   },
 });
 

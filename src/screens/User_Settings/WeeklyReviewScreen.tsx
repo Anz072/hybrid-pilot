@@ -1,3 +1,4 @@
+import { Disclosure } from "../../components/ui";
 import React from "react";
 import {
   Alert,
@@ -6,7 +7,11 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { CalendarCheckIcon, LightningIcon, TrendUpIcon } from "phosphor-react-native";
+import {
+  CalendarCheckIcon,
+  LightningIcon,
+  TrendUpIcon,
+} from "phosphor-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -50,7 +55,12 @@ import {
   NumericText,
   ScreenHeader,
 } from "../../components/ui";
-import { appBorders, appRadius, appSpacing, appSurfaces } from "../../theme/tokens";
+import {
+  appBorders,
+  appRadius,
+  appSpacing,
+  appSurfaces,
+} from "../../theme/tokens";
 import {
   finishDiaryTrace,
   markDiaryUseful,
@@ -153,10 +163,7 @@ const formatSignedWeightDelta = (value: number, unit: WeightUnit): string =>
 
 const formatRecommendationStatus = (
   status: DBAdaptiveCalorieRecommendation["status"],
-) =>
-  status
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (match) => match.toUpperCase());
+) => status.replace(/_/g, " ").replace(/\b\w/g, (match) => match.toUpperCase());
 
 const getEntryDisplayName = (entry: DBUserFoodLogEntry): string => {
   if (entry.entrySource === "quick_add") {
@@ -266,7 +273,8 @@ const getAverage = (values: number[]) => {
 const getWeightTrend = (entries: DBWeightEntry[]) => {
   const sorted = [...entries].sort(
     (left, right) =>
-      new Date(left.measuredAt).getTime() - new Date(right.measuredAt).getTime(),
+      new Date(left.measuredAt).getTime() -
+      new Date(right.measuredAt).getTime(),
   );
   const first = sorted[0] ?? null;
   const last = sorted[sorted.length - 1] ?? null;
@@ -303,10 +311,12 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
   const [loadError, setLoadError] = React.useState<string | null>(null);
-  const [actionBusy, setActionBusy] = React.useState<"accept" | "dismiss" | null>(
+  const [actionBusy, setActionBusy] = React.useState<
+    "accept" | "dismiss" | null
+  >(null);
+  const [nextActionNote, setNextActionNote] = React.useState<string | null>(
     null,
   );
-  const [nextActionNote, setNextActionNote] = React.useState<string | null>(null);
   const activePerfTraceRef = React.useRef<DiaryPerfTrace | null>(null);
   const hasMeasuredWeeklyReviewRef = React.useRef(false);
 
@@ -469,8 +479,7 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
     return review.dayReviews.filter((day) => elapsedKeys.has(day.dateKey));
   }, [review.dayReviews, review.reviewDates]);
   const totalCalories = React.useMemo(
-    () =>
-      elapsedDayReviews.reduce((sum, day) => sum + day.calories, 0),
+    () => elapsedDayReviews.reduce((sum, day) => sum + day.calories, 0),
     [elapsedDayReviews],
   );
   const averageCalories = getAverage(
@@ -485,10 +494,11 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
     averageCalories != null && averageTarget != null
       ? averageCalories - averageTarget
       : null;
-  const completedDays = review.dayReviews.filter((day) => day.isComplete).length;
-  const completionRatio = review.dayReviews.length > 0
-    ? completedDays / review.dayReviews.length
-    : 0;
+  const completedDays = review.dayReviews.filter(
+    (day) => day.isComplete,
+  ).length;
+  const completionRatio =
+    review.dayReviews.length > 0 ? completedDays / review.dayReviews.length : 0;
   const weightTrend = React.useMemo(
     () => getWeightTrend(review.weightEntries),
     [review.weightEntries],
@@ -538,11 +548,11 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
         ? "Complete more diary days"
         : "Keep collecting this week's signal";
   const nextActionText = !review.settings?.adaptiveCaloriesEnabled
-    ? "You're already tracking intake, weight, and diary completion here. Turn adaptive calories on when you want a weekly recommendation to act on."
+    ? "Turn on adaptive calories for suggestions based on complete food logs and weight trends."
     : hasOpenProposal
       ? `Calories vs target are ${calorieDelta != null ? formatSignedCalories(calorieDelta) : "--"}, weight trend is ${weightTrendLabel}, and completion quality is ${completionQualityLabel}. This proposal suggests ${formatFoodNumber(review.proposedRecommendation?.recommendedBaseCalories ?? 0, " kcal")}.`
       : completedDays < 4
-        ? `Completion quality is ${completionQualityLabel}. Finish logging and mark full days complete so the next adaptive recommendation has a stronger signal.`
+        ? "Finish logging and mark full days complete to improve the next recommendation."
         : `Calories vs target are ${calorieDelta != null ? formatSignedCalories(calorieDelta) : "--"} and weight trend is ${weightTrendLabel}. Keep logging and weigh in again if you want the next recommendation to be stronger.`;
 
   const openAdaptiveSettings = React.useCallback(() => {
@@ -572,7 +582,13 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
     } finally {
       setActionBusy(null);
     }
-  }, [dispatch, loadReview, review.proposedRecommendation, review.settings, user]);
+  }, [
+    dispatch,
+    loadReview,
+    review.proposedRecommendation,
+    review.settings,
+    user,
+  ]);
 
   const handleDismissRecommendation = React.useCallback(async () => {
     if (!review.proposedRecommendation) {
@@ -601,13 +617,13 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
   }, []);
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <ScrollView
         style={styles.screen}
         contentContainerStyle={[
           styles.content,
           {
-            paddingTop: insets.top + 16,
+            paddingTop: 16,
             paddingBottom: insets.bottom + 28,
           },
         ]}
@@ -621,17 +637,21 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
         showsVerticalScrollIndicator={false}
       >
         <ScreenHeader
-          eyebrow="Check-in"
           onBack={() => navigation.goBack()}
           safeTop={false}
-          subtitle="Your weekly check-in: intake vs target, weight movement, completion quality, and the adaptive calorie decision — all in one place."
           title="Weekly check-in"
         />
 
         {!user ? (
           <AppCard style={styles.card}>
-            <AppText style={styles.cardTitle} variant="cardTitle">No active user</AppText>
-            <AppText color="secondary" style={styles.cardText} variant="bodySmall">
+            <AppText style={styles.cardTitle} variant="cardTitle">
+              No active user
+            </AppText>
+            <AppText
+              color="secondary"
+              style={styles.cardText}
+              variant="bodySmall"
+            >
               Sign in to review your weekly food and weight signals.
             </AppText>
           </AppCard>
@@ -659,43 +679,21 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
           <>
             <View style={styles.nextActionCard}>
               <CoachNote
-                eyebrow="Next action"
+                eyebrow=""
+                messageVariant="body"
                 message={`${nextActionTitle}. ${nextActionText}`}
               />
-
-              <View style={styles.nextActionStats}>
-                <View style={styles.nextActionStat}>
-                  <AppText color="muted" style={styles.metricLabel} variant="label">
-                    Calories vs target
-                  </AppText>
-                  <NumericText style={styles.nextActionStatValue} variant="numberTrendDelta">
-                    {calorieDelta != null ? formatSignedCalories(calorieDelta) : "--"}
-                  </NumericText>
-                </View>
-                <View style={styles.nextActionStat}>
-                  <AppText color="muted" style={styles.metricLabel} variant="label">
-                    Weight trend
-                  </AppText>
-                  <NumericText style={styles.nextActionStatValue} variant="numberTrendDelta">
-                    {weightTrendLabel}
-                  </NumericText>
-                </View>
-                <View style={styles.nextActionStat}>
-                  <AppText color="muted" style={styles.metricLabel} variant="label">
-                    Completion quality
-                  </AppText>
-                  <NumericText style={styles.nextActionStatValue} variant="numberTrendDelta">
-                    {completionQualityLabel}
-                  </NumericText>
-                </View>
-              </View>
 
               {hasOpenProposal ? (
                 <>
                   <AppButton
                     onPress={() => void handleApplyRecommendation()}
                     disabled={actionBusy != null}
-                    label={actionBusy === "accept" ? "Applying update..." : "Accept update"}
+                    label={
+                      actionBusy === "accept"
+                        ? "Applying update..."
+                        : "Accept update"
+                    }
                     style={styles.nextActionPrimaryButton}
                   />
 
@@ -710,7 +708,9 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
                     <AppButton
                       onPress={() => void handleDismissRecommendation()}
                       disabled={actionBusy != null}
-                      label={actionBusy === "dismiss" ? "Dismissing..." : "Dismiss"}
+                      label={
+                        actionBusy === "dismiss" ? "Dismissing..." : "Dismiss"
+                      }
                       variant="danger"
                       style={styles.nextActionButton}
                     />
@@ -726,165 +726,59 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
               )}
 
               {nextActionNote ? (
-                <AppText color="secondary" style={styles.nextActionNote} variant="bodySmall">
+                <AppText
+                  color="secondary"
+                  style={styles.nextActionNote}
+                  variant="bodySmall"
+                >
                   {nextActionNote}
                 </AppText>
               ) : null}
             </View>
 
-            <AppCard variant="hero" style={styles.heroCard}>
-              <View style={styles.heroTopRow}>
-                <View style={styles.copyColumn}>
-                  <AppText color="secondary" style={styles.eyebrow} variant="eyebrow">
-                    This week
-                  </AppText>
-                  <AppText style={styles.heroTitle} variant="sectionTitleLarge">
-                    {formatDateRange(review.weekDates)}
-                  </AppText>
-                </View>
-                <View style={styles.heroIcon}>
-                  <CalendarCheckIcon
-                    size={24}
-                    color={appColors.textSecondary}
-                    weight="fill"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.heroValueRow}>
-                <NumericText adjustsFontSizeToFit numberOfLines={1} variant="numberDisplay">
-                  {calorieDelta != null
-                    ? formatSignedCalories(calorieDelta)
-                    : averageCalories != null
-                      ? formatFoodNumber(averageCalories, " kcal")
-                      : "--"}
-                </NumericText>
-                <AppText color="secondary" style={styles.heroValueLabel} variant="label">
-                  {calorieDelta != null ? "vs daily target" : "average intake"}
-                </AppText>
-              </View>
-              <AppText color="secondary" style={styles.heroSummary} variant="bodySmall">
-                {averageCalories != null
-                  ? `${formatFoodNumber(averageCalories, " kcal")} average intake`
-                  : "No logged intake yet"}
-                {averageTarget != null
-                  ? ` vs ${formatFoodNumber(averageTarget, " kcal")} target`
-                  : ""}
+            <View style={styles.heroCard}>
+              <AppText variant="cardTitle">
+                {formatDateRange(review.weekDates)}
               </AppText>
-
-              <View style={styles.heroMetrics}>
-                <AppCard variant="compact" style={styles.metricCard}>
-                  <AppText color="muted" style={styles.metricLabel} variant="label">
-                    Completion quality
+              <AppText color="secondary" variant="bodySmall">
+                {completedDays} of {review.dayReviews.length || 7} days marked
+                complete
+              </AppText>
+              <AppText color="secondary" variant="metadata">
+                {completedDays < 4
+                  ? "Partial logs — intake may be understated."
+                  : "Based on your logged food and weigh-ins."}
+              </AppText>
+              <View style={styles.dayRow}>
+                <View style={styles.copyColumn}>
+                  <AppText color="secondary" variant="metadata">
+                    Logged daily average
                   </AppText>
-                  <NumericText style={styles.metricValue} variant="numberMacroSummary">
-                    {completedDays}/{review.dayReviews.length || 7}
-                  </NumericText>
-                </AppCard>
-                <AppCard variant="compact" style={styles.metricCard}>
-                  <AppText color="muted" style={styles.metricLabel} variant="label">
-                    Logged so far
-                  </AppText>
-                  <NumericText style={styles.metricValue} variant="numberMacroSummary">
-                    {formatFoodNumber(totalCalories, " kcal")}
-                  </NumericText>
-                </AppCard>
-                <AppCard variant="compact" style={styles.metricCard}>
-                  <AppText color="muted" style={styles.metricLabel} variant="label">
-                    Entries
-                  </AppText>
-                  <NumericText style={styles.metricValue} variant="numberMacroSummary">
-                    {review.entries.length}
-                  </NumericText>
-                </AppCard>
-              </View>
-
-              <View style={styles.progressTrack}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    { width: `${clampRatio(completionRatio) * 100}%` },
-                  ]}
-                />
-              </View>
-            </AppCard>
-
-            <View style={styles.metricGrid}>
-              <AppCard style={styles.insightCard}>
-                <AppText color="muted" style={styles.metricLabel} variant="label">
-                  Calories vs target
-                </AppText>
-                <NumericText style={styles.bigValue} variant="numberMacroSummary">
-                  {calorieDelta != null ? formatSignedCalories(calorieDelta) : "--"}
-                </NumericText>
-                <AppText color="secondary" style={styles.cardText} variant="bodySmall">
-                  Average difference across elapsed days this week.
-                </AppText>
-              </AppCard>
-
-              <AppCard style={styles.insightCard}>
-                <AppText color="muted" style={styles.metricLabel} variant="label">
-                  Weight trend
-                </AppText>
-                <View style={styles.iconValueRow}>
-                  <TrendUpIcon size={18} color={appColors.textSecondary} weight="bold" />
-                  <NumericText style={styles.bigValue} variant="numberMacroSummary">
-                    {weightTrend.delta != null
-                      ? formatSignedWeightDelta(weightTrend.delta, weightUnit)
-                      : weightTrend.last
-                        ? formatWeight(weightTrend.last.valueKg, weightUnit)
-                        : "--"}
+                  <NumericText variant="numberMacroSummary">
+                    {averageCalories != null
+                      ? formatFoodNumber(averageCalories, " kcal")
+                      : "—"}
                   </NumericText>
                 </View>
-                <AppText color="secondary" style={styles.cardText} variant="bodySmall">
-                  {weightTrend.delta != null
-                    ? `From ${formatWeight(
-                        weightTrend.first?.valueKg ?? 0,
-                        weightUnit,
-                      )} to ${formatWeight(weightTrend.last?.valueKg ?? 0, weightUnit)}.`
-                    : weightTrend.last
-                      ? "Only one weigh-in this week, so no delta yet."
-                      : "No weigh-ins logged this week."}
-                </AppText>
-              </AppCard>
-
-              <AppCard style={styles.insightCardFull}>
-                <View style={styles.rowBetween}>
-                  <View style={styles.copyColumn}>
-                    <AppText color="muted" style={styles.metricLabel} variant="label">
-                      Adaptive recommendation
-                    </AppText>
-                    <AppText style={styles.bigValue} variant="cardTitle">
-                      {adaptiveStatus}
-                    </AppText>
-                    <AppText color="secondary" style={styles.cardText} variant="bodySmall">
-                      {adaptiveDetail}
-                    </AppText>
-                  </View>
-                  <LightningIcon
-                    size={24}
-                    color={
-                      review.proposedRecommendation
-                        ? appColors.statusWarning
-                        : appColors.textMuted
-                    }
-                    weight="fill"
-                  />
+                <View style={styles.copyColumn}>
+                  <AppText color="secondary" variant="metadata">
+                    Daily target
+                  </AppText>
+                  <NumericText variant="numberMacroSummary">
+                    {averageTarget != null
+                      ? formatFoodNumber(averageTarget, " kcal")
+                      : "—"}
+                  </NumericText>
                 </View>
-                <AppButton
-                  onPress={() => navigation.navigate("AdaptiveCaloriesSettingsScreen")}
-                  label="Open adaptive calories"
-                  variant="secondary"
-                  style={styles.cardButton}
-                />
-              </AppCard>
+              </View>
+              <AppText color="secondary" variant="bodySmall">
+                {weightTrendLabel === "--"
+                  ? "No weight trend this week"
+                  : `Weight trend: ${weightTrendLabel}`}
+              </AppText>
             </View>
 
-            <AppCard style={styles.card}>
-              <AppText style={styles.cardTitle} variant="cardTitle">Diary days</AppText>
-              <AppText color="secondary" style={styles.cardText} variant="bodySmall">
-                Completion comes from days you explicitly marked complete in the Food Diary.
-              </AppText>
+            <Disclosure title="Diary details">
               <View style={styles.dayStack}>
                 {review.dayReviews.map((day, index) => {
                   const ratio =
@@ -897,7 +791,8 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
                       key={day.dateKey}
                       style={[
                         styles.dayRow,
-                        index < review.dayReviews.length - 1 && styles.dayRowDivider,
+                        index < review.dayReviews.length - 1 &&
+                          styles.dayRowDivider,
                       ]}
                     >
                       <View style={styles.dayDate}>
@@ -906,7 +801,11 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
                             weekday: "short",
                           })}
                         </AppText>
-                        <AppText color="secondary" style={styles.dayNumber} variant="label">
+                        <AppText
+                          color="secondary"
+                          style={styles.dayNumber}
+                          variant="label"
+                        >
                           {day.date.toLocaleDateString(undefined, {
                             month: "short",
                             day: "numeric",
@@ -915,7 +814,10 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
                       </View>
                       <View style={styles.dayBody}>
                         <View style={styles.rowBetween}>
-                          <NumericText style={styles.dayCalories} variant="numberCalorieRow">
+                          <NumericText
+                            style={styles.dayCalories}
+                            variant="numberCalorieRow"
+                          >
                             {formatFoodNumber(day.calories, " kcal")}
                           </NumericText>
                           <AppText
@@ -925,7 +827,11 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
                             {day.isComplete ? "Complete" : "Open"}
                           </AppText>
                         </View>
-                        <NumericText color="secondary" style={styles.dayMeta} variant="numberMacroRow">
+                        <NumericText
+                          color="secondary"
+                          style={styles.dayMeta}
+                          variant="numberMacroRow"
+                        >
                           {day.target != null
                             ? `${formatFoodNumber(day.target, " kcal")} target`
                             : "No target set"}{" "}
@@ -944,18 +850,15 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
                   );
                 })}
               </View>
-            </AppCard>
+            </Disclosure>
 
-            <AppCard style={styles.card}>
-              <AppText style={styles.cardTitle} variant="cardTitle">
-                Most repeated foods
-              </AppText>
-              <AppText color="secondary" style={styles.cardText} variant="bodySmall">
-                Foods are ranked by how many times they appeared in this week's diary.
-              </AppText>
-
+            <Disclosure title="Most repeated foods">
               {review.repeatedFoods.length === 0 ? (
-                <AppText color="secondary" style={styles.emptyText} variant="bodySmall">
+                <AppText
+                  color="secondary"
+                  style={styles.emptyText}
+                  variant="bodySmall"
+                >
                   No foods logged this week yet.
                 </AppText>
               ) : (
@@ -965,25 +868,39 @@ const WeeklyReviewScreen = ({ navigation }: Props) => {
                       key={food.key}
                       style={[
                         styles.foodRow,
-                        index < review.repeatedFoods.length - 1 && styles.foodRowDivider,
+                        index < review.repeatedFoods.length - 1 &&
+                          styles.foodRowDivider,
                       ]}
                     >
-                      <NumericText color="secondary" style={styles.rankText} variant="numberChartAxis">
+                      <NumericText
+                        color="secondary"
+                        style={styles.rankText}
+                        variant="numberChartAxis"
+                      >
                         {index + 1}
                       </NumericText>
                       <View style={styles.foodCopy}>
-                        <AppText style={styles.foodName} numberOfLines={1} variant="bodySmallStrong">
+                        <AppText
+                          style={styles.foodName}
+                          numberOfLines={1}
+                          variant="bodySmallStrong"
+                        >
                           {food.name}
                         </AppText>
-                        <NumericText color="secondary" style={styles.foodMeta} variant="numberMacroRow">
-                          {food.count}x · {formatFoodNumber(food.calories, " kcal")} total
+                        <NumericText
+                          color="secondary"
+                          style={styles.foodMeta}
+                          variant="numberMacroRow"
+                        >
+                          {food.count}x ·{" "}
+                          {formatFoodNumber(food.calories, " kcal")} total
                         </NumericText>
                       </View>
                     </View>
                   ))}
                 </View>
               )}
-            </AppCard>
+            </Disclosure>
           </>
         )}
       </ScrollView>
@@ -1051,8 +968,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     marginBottom: appSpacing.xs,
   },
-  heroTitle: {
-  },
+  heroTitle: {},
   heroValueRow: {
     alignItems: "baseline",
     flexDirection: "row",
@@ -1150,8 +1066,7 @@ const styles = StyleSheet.create({
   dayDate: {
     width: 58,
   },
-  dayName: {
-  },
+  dayName: {},
   dayNumber: {
     marginTop: appSpacing.xxs,
   },
@@ -1198,8 +1113,7 @@ const styles = StyleSheet.create({
   foodCopy: {
     flex: 1,
   },
-  foodName: {
-  },
+  foodName: {},
   foodMeta: {
     textAlign: "left",
     marginTop: appSpacing.xxs,

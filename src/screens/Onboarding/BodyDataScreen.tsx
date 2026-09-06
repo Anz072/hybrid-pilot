@@ -34,7 +34,12 @@ import type {
 } from "../../navigation/onboardingTypes";
 import { appColors } from "../../theme/colors";
 import { appTypography } from "../../theme/typography";
-import { appBorders, appRadius, appSpacing, appSurfaces } from "../../theme/tokens";
+import {
+  appBorders,
+  appRadius,
+  appSpacing,
+  appSurfaces,
+} from "../../theme/tokens";
 import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
 import OnboardingTopBar from "./OnboardingTopBar";
 import { onboardingStepProgress } from "./OnboardingStepScreen";
@@ -96,12 +101,23 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
       return;
     }
 
-    if (!Number.isFinite(parsedHeight) || parsedHeight < 120 || parsedHeight > 250) {
-      Alert.alert("Check your height", "Enter a height between 120 and 250 cm.");
+    if (
+      !Number.isFinite(parsedHeight) ||
+      parsedHeight < 120 ||
+      parsedHeight > 250
+    ) {
+      Alert.alert(
+        "Check your height",
+        "Enter a height between 120 and 250 cm.",
+      );
       return;
     }
 
-    if (!Number.isFinite(parsedWeight) || parsedWeight < 35 || parsedWeight > 300) {
+    if (
+      !Number.isFinite(parsedWeight) ||
+      parsedWeight < 35 ||
+      parsedWeight > 300
+    ) {
       Alert.alert("Check your weight", "Enter a weight between 35 and 300 kg.");
       return;
     }
@@ -124,15 +140,15 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
-      style={styles.screen}
+      style={[styles.screen, { paddingTop: insets.top }]}
     >
       <KeyboardAwareScrollView
         contentContainerStyle={[
           styles.content,
           {
-            paddingTop: insets.top + appSpacing.md,
+            paddingTop: appSpacing.md,
             paddingBottom: Math.max(172, insets.bottom + 140),
           },
         ]}
@@ -145,23 +161,15 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
           stepLabel="Body Data"
         />
         <View style={styles.header}>
-          <AppText color="coral" variant="eyebrow">
-            Body Data
-          </AppText>
           <AppText variant="sectionTitleLarge">Body basics</AppText>
           <AppText color="secondary" variant="bodySmall">
-            Quick setup for a better TDEE estimate. We use your birthdate to
-            calculate age automatically.
-          </AppText>
-          <AppText color="success" style={styles.contextNote} variant="metadata">
-            Selected approach:{" "}
-            {formatGoalStrategyMeta(route.params.goal, route.params.goalStrategy)}.
+            Used to estimate your daily energy needs.
           </AppText>
         </View>
 
-        <AppCard style={styles.formCard} variant="soft">
+        <AppCard style={styles.formCard} variant="plain">
           <View>
-            <AppText color="secondary" variant="eyebrow">
+            <AppText color="secondary" variant="metadata">
               Birthdate
             </AppText>
             <Pressable
@@ -172,12 +180,19 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
                 pressed && styles.pressed,
               ]}
             >
-              <NumericText style={styles.inputValue} variant="numberWeightEntry">
-                {formattedBirthdate}
+              <NumericText
+                style={styles.inputValue}
+                variant="numberWeightEntry"
+              >
+                {selectedBirthdate.toLocaleDateString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
               </NumericText>
             </Pressable>
             <AppText color="secondary" style={styles.hint} variant="metadata">
-              Age used for calculations: {derivedAge} years
+              {derivedAge} years old
             </AppText>
             {showDatePicker ? (
               <View style={styles.pickerWrap}>
@@ -218,7 +233,7 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
           />
 
           <View style={styles.sexGroup}>
-            <AppText color="secondary" variant="eyebrow">
+            <AppText color="secondary" variant="metadata">
               Sex
             </AppText>
             <View style={styles.sexRow}>
@@ -236,7 +251,12 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
         </AppCard>
       </KeyboardAwareScrollView>
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom + appSpacing.xs }]}>
+      <View
+        style={[
+          styles.footer,
+          { paddingBottom: insets.bottom + appSpacing.xs },
+        ]}
+      >
         <OnboardingPrimaryButton label="Next" onPress={handleNext} />
       </View>
     </KeyboardAvoidingView>

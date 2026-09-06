@@ -1,3 +1,4 @@
+import { appColors } from "../../theme/colors";
 import React from "react";
 import { Image, StyleSheet, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -5,24 +6,23 @@ import { AppButton } from "../../components/ui";
 import type { OnboardingParamList } from "../../navigation/onboardingTypes";
 import { appSpacing } from "../../theme/tokens";
 import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
-import OnboardingStepScreen, { onboardingStepProgress } from "./OnboardingStepScreen";
+import OnboardingStepScreen, {
+  onboardingStepProgress,
+} from "./OnboardingStepScreen";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "Welcome">;
 
 const WelcomeScreen = ({ navigation }: Props) => (
   <OnboardingStepScreen
     centered
-    eyebrow="Nutrition + Training"
     headerAccessory={
       <Image
         accessibilityLabel="Nouri logo"
-        source={require("../../../nouri_app_assets/brand/nouri-rounded-preview-transparent.png")}
+        source={require("../../../nouri_app_assets/brand/nouri-mark-transparent-2048.png")}
         style={styles.brandMark}
       />
     }
-    progress={onboardingStepProgress(1)}
-    stepLabel="Welcome"
-    subtitle="Build your plan in under a minute and get tailored calories, macros, and progress tracking."
+    subtitle="Food, weight, and a plan that fits you."
     title="Nouri"
   >
     <View style={styles.actions}>
@@ -41,8 +41,9 @@ const WelcomeScreen = ({ navigation }: Props) => (
 
 const styles = StyleSheet.create({
   brandMark: {
-    width: 112,
-    height: 112,
+    width: 80,
+    height: 80,
+    tintColor: appColors.actionPrimary,
     marginBottom: appSpacing.xs,
   },
   actions: {

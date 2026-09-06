@@ -2,14 +2,21 @@ import React from "react";
 import { LayoutAnimation, StyleSheet, View } from "react-native";
 import { CaretDownIcon, CaretUpIcon } from "phosphor-react-native";
 import type { DBUser } from "../../store/DB_TYPES";
-import { AppText, InteractiveCard, NumericText, ProgressRail } from "../../components/ui";
+import {
+  AppText,
+  InteractiveCard,
+  NumericText,
+  ProgressRail,
+} from "../../components/ui";
 import type { FoodNutritionTotals } from "./foodUtils";
 import { appColors, type AppColorValue } from "../../theme/colors";
 import { appSpacing, appSurfaces } from "../../theme/tokens";
 
+import { useReducedMotion } from "../../theme/useReducedMotion";
+
 type MacroBarProps = {
   accent: AppColorValue;
-  consumed: number;
+  consumed: number | null;
   label: string;
   places?: number;
   target: number | null;
@@ -32,7 +39,8 @@ export const MacroBar = ({
   unit,
   accessory,
 }: MacroBarProps) => {
-  const safeConsumed = Number.isFinite(consumed) ? consumed : 0;
+  const safeConsumed =
+    consumed != null && Number.isFinite(consumed) ? consumed : 0;
   const safeTarget = target != null && Number.isFinite(target) ? target : null;
   const hasTarget = safeTarget != null && safeTarget > 0;
   const rawRatio = hasTarget ? safeConsumed / safeTarget : 0;
@@ -49,17 +57,15 @@ export const MacroBar = ({
   return (
     <View style={styles.macroCard}>
       <View style={styles.progressTextRow}>
-        <AppText numberOfLines={1} style={styles.progressHeadline} variant="bodySmall">
+        <AppText style={styles.progressHeadline} variant="bodySmall">
           <AppText variant="bodySmallStrong">{label}</AppText>
           <AppText color="secondary" variant="bodySmall">
             {"  "}
-            {safeConsumed.toFixed(places)} / {hasTarget ? safeTarget.toFixed(places) : "--"} {unit}
+            {consumed == null ? "—" : safeConsumed.toFixed(places)} /{" "}
+            {hasTarget ? safeTarget.toFixed(places) : "--"} {unit}
           </AppText>
         </AppText>
         <View style={styles.progressMetaGroup}>
-          <NumericText color={isOver ? "error" : "secondary"} variant="numberTrendDelta">
-            {progressLabel}
-          </NumericText>
           {accessory ? (
             <View style={styles.progressAccessory}>{accessory}</View>
           ) : null}
@@ -84,10 +90,15 @@ const FoodDiaryHeroCard = ({
   user,
 }: FoodDiaryHeroCardProps) => {
   const [expanded, setExpanded] = React.useState(false);
+  const reducedMotion = useReducedMotion();
   const toggleExpanded = React.useCallback(() => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    if (!reducedMotion)
+      LayoutAnimation.configureNext({
+        ...LayoutAnimation.Presets.easeInEaseOut,
+        duration: 160,
+      });
     setExpanded((current) => !current);
-  }, []);
+  }, [reducedMotion]);
 
   const consumed = Number.isFinite(totals.calories) ? totals.calories : 0;
   const target =
@@ -109,16 +120,24 @@ const FoodDiaryHeroCard = ({
       }
       accessibilityState={{ expanded }}
       onPress={toggleExpanded}
-      variant="hero"
+      variant="plain"
       style={styles.hero}
     >
       <View style={styles.calorieRow}>
         <View style={styles.calorieValueGroup}>
           <View style={styles.calorieValueRow}>
-            <NumericText adjustsFontSizeToFit numberOfLines={1} variant="numberDisplay">
+            <NumericText
+              adjustsFontSizeToFit
+              numberOfLines={1}
+              variant="numberCalorieHero"
+            >
               {formatWholeNumber(consumed)}
             </NumericText>
-            <AppText color="secondary" style={styles.calorieTarget} variant="label">
+            <AppText
+              color="secondary"
+              style={styles.calorieTarget}
+              variant="label"
+            >
               / {target != null ? formatWholeNumber(target) : "--"} kcal
             </AppText>
           </View>
@@ -131,9 +150,17 @@ const FoodDiaryHeroCard = ({
         </View>
         <View style={styles.disclosure}>
           {expanded ? (
-            <CaretUpIcon size={18} color={appColors.textSecondary} weight="bold" />
+            <CaretUpIcon
+              size={18}
+              color={appColors.textSecondary}
+              weight="bold"
+            />
           ) : (
-            <CaretDownIcon size={18} color={appColors.textSecondary} weight="bold" />
+            <CaretDownIcon
+              size={18}
+              color={appColors.textSecondary}
+              weight="bold"
+            />
           )}
         </View>
       </View>
@@ -176,7 +203,7 @@ const FoodDiaryHeroCard = ({
 const styles = StyleSheet.create({
   hero: {
     marginTop: appSpacing.xs,
-    marginBottom: appSpacing.sm,
+    marginBottom: appSpacing.xxs,
     paddingHorizontal: 0,
     paddingVertical: appSpacing.xxs,
     backgroundColor: "transparent",
@@ -209,7 +236,7 @@ const styles = StyleSheet.create({
     backgroundColor: appSurfaces.soft,
   },
   calorieRail: {
-    marginTop: appSpacing.sm,
+    marginTop: appSpacing.xs,
   },
   macroPanel: {
     marginTop: appSpacing.md,

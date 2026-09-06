@@ -1,3 +1,5 @@
+import { AppButton, Disclosure } from "../../components/ui";
+import { getDisplayPreferencesSnapshot } from "../../preferences/displayPreferences";
 import React from "react";
 import DateTimePicker, {
   DateTimePickerEvent,
@@ -12,10 +14,7 @@ import {
   Text,
   View,
 } from "react-native";
-import {
-  ClockIcon,
-  PencilSimpleIcon,
-} from "phosphor-react-native";
+import { ClockIcon, PencilSimpleIcon } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
@@ -270,27 +269,31 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
       return;
     }
 
-    Alert.alert("Delete entry?", "This will remove the entry from your diary.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: () => {
-          void (async () => {
-            try {
-              await DB.deleteUserFoodLog(entry.id);
-              bypassUnsavedGuardRef.current = true;
-              navigation.goBack();
-            } catch {
-              Alert.alert(
-                "Could not delete entry",
-                "Check your connection and try again.",
-              );
-            }
-          })();
+    Alert.alert(
+      "Delete entry?",
+      "This will remove the entry from your diary.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              try {
+                await DB.deleteUserFoodLog(entry.id);
+                bypassUnsavedGuardRef.current = true;
+                navigation.goBack();
+              } catch {
+                Alert.alert(
+                  "Could not delete entry",
+                  "Check your connection and try again.",
+                );
+              }
+            })();
+          },
         },
-      },
-    ]);
+      ],
+    );
   }, [entry, navigation]);
 
   const loggedTime = formatFoodLoggedTime(loggedAtDate.toISOString());
@@ -305,7 +308,7 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
 
   if (loading) {
     return (
-      <View style={styles.screen}>
+      <View style={[styles.screen, { paddingTop: insets.top }]}>
         <View style={styles.content}>
           <FoodScreenHeader
             eyebrow="Food Entry"
@@ -325,7 +328,7 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
 
   if (!entry) {
     return (
-      <View style={styles.screen}>
+      <View style={[styles.screen, { paddingTop: insets.top }]}>
         <View style={styles.content}>
           <FoodScreenHeader
             eyebrow="Food Entry"
@@ -348,10 +351,10 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
   }
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <KeyboardAvoidingView
-        style={styles.screen}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={[styles.screen, { overflow: "hidden" }]}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
       >
         <KeyboardAwareScrollView
@@ -373,7 +376,9 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
               entry.servingSize,
               entry.servingUnit,
             )} · ${entry.calories.toFixed(0)} kcal`}
-            previewCaloriesText={preview ? `${preview.calories.toFixed(0)} kcal` : "--"}
+            previewCaloriesText={
+              preview ? `${preview.calories.toFixed(0)} kcal` : "--"
+            }
             previewSummaryText={
               preview
                 ? `${formatFoodMacro(preview.proteinG, "P")} · ${formatFoodMacro(
@@ -393,7 +398,9 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
             }}
             onAmountBlur={handleQuantityBlur}
             slot={{
-              icon: <ClockIcon size={18} color={appColors.brand500} weight="bold" />,
+              icon: (
+                <ClockIcon size={18} color={appColors.brand500} weight="bold" />
+              ),
               label: "Logged time",
               value: loggedTime,
               actionLabel: "Change",
@@ -428,7 +435,11 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
             }}
             primaryActionDisabled={saving}
             primaryActionIcon={
-              <PencilSimpleIcon size={16} color={appColors.white} weight="bold" />
+              <PencilSimpleIcon
+                size={16}
+                color={appColors.white}
+                weight="bold"
+              />
             }
             primaryActionLabel={saving ? "Saving..." : "Save changes"}
             formError={formError}
@@ -437,33 +448,43 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
 
           {food ? (
             <>
-              <Text style={styles.title}>Micronutrients</Text>
-              {(
-                Object.entries(microTargets ?? MICRONUTRIENT_TARGETS.generic) as [
-                  OpenFoodMapMicronutrientKey,
-                  number,
-                ][]
-              ).map(([key, target]) => (
-                <MacroBar
-                  key={key}
-                  accent={appColors.brand500}
-                  consumed={(food[key] ?? 0) * micronutrientFactor}
-                  target={target}
-                  label={key
-                    .slice(0, -2)
-                    .split(/(?=[A-Z])/)
-                    .map((word) => word[0].toUpperCase() + word.slice(1))
-                    .join(" ")}
-                  unit={key.endsWith("Ug") ? "ug" : "mg"}
-                />
-              ))}
+              <Disclosure title="Micronutrients">
+                {(
+                  Object.entries(
+                    microTargets ?? MICRONUTRIENT_TARGETS.generic,
+                  ) as [OpenFoodMapMicronutrientKey, number][]
+                ).map(([key, target]) => (
+                  <MacroBar
+                    key={key}
+                    accent={appColors.brand500}
+                    consumed={
+                      food[key] == null ? null : food[key] * micronutrientFactor
+                    }
+                    target={target}
+                    label={key
+                      .slice(0, -2)
+                      .split(/(?=[A-Z])/)
+                      .map((word) => word[0].toUpperCase() + word.slice(1))
+                      .join(" ")}
+                    unit={key.endsWith("Ug") ? "ug" : "mg"}
+                  />
+                ))}
+              </Disclosure>
             </>
           ) : null}
+
+          <AppButton
+            label="Delete entry"
+            variant="ghost"
+            onPress={handleDelete}
+            disabled={saving}
+          />
 
           {showTimePicker ? (
             <DateTimePicker
               value={loggedAtDate}
               mode="time"
+              is24Hour={getDisplayPreferencesSnapshot().timeFormat === "24h"}
               display={Platform.OS === "ios" ? "spinner" : "default"}
               onChange={handleTimeChange}
             />
@@ -476,16 +497,6 @@ const EditFoodEntryScreen = ({ navigation, route }: Props) => {
             { paddingBottom: Math.max(insets.bottom, 16) },
           ]}
         >
-          <Pressable
-            onPress={handleDelete}
-            style={({ pressed }) => [
-              styles.secondaryButton,
-              pressed && styles.cardPressed,
-            ]}
-          >
-            <Text style={styles.secondaryButtonText}>Delete entry</Text>
-          </Pressable>
-
           <Pressable
             onPress={() => {
               void handleSave();

@@ -23,7 +23,13 @@ import {
 import { appColors } from "../../theme/colors";
 import { appBorders, appRadius, appSpacing } from "../../theme/tokens";
 
+import MealBucketSelect from "./MealBucketSelect";
+import { AppText } from "../../components/ui";
+import { useReducedMotion } from "../../theme/useReducedMotion";
+
 type FoodDiaryQuickAddsProps = {
+  onSelectMeal: (slot: MealSlot) => void;
+  onBeforeToggle: () => void;
   favoriteFoods: FoodDiaryFavoriteFood[];
   recentFoods: FoodDiaryFavoriteFood[];
   selectedMeal: MealSlot;
@@ -46,19 +52,12 @@ const QuickPickCard = ({
 }) => {
   const content = (
     <>
-      <Text style={styles.favoriteEyebrow}>
-        {formatFoodSourceLabel(food.source)}
-      </Text>
       <Text style={styles.favoriteName} numberOfLines={2}>
         {food.name}
       </Text>
       <Text style={styles.favoriteMeta}>
         {Math.round(food.calories)} kcal ·{" "}
         {formatFoodServing(food.servingSize, food.servingUnit)}
-      </Text>
-      <Text style={styles.favoriteMeta}>
-        {food.proteinG.toFixed(0)}P · {food.carbsG.toFixed(0)}C ·{" "}
-        {food.fatG.toFixed(0)}F
       </Text>
     </>
   );
@@ -114,6 +113,8 @@ const QuickPickCard = ({
 };
 
 const FoodDiaryQuickAdds = ({
+  onSelectMeal,
+  onBeforeToggle,
   favoriteFoods,
   recentFoods,
   selectedMeal,
@@ -121,13 +122,15 @@ const FoodDiaryQuickAdds = ({
   onQuickLogFavorite,
 }: FoodDiaryQuickAddsProps) => {
   const [recentExpanded, setRecentExpanded] = React.useState(false);
-
-  if (favoriteFoods.length === 0 && recentFoods.length === 0) {
-    return null;
-  }
+  const reducedMotion = useReducedMotion();
 
   const toggleRecentExpanded = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    onBeforeToggle();
+    if (!reducedMotion)
+      LayoutAnimation.configureNext({
+        ...LayoutAnimation.Presets.easeInEaseOut,
+        duration: 160,
+      });
     setRecentExpanded((current) => !current);
   };
 
@@ -155,14 +158,19 @@ const FoodDiaryQuickAdds = ({
 
   return (
     <View style={styles.card}>
-      {favoriteFoods.length > 0 ? (
-        <>
-          <Text style={styles.sectionTitle}>
-            Quick picks for {MEAL_SLOT_LABELS[selectedMeal]}
-          </Text>
-          {renderRail(favoriteFoods)}
-        </>
-      ) : null}
+      <View style={styles.targetRow}>
+        {favoriteFoods.length > 0 || recentFoods.length > 0 ? (
+          <AppText color="secondary" variant="bodySmallStrong">
+            Quick picks
+          </AppText>
+        ) : null}
+        <MealBucketSelect
+          value={selectedMeal}
+          onChange={onSelectMeal}
+          accessibilityLabel={`Meal for quick picks and repeat: ${MEAL_SLOT_LABELS[selectedMeal]}`}
+        />
+      </View>
+      {favoriteFoods.length > 0 ? <>{renderRail(favoriteFoods)}</> : null}
 
       {recentFoods.length > 0 ? (
         <>
@@ -207,6 +215,14 @@ const FoodDiaryQuickAdds = ({
 };
 
 const styles = StyleSheet.create({
+  targetRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: appSpacing.xs,
+    marginVertical: appSpacing.xs,
+  },
   card: {
     marginBottom: appSpacing.md,
   },
@@ -214,15 +230,15 @@ const styles = StyleSheet.create({
     color: appColors.textSecondary,
     fontSize: 12,
     fontWeight: "600",
-    letterSpacing: 0.7,
-    textTransform: "uppercase",
+    letterSpacing: 0,
+    textTransform: "none",
     marginBottom: 12,
   },
   sectionTitleSpaced: {
     marginTop: 16,
   },
   recentHeader: {
-    minHeight: 36,
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -242,9 +258,9 @@ const styles = StyleSheet.create({
   favoriteCard: {
     width: 180,
     borderRadius: appRadius.md,
-    borderWidth: appBorders.width,
+    borderWidth: 0,
     borderColor: appBorders.soft,
-    backgroundColor: appColors.surfaceCard,
+    backgroundColor: appColors.surfaceField,
     padding: appSpacing.sm,
   },
   reviewCard: {
@@ -255,7 +271,7 @@ const styles = StyleSheet.create({
     color: appColors.textMuted,
     fontSize: 11,
     fontWeight: "600",
-    textTransform: "uppercase",
+    textTransform: "none",
     letterSpacing: 0.8,
     marginBottom: 8,
   },

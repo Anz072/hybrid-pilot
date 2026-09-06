@@ -1,9 +1,5 @@
 import React from "react";
-import {
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { MoreParamList } from "../../navigation/MoreNavigator";
@@ -40,11 +36,9 @@ const PreferenceRow = <T extends string>({
   options,
   onChange,
 }: PreferenceRowProps<T>) => (
-  <AppCard style={styles.card}>
+  <AppCard style={styles.card} variant="plain">
     <AppText variant="cardTitle">{title}</AppText>
-    <AppText color="secondary" style={styles.cardText} variant="bodySmall">
-      {description}
-    </AppText>
+
     <SegmentedControl options={options} onChange={onChange} value={value} />
   </AppCard>
 );
@@ -58,22 +52,20 @@ const PreferencesScreen = ({ navigation }: Props) => {
   }, []);
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <ScrollView
         style={styles.screen}
         contentContainerStyle={[
           styles.content,
           {
-            paddingTop: insets.top + 16,
+            paddingTop: 16,
             paddingBottom: insets.bottom + 28,
           },
         ]}
         showsVerticalScrollIndicator={false}
       >
         <SettingsStackHeader
-          eyebrow="Preferences"
           onBack={() => navigation.goBack()}
-          subtitle="Choose how weights, heights, and times are shown throughout the app. Your data is always stored the same way — only the display changes."
           title="Units & display"
         />
 
@@ -110,7 +102,12 @@ const PreferencesScreen = ({ navigation }: Props) => {
           onChange={(timeFormat) => update({ timeFormat })}
         />
 
-        <AppText align="center" color="muted" style={styles.footnote} variant="metadata">
+        <AppText
+          align="center"
+          color="muted"
+          style={styles.footnote}
+          variant="metadata"
+        >
           Changes save automatically.
         </AppText>
       </ScrollView>

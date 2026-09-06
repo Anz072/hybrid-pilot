@@ -15,7 +15,7 @@ type CalorieBudgetChartProps = {
   values: Array<number | null>;
 };
 
-const CHART_BAR_MAX_HEIGHT = 120;
+const CHART_BAR_MAX_HEIGHT = 72;
 
 const CalorieBudgetChart = ({
   highlightDate,
@@ -28,8 +28,20 @@ const CalorieBudgetChart = ({
   const highlightedIndex =
     highlightDate != null ? getMondayFirstDayIndex(highlightDate) : null;
 
+  if (!hasAnyValues) return null;
+  if (new Set(values).size <= 1) {
+    return (
+      <AppText color="secondary" style={styles.card} variant="bodySmall">
+        {Math.round(
+          values.reduce<number>((total, value) => total + (value ?? 0), 0),
+        ).toLocaleString()}{" "}
+        kcal per week
+      </AppText>
+    );
+  }
+
   return (
-    <AppCard style={styles.card}>
+    <AppCard style={styles.card} variant="plain">
       <AppText variant="cardTitle">{title}</AppText>
       {subtitle ? (
         <AppText color="secondary" style={styles.subtitle} variant="bodySmall">
@@ -49,13 +61,14 @@ const CalorieBudgetChart = ({
               const highlighted = highlightedIndex === index;
 
               return (
-                <View key={`${CALORIE_SCHEDULE_DAY_LABELS[index]}-${index}`} style={styles.barColumn}>
+                <View
+                  key={`${CALORIE_SCHEDULE_DAY_LABELS[index]}-${index}`}
+                  style={styles.barColumn}
+                >
                   <NumericText
                     align="center"
                     color={highlighted ? "primary" : "muted"}
-                    style={[
-                      styles.barValue,
-                    ]}
+                    style={[styles.barValue]}
                     variant="numberChartAxis"
                   >
                     {safeValue > 0 ? safeValue : "--"}
@@ -72,9 +85,7 @@ const CalorieBudgetChart = ({
                   <AppText
                     align="center"
                     color={highlighted ? "primary" : "muted"}
-                    style={[
-                      styles.barLabel,
-                    ]}
+                    style={[styles.barLabel]}
                     variant="eyebrow"
                   >
                     {CALORIE_SCHEDULE_DAY_LABELS[index]}
@@ -104,7 +115,7 @@ const styles = StyleSheet.create({
   chartWrap: {
     overflow: "hidden",
     borderRadius: appRadius.md,
-    backgroundColor: appSurfaces.soft,
+    backgroundColor: "transparent",
     paddingHorizontal: appSpacing.sm,
     paddingVertical: 16,
   },
@@ -128,7 +139,7 @@ const styles = StyleSheet.create({
     height: CHART_BAR_MAX_HEIGHT,
     justifyContent: "flex-end",
     borderRadius: appRadius.md,
-    backgroundColor: appColors.surfaceGhost,
+    backgroundColor: "transparent",
     padding: appSpacing.xxs,
   },
   barFill: {

@@ -1,6 +1,6 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import { AppButton, AppCard, AppText } from "../../components/ui";
+import { AppButton, Disclosure, AppText } from "../../components/ui";
 import { appColors } from "../../theme/colors";
 import { appSpacing } from "../../theme/tokens";
 
@@ -17,30 +17,30 @@ type OnboardingReviewCardProps = {
 
 const OnboardingReviewCard = ({
   items,
-  title = "Review & edit",
+  title = "Review your answers",
 }: OnboardingReviewCardProps) => (
-  <AppCard style={styles.card} variant="surface">
-    <AppText variant="cardTitle">{title}</AppText>
+  <Disclosure title={title}>
     {items.map((item, index) => (
       <View
         key={`${item.label}-${index}`}
         style={[styles.row, index > 0 && styles.rowDivider]}
       >
         <View style={styles.valueWrap}>
-          <AppText color="muted" variant="eyebrow">
+          <AppText color="muted" variant="metadata">
             {item.label}
           </AppText>
           <AppText variant="bodySmallStrong">{item.value}</AppText>
         </View>
         <AppButton
+          accessibilityLabel={`Edit ${item.label.toLowerCase()}`}
           label="Edit"
           onPress={item.onEdit}
           size="sm"
-          variant="secondary"
+          variant="ghost"
         />
       </View>
     ))}
-  </AppCard>
+  </Disclosure>
 );
 
 const styles = StyleSheet.create({

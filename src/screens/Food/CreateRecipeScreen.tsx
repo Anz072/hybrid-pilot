@@ -1,3 +1,4 @@
+import { AppButton, Disclosure } from "../../components/ui";
 import React from "react";
 import {
   Alert,
@@ -62,10 +63,7 @@ import {
   normalizePositiveFoodInput,
 } from "./foodUtils";
 import { resolveFoodLogContext } from "./foodLogContext";
-import {
-  searchFoodResults,
-  type FoodSearchResult,
-} from "./foodSearch";
+import { searchFoodResults, type FoodSearchResult } from "./foodSearch";
 
 type CreateRecipeRoute = RouteProp<FoodStackParamList, "CreateRecipe">;
 type CreateRecipeNav = CompositeNavigationProp<
@@ -404,12 +402,14 @@ const CreateRecipeScreen = () => {
         const loadedCookTimeValue = formatNumberInput(loadedRecipe.cookTimeMin);
         const loadedLinkValue = loadedRecipe.linkUrl ?? "";
         const loadedDescriptionValue = loadedRecipe.description ?? "";
-        const loadedIngredients = loadedRecipe.ingredients.map((ingredient) => ({
+        const loadedIngredients = loadedRecipe.ingredients.map(
+          (ingredient) => ({
             key: `${ingredient.id}-${ingredient.foodId}`,
             foodId: ingredient.foodId,
             food: ingredient.food,
             amountValue: formatNumberInput(ingredient.amount),
-          }));
+          }),
+        );
         const loadedSteps = loadedRecipe.steps;
 
         setRecipeDetails(loadedRecipe);
@@ -687,12 +687,7 @@ const CreateRecipeScreen = () => {
         loggedAt: resolvedLoggedAt,
       });
     },
-    [
-      navigation,
-      resolvedContextLabel,
-      resolvedLoggedAt,
-      route.params.date,
-    ],
+    [navigation, resolvedContextLabel, resolvedLoggedAt, route.params.date],
   );
 
   const addStep = React.useCallback(() => {
@@ -714,22 +709,25 @@ const CreateRecipeScreen = () => {
     );
   }, []);
 
-  const closeAfterSave = React.useCallback((mode: RecipeSaveMode) => {
-    if (isEditing || mode === "save") {
+  const closeAfterSave = React.useCallback(
+    (mode: RecipeSaveMode) => {
+      if (isEditing || mode === "save") {
+        navigation.goBack();
+        return;
+      }
+
+      const routes = navigation.getState().routes;
+      const previousRoute = routes[routes.length - 2];
+
+      if (previousRoute?.name === "AddFood" && routes.length >= 2) {
+        navigation.dispatch(StackActions.pop(2));
+        return;
+      }
+
       navigation.goBack();
-      return;
-    }
-
-    const routes = navigation.getState().routes;
-    const previousRoute = routes[routes.length - 2];
-
-    if (previousRoute?.name === "AddFood" && routes.length >= 2) {
-      navigation.dispatch(StackActions.pop(2));
-      return;
-    }
-
-    navigation.goBack();
-  }, [isEditing, navigation]);
+    },
+    [isEditing, navigation],
+  );
 
   const handleCancel = React.useCallback(() => {
     if (saving || deleting) {
@@ -905,17 +903,17 @@ const CreateRecipeScreen = () => {
   }, [deleting, editingRecipeId, isEditing, navigation]);
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <KeyboardAvoidingView
-        style={styles.screen}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={[styles.screen, { overflow: "hidden" }]}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
       >
         <KeyboardAwareScrollView
           style={styles.screen}
           contentContainerStyle={[
             styles.content,
-            { paddingBottom: Math.max(176, insets.bottom + 152) },
+            { paddingBottom: Math.max(112, insets.bottom + 88) },
           ]}
           focusedInputBottomOffset={148}
         >
@@ -923,7 +921,7 @@ const CreateRecipeScreen = () => {
             eyebrow="Recipe"
             title={isEditing ? "Edit recipe" : "Create recipe"}
             subtitle={foodLogContext.dateLabel}
-            onBack={() => navigation.goBack()}
+            onBack={handleCancel}
           />
           {!isEditing ? (
             <MealBucketSelect
@@ -938,7 +936,8 @@ const CreateRecipeScreen = () => {
             <View style={styles.card}>
               <Text style={styles.sectionTitle}>Loading recipe</Text>
               <Text style={styles.sectionSubtitle}>
-                Pulling the saved ingredients and recipe details into the editor.
+                Pulling the saved ingredients and recipe details into the
+                editor.
               </Text>
             </View>
           ) : recipeLoadError ? (
@@ -948,563 +947,465 @@ const CreateRecipeScreen = () => {
             </View>
           ) : (
             <>
-          <View style={styles.card}>
-            <View
-              style={styles.heroHeaderRow}
-            >
-              <View style={styles.heroHeaderCopy}>
-                <Text style={styles.heroEyebrow}>
-                  {isEditing ? "Saved recipe" : "Recipe builder"}
-                </Text>
-                <Text style={styles.heroTitle}>
-                  {isEditing ? "Edit recipe" : "Create recipe"}
-                </Text>
-                <Text style={styles.heroMeta}>
-                  {isEditing
-                    ? "Update ingredients, servings, and preparation details. Saved changes show anywhere this recipe is used."
-                    : `Build a saved recipe for ${resolvedContextLabel}, then save it for later or save and add one serving right away.`}
-                </Text>
-              </View>
-            </View>
-
-            <Text style={styles.sectionTitle}>Details</Text>
-
-            <Text style={styles.fieldLabel}>Recipe name</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="Banana bread"
-              placeholderTextColor={appColors.textMuted}
-              value={name}
-              onChangeText={(value) => {
-                setName(value);
-                setFormError(null);
-              }}
-            />
-
-            <View style={[styles.twoUpGrid, styles.fieldSpacing]}>
-              <View style={styles.twoUpCell}>
-                <Text style={styles.fieldLabel}>Servings</Text>
-                <View style={styles.inlineInputRow}>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder="1"
-                    placeholderTextColor={appColors.textMuted}
-                    value={servingsValue}
-                    onChangeText={(value) => {
-                      setServingsValue(value);
-                      setFormError(null);
-                    }}
-                    onBlur={() => {
-                      setFormError(null);
-                      setServingsValue((current) =>
-                        normalizePositiveFoodInput(current, 1, 1),
-                      );
-                    }}
-                    keyboardType="decimal-pad"
-                  />
-                  <View style={styles.unitPill}>
-                    <Text style={styles.unitText}>servings</Text>
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.twoUpCell}>
-                <Text style={styles.fieldLabel}>Prepared weight</Text>
-                <View style={styles.inlineInputRow}>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder="Optional"
-                    placeholderTextColor={appColors.textMuted}
-                    value={preparedWeightValue}
-                    onChangeText={(value) => {
-                      setPreparedWeightValue(value);
-                      setFormError(null);
-                    }}
-                    onBlur={() => {
-                      setFormError(null);
-                      setPreparedWeightValue((current) => {
-                        const next = toSafeNumber(current);
-                        return next > 0 ? formatNumberInput(next) : "";
-                      });
-                    }}
-                    keyboardType="decimal-pad"
-                  />
-                  <View style={styles.unitPill}>
-                    <Text style={styles.unitText}>g</Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.fieldSpacing}>
-              <PublicVisibilityCheckbox
-                checked={isPublic}
-                onChange={(value) => {
-                  setIsPublic(value);
-                  setFormError(null);
-                }}
-              />
-            </View>
-
-            <View style={styles.metricCard}>
-              <View style={styles.metricRow}>
-                <Text style={styles.metricLabel}>Ingredient weight</Text>
-                <Text style={styles.metricValue}>
-                  {formatFoodNumber(
-                    recipeWeightMetrics.ingredientTotalWeightG,
-                    " g",
-                  )}
-                </Text>
-              </View>
-              <View style={styles.metricRow}>
-                <Text style={styles.metricLabel}>Prepared recipe weight</Text>
-                <Text style={styles.metricValue}>
-                  {recipeWeightMetrics.usesPreparedWeight
-                    ? formatFoodNumber(resolvedPreparedWeight, " g")
-                    : "Using ingredient total"}
-                </Text>
-              </View>
-              <View style={styles.metricRow}>
-                <Text style={styles.metricLabel}>Weight per serving</Text>
-                <Text style={styles.metricValue}>
-                  {recipeWeightMetrics.gramsPerServing != null
-                    ? formatFoodNumber(
-                        recipeWeightMetrics.gramsPerServing,
-                        " g",
-                      )
-                    : "--"}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Ingredients</Text>
-            <Text style={styles.sectionSubtitle}>
-              Search or scan ingredients, tap a result to add it, and swipe
-              saved ingredient rows left to remove them.
-            </Text>
-            <View style={styles.searchRow}>
-              <View style={styles.searchInputWrap}>
-                <MagnifyingGlassIcon
-                  size={18}
-                  color={appColors.textMuted}
-                  weight="bold"
-                />
+              <View style={styles.card}>
+                <Text style={styles.fieldLabel}>Recipe name</Text>
                 <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search ingredients"
+                  style={styles.textInput}
+                  placeholder="Banana bread"
                   placeholderTextColor={appColors.textMuted}
-                  value={ingredientQuery}
-                  onChangeText={setIngredientQuery}
-                  returnKeyType="search"
+                  value={name}
+                  onChangeText={(value) => {
+                    setName(value);
+                    setFormError(null);
+                  }}
                 />
-              </View>
-              <Pressable
-                onPress={() => setScannerVisible(true)}
-                style={({ pressed }) => [
-                  styles.scanButton,
-                  pressed && styles.cardPressed,
-                ]}
-              >
-                <BarcodeIcon size={18} color={appColors.white} weight="bold" />
-              </Pressable>
-            </View>
 
-            {ingredientQuery.trim() ? (
-              <View style={styles.resultsWrap}>
-                <Text style={styles.resultsMeta}>
-                  {ingredientSearchLoading
-                    ? "Searching your foods and USDA ingredients..."
-                    : ingredientResults.length > 0
-                      ? `${ingredientResults.length} ingredient matches`
-                      : "No ingredients matched yet."}
-                </Text>
+                <View style={[styles.twoUpGrid, styles.fieldSpacing]}>
+                  <View style={styles.twoUpCell}>
+                    <Text style={styles.fieldLabel}>Servings</Text>
+                    <View style={styles.inlineInputRow}>
+                      <TextInput
+                        style={styles.textInput}
+                        placeholder="1"
+                        placeholderTextColor={appColors.textMuted}
+                        value={servingsValue}
+                        onChangeText={(value) => {
+                          setServingsValue(value);
+                          setFormError(null);
+                        }}
+                        onBlur={() => {
+                          setFormError(null);
+                          setServingsValue((current) =>
+                            normalizePositiveFoodInput(current, 1, 1),
+                          );
+                        }}
+                        keyboardType="decimal-pad"
+                      />
+                      <View style={styles.unitPill}>
+                        <Text style={styles.unitText}>servings</Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
 
-                {ingredientResults.map((result) => (
-                  <Pressable
-                    key={result.key}
-                    onPress={() => {
+                <View style={styles.fieldSpacing}>
+                  <PublicVisibilityCheckbox
+                    checked={isPublic}
+                    onChange={(value) => {
+                      setIsPublic(value);
                       setFormError(null);
-                      void handleAddIngredient(result);
                     }}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.card}>
+                <Text style={styles.sectionTitle}>Ingredients</Text>
+
+                <View style={styles.searchRow}>
+                  <View style={styles.searchInputWrap}>
+                    <MagnifyingGlassIcon
+                      size={18}
+                      color={appColors.textMuted}
+                      weight="bold"
+                    />
+                    <TextInput
+                      style={styles.searchInput}
+                      placeholder="Search ingredients"
+                      placeholderTextColor={appColors.textMuted}
+                      value={ingredientQuery}
+                      onChangeText={setIngredientQuery}
+                      returnKeyType="search"
+                    />
+                  </View>
+                  <Pressable
+                    onPress={() => setScannerVisible(true)}
                     style={({ pressed }) => [
-                      styles.searchResultCard,
+                      styles.scanButton,
                       pressed && styles.cardPressed,
                     ]}
                   >
-                    <View style={styles.searchResultCopy}>
-                      <View style={styles.resultTopRow}>
-                        <Text style={styles.resultTitle} numberOfLines={1}>
-                          {result.name}
-                        </Text>
-                        <Text style={styles.resultCalories}>
-                          {formatFoodNumber(result.calories, " kcal")}
-                        </Text>
-                      </View>
-                      <Text style={styles.resultMeta} numberOfLines={1}>
-                        {result.brand ? `${result.brand} · ` : ""}
-                        {formatFoodSourceLabel(result.source)} ·{" "}
-                        {formatFoodItemServing(result)}
-                      </Text>
-                    </View>
-                    <View style={styles.addButton}>
-                      <PlusIcon
-                        size={16}
-                        color={appColors.white}
-                        weight="bold"
-                      />
-                    </View>
+                    <BarcodeIcon
+                      size={18}
+                      color={appColors.white}
+                      weight="bold"
+                    />
                   </Pressable>
-                ))}
-              </View>
-            ) : null}
-
-            <View style={styles.ingredientList}>
-              {ingredients.length === 0 ? (
-                <Text style={styles.emptyText}>
-                  No ingredients yet. Search above to start building the recipe.
-                </Text>
-              ) : (
-                ingredients.map((ingredient) => {
-                  const { amount, factor, serving } =
-                    calculateIngredientFactor(ingredient);
-                  const calories = (ingredient.food.calories ?? 0) * factor;
-                  const protein = (ingredient.food.proteinG ?? 0) * factor;
-                  const carbs = (ingredient.food.carbsG ?? 0) * factor;
-                  const fat = (ingredient.food.fatG ?? 0) * factor;
-
-                  return (
-                    <Swipeable
-                      key={ingredient.key}
-                      overshootRight={false}
-                      renderRightActions={() => (
-                        <Pressable
-                          onPress={() => removeIngredient(ingredient.key)}
-                          style={({ pressed }) => [
-                            styles.deleteSwipe,
-                            pressed && styles.cardPressed,
-                          ]}
-                          accessibilityLabel={`Delete ${ingredient.food.name} ingredient`}
-                        >
-                          <TrashIcon
-                            size={18}
-                            color={appColors.white}
-                            weight="bold"
-                          />
-                          <Text style={styles.deleteSwipeText}>Delete</Text>
-                        </Pressable>
-                      )}
-                    >
-                      <View style={styles.ingredientCard}>
-                        <Pressable
-                          onPress={() => openIngredientDetails(ingredient)}
-                          style={({ pressed }) => [
-                            styles.ingredientPressable,
-                            pressed && styles.cardPressed,
-                          ]}
-                        >
-                          <View style={styles.ingredientHeaderRow}>
-                            <View style={styles.ingredientCopy}>
-                              <Text
-                                style={styles.ingredientTitle}
-                                numberOfLines={1}
-                                ellipsizeMode="tail"
-                              >
-                                {ingredient.food.name}
-                              </Text>
-                              <Text
-                                style={styles.ingredientMeta}
-                                numberOfLines={1}
-                                ellipsizeMode="tail"
-                              >
-                                {ingredient.food.brand
-                                  ? `${ingredient.food.brand} · `
-                                  : ""}
-                                {formatFoodSourceLabel(ingredient.food.source)} ·{" "}
-                                {formatFoodItemServing(ingredient.food)}
-                              </Text>
-                            </View>
-                            <CaretRightIcon
-                              size={14}
-                              color={appColors.brand500}
-                              weight="bold"
-                            />
-                          </View>
-
-                          <Text style={styles.ingredientPreviewText}>
-                            {`${formatFoodNumber(amount, ` ${serving.unit}`)} · ${formatFoodNumber(
-                              calories,
-                              " kcal",
-                            )} · ${formatFoodMacro(
-                              protein,
-                              "P",
-                            )} · ${formatFoodMacro(
-                              carbs,
-                              "C",
-                            )} · ${formatFoodMacro(fat, "F")}`}
-                          </Text>
-                        </Pressable>
-
-                        <View style={styles.ingredientAmountRow}>
-                          <Text style={styles.ingredientAmountLabel}>Amount</Text>
-                          <View style={styles.ingredientAmountInputWrap}>
-                            <TextInput
-                              style={[
-                                styles.textInput,
-                                styles.ingredientAmountInput,
-                              ]}
-                              value={ingredient.amountValue}
-                              onChangeText={(value) => {
-                                updateIngredientAmount(ingredient.key, value);
-                              }}
-                              onBlur={() =>
-                                normalizeIngredientAmount(ingredient.key)
-                              }
-                              keyboardType="decimal-pad"
-                              placeholder={formatNumberInput(serving.value)}
-                              placeholderTextColor={appColors.textMuted}
-                            />
-                            <View
-                              style={[
-                                styles.unitPill,
-                                styles.ingredientAmountUnitPill,
-                              ]}
-                            >
-                              <Text style={styles.unitText}>{serving.unit}</Text>
-                            </View>
-                          </View>
-                        </View>
-                      </View>
-                    </Swipeable>
-                  );
-                })
-              )}
-            </View>
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Preparation</Text>
-            <View style={styles.twoUpGrid}>
-              <View style={styles.twoUpCell}>
-                <Text style={styles.fieldLabel}>Prep time</Text>
-                <View style={styles.inlineInputRow}>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder="Optional"
-                    placeholderTextColor={appColors.textMuted}
-                    value={prepTimeValue}
-                    onChangeText={(value) => {
-                      setPrepTimeValue(value);
-                      setFormError(null);
-                    }}
-                    keyboardType="decimal-pad"
-                  />
-                  <View style={styles.unitPill}>
-                    <Text style={styles.unitText}>min</Text>
-                  </View>
                 </View>
-              </View>
 
-              <View style={styles.twoUpCell}>
-                <Text style={styles.fieldLabel}>Cook time</Text>
-                <View style={styles.inlineInputRow}>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder="Optional"
-                    placeholderTextColor={appColors.textMuted}
-                    value={cookTimeValue}
-                    onChangeText={(value) => {
-                      setCookTimeValue(value);
-                      setFormError(null);
-                    }}
-                    keyboardType="decimal-pad"
-                  />
-                  <View style={styles.unitPill}>
-                    <Text style={styles.unitText}>min</Text>
-                  </View>
-                </View>
-              </View>
-            </View>
+                {ingredientQuery.trim() ? (
+                  <View style={styles.resultsWrap}>
+                    <Text style={styles.resultsMeta}>
+                      {ingredientSearchLoading
+                        ? "Searching your foods and USDA ingredients..."
+                        : ingredientResults.length > 0
+                          ? `${ingredientResults.length} ingredient matches`
+                          : "No ingredients matched yet."}
+                    </Text>
 
-            <Text style={[styles.fieldLabel, styles.fieldSpacing]}>Link</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="https://..."
-              placeholderTextColor={appColors.textMuted}
-              value={linkValue}
-              onChangeText={(value) => {
-                setLinkValue(value);
-                setFormError(null);
-              }}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-
-            <Text style={[styles.fieldLabel, styles.fieldSpacing]}>
-              Description
-            </Text>
-            <TextInput
-              style={[styles.textInput, styles.multilineInput]}
-              placeholder="Describe the recipe, notes, or serving details."
-              placeholderTextColor={appColors.textMuted}
-              value={descriptionValue}
-              onChangeText={(value) => {
-                setDescriptionValue(value);
-                setFormError(null);
-              }}
-              multiline
-              textAlignVertical="top"
-              maxLength={1500}
-            />
-
-            <View style={styles.stepsHeaderRow}>
-              <View style={styles.stepsHeaderCopy}>
-                <Text style={[styles.fieldLabel, styles.stepsLabel]}>
-                  Steps
-                </Text>
-                <Text style={styles.stepsSubtitle}>
-                  Add preparation steps if you want the recipe saved with
-                  instructions.
-                </Text>
-              </View>
-              <Pressable
-                onPress={addStep}
-                style={({ pressed }) => [
-                  styles.iconButtonPrimary,
-                  pressed && styles.cardPressed,
-                ]}
-              >
-                <PlusIcon size={16} color={appColors.white} weight="bold" />
-              </Pressable>
-            </View>
-
-            {steps.length === 0 ? (
-              <Text style={styles.emptyText}>
-                Steps are optional. Tap the plus button to add one.
-              </Text>
-            ) : (
-              <View style={styles.stepsList}>
-                {steps.map((step, index) => (
-                  <View key={`step-${index}`} style={styles.stepCard}>
-                    <View style={styles.stepHeaderRow}>
-                      <Text style={styles.stepTitle}>Step {index + 1}</Text>
+                    {ingredientResults.map((result) => (
                       <Pressable
-                        onPress={() => removeStep(index)}
+                        key={result.key}
+                        onPress={() => {
+                          setFormError(null);
+                          void handleAddIngredient(result);
+                        }}
                         style={({ pressed }) => [
-                          styles.iconButton,
+                          styles.searchResultCard,
                           pressed && styles.cardPressed,
                         ]}
                       >
-                        <TrashIcon
-                          size={16}
-                          color={appColors.dangerText}
-                          weight="bold"
-                        />
+                        <View style={styles.searchResultCopy}>
+                          <View style={styles.resultTopRow}>
+                            <Text style={styles.resultTitle} numberOfLines={1}>
+                              {result.name}
+                            </Text>
+                            <Text style={styles.resultCalories}>
+                              {formatFoodNumber(result.calories, " kcal")}
+                            </Text>
+                          </View>
+                          <Text style={styles.resultMeta} numberOfLines={1}>
+                            {result.brand ? `${result.brand} · ` : ""}
+                            {formatFoodSourceLabel(result.source)} ·{" "}
+                            {formatFoodItemServing(result)}
+                          </Text>
+                        </View>
+                        <View style={styles.addButton}>
+                          <PlusIcon
+                            size={16}
+                            color={appColors.white}
+                            weight="bold"
+                          />
+                        </View>
                       </Pressable>
-                    </View>
-                    <TextInput
-                      style={[styles.textInput, styles.stepInput]}
-                      placeholder="Describe this step"
-                      placeholderTextColor={appColors.textMuted}
-                      value={step}
-                      onChangeText={(value) => updateStep(index, value)}
-                      multiline
-                      textAlignVertical="top"
-                    />
+                    ))}
                   </View>
-                ))}
+                ) : null}
+
+                <View style={styles.ingredientList}>
+                  {ingredients.length === 0 ? (
+                    <Text style={styles.emptyText}>No ingredients yet.</Text>
+                  ) : (
+                    ingredients.map((ingredient) => {
+                      const { amount, factor, serving } =
+                        calculateIngredientFactor(ingredient);
+                      const calories = (ingredient.food.calories ?? 0) * factor;
+                      const protein = (ingredient.food.proteinG ?? 0) * factor;
+                      const carbs = (ingredient.food.carbsG ?? 0) * factor;
+                      const fat = (ingredient.food.fatG ?? 0) * factor;
+
+                      return (
+                        <Swipeable
+                          key={ingredient.key}
+                          overshootRight={false}
+                          renderRightActions={() => (
+                            <Pressable
+                              onPress={() => removeIngredient(ingredient.key)}
+                              style={({ pressed }) => [
+                                styles.deleteSwipe,
+                                pressed && styles.cardPressed,
+                              ]}
+                              accessibilityLabel={`Delete ${ingredient.food.name} ingredient`}
+                            >
+                              <TrashIcon
+                                size={18}
+                                color={appColors.white}
+                                weight="bold"
+                              />
+                              <Text style={styles.deleteSwipeText}>Delete</Text>
+                            </Pressable>
+                          )}
+                        >
+                          <View style={styles.ingredientCard}>
+                            <Pressable
+                              onPress={() => openIngredientDetails(ingredient)}
+                              style={({ pressed }) => [
+                                styles.ingredientPressable,
+                                pressed && styles.cardPressed,
+                              ]}
+                            >
+                              <View style={styles.ingredientHeaderRow}>
+                                <View style={styles.ingredientCopy}>
+                                  <Text
+                                    style={styles.ingredientTitle}
+                                    numberOfLines={1}
+                                    ellipsizeMode="tail"
+                                  >
+                                    {ingredient.food.name}
+                                  </Text>
+                                </View>
+                                <CaretRightIcon
+                                  size={14}
+                                  color={appColors.brand500}
+                                  weight="bold"
+                                />
+                              </View>
+
+                              <Text style={styles.ingredientPreviewText}>
+                                {formatFoodNumber(calories, " kcal")}
+                              </Text>
+                            </Pressable>
+
+                            <View style={styles.ingredientAmountRow}>
+                              <Text style={styles.ingredientAmountLabel}>
+                                Amount
+                              </Text>
+                              <View style={styles.ingredientAmountInputWrap}>
+                                <TextInput
+                                  accessibilityLabel={`Amount of ${ingredient.food.name} in ${serving.unit}`}
+                                  style={[
+                                    styles.textInput,
+                                    styles.ingredientAmountInput,
+                                  ]}
+                                  value={ingredient.amountValue}
+                                  onChangeText={(value) => {
+                                    updateIngredientAmount(
+                                      ingredient.key,
+                                      value,
+                                    );
+                                  }}
+                                  onBlur={() =>
+                                    normalizeIngredientAmount(ingredient.key)
+                                  }
+                                  keyboardType="decimal-pad"
+                                  placeholder={formatNumberInput(serving.value)}
+                                  placeholderTextColor={appColors.textMuted}
+                                />
+                                <View
+                                  style={[
+                                    styles.unitPill,
+                                    styles.ingredientAmountUnitPill,
+                                  ]}
+                                >
+                                  <Text style={styles.unitText}>
+                                    {serving.unit}
+                                  </Text>
+                                </View>
+                              </View>
+                            </View>
+                          </View>
+                        </Swipeable>
+                      );
+                    })
+                  )}
+                </View>
               </View>
-            )}
-          </View>
-          {formError ? <Text style={styles.formError}>{formError}</Text> : null}
+
+              {recipeWeightMetrics.gramsPerServing != null &&
+              ingredients.length > 0 ? (
+                <Text style={styles.servingSummary}>
+                  {formatFoodNumber(
+                    recipeWeightMetrics.gramsPerServing,
+                    " g per serving",
+                  )}
+                </Text>
+              ) : null}
+
+              <Disclosure title="Preparation & notes">
+                <View style={styles.twoUpCell}>
+                  <Text style={styles.fieldLabel}>Prepared weight</Text>
+                  <View style={styles.inlineInputRow}>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="Optional"
+                      placeholderTextColor={appColors.textMuted}
+                      value={preparedWeightValue}
+                      onChangeText={(value) => {
+                        setPreparedWeightValue(value);
+                        setFormError(null);
+                      }}
+                      onBlur={() => {
+                        setFormError(null);
+                        setPreparedWeightValue((current) => {
+                          const next = toSafeNumber(current);
+                          return next > 0 ? formatNumberInput(next) : "";
+                        });
+                      }}
+                      keyboardType="decimal-pad"
+                    />
+                    <View style={styles.unitPill}>
+                      <Text style={styles.unitText}>g</Text>
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.twoUpGrid}>
+                  <View style={styles.twoUpCell}>
+                    <Text style={styles.fieldLabel}>Prep time</Text>
+                    <View style={styles.inlineInputRow}>
+                      <TextInput
+                        style={styles.textInput}
+                        placeholder="Optional"
+                        placeholderTextColor={appColors.textMuted}
+                        value={prepTimeValue}
+                        onChangeText={(value) => {
+                          setPrepTimeValue(value);
+                          setFormError(null);
+                        }}
+                        keyboardType="decimal-pad"
+                      />
+                      <View style={styles.unitPill}>
+                        <Text style={styles.unitText}>min</Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={styles.twoUpCell}>
+                    <Text style={styles.fieldLabel}>Cook time</Text>
+                    <View style={styles.inlineInputRow}>
+                      <TextInput
+                        style={styles.textInput}
+                        placeholder="Optional"
+                        placeholderTextColor={appColors.textMuted}
+                        value={cookTimeValue}
+                        onChangeText={(value) => {
+                          setCookTimeValue(value);
+                          setFormError(null);
+                        }}
+                        keyboardType="decimal-pad"
+                      />
+                      <View style={styles.unitPill}>
+                        <Text style={styles.unitText}>min</Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+
+                <Text style={[styles.fieldLabel, styles.fieldSpacing]}>
+                  Link
+                </Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="https://..."
+                  placeholderTextColor={appColors.textMuted}
+                  value={linkValue}
+                  onChangeText={(value) => {
+                    setLinkValue(value);
+                    setFormError(null);
+                  }}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+
+                <Text style={[styles.fieldLabel, styles.fieldSpacing]}>
+                  Description
+                </Text>
+                <TextInput
+                  style={[styles.textInput, styles.multilineInput]}
+                  placeholder="Optional"
+                  placeholderTextColor={appColors.textMuted}
+                  value={descriptionValue}
+                  onChangeText={(value) => {
+                    setDescriptionValue(value);
+                    setFormError(null);
+                  }}
+                  multiline
+                  textAlignVertical="top"
+                  maxLength={1500}
+                />
+
+                <View style={styles.stepsHeaderRow}>
+                  <View style={styles.stepsHeaderCopy}>
+                    <Text style={[styles.fieldLabel, styles.stepsLabel]}>
+                      Steps
+                    </Text>
+                  </View>
+                  <Pressable
+                    accessibilityLabel="Add preparation step"
+                    onPress={addStep}
+                    style={({ pressed }) => [
+                      styles.iconButtonPrimary,
+                      pressed && styles.cardPressed,
+                    ]}
+                  >
+                    <PlusIcon size={16} color={appColors.white} weight="bold" />
+                  </Pressable>
+                </View>
+
+                {steps.length === 0 ? null : (
+                  <View style={styles.stepsList}>
+                    {steps.map((step, index) => (
+                      <View key={`step-${index}`} style={styles.stepCard}>
+                        <View style={styles.stepHeaderRow}>
+                          <Text style={styles.stepTitle}>Step {index + 1}</Text>
+                          <Pressable
+                            accessibilityLabel={`Delete step ${index + 1}`}
+                            onPress={() => removeStep(index)}
+                            style={({ pressed }) => [
+                              styles.iconButton,
+                              pressed && styles.cardPressed,
+                            ]}
+                          >
+                            <TrashIcon
+                              size={16}
+                              color={appColors.dangerText}
+                              weight="bold"
+                            />
+                          </Pressable>
+                        </View>
+                        <TextInput
+                          style={[styles.textInput, styles.stepInput]}
+                          placeholder="Describe this step"
+                          placeholderTextColor={appColors.textMuted}
+                          value={step}
+                          onChangeText={(value) => updateStep(index, value)}
+                          multiline
+                          textAlignVertical="top"
+                        />
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </Disclosure>
+              {formError ? (
+                <Text style={styles.formError}>{formError}</Text>
+              ) : null}
             </>
           )}
+          {isEditing && !loadingRecipe && !recipeLoadError ? (
+            <AppButton
+              label={deleting ? "Deleting..." : "Delete recipe"}
+              onPress={handleDeleteRecipe}
+              disabled={saving || deleting}
+              variant="ghost"
+            />
+          ) : null}
         </KeyboardAwareScrollView>
 
         {!loadingRecipe && !recipeLoadError ? (
           <View
             style={[
               styles.footer,
-              { paddingBottom: Math.max(insets.bottom + 8, 16) },
+              {
+                flexDirection: "row",
+                paddingBottom: Math.max(insets.bottom, 16),
+              },
             ]}
           >
-            {isEditing ? (
-              <Pressable
-                onPress={handleDeleteRecipe}
-                disabled={deleting || saving}
-                style={({ pressed }) => [
-                  styles.secondaryButton,
-                  styles.deleteButton,
-                  (deleting || saving) && styles.disabled,
-                  pressed && !deleting && !saving && styles.cardPressed,
-                ]}
-              >
-                <Text style={[styles.secondaryButtonText, styles.deleteButtonText]}>
-                  {deleting ? "Deleting..." : "Delete recipe"}
-                </Text>
-              </Pressable>
-            ) : null}
-            <View style={styles.footerRow}>
-              <Pressable
-                onPress={handleCancel}
-                disabled={saving || deleting}
-                style={({ pressed }) => [
-                  styles.secondaryButton,
-                  styles.footerButton,
-                  (saving || deleting) && styles.disabled,
-                  pressed && !saving && !deleting && styles.cardPressed,
-                ]}
-              >
-                <Text style={styles.secondaryButtonText}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  void handleSave("save");
-                }}
-                disabled={saving || deleting}
-                style={({ pressed }) => [
-                  isEditing ? styles.primaryButton : styles.secondaryButton,
-                  styles.footerButton,
-                  (saving || deleting) && styles.disabled,
-                  pressed && !saving && !deleting && styles.cardPressed,
-                ]}
-              >
-                <Text
-                  style={
-                    isEditing
-                      ? styles.primaryButtonText
-                      : styles.secondaryButtonText
-                  }
-                >
-                  {saving && saveMode === "save"
-                    ? isEditing
-                      ? "Saving changes..."
-                      : "Saving..."
-                    : isEditing
-                      ? "Save changes"
-                      : "Save only"}
-                </Text>
-              </Pressable>
-            </View>
+            <AppButton
+              style={{ flex: 1 }}
+              label={
+                saving && saveMode === "save"
+                  ? "Saving..."
+                  : isEditing
+                    ? "Save changes"
+                    : "Save only"
+              }
+              onPress={() => void handleSave("save")}
+              disabled={saving || deleting}
+              variant={isEditing ? "primary" : "secondary"}
+            />
             {!isEditing ? (
-              <Pressable
-                onPress={() => {
-                  void handleSave("save_and_add");
-                }}
+              <AppButton
+                style={{ flex: 1 }}
+                label={
+                  saving && saveMode === "save_and_add"
+                    ? "Saving..."
+                    : "Save and add"
+                }
+                onPress={() => void handleSave("save_and_add")}
                 disabled={saving || deleting}
-                style={({ pressed }) => [
-                  styles.primaryButton,
-                  (saving || deleting) && styles.disabled,
-                  pressed && !saving && !deleting && styles.cardPressed,
-                ]}
-              >
-                <Text style={styles.primaryButtonText}>
-                  {saving && saveMode === "save_and_add"
-                    ? "Saving and adding..."
-                    : "Save and add"}
-                </Text>
-              </Pressable>
+              />
             ) : null}
           </View>
         ) : null}
@@ -1561,7 +1462,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    marginBottom: 12
+    marginBottom: 12,
   },
   searchInputWrap: {
     flex: 1,
@@ -1651,11 +1552,10 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   ingredientCard: {
-    borderRadius: 10,
-    backgroundColor: appColors.surfaceCardAlt,
-    borderWidth: 1,
+    backgroundColor: appColors.surfaceCanvas,
+    borderBottomWidth: 1,
     borderColor: appColors.borderSoft,
-    paddingHorizontal: 10,
+    paddingHorizontal: 0,
     paddingVertical: 10,
   },
   ingredientPressable: {
@@ -1684,8 +1584,12 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     lineHeight: 15,
   },
+  servingSummary: {
+    ...sharedStyleValues.metaText,
+    marginBottom: 16,
+  },
   ingredientPreviewText: {
-    color: appColors.brand500,
+    color: appColors.textSecondary,
     fontSize: 11,
     lineHeight: 15,
     fontWeight: "700",
@@ -1698,11 +1602,9 @@ const styles = StyleSheet.create({
   },
   ingredientAmountLabel: {
     color: appColors.textMuted,
-    fontSize: 10,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    width: 52,
+    fontSize: 13,
+    fontWeight: "500",
+    minWidth: 52,
   },
   ingredientAmountInputWrap: {
     flex: 1,

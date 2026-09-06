@@ -71,23 +71,22 @@ const FoodDiaryMoreSection = ({
 
   return (
     <View style={styles.card}>
-      <Text style={styles.sectionTitle}>
-        Fast actions for {selectedMealLabel}
-      </Text>
       {renderActionRow({
         accessibilityLabel: `Repeat yesterday's ${selectedMealLabel}`,
         busy: isRepeatingYesterdayMeal,
         divider: true,
         iconWeight: "bold",
-        label: isRepeatingYesterdayMeal ? "Repeating" : "Repeat meal",
+        label: isRepeatingYesterdayMeal
+          ? "Repeating…"
+          : `Repeat ${selectedMealLabel.toLowerCase()}`,
         onPress: onRepeatYesterdayMeal,
       })}
       {renderActionRow({
-        accessibilityLabel: "Copy yesterday",
+        accessibilityLabel: "Copy previous day",
         busy: isCopyingYesterday,
         divider: false,
         iconWeight: "regular",
-        label: isCopyingYesterday ? "Copying" : "Copy last day",
+        label: isCopyingYesterday ? "Copying" : "Copy day",
         onPress: onCopyYesterday,
       })}
     </View>

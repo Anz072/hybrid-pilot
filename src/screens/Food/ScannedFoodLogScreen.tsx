@@ -1,20 +1,19 @@
+import { Disclosure } from "../../components/ui";
+import { getDisplayPreferencesSnapshot } from "../../preferences/displayPreferences";
 import React from "react";
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import {
   Alert,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import {
-  StackActions,
-  useNavigation,
-  useRoute,
-} from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import type {
   CompositeNavigationProp,
   RouteProp,
@@ -22,10 +21,7 @@ import type {
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
 import { LoadingState } from "../../components/ui";
-import {
-  ClockIcon,
-  StarIcon,
-} from "phosphor-react-native";
+import { ClockIcon, StarIcon } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import type { FoodStackParamList } from "../../navigation/foodTypes";
@@ -84,8 +80,15 @@ const ScannedFoodLogScreen = () => {
   const navigation = useNavigation<ScannedFoodNav>();
   const insets = useSafeAreaInsets();
   const footerBottomPadding = Math.max(insets.bottom, 16);
-  const { barcode, contextLabel, date, foodId, loggedAt, mealType, scanStatus } =
-    route.params;
+  const {
+    barcode,
+    contextLabel,
+    date,
+    foodId,
+    loggedAt,
+    mealType,
+    scanStatus,
+  } = route.params;
   const isScannedFlow = scanStatus != null;
   const user = useAppSelector((state) => state.user.currentUser);
 
@@ -216,14 +219,7 @@ const ScannedFoodLogScreen = () => {
   );
 
   const closeAfterSave = React.useCallback(() => {
-    const routes = navigation.getState().routes;
-    const previousRoute = routes[routes.length - 2];
-
-    if (previousRoute?.name === "AddFood" && routes.length >= 2) {
-      navigation.dispatch(StackActions.pop(2));
-      return;
-    }
-
+    // Keep the existing search session alive when adding several foods.
     navigation.goBack();
   }, [navigation]);
 
@@ -295,7 +291,7 @@ const ScannedFoodLogScreen = () => {
 
   if (loading) {
     return (
-      <View style={styles.screen}>
+      <View style={[styles.screen, { paddingTop: insets.top }]}>
         <View style={styles.content}>
           <FoodScreenHeader
             eyebrow={screenEyebrow}
@@ -319,7 +315,7 @@ const ScannedFoodLogScreen = () => {
 
   if (!food || !serving) {
     return (
-      <View style={styles.screen}>
+      <View style={[styles.screen, { paddingTop: insets.top }]}>
         <View style={styles.content}>
           <FoodScreenHeader
             eyebrow={screenEyebrow}
@@ -346,27 +342,20 @@ const ScannedFoodLogScreen = () => {
   }
 
   const heroMeta = [
-    food.brand || null,
-    formatFoodSourceLabel(food.source),
-    `Serving ${formatFoodNumber(serving.value, ` ${serving.unit}`)}`,
-    isScannedFlow
-      ? scanStatus === "created"
-        ? "Added to library"
-        : "Found in library"
-      : null,
-    barcode ? `Barcode ${barcode}` : null,
+    food.brand?.toLowerCase() !== food.name.toLowerCase() ? food.brand : null,
+    formatFoodNumber(serving.value, ` ${serving.unit}`),
   ]
     .filter(Boolean)
     .join(" · ");
 
   return (
-    <View style={styles.screen}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={[styles.screen, { paddingTop: insets.top, overflow: "hidden" }]}
+    >
       <KeyboardAwareScrollView
         style={styles.screen}
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: 148 + footerBottomPadding },
-        ]}
+        contentContainerStyle={[styles.content, { paddingBottom: 24 }]}
         focusedInputBottomOffset={132}
       >
         <FoodEntryForm
@@ -418,11 +407,7 @@ const ScannedFoodLogScreen = () => {
           onAmountBlur={handleQuantityBlur}
           slot={{
             icon: (
-              <ClockIcon
-                size={18}
-                color={appColors.brand500}
-                weight="bold"
-              />
+              <ClockIcon size={18} color={appColors.brand500} weight="bold" />
             ),
             label: "Logged time",
             value: loggedTime,
@@ -461,41 +446,42 @@ const ScannedFoodLogScreen = () => {
           formError={formError}
           showPrimaryAction={false}
         />
-        <Text style={styles.title}>Micronutrients</Text>
-        {(
-          Object.entries(microTargets ?? MICRONUTRIENT_TARGETS.generic) as [
-            OpenFoodMapMicronutrientKey,
-            number,
-          ][]
-        ).map(([key, target]) => (
-          <MacroBar
-            key={key}
-            accent={appColors.brand500}
-            consumed={Number(food?.[key] ?? 0) * micronutrientFactor}
-            target={target}
-            label={key
-              .slice(0, -2)
-              .split(/(?=[A-Z])/)
-              .map((w) => w[0].toUpperCase() + w.slice(1))
-              .join(" ")}
-            unit={key.endsWith("Ug") ? "ug" : "mg"}
-          />
-        ))}
+        <Disclosure title="Micronutrients">
+          {(
+            Object.entries(microTargets ?? MICRONUTRIENT_TARGETS.generic) as [
+              OpenFoodMapMicronutrientKey,
+              number,
+            ][]
+          )
+            .filter(([key]) => food?.[key] != null)
+            .map(([key, target]) => (
+              <MacroBar
+                key={key}
+                accent={appColors.brand500}
+                consumed={Number(food?.[key] ?? 0) * micronutrientFactor}
+                target={target}
+                label={key
+                  .slice(0, -2)
+                  .split(/(?=[A-Z])/)
+                  .map((w) => w[0].toUpperCase() + w.slice(1))
+                  .join(" ")}
+                unit={key.endsWith("Ug") ? "ug" : "mg"}
+              />
+            ))}
+        </Disclosure>
         {showTimePicker ? (
           <DateTimePicker
             value={loggedAtDate}
             mode="time"
+            is24Hour={getDisplayPreferencesSnapshot().timeFormat === "24h"}
             display={Platform.OS === "ios" ? "spinner" : "default"}
             onChange={handleTimeChange}
           />
-          ) : null}
+        ) : null}
       </KeyboardAwareScrollView>
 
       <View
-        style={[
-          styles.stickyFooter,
-          { paddingBottom: footerBottomPadding },
-        ]}
+        style={[styles.stickyFooter, { paddingBottom: footerBottomPadding }]}
       >
         <Pressable
           onPress={() => {
@@ -513,7 +499,7 @@ const ScannedFoodLogScreen = () => {
           </Text>
         </Pressable>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

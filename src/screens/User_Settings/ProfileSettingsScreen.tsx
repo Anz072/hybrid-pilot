@@ -1,3 +1,4 @@
+import DateTimePicker from "@react-native-community/datetimepicker";
 import React from "react";
 import {
   Alert,
@@ -24,7 +25,13 @@ import {
 } from "../../preferences/displayPreferences";
 import { useDisplayPreferences } from "../../preferences/usePreferences";
 import { appColors } from "../../theme/colors";
-import { AppButton, AppCard, AppInput, AppText, Chip } from "../../components/ui";
+import {
+  AppButton,
+  AppCard,
+  AppInput,
+  AppText,
+  Chip,
+} from "../../components/ui";
 import { appSpacing } from "../../theme/tokens";
 import SettingsStackHeader from "./SettingsStackHeader";
 import { saveUserProfileChanges } from "./userSettingsActions";
@@ -81,6 +88,7 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
   const [selectedGender, setSelectedGender] = React.useState<DBUserGender>(
     user?.gender ?? null,
   );
+  const [showBirthdatePicker, setShowBirthdatePicker] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [signingOut, setSigningOut] = React.useState(false);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
@@ -109,7 +117,9 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
         !Number.isFinite(feet) ||
         !Number.isFinite(inches)
       ) {
-        setHeightValue(nextFeet.trim() === "" && nextInches.trim() === "" ? "" : heightValue);
+        setHeightValue(
+          nextFeet.trim() === "" && nextInches.trim() === "" ? "" : heightValue,
+        );
         return;
       }
       setHeightValue(String(Math.round(feetInchesToCm(feet, inches))));
@@ -125,7 +135,8 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
     return (
       normalizeText(displayName) !== (user.displayName ?? "") ||
       birthdateValue.trim() !== formatBirthdateInput(user.birthdate) ||
-      heightValue.trim() !== (user.heightCm != null ? String(user.heightCm) : "") ||
+      heightValue.trim() !==
+        (user.heightCm != null ? String(user.heightCm) : "") ||
       selectedGender !== (user.gender ?? null)
     );
   }, [birthdateValue, displayName, heightValue, selectedGender, user]);
@@ -166,7 +177,10 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
 
     const trimmedHeight = heightValue.trim();
     const parsedHeight = trimmedHeight ? parseHeightValue(trimmedHeight) : null;
-    if (trimmedHeight && (parsedHeight == null || parsedHeight < 100 || parsedHeight > 260)) {
+    if (
+      trimmedHeight &&
+      (parsedHeight == null || parsedHeight < 100 || parsedHeight > 260)
+    ) {
       Alert.alert(
         "Invalid height",
         heightUnit === "ft_in"
@@ -185,7 +199,9 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
         user,
         patch: {
           displayName: trimmedDisplayName,
-          birthdate: parsedBirthdate ? buildBirthdateValue(parsedBirthdate) : null,
+          birthdate: parsedBirthdate
+            ? buildBirthdateValue(parsedBirthdate)
+            : null,
           heightCm: parsedHeight,
           gender: selectedGender,
         },
@@ -245,9 +261,9 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
   }, [dispatch, signingOut]);
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.screen}
       >
         <ScrollView
@@ -255,7 +271,7 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
           contentContainerStyle={[
             styles.content,
             {
-              paddingTop: insets.top + 16,
+              paddingTop: 16,
               paddingBottom: insets.bottom + 28,
             },
           ]}
@@ -263,14 +279,12 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
           showsVerticalScrollIndicator={false}
         >
           <SettingsStackHeader
-            eyebrow="Account"
             onBack={() => navigation.goBack()}
-            subtitle="Update the profile details that power your calorie planning, dashboard, and micronutrient targets."
             title="Profile & Account"
           />
 
           {!user ? (
-            <AppCard style={styles.card}>
+            <AppCard style={styles.card} variant="plain">
               <AppText variant="cardTitle">No active user</AppText>
               <AppText color="secondary" variant="bodySmall">
                 Sign in to your account first before editing profile details.
@@ -278,35 +292,13 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
             </AppCard>
           ) : (
             <>
-              <AppCard style={styles.card}>
-                <AppText variant="cardTitle">Account & sync</AppText>
-                <AppText color="coral" style={styles.accountValue} variant="sectionTitleLarge">
+              <AppCard style={styles.card} variant="plain">
+                <AppText color="secondary" variant="bodySmall">
                   {user.email ?? "No email"}
                 </AppText>
-                <View style={styles.syncRow}>
-                  <View
-                    style={[
-                      styles.syncDot,
-                      user.provider === "local"
-                        ? styles.syncDotLocal
-                      : styles.syncDotOnline,
-                    ]}
-                  />
-                  <AppText color="secondary" style={styles.syncText} variant="bodySmall">
-                    {user.provider === "local"
-                      ? "Local device account — data stays on this device and is not synced."
-                      : "Signed in — your diary, weights, and settings sync to your account."}
-                  </AppText>
-                </View>
               </AppCard>
 
-              <AppCard style={styles.card}>
-                <AppText variant="cardTitle">Profile details</AppText>
-                <AppText color="secondary" style={styles.sectionText} variant="bodySmall">
-                  Keep these fields current so your recommendations stay aligned
-                  with your body data.
-                </AppText>
-
+              <AppCard style={styles.card} variant="plain">
                 <AppInput
                   label="Display name"
                   placeholder="Your name"
@@ -317,20 +309,55 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
                   }}
                 />
 
-                <AppInput
-                  containerStyle={styles.fieldSpacing}
-                  label="Birthdate"
-                  placeholder="YYYY-MM-DD"
-                  value={birthdateValue}
-                  onChangeText={(value) => {
-                    setBirthdateValue(value);
-                    setStatusMessage(null);
-                  }}
-                  autoCapitalize="none"
-                  keyboardType="numbers-and-punctuation"
-                />
+                <View style={styles.fieldSpacing}>
+                  <AppText color="secondary" variant="metadata">
+                    Birthdate
+                  </AppText>
+                  <AppButton
+                    variant="secondary"
+                    label={
+                      parseBirthdateValue(birthdateValue)?.toLocaleDateString(
+                        undefined,
+                        { month: "short", day: "numeric", year: "numeric" },
+                      ) ?? "Choose birthdate"
+                    }
+                    onPress={() => setShowBirthdatePicker(true)}
+                  />
+                  {showBirthdatePicker ? (
+                    <>
+                      <DateTimePicker
+                        mode="date"
+                        value={
+                          parseBirthdateValue(birthdateValue) ??
+                          new Date(1995, 0, 1)
+                        }
+                        maximumDate={new Date()}
+                        minimumDate={new Date(1900, 0, 1)}
+                        onChange={(event, date) => {
+                          if (Platform.OS === "android")
+                            setShowBirthdatePicker(false);
+                          if (event.type === "set" && date) {
+                            setBirthdateValue(buildBirthdateValue(date));
+                            setStatusMessage(null);
+                          }
+                        }}
+                      />
+                      {Platform.OS === "ios" ? (
+                        <AppButton
+                          label="Done"
+                          variant="ghost"
+                          onPress={() => setShowBirthdatePicker(false)}
+                        />
+                      ) : null}
+                    </>
+                  ) : null}
+                </View>
 
-                <AppText color="secondary" style={styles.heightLabel} variant="eyebrow">
+                <AppText
+                  color="secondary"
+                  style={styles.heightLabel}
+                  variant="metadata"
+                >
                   Height
                 </AppText>
                 {heightUnit === "ft_in" ? (
@@ -345,7 +372,9 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
                       keyboardType="number-pad"
                     />
                     <View style={styles.unitPill}>
-                      <AppText color="coral" variant="label">ft</AppText>
+                      <AppText color="coral" variant="label">
+                        ft
+                      </AppText>
                     </View>
                     <AppInput
                       containerStyle={styles.inlineInput}
@@ -357,7 +386,9 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
                       keyboardType="number-pad"
                     />
                     <View style={styles.unitPill}>
-                      <AppText color="coral" variant="label">in</AppText>
+                      <AppText color="coral" variant="label">
+                        in
+                      </AppText>
                     </View>
                   </View>
                 ) : (
@@ -373,12 +404,18 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
                       keyboardType="decimal-pad"
                     />
                     <View style={styles.unitPill}>
-                      <AppText color="coral" variant="label">cm</AppText>
+                      <AppText color="coral" variant="label">
+                        cm
+                      </AppText>
                     </View>
                   </View>
                 )}
 
-                <AppText color="secondary" style={styles.fieldSpacing} variant="eyebrow">
+                <AppText
+                  color="secondary"
+                  style={styles.fieldSpacing}
+                  variant="metadata"
+                >
                   Sex profile
                 </AppText>
                 <View style={styles.optionRow}>
@@ -408,24 +445,22 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
                   style={styles.primaryButton}
                 />
 
-                <AppText color="secondary" style={styles.helperText} variant="metadata">
+                <AppText
+                  color="secondary"
+                  style={styles.helperText}
+                  variant="metadata"
+                >
                   {statusMessage ??
                     "Birthdate, height, and sex profile affect calorie planning and micronutrient targets."}
                 </AppText>
               </AppCard>
 
-              <AppCard style={styles.card}>
-                <AppText variant="cardTitle">Session</AppText>
-                <AppText color="secondary" style={styles.sectionText} variant="bodySmall">
-                  Signing out keeps your synced data safe and brings you back to
-                  the login screen.
-                </AppText>
-
+              <AppCard style={styles.card} variant="plain">
                 <AppButton
                   onPress={handleSignOut}
                   disabled={signingOut}
                   label={signingOut ? "Signing out..." : "Sign out"}
-                  variant="danger"
+                  variant="ghost"
                 />
               </AppCard>
             </>

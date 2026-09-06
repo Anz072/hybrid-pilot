@@ -1,3 +1,6 @@
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
+import { ScreenHeader } from "../../components/ui";
 import React from "react";
 import {
   ActivityIndicator,
@@ -6,12 +9,7 @@ import {
   Platform,
   StyleSheet,
 } from "react-native";
-import {
-  AppButton,
-  AppCard,
-  AppInput,
-  AppText,
-} from "../../components/ui";
+import { AppButton, AppCard, AppInput, AppText } from "../../components/ui";
 import {
   signInWithEmailPassword,
   upsertSupabaseAuthUserAccount,
@@ -46,6 +44,7 @@ const LoginScreen = ({
   onAuthenticated,
   onBackToOnboarding,
 }: LoginScreenProps) => {
+  const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -102,66 +101,75 @@ const LoginScreen = ({
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={styles.screen}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={[styles.screen, { paddingTop: insets.top }]}
     >
-      <AppCard style={styles.card}>
-        <AppText align="center" variant="sectionTitleLarge">
-          Sign in
-        </AppText>
-        <AppText align="center" color="secondary" variant="bodySmall">
-          Sign in to an account created after completing your nutrition profile.
-        </AppText>
-
-        <AppInput
-          autoCapitalize="none"
-          autoCorrect={false}
-          editable={!isSubmitting}
-          keyboardType="email-address"
-          label="Email"
-          onChangeText={setEmail}
-          placeholder="you@example.com"
-          returnKeyType="next"
-          textContentType="emailAddress"
-          value={email}
+      <KeyboardAwareScrollView
+        contentContainerStyle={{
+          flexGrow: 1,
+          paddingBottom: insets.bottom + 24,
+        }}
+      >
+        <ScreenHeader
+          safeTop={false}
+          title="Sign in"
+          onBack={onBackToOnboarding}
         />
+        <AppCard style={styles.card} variant="plain">
+          <AppInput
+            autoCapitalize="none"
+            autoCorrect={false}
+            editable={!isSubmitting}
+            keyboardType="email-address"
+            label="Email"
+            onChangeText={setEmail}
+            placeholder="you@example.com"
+            returnKeyType="next"
+            textContentType="emailAddress"
+            value={email}
+          />
 
-        <AppInput
-          autoCapitalize="none"
-          autoCorrect={false}
-          editable={!isSubmitting}
-          label="Password"
-          onChangeText={setPassword}
-          onSubmitEditing={() => void handleEmailSignIn()}
-          placeholder="Minimum 6 characters"
-          returnKeyType="done"
-          secureTextEntry
-          textContentType="password"
-          value={password}
-        />
+          <AppInput
+            autoCapitalize="none"
+            autoCorrect={false}
+            editable={!isSubmitting}
+            label="Password"
+            onChangeText={setPassword}
+            onSubmitEditing={() => void handleEmailSignIn()}
+            placeholder="Password"
+            returnKeyType="done"
+            secureTextEntry
+            textContentType="password"
+            value={password}
+          />
 
-        <AppButton
-          disabled={isSubmitting}
-          icon={isSubmitting ? <ActivityIndicator color={appColors.white} /> : undefined}
-          label={isSubmitting ? "Signing in..." : "Sign in"}
-          onPress={() => void handleEmailSignIn()}
-        />
-
-        {onBackToOnboarding ? (
           <AppButton
             disabled={isSubmitting}
-            label="Create an account"
-            onPress={onBackToOnboarding}
-            variant="secondary"
+            icon={
+              isSubmitting ? (
+                <ActivityIndicator color={appColors.white} />
+              ) : undefined
+            }
+            label={isSubmitting ? "Signing in..." : "Sign in"}
+            onPress={() => void handleEmailSignIn()}
           />
-        ) : null}
 
-        {errorMessage ? (
-          <AppText color="error" variant="bodySmall">
-            {errorMessage}
-          </AppText>
-        ) : null}
-      </AppCard>
+          {onBackToOnboarding ? (
+            <AppButton
+              disabled={isSubmitting}
+              label="Create an account"
+              onPress={onBackToOnboarding}
+              variant="secondary"
+            />
+          ) : null}
+
+          {errorMessage ? (
+            <AppText color="error" variant="bodySmall">
+              {errorMessage}
+            </AppText>
+          ) : null}
+        </AppCard>
+      </KeyboardAwareScrollView>
     </KeyboardAvoidingView>
   );
 };

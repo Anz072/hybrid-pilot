@@ -2,7 +2,13 @@ import { StyleSheet } from "react-native";
 import type { ImageStyle, TextStyle, ViewStyle } from "react-native";
 import { appColors } from "./colors";
 import { appTypography } from "./typography";
-import { appBorders, appRadius, appSpacing, appStates, appSurfaces } from "./tokens";
+import {
+  appBorders,
+  appRadius,
+  appSpacing,
+  appStates,
+  appSurfaces,
+} from "./tokens";
 
 type SharedStyleValue = ViewStyle | TextStyle | ImageStyle;
 
@@ -76,7 +82,8 @@ export const sharedStyleValues = {
     color: appColors.textSecondary,
   },
   fieldLabel: {
-    ...appTypography.eyebrow,
+    ...appTypography.metadata,
+    fontWeight: "500",
     color: appColors.textSecondary,
     marginBottom: 6,
   },
@@ -98,7 +105,8 @@ export const sharedStyleValues = {
     paddingHorizontal: 14,
     paddingVertical: appSpacing.sm,
     color: appColors.textPrimary,
-    ...appTypography.bodySmall,
+    ...appTypography.body,
+    minHeight: 48,
   },
   inputCompact: {
     flex: 1,
@@ -109,28 +117,15 @@ export const sharedStyleValues = {
     paddingHorizontal: appSpacing.sm,
     paddingVertical: appSpacing.xs,
     color: appColors.textPrimary,
-    ...appTypography.bodySmall,
+    ...appTypography.body,
+    minHeight: 48,
   },
-  unitPill: {
-    borderRadius: appRadius.md,
-    backgroundColor: appSurfaces.soft,
-    borderWidth: appBorders.width,
-    borderColor: appBorders.soft,
-    paddingHorizontal: appSpacing.sm,
-    paddingVertical: 11,
-  },
-  unitPillRound: {
-    borderRadius: appRadius.pill,
-    backgroundColor: appSurfaces.soft,
-    borderWidth: appBorders.width,
-    borderColor: appBorders.soft,
-    paddingHorizontal: appSpacing.sm,
-    paddingVertical: 11,
-  },
+  unitPill: { paddingHorizontal: 8, paddingVertical: 11 },
+  unitPillRound: { paddingHorizontal: 8, paddingVertical: 11 },
   unitText: {
     ...appTypography.metadata,
     fontWeight: "500",
-    color: appColors.actionPrimary,
+    color: appColors.textSecondary,
   },
   iconButton: {
     width: 44,
@@ -185,10 +180,7 @@ export const sharedStyleValues = {
     color: appColors.textPrimary,
   },
   footer: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flexShrink: 0,
     paddingHorizontal: appSpacing.gutter,
     paddingTop: appSpacing.sm,
     gap: appSpacing.sm,

@@ -1,10 +1,5 @@
 import React from "react";
-import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import { MinusIcon, PlusIcon } from "phosphor-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,8 +14,21 @@ import {
 import { DB } from "../../store/DB";
 import { useAppSelector } from "../../store/hooks";
 import { appColors } from "../../theme/colors";
-import { AppButton, AppCard, AppText, ErrorState, IconButton, LoadingState, NumericText } from "../../components/ui";
-import { appBorders, appRadius, appSpacing, appSurfaces } from "../../theme/tokens";
+import {
+  AppButton,
+  AppCard,
+  AppText,
+  ErrorState,
+  IconButton,
+  LoadingState,
+  NumericText,
+} from "../../components/ui";
+import {
+  appBorders,
+  appRadius,
+  appSpacing,
+  appSurfaces,
+} from "../../theme/tokens";
 import CalorieBudgetChart from "./CalorieBudgetChart";
 import SettingsStackHeader from "./SettingsStackHeader";
 import { supersedeOpenAdaptiveRecommendationForUser } from "./adaptiveCaloriesActions";
@@ -51,9 +59,8 @@ const coerceOverrides = (
 const CalorieScheduleScreen = ({ navigation }: Props) => {
   const insets = useSafeAreaInsets();
   const user = useAppSelector((state) => state.user.currentUser);
-  const [overrides, setOverrides] = React.useState<Array<number | null>>(
-    EMPTY_OVERRIDES,
-  );
+  const [overrides, setOverrides] =
+    React.useState<Array<number | null>>(EMPTY_OVERRIDES);
   const [saving, setSaving] = React.useState(false);
   const [contextLoading, setContextLoading] = React.useState(true);
   const [contextError, setContextError] = React.useState<string | null>(null);
@@ -71,7 +78,9 @@ const CalorieScheduleScreen = ({ navigation }: Props) => {
       const settings = await DB.getUserSettings(user.externalId);
       setOverrides(coerceOverrides(settings?.dailyCalorieOverrides));
     } catch {
-      setContextError("Could not load the calorie schedule. Check your connection and try again.");
+      setContextError(
+        "Could not load the calorie schedule. Check your connection and try again.",
+      );
     } finally {
       setContextLoading(false);
     }
@@ -140,13 +149,13 @@ const CalorieScheduleScreen = ({ navigation }: Props) => {
   };
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <ScrollView
         style={styles.screen}
         contentContainerStyle={[
           styles.content,
           {
-            paddingTop: insets.top + 16,
+            paddingTop: 16,
             paddingBottom: insets.bottom + 28,
           },
         ]}
@@ -158,7 +167,7 @@ const CalorieScheduleScreen = ({ navigation }: Props) => {
         />
 
         {!user ? (
-          <AppCard style={styles.card}>
+          <AppCard style={styles.card} variant="plain">
             <AppText variant="cardTitle">No active user</AppText>
             <AppText color="secondary" variant="bodySmall">
               Sign in to your account first before editing the calorie schedule.
@@ -168,7 +177,11 @@ const CalorieScheduleScreen = ({ navigation }: Props) => {
           <>
             <View style={styles.baseBlock}>
               <AppText variant="cardTitle">Base daily target</AppText>
-              <NumericText color="coral" style={styles.baseValue} variant="numberCalorieHero">
+              <NumericText
+                color="coral"
+                style={styles.baseValue}
+                variant="numberCalorieHero"
+              >
                 {baseCalories != null ? `${baseCalories} kcal` : "--"}
               </NumericText>
             </View>
@@ -178,7 +191,11 @@ const CalorieScheduleScreen = ({ navigation }: Props) => {
                 title="Could not load schedule"
                 message={contextError}
                 action={
-                  <AppButton label="Try again" onPress={() => void loadSettings()} size="sm" />
+                  <AppButton
+                    label="Try again"
+                    onPress={() => void loadSettings()}
+                    size="sm"
+                  />
                 }
                 style={styles.card}
               />
@@ -201,87 +218,101 @@ const CalorieScheduleScreen = ({ navigation }: Props) => {
                   values={weeklyValues}
                 />
 
-                <AppCard style={styles.card}>
-              <View style={styles.headerRow}>
-                <View>
-                  <AppText variant="cardTitle">Overrides</AppText>
-                  <AppText color="secondary" variant="bodySmall">
-                    Raise or lower a specific day by 50 kcal
-                  </AppText>
-                </View>
-                <AppButton
-                  onPress={() => setOverrides(EMPTY_OVERRIDES)}
-                  label="Clear all"
-                  size="sm"
-                  variant="ghost"
-                />
-              </View>
-
-              <View style={styles.dayStack}>
-                {CALORIE_SCHEDULE_DAY_NAMES.map((dayName, index) => {
-                  const override = overrides[index];
-                  const effectiveCalories = override ?? baseCalories ?? null;
-
-                  return (
-                    <AppCard key={dayName} style={styles.dayCard} variant="soft">
-                      <View style={styles.dayCopy}>
-                        <AppText variant="bodySmallStrong">{dayName}</AppText>
-                        <AppText color="secondary" variant="metadata">
-                          {override != null ? "Override" : "Using base target"}
-                        </AppText>
-                      </View>
-
-                      <View style={styles.dayControls}>
-                        <IconButton
-                          accessibilityLabel={`Decrease ${dayName} calories`}
-                          onPress={() => adjustOverride(index, -CALORIE_TARGET_STEP)}
-                        >
-                          <MinusIcon
-                            size={16}
-                            color={appColors.brand700}
-                            weight="bold"
-                          />
-                        </IconButton>
-
-                        <View style={styles.dayValueWrap}>
-                          <NumericText align="center" variant="numberCalorieHero">
-                            {effectiveCalories != null
-                              ? `${effectiveCalories}`
-                              : "--"}
-                          </NumericText>
-                          <AppText align="center" color="secondary" variant="eyebrow">kcal</AppText>
-                        </View>
-
-                        <IconButton
-                          accessibilityLabel={`Increase ${dayName} calories`}
-                          onPress={() => adjustOverride(index, CALORIE_TARGET_STEP)}
-                        >
-                          <PlusIcon
-                            size={16}
-                            color={appColors.brand700}
-                            weight="bold"
-                          />
-                        </IconButton>
-                      </View>
-
+                <AppCard style={styles.card} variant="plain">
+                  <View style={styles.headerRow}>
+                    <View>
+                      <AppText variant="cardTitle">Overrides</AppText>
+                      <AppText color="secondary" variant="bodySmall">
+                        Raise or lower a specific day by 50 kcal
+                      </AppText>
+                    </View>
+                    {overrides.some((value) => value != null) ? (
                       <AppButton
-                        onPress={() => setOverrideAtIndex(index, null)}
-                        label="Reset day"
+                        onPress={() => setOverrides(EMPTY_OVERRIDES)}
+                        label="Clear all"
                         size="sm"
-                        style={styles.resetDayButton}
-                        variant="secondary"
+                        variant="ghost"
                       />
-                    </AppCard>
-                  );
-                })}
-              </View>
+                    ) : null}
+                  </View>
 
-              <AppButton
-                onPress={() => void handleSave()}
-                disabled={saving}
-                label={saving ? "Saving..." : "Save daily schedule"}
-                style={styles.saveButton}
-              />
+                  <View style={styles.dayStack}>
+                    {CALORIE_SCHEDULE_DAY_NAMES.map((dayName, index) => {
+                      const override = overrides[index];
+                      const effectiveCalories =
+                        override ?? baseCalories ?? null;
+
+                      return (
+                        <AppCard
+                          key={dayName}
+                          style={styles.dayCard}
+                          variant="plain"
+                        >
+                          <View style={styles.dayCopy}>
+                            <AppText variant="bodySmallStrong">
+                              {dayName}
+                            </AppText>
+                          </View>
+
+                          <View style={styles.dayControls}>
+                            <IconButton
+                              accessibilityLabel={`Decrease ${dayName} calories`}
+                              onPress={() =>
+                                adjustOverride(index, -CALORIE_TARGET_STEP)
+                              }
+                            >
+                              <MinusIcon
+                                size={16}
+                                color={appColors.brand700}
+                                weight="bold"
+                              />
+                            </IconButton>
+
+                            <View style={styles.dayValueWrap}>
+                              <NumericText
+                                align="center"
+                                variant="numberMacroRow"
+                              >
+                                {effectiveCalories != null
+                                  ? `${effectiveCalories}`
+                                  : "--"}
+                              </NumericText>
+                            </View>
+
+                            <IconButton
+                              accessibilityLabel={`Increase ${dayName} calories`}
+                              onPress={() =>
+                                adjustOverride(index, CALORIE_TARGET_STEP)
+                              }
+                            >
+                              <PlusIcon
+                                size={16}
+                                color={appColors.brand700}
+                                weight="bold"
+                              />
+                            </IconButton>
+                          </View>
+
+                          {override != null ? (
+                            <AppButton
+                              onPress={() => setOverrideAtIndex(index, null)}
+                              label="Reset"
+                              size="sm"
+                              style={styles.resetDayButton}
+                              variant="ghost"
+                            />
+                          ) : null}
+                        </AppCard>
+                      );
+                    })}
+                  </View>
+
+                  <AppButton
+                    onPress={() => void handleSave()}
+                    disabled={saving}
+                    label={saving ? "Saving..." : "Save daily schedule"}
+                    style={styles.saveButton}
+                  />
                 </AppCard>
               </>
             )}
@@ -318,12 +349,20 @@ const styles = StyleSheet.create({
     marginBottom: appSpacing.md,
   },
   dayStack: {
-    gap: appSpacing.xs,
+    gap: 0,
   },
   dayCard: {
-    gap: appSpacing.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    minHeight: 56,
+    borderBottomWidth: 1,
+    borderBottomColor: appBorders.soft,
+    gap: appSpacing.xs,
   },
   dayCopy: {
+    flex: 1,
+    minWidth: 80,
     flexDirection: "row",
     justifyContent: "space-between",
     gap: appSpacing.sm,
@@ -335,13 +374,7 @@ const styles = StyleSheet.create({
     gap: appSpacing.sm,
   },
   dayValueWrap: {
-    flex: 1,
-    borderRadius: appRadius.md,
-    backgroundColor: appSurfaces.card,
-    borderWidth: appBorders.width,
-    borderColor: appBorders.soft,
-    paddingVertical: appSpacing.xs,
-    paddingHorizontal: appSpacing.sm,
+    minWidth: 54,
     alignItems: "center",
     justifyContent: "center",
   },

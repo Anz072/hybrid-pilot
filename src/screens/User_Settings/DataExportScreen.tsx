@@ -1,3 +1,8 @@
+import * as DocumentPicker from "expo-document-picker";
+import { File, Paths } from "expo-file-system";
+import * as Sharing from "expo-sharing";
+import { Platform } from "react-native";
+import { Disclosure } from "../../components/ui";
 import React from "react";
 import {
   ActivityIndicator,
@@ -21,10 +26,23 @@ import { useAppSelector } from "../../store/hooks";
 import type { DBUserFoodLogEntry, DBWeightEntry } from "../../store/DB_TYPES";
 import { formatFoodDateKey } from "../Food/foodUtils";
 import { appColors } from "../../theme/colors";
-import { AppButton, AppCard, AppInput, AppText, InteractiveCard } from "../../components/ui";
-import { appBorders, appRadius, appSpacing, appStates, appSurfaces } from "../../theme/tokens";
+import {
+  AppButton,
+  AppCard,
+  AppInput,
+  AppText,
+  InteractiveCard,
+} from "../../components/ui";
+import {
+  appBorders,
+  appRadius,
+  appSpacing,
+  appStates,
+  appSurfaces,
+} from "../../theme/tokens";
 import SettingsStackHeader from "./SettingsStackHeader";
 import {
+  loadFoodLogForExport,
   buildBackup,
   buildFoodLogCsv,
   buildWeightsCsv,
@@ -52,7 +70,12 @@ const DataExportScreen = ({ navigation }: Props) => {
       DB.getUserSettings(user.externalId),
       DB.getWeightGoal(user.externalId),
       DB.listWeightEntries(user.externalId),
-      DB.getUserFoodLogEntriesBetween(user.externalId, FOOD_LOG_START, today),
+      loadFoodLogForExport(
+        (from, to) =>
+          DB.getUserFoodLogEntriesBetween(user.externalId, from, to),
+        FOOD_LOG_START,
+        today,
+      ),
     ]);
 
     return { settings, weightGoal, weights, foodLog };
@@ -71,10 +94,28 @@ const DataExportScreen = ({ navigation }: Props) => {
       setBusy(key);
       try {
         const content = await build();
-        await Share.share({ title, message: content });
+        if (Platform.OS === "web" || !(await Sharing.isAvailableAsync())) {
+          await Share.share({ title, message: content });
+        } else {
+          const extension = key.endsWith("csv") ? "csv" : "json";
+          const file = new File(Paths.cache, `nouri-${key}.${extension}`);
+          file.create({ overwrite: true });
+          file.write(content);
+          await Sharing.shareAsync(file.uri, {
+            dialogTitle: title,
+            mimeType: extension === "csv" ? "text/csv" : "application/json",
+            UTI:
+              extension === "csv"
+                ? "public.comma-separated-values-text"
+                : "public.json",
+          });
+        }
       } catch (error) {
         if ((error as Error)?.message !== "no-user") {
-          Alert.alert("Export failed", "Could not prepare your data. Please try again.");
+          Alert.alert(
+            "Export failed",
+            "Could not prepare your data. Please try again.",
+          );
         }
       } finally {
         setBusy(null);
@@ -85,13 +126,18 @@ const DataExportScreen = ({ navigation }: Props) => {
 
   const exportWeightsCsv = () =>
     share("weights-csv", "Nouri weights (CSV)", async () => {
-      const { weights } = await loadAll();
+      const weights = await DB.listWeightEntries(user!.externalId);
       return buildWeightsCsv(weights);
     });
 
   const exportFoodCsv = () =>
     share("food-csv", "Nouri food log (CSV)", async () => {
-      const { foodLog } = await loadAll();
+      const foodLog = await loadFoodLogForExport(
+        (from, to) =>
+          DB.getUserFoodLogEntriesBetween(user!.externalId, from, to),
+        FOOD_LOG_START,
+        formatFoodDateKey(new Date()),
+      );
       return buildFoodLogCsv(foodLog);
     });
 
@@ -140,85 +186,138 @@ const DataExportScreen = ({ navigation }: Props) => {
     [user],
   );
 
-  const onImport = React.useCallback(() => {
-    if (busy || !importText.trim()) {
-      return;
-    }
-    if (!user) {
-      Alert.alert("No account found", "Sign in before restoring a backup.");
-      return;
-    }
+  const onImport = React.useCallback(
+    (raw = importText) => {
+      if (!raw.trim()) {
+        return;
+      }
+      if (!user) {
+        Alert.alert("No account found", "Sign in before restoring a backup.");
+        return;
+      }
 
-    const result = parseBackup(importText);
-    if (!result.ok) {
-      Alert.alert("Could not read backup", result.error);
-      return;
-    }
+      const result = parseBackup(raw);
+      if (!result.ok) {
+        Alert.alert("Could not read backup", result.error);
+        return;
+      }
 
-    const { backup } = result;
-    const summary = `This backup has ${backup.weights.length} weight entries and ${backup.foodLog.length} food entries${backup.exportedAt ? ` (exported ${new Date(backup.exportedAt).toLocaleDateString()})` : ""}.\n\nRestoring will re-add the weight entries. Food entries and profile are not restored automatically.`;
+      const { backup } = result;
+      const summary = `This backup has ${backup.weights.length} weight entries and ${backup.foodLog.length} food entries${backup.exportedAt ? ` (exported ${new Date(backup.exportedAt).toLocaleDateString()})` : ""}.\n\nRestoring will re-add the weight entries. Food entries and profile are not restored automatically.`;
 
-    Alert.alert("Restore this backup?", summary, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: `Restore ${backup.weights.length} weights`,
-        onPress: () => {
-          void (async () => {
-            setBusy("import");
-            try {
-              const restored = await restoreWeights(backup.weights);
-              setImportText("");
-              Alert.alert(
-                "Backup restored",
-                `${restored ?? 0} weight entries were restored.`,
-              );
-            } catch {
-              Alert.alert("Restore failed", "Please try again.");
-            } finally {
-              setBusy(null);
-            }
-          })();
+      Alert.alert("Restore this backup?", summary, [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: `Restore ${backup.weights.length} weights`,
+          onPress: () => {
+            void (async () => {
+              setBusy("import");
+              try {
+                const restored = await restoreWeights(backup.weights);
+                setImportText("");
+                Alert.alert(
+                  "Backup restored",
+                  `${restored ?? 0} weight entries were restored.`,
+                );
+              } catch {
+                Alert.alert("Restore failed", "Please try again.");
+              } finally {
+                setBusy(null);
+              }
+            })();
+          },
         },
-      },
-    ]);
-  }, [busy, importText, restoreWeights, user]);
+      ]);
+    },
+    [busy, importText, restoreWeights, user],
+  );
+
+  const chooseBackup = async () => {
+    if (busy) return;
+    setBusy("choose");
+    let cachedFile: File | null = null;
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ["application/json", "text/plain"],
+        multiple: false,
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      if (!asset || (asset.size ?? 0) > 10 * 1024 * 1024)
+        throw new Error("Choose a backup smaller than 10 MB.");
+      if (Platform.OS !== "web") cachedFile = new File(asset.uri);
+      if (cachedFile && cachedFile.size > 10 * 1024 * 1024)
+        throw new Error("Choose a backup smaller than 10 MB.");
+      const raw = asset.file
+        ? await asset.file.text()
+        : await cachedFile!.text();
+      onImport(raw);
+    } catch (error) {
+      Alert.alert(
+        "Could not open backup",
+        error instanceof Error
+          ? error.message
+          : "Choose a Nouri JSON backup and try again.",
+      );
+    } finally {
+      // Only the picker-created cache copy is removed; the selected original stays untouched.
+      if (cachedFile?.uri.startsWith(Paths.cache.uri) && cachedFile.exists)
+        cachedFile.delete();
+      setBusy(null);
+    }
+  };
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <ScrollView
         style={styles.screen}
         contentContainerStyle={[
           styles.content,
-          { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 28 },
+          { paddingTop: 16, paddingBottom: insets.bottom + 28 },
         ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         <SettingsStackHeader
-          eyebrow="Your data"
           onBack={() => navigation.goBack()}
-          subtitle="Export your diary and weights, or keep a full backup you own. Exports open your device share sheet so you can save or send the file."
           title="Export & backup"
         />
 
-        <AppText style={styles.sectionTitle} variant="sectionTitle">Export</AppText>
-        <AppCard style={styles.card}>
+        <AppText style={styles.sectionTitle} variant="sectionTitle">
+          Export
+        </AppText>
+        <AppCard style={styles.card} variant="plain">
           <ExportRow
-            icon={<ScalesIcon size={20} color={appColors.brand700} weight="fill" />}
+            icon={
+              <ScalesIcon size={20} color={appColors.brand700} weight="fill" />
+            }
             title="Weights (CSV)"
             description="Every weigh-in with date, value, and source."
             busy={busy === "weights-csv"}
             onPress={exportWeightsCsv}
           />
           <ExportRow
-            icon={<ForkKnifeIcon size={20} color={appColors.brand700} weight="fill" />}
+            icon={
+              <ForkKnifeIcon
+                size={20}
+                color={appColors.brand700}
+                weight="fill"
+              />
+            }
             title="Food log (CSV)"
             description="Every logged item with meal, calories, and macros."
             busy={busy === "food-csv"}
             onPress={exportFoodCsv}
           />
           <ExportRow
-            icon={<DownloadSimpleIcon size={20} color={appColors.brand700} weight="fill" />}
+            icon={
+              <DownloadSimpleIcon
+                size={20}
+                color={appColors.brand700}
+                weight="fill"
+              />
+            }
             title="Full backup (JSON)"
             description="Profile, settings, weights, and food log in one file."
             busy={busy === "backup-json"}
@@ -227,37 +326,53 @@ const DataExportScreen = ({ navigation }: Props) => {
           />
         </AppCard>
 
-        <AppText style={styles.sectionTitle} variant="sectionTitle">Restore</AppText>
-        <AppCard style={styles.card}>
-          <AppText color="secondary" style={styles.restoreHint} variant="bodySmall">
-            Paste the contents of a Nouri backup (JSON) to restore your weight
-            history onto this account.
+        <AppText style={styles.sectionTitle} variant="sectionTitle">
+          Restore weight history
+        </AppText>
+        <AppCard style={styles.card} variant="plain">
+          <AppText
+            color="secondary"
+            style={styles.restoreHint}
+            variant="bodySmall"
+          >
+            Choose a Nouri JSON backup. This restores weight entries only.
           </AppText>
-          <AppInput
-            containerStyle={styles.importInputWrap}
-            label="Backup JSON"
-            multiline
-            numberOfLines={5}
-            style={styles.importInput}
-            value={importText}
-            onChangeText={setImportText}
-            placeholder="Paste backup JSON here"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
           <AppButton
-            onPress={onImport}
-            disabled={busy != null || !importText.trim()}
-            icon={
-              busy === "import" ? (
-                <ActivityIndicator color={appColors.white} size="small" />
-              ) : (
-                <UploadSimpleIcon size={18} color={appColors.white} weight="bold" />
-              )
-            }
-            label={busy === "import" ? "Restoring..." : "Restore backup"}
-            style={styles.importButton}
+            label={busy === "choose" ? "Opening..." : "Choose backup file"}
+            onPress={() => void chooseBackup()}
+            disabled={busy != null}
           />
+          <Disclosure title="Paste JSON instead">
+            <AppInput
+              containerStyle={styles.importInputWrap}
+              label="Backup JSON"
+              multiline
+              numberOfLines={5}
+              style={styles.importInput}
+              value={importText}
+              onChangeText={setImportText}
+              placeholder="Paste backup JSON here"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <AppButton
+              onPress={() => onImport()}
+              disabled={busy != null || !importText.trim()}
+              icon={
+                busy === "import" ? (
+                  <ActivityIndicator color={appColors.white} size="small" />
+                ) : (
+                  <UploadSimpleIcon
+                    size={18}
+                    color={appColors.white}
+                    weight="bold"
+                  />
+                )
+              }
+              label={busy === "import" ? "Restoring..." : "Review backup"}
+              style={styles.importButton}
+            />
+          </Disclosure>
         </AppCard>
       </ScrollView>
     </View>
@@ -273,17 +388,28 @@ type ExportRowProps = {
   last?: boolean;
 };
 
-const ExportRow = ({ icon, title, description, busy, onPress, last }: ExportRowProps) => (
+const ExportRow = ({
+  icon,
+  title,
+  description,
+  busy,
+  onPress,
+  last,
+}: ExportRowProps) => (
   <InteractiveCard
     onPress={onPress}
     disabled={busy}
     style={[styles.exportRow, !last && styles.exportRowDivider]}
-    variant="compact"
+    variant="plain"
   >
     <View style={styles.exportIcon}>{icon}</View>
     <View style={styles.exportCopy}>
       <AppText variant="bodySmallStrong">{title}</AppText>
-      <AppText color="secondary" style={styles.exportDescription} variant="metadata">
+      <AppText
+        color="secondary"
+        style={styles.exportDescription}
+        variant="metadata"
+      >
         {description}
       </AppText>
     </View>
@@ -312,6 +438,7 @@ const styles = StyleSheet.create({
     marginBottom: appSpacing.gutter,
   },
   exportRow: {
+    paddingVertical: 16,
     flexDirection: "row",
     alignItems: "center",
     gap: appSpacing.sm,
@@ -326,7 +453,7 @@ const styles = StyleSheet.create({
     borderRadius: appRadius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.actionPrimarySoft,
+    backgroundColor: "transparent",
   },
   exportCopy: {
     flex: 1,

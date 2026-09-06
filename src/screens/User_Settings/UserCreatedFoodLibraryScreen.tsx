@@ -1,3 +1,7 @@
+import {
+  getCustomMealEditorId,
+  getLibraryFoodIdentity,
+} from "../../domain/libraryFoodIdentity";
 import React from "react";
 import {
   ActivityIndicator,
@@ -28,7 +32,13 @@ import type { DBFoodItem } from "../../store/DB_TYPES";
 import { useAppSelector } from "../../store/hooks";
 import { appColors } from "../../theme/colors";
 import { appTypography } from "../../theme/typography";
-import { appBorders, appRadius, appSpacing, appStates, appSurfaces } from "../../theme/tokens";
+import {
+  appBorders,
+  appRadius,
+  appSpacing,
+  appStates,
+  appSurfaces,
+} from "../../theme/tokens";
 import {
   buildFoodLoggedAt,
   formatFoodDateKey,
@@ -56,8 +66,7 @@ const SCREEN_CONFIG: Record<LibraryKind, LibraryScreenConfig> = {
   recipes: {
     eyebrow: "Recipes",
     title: "Your Recipes",
-    subtitle:
-      "Saved recipes you created. Tap any row to open the full editor.",
+    subtitle: "Saved recipes you created. Tap any row to open the full editor.",
     listLabel: "recipes",
     emptyText:
       "No recipes created yet. Build one from the diary or Add Food flow and it will appear here.",
@@ -89,25 +98,11 @@ const parseLibraryPayload = (rawPayload: string | null) => {
 };
 
 const getRecipeId = (food: DBFoodItem) => {
-  const directId = Number(food.sourceId);
-  if (Number.isFinite(directId)) {
-    return directId;
-  }
-
-  const payloadId = Number(parseLibraryPayload(food.rawPayload)?.recipeId);
-  return Number.isFinite(payloadId) ? payloadId : null;
+  const identity = getLibraryFoodIdentity(food);
+  return identity?.kind === "custom_recipe" ? identity.id : null;
 };
-
 const getMealId = (food: DBFoodItem) => {
-  if (food.sourceId?.startsWith("meal:")) {
-    const directId = Number(food.sourceId.slice("meal:".length));
-    if (Number.isFinite(directId)) {
-      return directId;
-    }
-  }
-
-  const payloadId = Number(parseLibraryPayload(food.rawPayload)?.mealId);
-  return Number.isFinite(payloadId) ? payloadId : null;
+  return getCustomMealEditorId(food);
 };
 
 const formatUpdatedLabel = (iso: string) =>
@@ -123,7 +118,9 @@ const getServingsLabel = (food: DBFoodItem) => {
     return "1 serving";
   }
 
-  const rounded = Number.isInteger(servings) ? String(servings) : servings.toFixed(1);
+  const rounded = Number.isInteger(servings)
+    ? String(servings)
+    : servings.toFixed(1);
   return `${rounded} servings`;
 };
 
@@ -238,57 +235,20 @@ const UserCreatedFoodLibraryScreen = ({ kind }: { kind: LibraryKind }) => {
     () => (
       <View>
         <SettingsStackHeader
-          eyebrow="Food Library"
           onBack={() => navigation.goBack()}
-          subtitle={config.subtitle}
           title={config.title}
         />
-
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryIconWrap}>
-            {kind === "recipes" ? (
-              <CookingPotIcon
-                size={20}
-                color={appColors.brand700}
-                weight="fill"
-              />
-            ) : (
-              <ForkKnifeIcon
-                size={20}
-                color={appColors.brand700}
-                weight="fill"
-              />
-            )}
-          </View>
-          <View style={styles.summaryCopy}>
-            <Text style={styles.summaryTitle}>
-              {items.length} {config.listLabel}
-            </Text>
-            <Text style={styles.summaryText}>
-              {publicCount > 0
-                ? `${publicCount} public and ${items.length - publicCount} private.`
-                : "All items shown here were created by you."}
-            </Text>
-          </View>
-        </View>
-
-        {items.length > 0 ? (
-          <View style={styles.tableHeader}>
-            <View style={[styles.headerCell, styles.nameColumn]}>
-              <Text style={styles.tableHeaderLabel}>Name</Text>
-            </View>
-            <View style={[styles.headerCell, styles.detailColumn]}>
-              <Text style={styles.tableHeaderLabel}>Details</Text>
-            </View>
-            <View style={[styles.headerCell, styles.stateColumn]}>
-              <Text style={styles.tableHeaderLabel}>State</Text>
-            </View>
-            <View style={styles.actionColumn} />
-          </View>
-        ) : null}
       </View>
     ),
-    [config.listLabel, config.subtitle, config.title, items.length, kind, navigation, publicCount],
+    [
+      config.listLabel,
+      config.subtitle,
+      config.title,
+      items.length,
+      kind,
+      navigation,
+      publicCount,
+    ],
   );
 
   if (loading) {
@@ -300,7 +260,7 @@ const UserCreatedFoodLibraryScreen = ({ kind }: { kind: LibraryKind }) => {
   }
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <FlatList
         data={items}
         keyExtractor={(item) => String(item.id)}
@@ -315,6 +275,8 @@ const UserCreatedFoodLibraryScreen = ({ kind }: { kind: LibraryKind }) => {
 
           return (
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Edit ${item.name}`}
               onPress={() => handleEdit(item)}
               style={({ pressed }) => [
                 styles.row,
@@ -323,59 +285,21 @@ const UserCreatedFoodLibraryScreen = ({ kind }: { kind: LibraryKind }) => {
                 pressed && styles.rowPressed,
               ]}
             >
-              <View style={styles.rowMain}>
-                <View style={[styles.rowCell, styles.nameColumn]}>
-                  <Text numberOfLines={1} style={styles.primaryText}>
-                    {item.name}
-                  </Text>
-                  <Text numberOfLines={1} style={styles.secondaryText}>
-                    {formatUpdatedLabel(item.updatedAt)}
-                  </Text>
-                </View>
-
-                <View style={[styles.rowCell, styles.detailColumn]}>
-                  <Text numberOfLines={1} style={styles.primaryMetaText}>
-                    {formatFoodNumber(item.calories, " kcal")}
-                  </Text>
-                  <Text numberOfLines={1} style={styles.secondaryText}>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.primaryText}>{item.name}</Text>
+                  <Text style={styles.secondaryText}>
+                    {formatFoodNumber(item.calories, " kcal")} ·{" "}
                     {kind === "recipes"
                       ? getServingsLabel(item)
-                      : formatFoodItemServing(item)}
+                      : formatFoodItemServing(item)}{" "}
+                    · {item.isPublic ? "Public" : "Private"}
                   </Text>
                 </View>
-
-                <View style={[styles.rowCell, styles.stateColumn]}>
-                  <Text
-                    style={[
-                      styles.statusText,
-                      item.isPublic
-                        ? styles.statusTextPublic
-                        : styles.statusTextPrivate,
-                    ]}
-                  >
-                    {item.isPublic ? "Public" : "Private"}
-                  </Text>
-                  <Text numberOfLines={1} style={styles.secondaryText}>
-                    Editable
-                  </Text>
-                </View>
-
-                <View style={styles.actionColumn}>
-                  <PencilSimpleIcon
-                    size={17}
-                    color={appColors.textSecondary}
-                    weight="bold"
-                  />
-                </View>
+                <PencilSimpleIcon size={18} color={appColors.textSecondary} />
               </View>
-
-              {supplementalText ? (
-                <View style={styles.supplementalRow}>
-                  <Text numberOfLines={2} style={styles.supplementalText}>
-                    {supplementalText}
-                  </Text>
-                </View>
-              ) : null}
             </Pressable>
           );
         }}
@@ -401,7 +325,7 @@ const UserCreatedFoodLibraryScreen = ({ kind }: { kind: LibraryKind }) => {
         ListHeaderComponent={renderHeader}
         contentContainerStyle={[
           styles.content,
-          { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 28 },
+          { paddingTop: 16, paddingBottom: insets.bottom + 28 },
         ]}
         refreshControl={
           <RefreshControl

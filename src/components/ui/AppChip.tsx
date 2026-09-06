@@ -8,7 +8,13 @@ import {
   type ViewStyle,
 } from "react-native";
 import { appColors } from "../../theme/colors";
-import { appBorders, appRadius, appSpacing, appStates, appSurfaces } from "../../theme/tokens";
+import {
+  appBorders,
+  appRadius,
+  appSpacing,
+  appStates,
+  appSurfaces,
+} from "../../theme/tokens";
 import { AppText } from "./AppText";
 
 type ChipProps = Omit<PressableProps, "children" | "style"> & {
@@ -28,7 +34,10 @@ export const Chip = ({
 }: ChipProps) => (
   <Pressable
     accessibilityRole="button"
-    accessibilityState={{ disabled: Boolean(disabled), selected: Boolean(selected) }}
+    accessibilityState={{
+      disabled: Boolean(disabled),
+      selected: Boolean(selected),
+    }}
     disabled={disabled}
     {...props}
     style={({ pressed }) => [
@@ -41,7 +50,9 @@ export const Chip = ({
   >
     {icon ? <View style={styles.iconWrap}>{icon}</View> : null}
     <AppText
-      color={selected ? appColors.actionPrimaryPressed : appColors.textSecondary}
+      color={
+        selected ? appColors.actionPrimaryPressed : appColors.textSecondary
+      }
       variant="label"
     >
       {label}
@@ -110,7 +121,7 @@ export const SegmentedControl = <T extends string>({
 
 const styles = StyleSheet.create({
   chip: {
-    minHeight: 36,
+    minHeight: 48,
     borderRadius: appRadius.pill,
     borderWidth: appBorders.width,
     borderColor: appBorders.soft,
@@ -131,12 +142,13 @@ const styles = StyleSheet.create({
   },
   segmented: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: appSpacing.lg,
     borderBottomWidth: appBorders.width,
     borderBottomColor: appBorders.soft,
   },
   segment: {
-    minHeight: 38,
+    minHeight: 48,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: appSpacing.xxs,

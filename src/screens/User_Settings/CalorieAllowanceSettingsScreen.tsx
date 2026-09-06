@@ -3,6 +3,7 @@ import {
   Alert,
   StyleSheet,
   TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { MinusIcon, PlusIcon } from "phosphor-react-native";
@@ -19,8 +20,21 @@ import type { MoreParamList } from "../../navigation/MoreNavigator";
 import { DB } from "../../store/DB";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { appColors } from "../../theme/colors";
-import { AppButton, AppCard, AppText, ErrorState, IconButton, LoadingState, NumericText } from "../../components/ui";
-import { appBorders, appRadius, appSpacing, appSurfaces } from "../../theme/tokens";
+import {
+  AppButton,
+  AppCard,
+  AppText,
+  ErrorState,
+  IconButton,
+  LoadingState,
+  NumericText,
+} from "../../components/ui";
+import {
+  appBorders,
+  appRadius,
+  appSpacing,
+  appSurfaces,
+} from "../../theme/tokens";
 import { appTypography } from "../../theme/typography";
 import CalorieBudgetChart from "./CalorieBudgetChart";
 import SettingsStackHeader from "./SettingsStackHeader";
@@ -49,6 +63,7 @@ const buildCurrentWeekDates = (reference: Date): Date[] => {
 
 const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
   const insets = useSafeAreaInsets();
+  const { fontScale } = useWindowDimensions();
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.user.currentUser);
   const [inputValue, setInputValue] = React.useState(
@@ -65,7 +80,9 @@ const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
   const [contextError, setContextError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    setInputValue(user?.calorieAllowance != null ? String(user.calorieAllowance) : "");
+    setInputValue(
+      user?.calorieAllowance != null ? String(user.calorieAllowance) : "",
+    );
   }, [user?.calorieAllowance]);
 
   const loadContext = React.useCallback(async () => {
@@ -86,7 +103,9 @@ const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
       setSettings(nextSettings);
       setAutoPlanCalories(nextAutoPlan?.calories ?? null);
     } catch {
-      setContextError("Could not build the calorie preview. Check your connection and try again.");
+      setContextError(
+        "Could not build the calorie preview. Check your connection and try again.",
+      );
     } finally {
       setContextLoading(false);
     }
@@ -100,7 +119,7 @@ const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
   const previewCalories =
     Number.isFinite(parsedInput) && parsedInput > 0
       ? clampCalorieTarget(parsedInput)
-      : user?.calorieAllowance ?? null;
+      : (user?.calorieAllowance ?? null);
   const weekDates = React.useMemo(() => buildCurrentWeekDates(new Date()), []);
   const weeklyValues = React.useMemo(
     () =>
@@ -133,7 +152,10 @@ const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
 
     const nextCalories = Number.parseInt(inputValue, 10);
     if (!Number.isFinite(nextCalories) || nextCalories <= 0) {
-      Alert.alert("Invalid calorie target", "Enter a valid daily calorie target.");
+      Alert.alert(
+        "Invalid calorie target",
+        "Enter a valid daily calorie target.",
+      );
       return;
     }
 
@@ -147,7 +169,9 @@ const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
       });
       const nextAutoPlan = await buildAutomaticFuelPlanSnapshot(savedUser);
       setAutoPlanCalories(nextAutoPlan?.calories ?? null);
-      setInputValue(String(savedUser.calorieAllowance ?? clampCalorieTarget(nextCalories)));
+      setInputValue(
+        String(savedUser.calorieAllowance ?? clampCalorieTarget(nextCalories)),
+      );
       navigation.navigate("MoreMainScreen");
     } catch {
       Alert.alert("Could not save calories", "Please try again.");
@@ -178,8 +202,14 @@ const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
       }
 
       const nextAutoPlan = await buildAutomaticFuelPlanSnapshot(savedUser);
-      setAutoPlanCalories(nextAutoPlan?.calories ?? savedUser.calorieAllowance ?? null);
-      setInputValue(savedUser.calorieAllowance != null ? String(savedUser.calorieAllowance) : "");
+      setAutoPlanCalories(
+        nextAutoPlan?.calories ?? savedUser.calorieAllowance ?? null,
+      );
+      setInputValue(
+        savedUser.calorieAllowance != null
+          ? String(savedUser.calorieAllowance)
+          : "",
+      );
       navigation.navigate("MoreMainScreen");
     } catch {
       Alert.alert("Could not reset calories", "Please try again.");
@@ -189,27 +219,25 @@ const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
   };
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <KeyboardAwareScrollView
         style={styles.screen}
         contentContainerStyle={[
           styles.content,
           {
-            paddingTop: insets.top + 16,
+            paddingTop: 16,
             paddingBottom: insets.bottom + 28,
           },
         ]}
         showsVerticalScrollIndicator={false}
       >
         <SettingsStackHeader
-          eyebrow="User Settings"
           onBack={() => navigation.goBack()}
-          subtitle="Change the base daily energy target. Day-specific overrides stay on top of this value."
           title="Calorie Allowance"
         />
 
         {!user ? (
-          <AppCard style={styles.card}>
+          <AppCard style={styles.card} variant="plain">
             <AppText variant="cardTitle">No active user</AppText>
             <AppText color="secondary" variant="bodySmall">
               Sign in to your account first before editing nutrition settings.
@@ -217,10 +245,10 @@ const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
           </AppCard>
         ) : (
           <>
-            <AppCard style={styles.card}>
+            <AppCard style={styles.card} variant="plain">
               <AppText variant="cardTitle">Daily target</AppText>
               <AppText color="secondary" variant="bodySmall">
-                Manual changes also rescale your macro targets to stay aligned with the new calorie budget.
+                Changing calories also adjusts your macro targets.
               </AppText>
 
               <View style={styles.inputRow}>
@@ -237,12 +265,15 @@ const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
 
                 <View style={styles.inputCard}>
                   <TextInput
+                    accessibilityLabel="Daily calorie target"
                     keyboardType="number-pad"
                     onChangeText={setInputValue}
                     style={styles.input}
                     value={inputValue}
                   />
-                  <AppText color="muted" variant="eyebrow">kcal / day</AppText>
+                  <AppText color="muted" variant="metadata">
+                    kcal / day
+                  </AppText>
                 </View>
 
                 <IconButton
@@ -262,7 +293,11 @@ const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
                   title="Could not build preview"
                   message={contextError}
                   action={
-                    <AppButton label="Try again" onPress={() => void loadContext()} size="sm" />
+                    <AppButton
+                      label="Try again"
+                      onPress={() => void loadContext()}
+                      size="sm"
+                    />
                   }
                   style={styles.previewState}
                 />
@@ -274,24 +309,25 @@ const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
                 />
               ) : (
                 <View style={styles.statRow}>
-                  <AppCard style={styles.statCard} variant="soft">
-                    <AppText color="secondary" variant="eyebrow">Current base</AppText>
+                  <AppCard style={styles.statCard} variant="plain">
+                    <AppText color="secondary" variant="metadata">
+                      Automatic target
+                    </AppText>
                     <NumericText variant="numberMacroSummary">
-                      {user.calorieAllowance != null
-                        ? `${user.calorieAllowance} kcal`
+                      {autoPlanCalories != null
+                        ? `${autoPlanCalories} kcal`
                         : "--"}
-                    </NumericText>
-                  </AppCard>
-                  <AppCard style={styles.statCard} variant="soft">
-                    <AppText color="secondary" variant="eyebrow">Automatic target</AppText>
-                    <NumericText variant="numberMacroSummary">
-                      {autoPlanCalories != null ? `${autoPlanCalories} kcal` : "--"}
                     </NumericText>
                   </AppCard>
                 </View>
               )}
 
-              <View style={styles.actionRow}>
+              <View
+                style={[
+                  styles.actionRow,
+                  fontScale > 1.3 && { flexDirection: "column" },
+                ]}
+              >
                 <AppButton
                   onPress={() => void handleSave()}
                   disabled={saving}
@@ -303,6 +339,7 @@ const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
                   onPress={() => void handleResetAutomatic()}
                   disabled={saving}
                   label="Use automatic"
+                  style={styles.actionButton}
                   variant="secondary"
                 />
               </View>
@@ -374,12 +411,11 @@ const styles = StyleSheet.create({
   actionRow: {
     marginTop: appSpacing.md,
     flexDirection: "row",
-    flex: 1,
     gap: appSpacing.xs,
   },
   actionButton: {
     flex: 1,
-  }
+  },
 });
 
 export default CalorieAllowanceSettingsScreen;

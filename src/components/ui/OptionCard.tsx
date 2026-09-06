@@ -9,12 +9,18 @@ import {
 } from "react-native";
 import { CheckIcon } from "phosphor-react-native";
 import { appColors } from "../../theme/colors";
-import { appBorders, appRadius, appSpacing, appStates } from "../../theme/tokens";
+import {
+  appBorders,
+  appRadius,
+  appSpacing,
+  appStates,
+} from "../../theme/tokens";
 import { AppText } from "./AppText";
 
 type OptionCardProps = Omit<PressableProps, "children" | "style"> & {
   icon?: React.ReactNode;
   selected?: boolean;
+  selectionMode?: "single" | "multiple";
   showCheck?: boolean;
   style?: StyleProp<ViewStyle>;
   subtitle?: string;
@@ -27,6 +33,7 @@ export const OptionCard = ({
   disabled,
   icon,
   selected,
+  selectionMode = "single",
   showCheck = true,
   style,
   subtitle,
@@ -35,8 +42,19 @@ export const OptionCard = ({
   ...props
 }: OptionCardProps) => (
   <Pressable
-    accessibilityRole="button"
-    accessibilityState={{ disabled: Boolean(disabled), selected: Boolean(selected) }}
+    accessibilityRole={
+      showCheck
+        ? selectionMode === "multiple"
+          ? "checkbox"
+          : "radio"
+        : "button"
+    }
+    accessibilityState={{
+      disabled: Boolean(disabled),
+      ...(showCheck
+        ? { checked: Boolean(selected) }
+        : { selected: Boolean(selected) }),
+    }}
     disabled={disabled}
     {...props}
     style={({ pressed }) => [
@@ -50,10 +68,7 @@ export const OptionCard = ({
     <View style={styles.content}>
       {icon ? <View style={styles.iconWrap}>{icon}</View> : null}
       <View style={styles.copy}>
-        <AppText
-          color={selected ? "coral" : "primary"}
-          variant="cardTitle"
-        >
+        <AppText color={selected ? "coral" : "primary"} variant="cardTitle">
           {title}
         </AppText>
         {subtitle ? (
@@ -64,8 +79,27 @@ export const OptionCard = ({
       </View>
       {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
       {showCheck ? (
-        <View style={[styles.check, selected && styles.checkSelected]}>
-          {selected ? <CheckIcon size={14} color={appColors.white} weight="bold" /> : null}
+        <View
+          style={[
+            styles.check,
+            selectionMode === "multiple" && { borderRadius: 4 },
+            selected && styles.checkSelected,
+          ]}
+        >
+          {selected ? (
+            selectionMode === "multiple" ? (
+              <CheckIcon size={14} color={appColors.white} weight="bold" />
+            ) : (
+              <View
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: 4,
+                  backgroundColor: appColors.white,
+                }}
+              />
+            )
+          ) : null}
         </View>
       ) : null}
     </View>

@@ -16,7 +16,9 @@ import { appColors } from "../../theme/colors";
 import { appSpacing } from "../../theme/tokens";
 import OnboardingPrimaryButton from "./OnboardingPrimaryButton";
 import OnboardingReviewCard from "./OnboardingReviewCard";
-import OnboardingStepScreen, { onboardingStepProgress } from "./OnboardingStepScreen";
+import OnboardingStepScreen, {
+  onboardingStepProgress,
+} from "./OnboardingStepScreen";
 import {
   formatActivitySummary,
   formatBodySummary,
@@ -26,9 +28,9 @@ import {
 type Props = NativeStackScreenProps<OnboardingParamList, "Training">;
 
 const TrainingProfileScreen = ({ navigation, route }: Props) => {
-  const [selectedTraining, setSelectedTraining] = React.useState<TrainingType[]>(
-    route.params.training ?? [],
-  );
+  const [selectedTraining, setSelectedTraining] = React.useState<
+    TrainingType[]
+  >(route.params.training ?? []);
 
   const options: {
     icon: React.ReactNode;
@@ -39,31 +41,45 @@ const TrainingProfileScreen = ({ navigation, route }: Props) => {
     {
       label: "Running",
       value: "running",
-      icon: <SneakerMoveIcon size={22} color={appColors.textPrimary} weight="fill" />,
+      icon: (
+        <SneakerMoveIcon
+          size={22}
+          color={appColors.textPrimary}
+          weight="fill"
+        />
+      ),
       note: "Useful for endurance-focused fueling and recovery.",
     },
     {
       label: "Cycling",
       value: "cycling",
-      icon: <BicycleIcon size={22} color={appColors.textPrimary} weight="fill" />,
+      icon: (
+        <BicycleIcon size={22} color={appColors.textPrimary} weight="fill" />
+      ),
       note: "Great if riding volume changes your energy demands.",
     },
     {
       label: "Gym / Bodybuilding",
       value: "bodybuilding",
-      icon: <BarbellIcon size={22} color={appColors.textPrimary} weight="fill" />,
+      icon: (
+        <BarbellIcon size={22} color={appColors.textPrimary} weight="fill" />
+      ),
       note: "Helps bias the plan toward performance and muscle retention.",
     },
     {
       label: "CrossFit",
       value: "crossfit",
-      icon: <BarbellIcon size={22} color={appColors.textPrimary} weight="fill" />,
+      icon: (
+        <BarbellIcon size={22} color={appColors.textPrimary} weight="fill" />
+      ),
       note: "Useful when training mixes strength and conditioning demands.",
     },
     {
       label: "Other",
       value: "other",
-      icon: <BarbellIcon size={22} color={appColors.textPrimary} weight="fill" />,
+      icon: (
+        <BarbellIcon size={22} color={appColors.textPrimary} weight="fill" />
+      ),
       note: "Pick this if your main training mode is something else.",
     },
   ];
@@ -78,11 +94,10 @@ const TrainingProfileScreen = ({ navigation, route }: Props) => {
 
   return (
     <OnboardingStepScreen
-      eyebrow="Training Profile"
       onBack={() => navigation.goBack()}
       progress={onboardingStepProgress(6)}
       stepLabel="Training"
-      subtitle="Select all that apply so the plan reflects your real training mix."
+      subtitle="Select at least one."
       title="What do you train?"
       footer={
         <OnboardingPrimaryButton
@@ -95,13 +110,29 @@ const TrainingProfileScreen = ({ navigation, route }: Props) => {
               bodyData: route.params.bodyData,
               activity: route.params.activity,
               training: selectedTraining,
-              proteinFocus:
-                route.params.proteinFocus ?? DEFAULT_PROTEIN_FOCUS,
+              proteinFocus: route.params.proteinFocus ?? DEFAULT_PROTEIN_FOCUS,
             })
           }
         />
       }
     >
+      <View style={styles.listWrap}>
+        {options.map((option) => {
+          const isSelected = selectedTraining.includes(option.value);
+
+          return (
+            <OptionCard
+              selectionMode="multiple"
+              icon={option.icon}
+              key={option.value}
+              onPress={() => toggleTraining(option.value)}
+              selected={isSelected}
+              title={option.label}
+            />
+          );
+        })}
+      </View>
+
       <OnboardingReviewCard
         items={[
           {
@@ -138,27 +169,6 @@ const TrainingProfileScreen = ({ navigation, route }: Props) => {
           },
         ]}
       />
-
-      <View style={styles.listWrap}>
-        {options.map((option) => {
-          const isSelected = selectedTraining.includes(option.value);
-
-          return (
-            <OptionCard
-              icon={option.icon}
-              key={option.value}
-              onPress={() => toggleTraining(option.value)}
-              selected={isSelected}
-              subtitle={option.note}
-              title={option.label}
-            />
-          );
-        })}
-      </View>
-
-      <AppText align="center" color="secondary" style={styles.helper} variant="metadata">
-        Pick at least one. You can come back later and adjust this mix.
-      </AppText>
     </OnboardingStepScreen>
   );
 };

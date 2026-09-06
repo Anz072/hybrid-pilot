@@ -34,7 +34,29 @@
       "favicon": "./nouri_app_assets/assets/images/favicon.png"
     },
     "plugins": [
-      "@react-native-community/datetimepicker",
+      [
+        "@react-native-community/datetimepicker",
+        {
+          "android": {
+            "datePicker": {
+              "colorAccent": {
+                "light": "#D6533C"
+              },
+              "colorControlActivated": {
+                "light": "#D6533C"
+              }
+            },
+            "timePicker": {
+              "headerBackground": {
+                "light": "#D6533C"
+              },
+              "numbersSelectorColor": {
+                "light": "#D6533C"
+              }
+            }
+          }
+        }
+      ],
       [
         "expo-splash-screen",
         {

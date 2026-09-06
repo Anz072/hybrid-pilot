@@ -72,29 +72,26 @@ export const ScreenHeader = ({
         safeTop ? { paddingTop: insets.top + appSpacing.sm } : null,
       ]}
     >
-      {onBack ? (
-        <IconButton
-          accessibilityLabel={backAccessibilityLabel}
-          onPress={onBack}
-          style={styles.backButton}
-        >
-          {backIcon ?? (
-            <ArrowLeftIcon
-              size={20}
-              color={appColors.textPrimary}
-              weight="bold"
-            />
-          )}
-        </IconButton>
-      ) : null}
-      {eyebrow ? (
-        <AppText color="secondary" style={styles.eyebrow} variant="eyebrow">
-          {eyebrow}
+      <View style={styles.titleRow}>
+        {onBack ? (
+          <IconButton
+            accessibilityLabel={backAccessibilityLabel}
+            onPress={onBack}
+            style={styles.backButton}
+          >
+            {backIcon ?? (
+              <ArrowLeftIcon
+                size={20}
+                color={appColors.textPrimary}
+                weight="bold"
+              />
+            )}
+          </IconButton>
+        ) : null}
+        <AppText style={styles.title} variant="screenTitle">
+          {title}
         </AppText>
-      ) : null}
-      <AppText style={styles.title} variant="screenTitle">
-        {title}
-      </AppText>
+      </View>
       {subtitle ? (
         <AppText color="secondary" variant="body">
           {subtitle}
@@ -116,8 +113,16 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: appSpacing.gutter,
   },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    minHeight: 48,
+  },
   backButton: {
-    marginBottom: appSpacing.gutter,
+    backgroundColor: "transparent",
+    borderWidth: 0,
+    marginLeft: -8,
   },
   eyebrow: {
     alignSelf: "flex-start",
@@ -125,7 +130,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: appColors.textPrimary,
-    marginBottom: appSpacing.xs,
-    ...appTypography.screenTitle,
+    flex: 1,
+    ...appTypography.sectionTitle,
   },
 });

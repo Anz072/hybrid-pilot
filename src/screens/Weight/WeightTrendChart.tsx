@@ -1,9 +1,5 @@
 import React from "react";
-import {
-  LayoutChangeEvent,
-  StyleSheet,
-  View,
-} from "react-native";
+import { LayoutChangeEvent, StyleSheet, View } from "react-native";
 import Svg, {
   Circle,
   Line,
@@ -324,7 +320,7 @@ const WeightTrendChart = ({
 
     const yTickValues = [yMax, (yMax + yMin) / 2, yMin];
     const yTicks = yTickValues.map((value) => ({
-      label: `${Math.round(value)}`,
+      label: yMax - yMin < 10 ? value.toFixed(1) : Math.round(value).toString(),
       y: scaleY(value),
     }));
 
@@ -359,7 +355,11 @@ const WeightTrendChart = ({
     <View style={styles.card}>
       <View style={styles.metaRow}>
         <View style={styles.metaCopy}>
-          <AppText color="secondary" style={styles.periodLabel} variant="bodySmallStrong">
+          <AppText
+            color="secondary"
+            style={styles.periodLabel}
+            variant="bodySmallStrong"
+          >
             {periodLabel}
           </AppText>
           {helperText !== "" && (
@@ -538,7 +538,11 @@ const WeightTrendChart = ({
             <View style={styles.dailyLegendLine} />
             <View style={styles.dailyLegendDot} />
           </View>
-          <AppText color="secondary" style={styles.legendText} variant="metadata">
+          <AppText
+            color="secondary"
+            style={styles.legendText}
+            variant="metadata"
+          >
             Scale Weight
           </AppText>
         </View>
@@ -546,7 +550,11 @@ const WeightTrendChart = ({
           <View style={styles.legendGraphic}>
             <View style={styles.trendLegendLine} />
           </View>
-          <AppText color="secondary" style={styles.legendText} variant="metadata">
+          <AppText
+            color="secondary"
+            style={styles.legendText}
+            variant="metadata"
+          >
             Trend Weight
           </AppText>
         </View>
@@ -584,6 +592,7 @@ const styles = StyleSheet.create({
   legendCard: {
     marginTop: appSpacing.sm,
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "center",
     gap: appSpacing.lg,

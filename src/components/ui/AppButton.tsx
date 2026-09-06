@@ -10,7 +10,13 @@ import {
 } from "react-native";
 import { appColors } from "../../theme/colors";
 import { appTypography } from "../../theme/typography";
-import { appBorders, appRadius, appSpacing, appStates, appSurfaces } from "../../theme/tokens";
+import {
+  appBorders,
+  appRadius,
+  appSpacing,
+  appStates,
+  appSurfaces,
+} from "../../theme/tokens";
 import { AppText } from "./AppText";
 
 type AppButtonVariant = "primary" | "secondary" | "ghost" | "danger";
@@ -84,7 +90,10 @@ export const IconButton = ({
 }: IconButtonProps) => (
   <Pressable
     accessibilityRole="button"
-    accessibilityState={{ disabled: Boolean(disabled), selected: Boolean(selected) }}
+    accessibilityState={{
+      disabled: Boolean(disabled),
+      selected: Boolean(selected),
+    }}
     disabled={disabled}
     {...props}
     style={({ pressed }) => [
@@ -113,7 +122,7 @@ const styles = StyleSheet.create({
     gap: appSpacing.xs,
   },
   smallButton: {
-    minHeight: 40,
+    minHeight: 48,
     paddingHorizontal: appSpacing.sm,
     paddingVertical: appSpacing.xs,
   },
@@ -141,8 +150,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   iconButton: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderRadius: appRadius.pill,
     alignItems: "center",
     justifyContent: "center",
@@ -167,6 +176,5 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: appStates.pressedOpacity,
-    transform: [{ scale: appStates.pressedScale }],
   },
 });

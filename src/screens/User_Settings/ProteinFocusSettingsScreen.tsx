@@ -1,17 +1,18 @@
 import React from "react";
-import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { ProteinFocus } from "../../navigation/onboardingTypes";
 import type { MoreParamList } from "../../navigation/MoreNavigator";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { appColors } from "../../theme/colors";
-import { AppButton, AppCard, AppText, NumericText, OptionCard } from "../../components/ui";
+import {
+  AppButton,
+  AppCard,
+  AppText,
+  NumericText,
+  OptionCard,
+} from "../../components/ui";
 import { appSpacing } from "../../theme/tokens";
 import SettingsStackHeader from "./SettingsStackHeader";
 import { formatProteinFocusSummary } from "../../engine/proteinFocus";
@@ -61,51 +62,32 @@ const ProteinFocusSettingsScreen = ({ navigation }: Props) => {
   };
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <ScrollView
         style={styles.screen}
         contentContainerStyle={[
           styles.content,
           {
-            paddingTop: insets.top + 16,
+            paddingTop: 16,
             paddingBottom: insets.bottom + 28,
           },
         ]}
         showsVerticalScrollIndicator={false}
       >
         <SettingsStackHeader
-          eyebrow="User Settings"
           onBack={() => navigation.goBack()}
-          subtitle="Choose how aggressively your macro targets should bias toward protein."
           title="Protein Focus"
         />
 
         {!user ? (
-          <AppCard style={styles.card}>
+          <AppCard style={styles.card} variant="plain">
             <AppText variant="cardTitle">No active user</AppText>
             <AppText color="secondary" variant="bodySmall">
               Sign in to your account first before editing protein settings.
             </AppText>
           </AppCard>
         ) : (
-          <AppCard style={styles.card}>
-            <View style={styles.summaryRow}>
-              <View style={styles.summaryCopy}>
-                <AppText variant="cardTitle">Current focus</AppText>
-                <AppText color="secondary" variant="bodySmall">
-                  {formatProteinFocusSummary(user.proteinFocus)}
-                </AppText>
-              </View>
-              <NumericText
-                align="right"
-                numberOfLines={2}
-                style={styles.metricValue}
-                variant="numberTrendDelta"
-              >
-                {formatProteinFocusSummary(selectedProteinFocus)}
-              </NumericText>
-            </View>
-
+          <AppCard style={styles.card} variant="plain">
             <View style={styles.optionStack}>
               {PROTEIN_FOCUS_OPTIONS.map((option) => {
                 const selected = selectedProteinFocus === option.value;
@@ -115,7 +97,6 @@ const ProteinFocusSettingsScreen = ({ navigation }: Props) => {
                     key={option.value}
                     onPress={() => setSelectedProteinFocus(option.value)}
                     selected={selected}
-                    subtitle={option.description}
                     title={`${option.label} (${option.gramsPerKg} g/kg)`}
                   />
                 );

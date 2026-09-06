@@ -1,15 +1,6 @@
 import React from "react";
-import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
-import {
-  FireIcon,
-  ShieldCheckIcon,
-  TrendUpIcon,
-} from "phosphor-react-native";
+import { Alert, ScrollView, StyleSheet, View } from "react-native";
+import { FireIcon, ShieldCheckIcon, TrendUpIcon } from "phosphor-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -30,7 +21,15 @@ import type { MoreParamList } from "../../navigation/MoreNavigator";
 import { DB } from "../../store/DB";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { appColors } from "../../theme/colors";
-import { AppButton, AppCard, AppText, ErrorState, LoadingState, NumericText, OptionCard } from "../../components/ui";
+import {
+  AppButton,
+  AppCard,
+  AppText,
+  ErrorState,
+  LoadingState,
+  NumericText,
+  OptionCard,
+} from "../../components/ui";
 import { appSpacing } from "../../theme/tokens";
 import CalorieBudgetChart from "./CalorieBudgetChart";
 import SettingsStackHeader from "./SettingsStackHeader";
@@ -128,7 +127,9 @@ const GoalStrategySettingsScreen = ({ navigation }: Props) => {
       setLatestWeightKg(nextWeightKg);
       setSettings(nextSettings);
     } catch {
-      setContextError("Could not build the strategy preview. Check your connection and try again.");
+      setContextError(
+        "Could not build the strategy preview. Check your connection and try again.",
+      );
     } finally {
       setContextLoading(false);
     }
@@ -214,27 +215,25 @@ const GoalStrategySettingsScreen = ({ navigation }: Props) => {
   };
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <ScrollView
         style={styles.screen}
         contentContainerStyle={[
           styles.content,
           {
-            paddingTop: insets.top + 16,
+            paddingTop: 16,
             paddingBottom: insets.bottom + 28,
           },
         ]}
         showsVerticalScrollIndicator={false}
       >
         <SettingsStackHeader
-          eyebrow="User Settings"
           onBack={() => navigation.goBack()}
-          subtitle="Pick how hard calories should sit below or above maintenance. Saving updates goal direction when needed and rebuilds your automatic fuel plan."
           title="Goal Strategy"
         />
 
         {!user ? (
-          <AppCard style={styles.card}>
+          <AppCard style={styles.card} variant="plain">
             <AppText variant="cardTitle">No active user</AppText>
             <AppText color="secondary" variant="bodySmall">
               Sign in to your account first before editing your goal strategy.
@@ -242,47 +241,25 @@ const GoalStrategySettingsScreen = ({ navigation }: Props) => {
           </AppCard>
         ) : (
           <>
-            <AppCard style={styles.card}>
+            <AppCard style={styles.card} variant="plain">
               <View style={styles.summaryRow}>
-                <View style={styles.summaryCopy}>
-                  <AppText variant="cardTitle">Current strategy</AppText>
-                  <AppText color="secondary" variant="bodySmall">
-                    {formatGoalStrategyMeta(
-                      user.goal,
-                      resolveGoalStrategy(user.goal, user.goalStrategy),
-                    )}
-                  </AppText>
-                </View>
+                <AppText color="secondary" variant="bodySmall">
+                  Estimated daily target
+                </AppText>
+
                 <NumericText
                   align="right"
                   numberOfLines={1}
                   style={styles.metricValue}
                   variant="numberTrendDelta"
                 >
-                  {contextLoading ? "..." : previewPlan?.calories ?? user.calorieAllowance ?? "--"}{" "}
+                  {contextLoading
+                    ? "..."
+                    : (previewPlan?.calories ??
+                      user.calorieAllowance ??
+                      "--")}{" "}
                   kcal
                 </NumericText>
-              </View>
-
-              <View style={styles.previewGrid}>
-                <AppCard style={styles.previewStat} variant="soft">
-                  <AppText color="secondary" variant="eyebrow">Goal</AppText>
-                  <AppText variant="bodySmallStrong">
-                    {formatGoalLabel(previewGoal)}
-                  </AppText>
-                </AppCard>
-                <AppCard style={styles.previewStat} variant="soft">
-                  <AppText color="secondary" variant="eyebrow">Strategy</AppText>
-                  <AppText variant="bodySmallStrong">
-                    {formatGoalStrategyLabel(selectedStrategy)}
-                  </AppText>
-                </AppCard>
-                <AppCard style={styles.previewStat} variant="soft">
-                  <AppText color="secondary" variant="eyebrow">Offset</AppText>
-                  <NumericText color="primary" variant="numberTrendDelta">
-                    {formatSignedCalories(selectedOption.dailyCalorieDelta)}
-                  </NumericText>
-                </AppCard>
               </View>
             </AppCard>
 
@@ -292,7 +269,7 @@ const GoalStrategySettingsScreen = ({ navigation }: Props) => {
               );
 
               return (
-                <AppCard key={section.key} style={styles.card}>
+                <AppCard key={section.key} style={styles.card} variant="plain">
                   <View style={styles.sectionHeader}>
                     {section.icon}
                     <AppText variant="cardTitle">{section.title}</AppText>
@@ -307,12 +284,22 @@ const GoalStrategySettingsScreen = ({ navigation }: Props) => {
                           key={option.value}
                           onPress={() => setSelectedStrategy(option.value)}
                           selected={selected}
-                          subtitle={option.description}
+
                           title={option.label}
+                          subtitle={
+                            option.value === "deficit_aggressive"
+                              ? "Hunger and recovery need closer attention."
+                              : option.value === "surplus_aggressive"
+                                ? "Body-fat gain is more likely."
+                                : undefined
+                          }
                           trailing={
                             <View style={styles.optionMeta}>
-                              <NumericText color="coral" variant="numberTrendDelta">
-                              {formatSignedCalories(option.dailyCalorieDelta)}
+                              <NumericText
+                                color="coral"
+                                variant="numberTrendDelta"
+                              >
+                                {formatSignedCalories(option.dailyCalorieDelta)}
                               </NumericText>
                               <NumericText
                                 align="right"
@@ -333,7 +320,7 @@ const GoalStrategySettingsScreen = ({ navigation }: Props) => {
               );
             })}
 
-            <AppCard style={styles.card}>
+            <AppCard style={styles.card} variant="plain">
               <AppButton
                 onPress={() => void handleSave()}
                 disabled={saving}
@@ -346,7 +333,11 @@ const GoalStrategySettingsScreen = ({ navigation }: Props) => {
                 title="Could not build preview"
                 message={contextError}
                 action={
-                  <AppButton label="Try again" onPress={() => void loadContext()} size="sm" />
+                  <AppButton
+                    label="Try again"
+                    onPress={() => void loadContext()}
+                    size="sm"
+                  />
                 }
                 style={styles.card}
               />

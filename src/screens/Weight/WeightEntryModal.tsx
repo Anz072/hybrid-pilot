@@ -1,3 +1,5 @@
+import { resolveWeightEntryValueKg } from "./weightEntryValue";
+import { getDisplayPreferencesSnapshot } from "../../preferences/displayPreferences";
 import React from "react";
 import DateTimePicker, {
   DateTimePickerEvent,
@@ -11,16 +13,16 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ArrowLeftIcon, CalendarIcon, ClockIcon, PencilSimpleIcon } from "phosphor-react-native";
+import {
+  ArrowLeftIcon,
+  CalendarIcon,
+  ClockIcon,
+  PencilSimpleIcon,
+} from "phosphor-react-native";
 import type { DBWeightEntry } from "../../store/DB_TYPES";
 import KeyboardAwareScrollView from "../../components/KeyboardAwareScrollView";
+import { getZoneOffsetMinutes, toLocalIsoWithOffset } from "./weightUtils";
 import {
-  getZoneOffsetMinutes,
-  parseLocalizedWeight,
-  toLocalIsoWithOffset,
-} from "./weightUtils";
-import {
-  displayNumberToWeightKg,
   formatTimeOfDay,
   formatWeightValue,
   weightUnitLabel,
@@ -28,6 +30,8 @@ import {
 import { useDisplayPreferences } from "../../preferences/usePreferences";
 import { appColors } from "../../theme/colors";
 import {
+  Disclosure,
+  ScreenHeader,
   AppButton,
   AppInput,
   AppText,
@@ -90,6 +94,14 @@ const WeightEntryModal = ({
   const [showTimePicker, setShowTimePicker] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
 
+  const initialSnapshotRef = React.useRef(
+    serializeDraft({
+      value,
+      measuredAt: initialDate.toISOString(),
+      notes,
+    }),
+  );
+
   React.useEffect(() => {
     if (!visible) {
       return;
@@ -101,30 +113,25 @@ const WeightEntryModal = ({
     setValue(
       initialEntry ? formatWeightValue(initialEntry.valueKg, weightUnit) : "",
     );
+    initialSnapshotRef.current = serializeDraft({
+      value: initialEntry
+        ? formatWeightValue(initialEntry.valueKg, weightUnit)
+        : "",
+      measuredAt: nextDate.toISOString(),
+      notes: initialEntry?.notes ?? "",
+    });
     setMeasuredAtDate(nextDate);
     setNotes(initialEntry?.notes ?? "");
     setShowDatePicker(false);
     setShowTimePicker(false);
-  }, [initialEntry, visible]);
-
-  const initialSnapshot = React.useMemo(
-    () =>
-      serializeDraft({
-        value: initialEntry
-          ? formatWeightValue(initialEntry.valueKg, weightUnit)
-          : "",
-        measuredAt: initialDate.toISOString(),
-        notes: initialEntry?.notes ?? "",
-      }),
-    [initialDate, initialEntry, weightUnit],
-  );
+  }, [initialEntry, visible, weightUnit]);
 
   const currentSnapshot = serializeDraft({
     value,
     measuredAt: measuredAtDate.toISOString(),
     notes,
   });
-  const isDirty = currentSnapshot !== initialSnapshot;
+  const isDirty = currentSnapshot !== initialSnapshotRef.current;
 
   const handleRequestClose = () => {
     if (!isDirty) {
@@ -173,16 +180,18 @@ const WeightEntryModal = ({
   const handleSave = () => {
     try {
       setSaving(true);
-      const parsedDisplay = parseLocalizedWeight(value);
-      if (parsedDisplay == null) {
+      const parsed = resolveWeightEntryValueKg(
+        value,
+        weightUnit,
+        initialEntry?.valueKg,
+      );
+      if (parsed == null) {
         Alert.alert(
           "Invalid weight",
           `Enter a valid number in ${weightUnit === "lb" ? "pounds" : "kilograms"}.`,
         );
         return;
       }
-
-      const parsed = displayNumberToWeightKg(parsedDisplay, weightUnit);
 
       onSave({
         valueOriginal: parsed,
@@ -206,12 +215,11 @@ const WeightEntryModal = ({
     >
       <View style={styles.container}>
         <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-          <IconButton
-            onPress={handleRequestClose}
-            accessibilityLabel="Go back"
-          >
-            <ArrowLeftIcon size={18} color={appColors.textPrimary} weight="bold" />
-          </IconButton>
+          <ScreenHeader
+            safeTop={false}
+            title={mode === "create" ? "Log weight" : "Edit weight"}
+            onBack={handleRequestClose}
+          />
         </View>
 
         <KeyboardAwareScrollView
@@ -222,11 +230,6 @@ const WeightEntryModal = ({
           focusedInputBottomOffset={132}
         >
           <View style={styles.card}>
-            <View>
-              <AppText style={styles.heroTitle} variant="sectionTitleLarge">
-                {mode === "create" ? "Log weight" : "Update weight entry"}
-              </AppText>
-            </View>
             <View style={styles.weightRow}>
               <AppInput
                 label="Weight"
@@ -242,11 +245,15 @@ const WeightEntryModal = ({
                 accessibilityLabel={`Weight in ${weightUnit === "lb" ? "pounds" : "kilograms"}`}
               />
               <View style={styles.unitPill}>
-                <AppText style={styles.unitText} variant="bodyStrong">{weightUnitLabel(weightUnit)}</AppText>
+                <AppText style={styles.unitText} variant="bodyStrong">
+                  {weightUnitLabel(weightUnit)}
+                </AppText>
               </View>
             </View>
 
-            <AppText color="muted" style={styles.label} variant="eyebrow">Measured at</AppText>
+            <AppText color="muted" style={styles.label} variant="metadata">
+              Measured at
+            </AppText>
             <View style={styles.dateRow}>
               <InteractiveCard
                 onPress={() => setShowDatePicker((current) => !current)}
@@ -259,7 +266,10 @@ const WeightEntryModal = ({
                   color={appColors.textPrimary}
                   weight="bold"
                 />
-                <AppText style={styles.dateButtonText} variant="bodySmallStrong">
+                <AppText
+                  style={styles.dateButtonText}
+                  variant="bodySmallStrong"
+                >
                   {measuredAtDate.toLocaleDateString(undefined, {
                     month: "short",
                     day: "numeric",
@@ -278,7 +288,10 @@ const WeightEntryModal = ({
                   color={appColors.textPrimary}
                   weight="bold"
                 />
-                <AppText style={styles.dateButtonText} variant="bodySmallStrong">
+                <AppText
+                  style={styles.dateButtonText}
+                  variant="bodySmallStrong"
+                >
                   {formatTimeOfDay(measuredAtDate, timeFormat)}
                 </AppText>
               </InteractiveCard>
@@ -296,26 +309,35 @@ const WeightEntryModal = ({
               <DateTimePicker
                 value={measuredAtDate}
                 mode="time"
+                is24Hour={getDisplayPreferencesSnapshot().timeFormat === "24h"}
                 display={Platform.OS === "ios" ? "spinner" : "default"}
                 onChange={handleTimeChange}
               />
             ) : null}
 
-            <AppInput
-              label="Notes"
-              value={notes}
-              onChangeText={setNotes}
-              placeholder="Optional notes"
-              style={styles.notesInput}
-              multiline
-              accessibilityLabel="Entry notes"
-            />
+            <Disclosure title={notes.trim() ? "Notes · added" : "Add a note"}>
+              <AppInput
+                label="Notes"
+                value={notes}
+                onChangeText={setNotes}
+                placeholder="Optional notes"
+                style={styles.notesInput}
+                multiline
+                accessibilityLabel="Entry notes"
+              />
+            </Disclosure>
           </View>
 
           <AppButton
             onPress={() => void handleSave()}
             disabled={saving}
-            icon={<PencilSimpleIcon size={16} color={appColors.white} weight="bold" />}
+            icon={
+              <PencilSimpleIcon
+                size={16}
+                color={appColors.white}
+                weight="bold"
+              />
+            }
             label={
               saving
                 ? mode === "edit"
@@ -357,9 +379,6 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: appSpacing.gutter,
     paddingBottom: appSpacing.sm,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
   },
   heroTitle: {
     marginBottom: appSpacing.xs,
@@ -383,21 +402,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   weightInput: {
-    ...appTypography.numberCalorieHero,
-    minHeight: 64,
+    ...appTypography.numberWeightEntry,
+    minHeight: 52,
     textAlign: "left",
   },
   unitPill: {
-    minHeight: 64,
-    minWidth: 60,
+    minHeight: 52,
+    minWidth: 36,
     paddingHorizontal: appSpacing.md,
     borderRadius: appRadius.md,
-    backgroundColor: appSurfaces.soft,
+    backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
   },
   unitText: {
-    textTransform: "uppercase",
+    textTransform: "none",
   },
   dateRow: {
     flexDirection: "row",

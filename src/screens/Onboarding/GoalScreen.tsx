@@ -9,7 +9,9 @@ import type {
 import { appColors } from "../../theme/colors";
 import { appSpacing } from "../../theme/tokens";
 import OnboardingButton from "./onboardingButton";
-import OnboardingStepScreen, { onboardingStepProgress } from "./OnboardingStepScreen";
+import OnboardingStepScreen, {
+  onboardingStepProgress,
+} from "./OnboardingStepScreen";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "Goal">;
 
@@ -25,30 +27,36 @@ const GoalScreen = ({ navigation }: Props) => {
     {
       label: "Lose fat",
       value: "lose_fat",
-      subtitle: "Slight calorie deficit with protein-first targets.",
-      icon: <FireIcon size={22} color={appColors.actionPrimary} weight="fill" />,
+      subtitle: "",
+      icon: (
+        <FireIcon size={22} color={appColors.actionPrimary} weight="fill" />
+      ),
     },
     {
       label: "Maintain",
       value: "maintain",
-      subtitle: "Balanced intake to keep performance steady.",
-      icon: <ShieldCheckIcon size={22} color={appColors.statusSuccess} weight="fill" />,
+      subtitle: "",
+      icon: (
+        <ShieldCheckIcon
+          size={22}
+          color={appColors.statusSuccess}
+          weight="fill"
+        />
+      ),
     },
     {
       label: "Build muscle",
       value: "build_muscle",
-      subtitle: "Lean surplus and recovery-focused macro split.",
+      subtitle: "",
       icon: <TrendUpIcon size={22} color={appColors.protein} weight="fill" />,
     },
   ];
 
   return (
     <OnboardingStepScreen
-      eyebrow="Setup"
       onBack={() => navigation.goBack()}
       progress={onboardingStepProgress(2)}
       stepLabel="Goal"
-      subtitle="Pick one to tune calories, macros, and training recommendations."
       title="What is your primary goal?"
     >
       <View style={styles.optionsWrap}>

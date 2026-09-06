@@ -1,3 +1,4 @@
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   Alert,
@@ -16,7 +17,10 @@ import type { DBFoodItem } from "../../store/DB_TYPES";
 import FoodScreenHeader from "./FoodScreenHeader";
 import { appColors } from "../../theme/colors";
 
-type FoodLibraryNav = NativeStackNavigationProp<FoodStackParamList, "FoodLibrary">;
+type FoodLibraryNav = NativeStackNavigationProp<
+  FoodStackParamList,
+  "FoodLibrary"
+>;
 
 type DebugField = {
   label: string;
@@ -63,7 +67,9 @@ const getDebugFields = (item: DBFoodItem): DebugField[] => {
         ? prettyJson(rawPayload)
         : formatDebugValue(value),
   }));
-  const rawPayloadIndex = fields.findIndex((field) => field.label === "rawPayload");
+  const rawPayloadIndex = fields.findIndex(
+    (field) => field.label === "rawPayload",
+  );
   const nutrimentsField = {
     label: "nutriments",
     value: nutriments ? prettyJson(nutriments) : "null",
@@ -81,6 +87,7 @@ const getDebugFields = (item: DBFoodItem): DebugField[] => {
 };
 
 const FoodLibraryScreen = () => {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<FoodLibraryNav>();
 
   const [items, setItems] = useState<DBFoodItem[]>([]);
@@ -96,7 +103,10 @@ const FoodLibraryScreen = () => {
 
     setItems(rows);
 
-    if (selectedItemId != null && !rows.some((item) => item.id === selectedItemId)) {
+    if (
+      selectedItemId != null &&
+      !rows.some((item) => item.id === selectedItemId)
+    ) {
       setSelectedItemId(null);
     }
   }, [query, selectedItemId]);
@@ -158,7 +168,7 @@ const FoodLibraryScreen = () => {
   }, [isDeleting, loadItems, selectedItem]);
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <KeyboardAwareScrollView
         style={styles.screen}
         contentContainerStyle={styles.content}
@@ -192,7 +202,9 @@ const FoodLibraryScreen = () => {
                   <Pressable
                     key={item.id}
                     onPress={() =>
-                      setSelectedItemId((current) => (current === item.id ? null : item.id))
+                      setSelectedItemId((current) =>
+                        current === item.id ? null : item.id,
+                      )
                     }
                     style={({ pressed }) => [
                       styles.row,
@@ -210,7 +222,9 @@ const FoodLibraryScreen = () => {
                         {item.barcode ? ` · ${item.barcode}` : ""}
                       </Text>
                     </View>
-                    <Text style={styles.rowChevron}>{isSelected ? "Hide" : "View"}</Text>
+                    <Text style={styles.rowChevron}>
+                      {isSelected ? "Hide" : "View"}
+                    </Text>
                   </Pressable>
                 );
               })
@@ -245,7 +259,9 @@ const FoodLibraryScreen = () => {
               ))}
             </View>
           ) : (
-            <Text style={styles.emptyText}>Tap an item above to inspect all DB fields.</Text>
+            <Text style={styles.emptyText}>
+              Tap an item above to inspect all DB fields.
+            </Text>
           )}
         </View>
       </KeyboardAwareScrollView>

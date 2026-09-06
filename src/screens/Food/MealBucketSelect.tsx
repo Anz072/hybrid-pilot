@@ -7,7 +7,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { CaretDownIcon, CheckIcon } from "phosphor-react-native";
-import { AppText } from "../../components/ui";
+import { AppSheet, AppText } from "../../components/ui";
 import { appColors } from "../../theme/colors";
 import {
   appBorders,
@@ -25,6 +25,7 @@ import {
 } from "./foodUtils";
 
 type MealBucketSelectProps = {
+  accessibilityLabel?: string;
   disabled?: boolean;
   onChange: (value: MealSlot) => void;
   style?: StyleProp<ViewStyle>;
@@ -36,6 +37,7 @@ export const getInitialMealBucket = (
 ): MealSlot => getMealSlotFromLabel(mealType) ?? getDefaultMealSlotForNow();
 
 const MealBucketSelect = ({
+  accessibilityLabel,
   disabled = false,
   onChange,
   style,
@@ -52,7 +54,9 @@ const MealBucketSelect = ({
   return (
     <View style={[styles.container, style]}>
       <Pressable
-        accessibilityLabel={`Add food to ${MEAL_SLOT_LABELS[value]}`}
+        accessibilityLabel={
+          accessibilityLabel ?? `Add food to ${MEAL_SLOT_LABELS[value]}`
+        }
         accessibilityRole="button"
         accessibilityState={{ disabled, expanded }}
         disabled={disabled}
@@ -63,57 +67,52 @@ const MealBucketSelect = ({
           pressed && !disabled && styles.pressed,
         ]}
       >
-        <AppText color="secondary" variant="label">
-          Add to
-        </AppText>
         <AppText style={styles.value} variant="bodySmallStrong">
           {MEAL_SLOT_LABELS[value]}
         </AppText>
-        <CaretDownIcon
-          color={appColors.textMuted}
-          size={16}
-          weight="bold"
-        />
+        <CaretDownIcon color={appColors.textMuted} size={16} weight="bold" />
       </Pressable>
 
-      {expanded ? (
-        <View style={styles.menu}>
-          {MEAL_SLOTS.map((slot, index) => {
-            const selected = slot === value;
-            return (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                key={slot}
-                onPress={() => {
-                  onChange(slot);
-                  setExpanded(false);
-                }}
-                style={({ pressed }) => [
-                  styles.option,
-                  index < MEAL_SLOTS.length - 1 && styles.optionDivider,
-                  selected && styles.optionSelected,
-                  pressed && styles.pressed,
-                ]}
+      <AppSheet
+        visible={expanded}
+        onClose={() => setExpanded(false)}
+        title="Meal"
+      >
+        {MEAL_SLOTS.map((slot, index) => {
+          const selected = slot === value;
+          return (
+            <Pressable
+              accessibilityRole="radio"
+              accessibilityState={{ checked: selected }}
+              key={slot}
+              onPress={() => {
+                onChange(slot);
+                setExpanded(false);
+              }}
+              style={({ pressed }) => [
+                styles.option,
+                index < MEAL_SLOTS.length - 1 && styles.optionDivider,
+                selected && styles.optionSelected,
+                pressed && styles.pressed,
+              ]}
+            >
+              <AppText
+                color={selected ? "primary" : "secondary"}
+                variant={selected ? "bodySmallStrong" : "bodySmall"}
               >
-                <AppText
-                  color={selected ? "primary" : "secondary"}
-                  variant={selected ? "bodySmallStrong" : "bodySmall"}
-                >
-                  {MEAL_SLOT_LABELS[slot]}
-                </AppText>
-                {selected ? (
-                  <CheckIcon
-                    color={appColors.actionPrimary}
-                    size={16}
-                    weight="bold"
-                  />
-                ) : null}
-              </Pressable>
-            );
-          })}
-        </View>
-      ) : null}
+                {MEAL_SLOT_LABELS[slot]}
+              </AppText>
+              {selected ? (
+                <CheckIcon
+                  color={appColors.actionPrimary}
+                  size={16}
+                  weight="bold"
+                />
+              ) : null}
+            </Pressable>
+          );
+        })}
+      </AppSheet>
     </View>
   );
 };
@@ -121,10 +120,10 @@ const MealBucketSelect = ({
 const styles = StyleSheet.create({
   container: {
     alignSelf: "flex-start",
-    minWidth: 180,
+    maxWidth: "100%",
   },
   trigger: {
-    minHeight: 44,
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
     gap: appSpacing.xs,
@@ -133,9 +132,10 @@ const styles = StyleSheet.create({
     borderColor: appBorders.soft,
     backgroundColor: appSurfaces.soft,
     paddingHorizontal: appSpacing.sm,
+    paddingVertical: appSpacing.xs,
   },
   value: {
-    flex: 1,
+    flexShrink: 1,
   },
   menu: {
     marginTop: appSpacing.xxs,
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   option: {
-    minHeight: 44,
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",

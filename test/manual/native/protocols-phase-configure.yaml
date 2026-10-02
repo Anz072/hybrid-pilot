@@ -1,0 +1,37 @@
+appId: com.dribsnis.app
+name: Configure a future course phase
+# Starts in a Protocol root section with the example active course.
+# Leaves Change begins open for an explicitly verified future date.
+---
+- tapOn: "Compounds, tab, 4 of 4"
+- tapOn: "Testosterone Enanthate, Active, Sep 9, 2026.*"
+- tapOn: "Edit schedule"
+- tapOn:
+    text: "Interval in days"
+    index: 1
+- eraseText
+- inputText: "3"
+- swipe:
+    start: "85%,50%"
+    end: "85%,80%"
+    duration: 800
+- scrollUntilVisible:
+    element: "Amount, administration 1"
+    direction: DOWN
+- tapOn:
+    text: "Amount, administration 1"
+    index: 1
+- eraseText
+- inputText: "90"
+- swipe:
+    start: "85%,50%"
+    end: "85%,80%"
+    duration: 800
+- scrollUntilVisible:
+    element: "Change begins, .*"
+    direction: DOWN
+- tapOn: "Change begins, .*"
+- scrollUntilVisible:
+    element: "Done"
+    direction: DOWN
+- takeScreenshot: protocols-phase-date-picker

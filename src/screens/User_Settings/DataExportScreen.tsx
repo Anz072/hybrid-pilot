@@ -34,6 +34,7 @@ import {
   InteractiveCard,
 } from "../../components/ui";
 import {
+  appContentLayout,
   appBorders,
   appRadius,
   appSpacing,
@@ -287,7 +288,7 @@ const DataExportScreen = ({ navigation }: Props) => {
         <AppText style={styles.sectionTitle} variant="sectionTitle">
           Export
         </AppText>
-        <AppCard style={styles.card} variant="plain">
+        <AppCard style={styles.card} variant="surface">
           <ExportRow
             icon={
               <ScalesIcon size={20} color={appColors.brand700} weight="fill" />
@@ -329,7 +330,7 @@ const DataExportScreen = ({ navigation }: Props) => {
         <AppText style={styles.sectionTitle} variant="sectionTitle">
           Restore weight history
         </AppText>
-        <AppCard style={styles.card} variant="plain">
+        <AppCard style={styles.card} variant="surface">
           <AppText
             color="secondary"
             style={styles.restoreHint}
@@ -427,6 +428,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
+    ...appContentLayout,
     paddingHorizontal: appSpacing.gutter,
   },
   sectionTitle: {

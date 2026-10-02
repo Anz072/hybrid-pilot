@@ -86,6 +86,8 @@ const toDbSettings = (
   settings: ApiSettings,
   userExternalId: string,
 ): DBUserSettings => ({
+  protocolsEnabled: settings.protocolsEnabled ?? false,
+  protocolsIntroSeenAt: settings.protocolsIntroSeenAt ?? null,
   userExternalId,
   foodDiaryStartHour: settings.foodDiaryStartHour,
   foodDiaryEndHour: settings.foodDiaryEndHour,
@@ -191,7 +193,7 @@ export const getUserByExternalId = async (
   );
   if (!sessionUser || sessionUser.id !== externalId) return null;
 
-  const me = await measureDiaryRequest(perfTrace, "profile", "node-api", () => getMe());
+  const me = await measureDiaryRequest(perfTrace, "profile", "node-api", () => getMe(externalId));
   return toDbUser(me, null);
 };
 
@@ -211,16 +213,18 @@ export const getUserSettings = async (
   userExternalId: string,
   perfTrace?: DiaryPerfTrace,
 ): Promise<DBUserSettings | null> => {
-  const me = await measureDiaryRequest(perfTrace, "settings", "node-api", () => getMe());
+  const me = await measureDiaryRequest(perfTrace, "settings", "node-api", () => getMe(userExternalId));
   return me.settings ? toDbSettings(me.settings, userExternalId) : null;
 };
 
 export const saveUserSettings = async (
   input: SaveUserSettingsInput,
-): Promise<void> => {
+): Promise<DBUserSettings | undefined> => {
   // Only the supplied fields are sent; the API updates column-wise so a partial
   // save cannot clobber a concurrent one.
   const patch: Record<string, unknown> = {};
+  if (input.protocolsEnabled !== undefined) patch.protocolsEnabled = input.protocolsEnabled;
+  if (input.protocolsIntroSeenAt !== undefined) patch.protocolsIntroSeenAt = input.protocolsIntroSeenAt;
   if (input.foodDiaryStartHour !== undefined) patch.foodDiaryStartHour = input.foodDiaryStartHour;
   if (input.foodDiaryEndHour !== undefined) patch.foodDiaryEndHour = input.foodDiaryEndHour;
   if (input.dailyCalorieOverrides !== undefined) patch.dailyCalorieOverrides = input.dailyCalorieOverrides;
@@ -229,7 +233,7 @@ export const saveUserSettings = async (
   if (input.adaptiveLastCalculatedAt !== undefined) patch.adaptiveLastCalculatedAt = input.adaptiveLastCalculatedAt;
 
   if (Object.keys(patch).length === 0) return;
-  await patchSettings(patch);
+  return toDbSettings(await patchSettings(patch, input.userExternalId), input.userExternalId);
 };
 
 // --- Adaptive recommendations ----------------------------------------------

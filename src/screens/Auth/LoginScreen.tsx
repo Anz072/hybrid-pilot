@@ -21,7 +21,7 @@ import {
 import { useAppDispatch } from "../../store/hooks";
 import { setCurrentUser } from "../../store/userSlice";
 import { appColors } from "../../theme/colors";
-import { appSpacing, appSurfaces } from "../../theme/tokens";
+import { appContentLayout, appSpacing, appSurfaces } from "../../theme/tokens";
 
 type LoginScreenProps = {
   onAuthenticated?: () => void | Promise<void>;
@@ -106,6 +106,7 @@ const LoginScreen = ({
     >
       <KeyboardAwareScrollView
         contentContainerStyle={{
+          ...appContentLayout,
           flexGrow: 1,
           paddingBottom: insets.bottom + 24,
         }}
@@ -115,7 +116,7 @@ const LoginScreen = ({
           title="Sign in"
           onBack={onBackToOnboarding}
         />
-        <AppCard style={styles.card} variant="plain">
+        <AppCard style={styles.card} variant="surface">
           <AppInput
             autoCapitalize="none"
             autoCorrect={false}

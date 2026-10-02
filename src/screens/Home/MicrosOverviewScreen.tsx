@@ -17,7 +17,12 @@ import {
   type UserMicronutrientProfile,
 } from "../../engine/micronutrients";
 import { appColors } from "../../theme/colors";
-import { appBorders, appSpacing } from "../../theme/tokens";
+import {
+  appContentLayout,
+  appCardSurface,
+  appBorders,
+  appSpacing,
+} from "../../theme/tokens";
 import {
   AppText,
   ErrorState,
@@ -457,6 +462,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
+    ...appContentLayout,
     paddingHorizontal: appSpacing.gutter,
   },
   headerRow: {
@@ -476,6 +482,8 @@ const styles = StyleSheet.create({
   },
   subtitle: {},
   heroCard: {
+    ...appCardSurface,
+    padding: appSpacing.md,
     marginBottom: appSpacing.md,
   },
   toggleRow: {
@@ -500,6 +508,8 @@ const styles = StyleSheet.create({
     marginBottom: appSpacing.md,
   },
   sectionCard: {
+    ...appCardSurface,
+    padding: appSpacing.md,
     marginBottom: appSpacing.xl,
   },
   sectionStack: {

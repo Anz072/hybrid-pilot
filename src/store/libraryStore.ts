@@ -1,3 +1,4 @@
+import { foodNutrientDetails } from "../API/nouri/foodNutrients";
 import { NouriApiError } from "../API/nouri/client";
 import { toDbFoodItem, type ApiFood } from "../API/nouri/foodsApi";
 import {
@@ -56,6 +57,7 @@ const mapFoods = (foods: ApiFood[]): DBFoodItem[] => foods.map(toDbFoodItem);
 
 export const saveFoodItem = async (input: SaveFoodItemInput): Promise<number> => {
   const food = await createCatalogueFood({
+    ...foodNutrientDetails(input),
     name: input.name,
     brand: input.brand ?? null,
     barcode: input.barcode ?? null,

@@ -1,4 +1,4 @@
-export type AppDataChangeKind = "food_log" | "weight";
+export type AppDataChangeKind = "food_log" | "weight" | "protocols" | "bloodwork" | "settings";
 
 export type AppDataChangeEvent = {
   date?: string | null;

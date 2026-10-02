@@ -1,17 +1,12 @@
-/**
- * Shared app color tokens — the "Bright Editorial" direction.
- * A porcelain canvas with near-black ink text and one persimmon action
- * accent. Nutrient/status hues stay deliberately subdued — they exist to
- * support progress visualization, not to decorate the page.
- */
+/** Shared Nouri colors: pale canvas, raised white cards, persimmon accents. */
 const palette = {
   white: "#FFFFFF",
-  porcelain: "#FAFAF8",
+  porcelain: "#F7F7F5",
   porcelainSoft: "#F1F1ED",
   porcelainMuted: "#EAEAE4",
   ink: "#171715",
   inkSoft: "#55534C",
-  inkMuted: "#8A887E",
+  inkMuted: "#706E67",
   divider: "#E5E5DF",
   dividerStrong: "#D8D8D0",
   persimmonTint: "#F7E2DB",
@@ -209,8 +204,11 @@ export const appColors = {
   warningSurface: warning.surface,
   warningSurfaceStrong: warning.surfaceStrong,
 
-  actionPrimary: brand[500],
-  actionPrimaryPressed: brand[700],
+  actionPrimary: brand[700],
+  accent: palette.persimmon,
+  navigationBackground: palette.persimmonDeep,
+  navigationForeground: palette.white,
+  actionPrimaryPressed: "#963523",
   actionPrimarySoft: brand[100],
   actionPrimaryBorder: brand[300],
 

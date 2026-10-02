@@ -1,0 +1,17 @@
+appId: com.dribsnis.app
+name: Levels reflects the saved future phase
+# Starts in a Protocol root section. Uses the September 12 future-phase fixture.
+---
+- tapOn: "Levels, tab, 2 of 4"
+- scrollUntilVisible:
+    element: "Next chart point or event"
+    direction: DOWN
+- repeat:
+    times: 100
+    while:
+      notVisible: "Planned · 90 mg · IM"
+    commands:
+      - tapOn: "Next chart point or event"
+- assertVisible: "Planned · 90 mg · IM"
+- assertVisible: ".*Europe/Vilnius"
+- takeScreenshot: protocols-levels-future-phase

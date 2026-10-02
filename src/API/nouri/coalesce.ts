@@ -48,10 +48,10 @@ export const isCoalescing = (key: string): boolean => inFlight.has(key);
 /**
  * Drops every in-flight entry, on sign-out.
  *
- * The promises themselves keep running — they cannot be cancelled — but they
- * are no longer reachable, so a request started by the previous user can never
- * resolve into the next user's screen. Their late `finally` finds a different
- * promise under the key, or none, and removes nothing.
+ * Existing callers still hold their promises. They must guard late results
+ * with session/request identity; clearing this Map alone cannot protect a
+ * screen callback. A new caller cannot join the detached request, and its late
+ * `finally` finds a different promise under the key, or none, and removes nothing.
  */
 export const resetCoalescedRequests = (): void => {
   inFlight.clear();

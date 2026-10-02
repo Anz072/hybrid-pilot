@@ -6,6 +6,7 @@ import {
 } from "@supabase/supabase-js";
 import * as SecureStore from "expo-secure-store";
 import { AppState, type AppStateStatus } from "react-native";
+import { observeAuthIdentity } from "./sessionScope";
 
 const SUPABASE_STORAGE_KEY = "dribsnis-auth";
 export const SUPABASE_SESSION_REQUIRED_MESSAGE =
@@ -72,6 +73,11 @@ export const getSupabaseClient = () => {
         storage: supabaseStorage,
         storageKey: SUPABASE_STORAGE_KEY,
       },
+    });
+    // Synchronous bookkeeping only: awaiting Supabase inside its auth callback
+    // can deadlock. This listener lives as long as the singleton client.
+    cachedClient.auth.onAuthStateChange((event, session) => {
+      observeAuthIdentity(session?.user.id ?? null, event === "SIGNED_OUT");
     });
   }
 

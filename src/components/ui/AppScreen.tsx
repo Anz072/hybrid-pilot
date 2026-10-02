@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowLeftIcon } from "phosphor-react-native";
 import { appColors } from "../../theme/colors";
 import { appTypography } from "../../theme/typography";
-import { appSpacing, appSurfaces } from "../../theme/tokens";
+import { appContentLayout, appSpacing, appSurfaces } from "../../theme/tokens";
 import { IconButton } from "./AppButton";
 import { AppText } from "./AppText";
 
@@ -19,12 +19,14 @@ type AppScreenProps = ViewProps & {
   children: React.ReactNode;
   contentStyle?: StyleProp<ViewStyle>;
   safeTop?: boolean;
+  safeBottom?: boolean;
 };
 
 export const AppScreen = ({
   children,
   contentStyle,
   safeTop = false,
+  safeBottom = false,
   style,
   ...props
 }: AppScreenProps) => {
@@ -36,6 +38,7 @@ export const AppScreen = ({
       style={[
         styles.screen,
         safeTop ? { paddingTop: insets.top } : null,
+        safeBottom ? { paddingBottom: insets.bottom } : null,
         style,
       ]}
     >
@@ -88,7 +91,7 @@ export const ScreenHeader = ({
             )}
           </IconButton>
         ) : null}
-        <AppText style={styles.title} variant="screenTitle">
+        <AppText accessibilityRole="header" style={styles.title} variant="screenTitle">
           {title}
         </AppText>
       </View>
@@ -107,6 +110,7 @@ const styles = StyleSheet.create({
     backgroundColor: appSurfaces.canvas,
   },
   content: {
+    ...appContentLayout,
     flex: 1,
     paddingHorizontal: appSpacing.gutter,
   },

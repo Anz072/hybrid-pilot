@@ -1,0 +1,27 @@
+appId: com.dribsnis.app
+name: Edit and delete a bloodwork calendar item
+# Starts in Today with exactly one Bloodwork reminder in the isolated account.
+---
+- tapOn: "Edit reminder"
+- assertVisible: "Edit bloodwork reminder"
+- tapOn:
+    text: "Title"
+    index: 1
+- eraseText
+- inputText: "Follow-up bloodwork"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Save calendar item"
+    direction: DOWN
+- tapOn: "Save calendar item"
+- assertVisible: "Follow-up bloodwork"
+- tapOn: "Edit reminder"
+- assertVisible: "Edit bloodwork reminder"
+- scrollUntilVisible:
+    element: "Delete reminder"
+    direction: DOWN
+- takeScreenshot: protocols-reminder-edit
+- tapOn: "Delete reminder"
+- assertVisible: "Only this calendar item will be deleted. Recorded bloodwork is kept."
+- tapOn: "Delete"
+- assertVisible: "Nothing scheduled this day"

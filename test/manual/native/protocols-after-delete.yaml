@@ -1,0 +1,22 @@
+appId: com.dribsnis.app
+name: Empty Protocols preserves ordinary weight data
+# Starts on Protocol settings after whole-feature deletion and API snapshot checks.
+---
+- tapOn: "0"
+- assertVisible: "Track your protocol"
+- tapOn: "Not now"
+- assertVisible: "Nothing scheduled this day"
+- tapOn: "Compounds, tab, 4 of 4"
+- assertVisible: "No compounds yet"
+- tapOn: "Levels, tab, 2 of 4"
+- assertVisible: "No compounds yet"
+- tapOn: "Trends, tab, 3 of 4"
+- tapOn: "Bloodwork"
+- assertVisible: "No bloodwork added yet"
+- tapOn: "Metrics"
+- tapOn: "Body weight"
+- scrollUntilVisible:
+    element: "79.95 kg"
+    direction: DOWN
+- assertVisible: "79.95 kg"
+- takeScreenshot: protocols-deletion-weight-preserved

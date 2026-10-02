@@ -1,0 +1,39 @@
+appId: com.dribsnis.app
+name: Protocol root sections, Trends and Add
+# Starts at Protocols Today with the local QA metric fixtures and no courses.
+---
+- assertVisible: "Today, tab, 1 of 4"
+- assertVisible: "Levels, tab, 2 of 4"
+- assertVisible: "Trends, tab, 3 of 4"
+- assertVisible: "Compounds, tab, 4 of 4"
+- tapOn: "Levels, tab, 2 of 4"
+- assertVisible: "No compounds yet"
+- tapOn: "Compounds, tab, 4 of 4"
+- assertVisible: "No compounds yet"
+- tapOn: "Trends, tab, 3 of 4"
+- assertVisible: "Metrics"
+- assertVisible: "Bloodwork"
+- scrollUntilVisible:
+    element: "Health trends"
+    direction: UP
+- assertVisible: "Health trends"
+- assertVisible: "Body weight"
+- tapOn: "Body weight"
+- scrollUntilVisible:
+    element: "79.95 kg"
+    direction: DOWN
+- assertVisible: "79.95 kg"
+- scrollUntilVisible:
+    element: "Health trends"
+    direction: UP
+- tapOn: "Calories"
+- scrollUntilVisible:
+    element: ".*7-day average.*"
+    direction: DOWN
+- assertVisible: ".*/7 complete days.*"
+- takeScreenshot: protocols-trends
+- tapOn: "Add to Protocols"
+- assertVisible: "Compound"
+- assertVisible: "Bloodwork"
+- assertVisible: "Bloodwork reminder"
+- takeScreenshot: protocols-add

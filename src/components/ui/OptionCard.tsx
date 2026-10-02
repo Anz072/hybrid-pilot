@@ -11,6 +11,7 @@ import { CheckIcon } from "phosphor-react-native";
 import { appColors } from "../../theme/colors";
 import {
   appBorders,
+  appElevation,
   appRadius,
   appSpacing,
   appStates,
@@ -28,7 +29,7 @@ type OptionCardProps = Omit<PressableProps, "children" | "style"> & {
   trailing?: React.ReactNode;
 };
 
-/** A selectable row — not a boxed card. Selection is shown with a fill and a checkmark. */
+/** A rounded choice with explicit radio/checkbox semantics and stable bounds. */
 export const OptionCard = ({
   disabled,
   icon,
@@ -109,12 +110,16 @@ export const OptionCard = ({
 const styles = StyleSheet.create({
   card: {
     minHeight: 64,
-    borderBottomWidth: appBorders.width,
-    borderBottomColor: appBorders.soft,
+    borderWidth: appBorders.width,
+    borderColor: "transparent",
+    borderRadius: appRadius.lg,
+    backgroundColor: appColors.surfaceCard,
+    ...appElevation.metric,
     paddingVertical: appSpacing.sm,
     paddingHorizontal: appSpacing.sm,
   },
   selectedCard: {
+    borderColor: appColors.actionPrimary,
     backgroundColor: appStates.selectedFill,
   },
   disabled: {

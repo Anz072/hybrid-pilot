@@ -1,0 +1,41 @@
+appId: com.dribsnis.app
+name: Disable and re-enable without deleting history
+# Starts on the newly created course detail. Local fixtures include
+# a panel named Deletion QA and a reminder titled Deletion QA reminder.
+---
+- scrollUntilVisible:
+    element: "Estimated Levels"
+    direction: UP
+- tapOn: "Estimated Levels"
+- tapOn: "Back to Nouri"
+- tapOn: "More"
+- scrollUntilVisible:
+    element: "Protocol tracking.*"
+    direction: DOWN
+- tapOn: "Protocol tracking.*"
+- tapOn: "1"
+- assertVisible: "Turn off Protocol tracking?"
+- tapOn: "Turn off"
+- assertNotVisible: "Open Protocols"
+- takeScreenshot: protocols-disabled
+- tapOn: "Go back"
+- tapOn: "Home"
+- assertNotVisible: "Open Protocols Today"
+- takeScreenshot: protocols-home-disabled
+- tapOn: "More"
+- scrollUntilVisible:
+    element: "Protocol tracking.*"
+    direction: DOWN
+- tapOn: "Protocol tracking.*"
+- tapOn: "0"
+- assertVisible: "Today, tab, 1 of 4"
+- assertNotVisible: "Track your protocol"
+- scrollUntilVisible:
+    element: "Deletion QA reminder"
+    direction: DOWN
+- assertVisible: "Deletion QA reminder"
+- takeScreenshot: protocols-reminder-after-enable
+- tapOn: "Trends, tab, 3 of 4"
+- tapOn: "Bloodwork"
+- assertVisible: ".*Deletion QA"
+- takeScreenshot: protocols-bloodwork-after-enable

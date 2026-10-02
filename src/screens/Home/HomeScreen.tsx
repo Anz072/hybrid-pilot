@@ -1,12 +1,11 @@
 import React from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { CompositeNavigationProp } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   BowlFoodIcon,
-  CaretRightIcon,
   DnaIcon,
   DropIcon,
   LeafIcon,
@@ -23,9 +22,12 @@ import { useDisplayPreferences } from "../../preferences/usePreferences";
 import { subscribeToAppDataChanges } from "../../store/dataChangeEvents";
 import { useAppSelector } from "../../store/hooks";
 import { appColors, type AppColorValue } from "../../theme/colors";
-import { appSpacing, appStates } from "../../theme/tokens";
+import { appContentLayout, appMetricSurface, appSpacing } from "../../theme/tokens";
 import {
   AppButton,
+  CalorieRing,
+  CardFooter,
+  InteractiveCard,
   AppText,
   ErrorState,
   LoadingState,
@@ -46,6 +48,7 @@ import {
   loadHomeDashboardSummary,
   type HomeDashboardSummary,
 } from "./homeDashboardSummary";
+import ProtocolHomeCard from "../Protocols/ProtocolHomeCard";
 
 type HomeNavigation = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList, "Home">,
@@ -76,62 +79,9 @@ const formatWholeNumber = (value: number | null) => {
   return Math.round(value).toLocaleString();
 };
 
-const formatRemainingLabel = (remaining: number | null) => {
-  if (remaining == null) {
-    return "Set a calorie target";
-  }
-
-  const remainingValue = Math.abs(Math.round(remaining)).toLocaleString();
-  return remaining < 0
-    ? `${remainingValue} kcal over`
-    : `${remainingValue} kcal left`;
-};
-
-type CalorieHeroProps = {
-  consumed: number;
-  remaining: number | null;
-  remainingLabel: string;
-  target: number | null;
-};
-
-const CalorieHero = ({
-  consumed,
-  remainingLabel,
-  target,
-}: CalorieHeroProps) => {
-  const safeTarget = target != null && target > 0 ? target : null;
-  const safeConsumed = Number.isFinite(consumed) ? consumed : 0;
-
-  return (
-    <View style={styles.heroSection}>
-      <View style={styles.heroValueRow}>
-        <NumericText
-          adjustsFontSizeToFit
-          numberOfLines={1}
-          variant="numberDisplay"
-        >
-          {formatWholeNumber(safeConsumed)}
-        </NumericText>
-        <AppText color="secondary" style={styles.heroTarget} variant="label">
-          / {safeTarget ? formatWholeNumber(safeTarget) : "--"} kcal
-        </AppText>
-      </View>
-      <AppText color="muted" variant="bodySmall">
-        {remainingLabel}
-      </AppText>
-      <ProgressRail
-        color={appColors.calories}
-        height={6}
-        max={safeTarget ?? 0}
-        style={styles.heroRail}
-        value={safeConsumed}
-      />
-    </View>
-  );
-};
-
 type MacroSummaryItemProps = {
   accent: AppColorValue;
+  compactHeader: boolean;
   consumed: number;
   icon: React.ReactNode;
   label: string;
@@ -140,6 +90,7 @@ type MacroSummaryItemProps = {
 
 const MacroSummaryItem = ({
   accent,
+  compactHeader,
   consumed,
   icon,
   label,
@@ -151,22 +102,21 @@ const MacroSummaryItem = ({
 
   return (
     <View style={styles.macroItem}>
-      <View style={styles.macroItemHeader}>
+      <View style={[styles.macroItemHeader, compactHeader && styles.macroItemHeaderCompact]}>
         {icon}
-        <AppText numberOfLines={1} variant="bodySmallStrong">
+        <AppText variant="bodySmallStrong">
           {label}
         </AppText>
       </View>
       <NumericText
-        adjustsFontSizeToFit
-        numberOfLines={1}
         style={styles.macroItemValue}
         variant="numberMacroSummary"
       >
-        {safeTarget
-          ? `${formatWholeNumber(safeConsumed)} / ${formatWholeNumber(safeTarget)} g`
-          : `${formatWholeNumber(safeConsumed)} g`}
+        {formatWholeNumber(safeConsumed)} g
       </NumericText>
+      <AppText variant="label" color="muted">
+        {safeTarget ? `of ${formatWholeNumber(safeTarget)} g` : "No target"}
+      </AppText>
       <ProgressRail
         color={accent}
         height={6}
@@ -180,6 +130,7 @@ const MacroSummaryItem = ({
 
 const HomeScreen = () => {
   const insets = useSafeAreaInsets();
+  const { fontScale, width } = useWindowDimensions();
   const { weightUnit } = useDisplayPreferences();
   const formatWeightValue = (value: number | null) =>
     value != null ? formatWeight(value, weightUnit) : "--";
@@ -298,6 +249,7 @@ const HomeScreen = () => {
     }
 
     return subscribeToAppDataChanges((event) => {
+      if (event.kind !== "food_log" && event.kind !== "weight") return;
       if (event.userExternalId && event.userExternalId !== user.externalId) {
         return;
       }
@@ -314,11 +266,6 @@ const HomeScreen = () => {
     });
   }, [refreshSummary, user?.externalId]);
 
-  const caloriesRemaining =
-    calorieTarget != null
-      ? Math.round(calorieTarget - todayTotals.calories)
-      : null;
-  const remainingLabel = formatRemainingLabel(caloriesRemaining);
   const microsPreview = React.useMemo(
     () => getMicronutrientPreviewItems(todayMicros, 4),
     [todayMicros],
@@ -333,7 +280,7 @@ const HomeScreen = () => {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <AppText adjustsFontSizeToFit numberOfLines={1} variant="screenTitle">
+        <AppText accessibilityRole="header" variant="screenTitle">
           Daily Summary
         </AppText>
         <AppText color="muted" style={styles.dateText} variant="bodySmall">
@@ -361,17 +308,18 @@ const HomeScreen = () => {
             }
           />
         ) : (
-          <>
-            <CalorieHero
+            <CalorieRing
               consumed={todayTotals.calories}
-              remaining={caloriesRemaining}
-              remainingLabel={remainingLabel}
               target={calorieTarget}
             />
-
-            <View style={styles.macroSummaryRow}>
+        )}
+        <ProtocolHomeCard />
+        {!isLoading && !error ? (
+          <>
+            <View style={[styles.macroSummaryRow, fontScale > 1.3 && styles.macroSummaryStacked]}>
               <MacroSummaryItem
                 accent={appColors.protein}
+                compactHeader={width < 360 && fontScale <= 1.3}
                 consumed={todayTotals.proteinG}
                 icon={
                   <DnaIcon
@@ -385,6 +333,7 @@ const HomeScreen = () => {
               />
               <MacroSummaryItem
                 accent={appColors.carbs}
+                compactHeader={width < 360 && fontScale <= 1.3}
                 consumed={todayTotals.carbsG}
                 icon={
                   <BowlFoodIcon
@@ -398,6 +347,7 @@ const HomeScreen = () => {
               />
               <MacroSummaryItem
                 accent={appColors.fat}
+                compactHeader={width < 360 && fontScale <= 1.3}
                 consumed={todayTotals.fatG}
                 icon={
                   <DropIcon size={18} color={appColors.fat} weight="regular" />
@@ -407,133 +357,116 @@ const HomeScreen = () => {
               />
             </View>
           </>
-        )}
+        ) : null}
 
-        <Pressable
+        <InteractiveCard
           accessibilityLabel="Open weekly review"
           accessibilityRole="button"
           onPress={() => navigation.navigate("WeeklyReviewScreen")}
-          style={({ pressed }) => [
-            styles.section,
-            pressed && styles.sectionPressed,
-          ]}
+          style={styles.section}
         >
-          <SectionHeader
-            action={
-              <View style={styles.weeklyAction}>
-                <CaretRightIcon
-                  size={18}
-                  color={appColors.actionPrimary}
-                  weight="bold"
-                />
-              </View>
-            }
-
-            title="Weekly check-in"
-          />
-          <View style={styles.insightList}>
-            <MetricLine
-              divider
-              icon={
-                <ScalesIcon
-                  size={16}
-                  color={appColors.textMuted}
-                  weight="regular"
-                />
-              }
-              label="Latest weight"
-              value={
-                <NumericText variant="numberWeightEntry">
-                  {formatWeightValue(currentWeightKg)}
-                </NumericText>
-              }
+          <View style={styles.sectionContent}>
+            <SectionHeader
+              title="Weekly check-in"
             />
-            <MetricLine
-              divider
-              icon={
-                <TrendUpIcon
-                  size={16}
-                  color={appColors.textMuted}
-                  weight="regular"
-                />
-              }
-              label="7-day average"
-              value={
-                <NumericText variant="numberWeightEntry">
-                  {formatWeightValue(sevenDayAverageWeightKg)}
-                </NumericText>
-              }
-            />
-            {goalProgressPercent != null ? (
+            <View style={styles.insightList}>
               <MetricLine
+                divider
                 icon={
-                  <TargetIcon
+                  <ScalesIcon
                     size={16}
                     color={appColors.textMuted}
                     weight="regular"
                   />
                 }
-                label="To goal"
+                label="Latest weight"
                 value={
                   <NumericText variant="numberWeightEntry">
-                    {goalProgressPercent != null
-                      ? `${goalProgressPercent}%`
-                      : "--"}
+                    {formatWeightValue(currentWeightKg)}
                   </NumericText>
                 }
               />
-            ) : null}
-          </View>
-        </Pressable>
-
-        <Pressable
-          accessibilityLabel="Open micronutrients overview"
-          accessibilityRole="button"
-          onPress={() => navigation.navigate("MicrosOverview")}
-          style={({ pressed }) => [
-            styles.section,
-            pressed && styles.sectionPressed,
-          ]}
-        >
-          <SectionHeader
-            action={
-              <CaretRightIcon
-                size={18}
-                color={appColors.textMuted}
-                weight="bold"
+              <MetricLine
+                divider
+                icon={
+                  <TrendUpIcon
+                    size={16}
+                    color={appColors.textMuted}
+                    weight="regular"
+                  />
+                }
+                label="7-day average"
+                value={
+                  <NumericText variant="numberWeightEntry">
+                    {formatWeightValue(sevenDayAverageWeightKg)}
+                  </NumericText>
+                }
               />
-            }
-            subtitle={
-              trackedMicronutrientCount
-                ? `${trackedMicronutrientCount} nutrients tracked`
-                : "No nutrient data logged today"
-            }
-            title="Micronutrients"
-          />
-          <View style={styles.microList}>
-            {(trackedMicronutrientCount > 0 ? microsPreview : []).map(
-              (item, index) => (
+              {goalProgressPercent != null ? (
                 <MetricLine
-                  divider={index < microsPreview.length - 1}
                   icon={
-                    <LeafIcon
+                    <TargetIcon
                       size={16}
-                      color={appColors.protein}
+                      color={appColors.textMuted}
                       weight="regular"
                     />
                   }
-                  key={item.key}
-                  label={item.label}
+                  label="To goal"
                   value={
-                    <NumericText variant="numberMacroRow">
-                      {formatMicronutrientValue(item.value, item.unit)}
+                    <NumericText variant="numberWeightEntry">
+                      {goalProgressPercent != null
+                        ? `${goalProgressPercent}%`
+                        : "--"}
                     </NumericText>
                   }
                 />
-              ),
-            )}
+              ) : null}
+            </View>
           </View>
-        </Pressable>
+          <CardFooter label="View weekly check-in" />
+        </InteractiveCard>
+
+        <InteractiveCard
+          accessibilityLabel="Open micronutrients overview"
+          accessibilityRole="button"
+          onPress={() => navigation.navigate("MicrosOverview")}
+          style={styles.section}
+        >
+          <View style={styles.sectionContent}>
+            <SectionHeader
+              subtitle={
+                trackedMicronutrientCount
+                  ? `${trackedMicronutrientCount} nutrients tracked`
+                  : "No nutrient data logged today"
+              }
+              title="Micronutrients"
+            />
+            <View style={styles.microList}>
+              {(trackedMicronutrientCount > 0 ? microsPreview : []).map(
+                (item, index) => (
+                  <MetricLine
+                    divider={index < microsPreview.length - 1}
+                    icon={
+                      <LeafIcon
+                        size={16}
+                        color={appColors.protein}
+                        weight="regular"
+                      />
+                    }
+                    key={item.key}
+                    label={item.label}
+                    value={
+                      <NumericText variant="numberMacroRow">
+                        {formatMicronutrientValue(item.value, item.unit)}
+                      </NumericText>
+                    }
+                  />
+                ),
+              )}
+            </View>
+          </View>
+          <CardFooter label="View micronutrients" />
+        </InteractiveCard>
       </ScrollView>
     </View>
   );
@@ -545,6 +478,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
+    ...appContentLayout,
     paddingHorizontal: appSpacing.gutter,
   },
   dateText: {
@@ -558,27 +492,15 @@ const styles = StyleSheet.create({
     marginTop: appSpacing.xl,
     marginBottom: appSpacing.md,
   },
-  heroSection: {
-    marginTop: appSpacing.xl,
-    marginBottom: appSpacing.lg,
-  },
-  heroValueRow: {
-    alignItems: "baseline",
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-  heroTarget: {
-    marginLeft: appSpacing.xxs,
-  },
-  heroRail: {
-    marginTop: appSpacing.sm,
-  },
   macroSummaryRow: {
     flexDirection: "row",
-    gap: appSpacing.lg,
-    marginBottom: appSpacing.xl,
+    gap: appSpacing.xs,
+    marginBottom: appSpacing.md,
   },
+  macroSummaryStacked: { flexDirection: "column" },
   macroItem: {
+    ...appMetricSurface,
+    padding: appSpacing.sm,
     flex: 1,
     minWidth: 0,
   },
@@ -586,29 +508,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: appSpacing.xxs,
-    marginBottom: appSpacing.xxs,
+    flexWrap: "wrap",
+    marginBottom: appSpacing.xs,
   },
   macroItemValue: {
     textAlign: "left",
-    marginBottom: appSpacing.xs,
+    marginBottom: appSpacing.xxs,
+  },
+  macroItemHeaderCompact: {
+    flexDirection: "column",
+    alignItems: "flex-start",
   },
   macroItemRail: {
-    marginTop: 0,
+    marginTop: appSpacing.sm,
   },
   section: {
-    marginTop: appSpacing.xxl,
+    padding: 0,
+    marginBottom: appSpacing.md,
   },
-  sectionPressed: {
-    opacity: appStates.pressedOpacity,
-  },
-  weeklyAction: {
-    minHeight: 44,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: appSpacing.xxs,
-  },
-  weeklyActionText: {
-    color: appColors.actionPrimary,
+  sectionContent: {
+    padding: appSpacing.md,
   },
   insightList: {
     marginTop: appSpacing.md,

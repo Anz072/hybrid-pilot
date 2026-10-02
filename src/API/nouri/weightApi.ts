@@ -46,7 +46,16 @@ export const saveWeight = (input: {
   notes?: string | null;
   deviceId?: string | null;
 }): Promise<ApiWeightEntry> =>
-  apiRequest<ApiWeightEntry>("/v1/weights", { method: "POST", body: input });
+  apiRequest<ApiWeightEntry>("/v1/weights", {
+    method: "POST",
+    body: {
+      ...input,
+      // UI drafts and older backups include an ISO offset. The API stores
+      // local wall-clock time separately from zoneOffsetMinutes. Remove only
+      // the suffix: converting to UTC here could change the weigh-in's day.
+      measuredAtLocalIso: input.measuredAtLocalIso.replace(/(?:Z|[+-]\d{2}:\d{2})$/, ""),
+    },
+  });
 
 export const deleteWeight = (id: string): Promise<ApiWeightEntry> =>
   apiRequest<ApiWeightEntry>(`/v1/weights/${id}`, { method: "DELETE" });

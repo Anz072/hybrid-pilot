@@ -1,0 +1,19 @@
+appId: com.dribsnis.app
+name: Protocols in-app reminder lifecycle
+# Starts with global Add open after protocols-root.yaml. Uses the isolated account only.
+---
+- tapOn: "Bloodwork reminder"
+- assertVisible: "A one-time item in your Protocols calendar. No device alert is sent."
+- scrollUntilVisible:
+    element: "Save calendar item"
+    direction: DOWN
+- takeScreenshot: protocols-reminder-form
+- tapOn: "Save calendar item"
+- assertVisible: "Trends, tab, 3 of 4"
+- tapOn: "Today, tab, 1 of 4"
+- scrollUntilVisible:
+    element: "Calendar item · no device alert"
+    direction: DOWN
+- assertVisible: "BLOODWORK CALENDAR"
+- takeScreenshot: protocols-reminder-today
+- runFlow: protocols-reminder-edit.yaml

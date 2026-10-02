@@ -10,7 +10,10 @@ import {
 import { useDisplayPreferences } from "../../preferences/usePreferences";
 import { appColors } from "../../theme/colors";
 import { AppCard, AppText, SegmentedControl } from "../../components/ui";
-import { appSpacing } from "../../theme/tokens";
+import {
+  appContentLayout,
+  appSpacing,
+} from "../../theme/tokens";
 import SettingsStackHeader from "./SettingsStackHeader";
 
 type Props = NativeStackScreenProps<MoreParamList, "PreferencesScreen">;
@@ -36,7 +39,7 @@ const PreferenceRow = <T extends string>({
   options,
   onChange,
 }: PreferenceRowProps<T>) => (
-  <AppCard style={styles.card} variant="plain">
+  <AppCard style={styles.card} variant="surface">
     <AppText variant="cardTitle">{title}</AppText>
 
     <SegmentedControl options={options} onChange={onChange} value={value} />
@@ -121,9 +124,11 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
+    ...appContentLayout,
     paddingHorizontal: appSpacing.gutter,
   },
   card: {
+    gap: appSpacing.sm,
     marginBottom: appSpacing.md,
   },
   cardText: {

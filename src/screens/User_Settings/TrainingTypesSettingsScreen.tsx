@@ -13,7 +13,10 @@ import {
   NumericText,
   OptionCard,
 } from "../../components/ui";
-import { appSpacing } from "../../theme/tokens";
+import {
+  appContentLayout,
+  appSpacing,
+} from "../../theme/tokens";
 import SettingsStackHeader from "./SettingsStackHeader";
 import {
   formatTrainingSummary,
@@ -89,7 +92,7 @@ const TrainingTypesSettingsScreen = ({ navigation }: Props) => {
         />
 
         {!user ? (
-          <AppCard style={styles.card} variant="plain">
+          <AppCard style={styles.card} variant="surface">
             <AppText variant="cardTitle">No active user</AppText>
             <AppText color="secondary" variant="bodySmall">
               Sign in to your account first before editing training settings.
@@ -97,7 +100,7 @@ const TrainingTypesSettingsScreen = ({ navigation }: Props) => {
           </AppCard>
         ) : (
           <>
-            <AppCard style={styles.card} variant="plain">
+            <AppCard style={styles.card} variant="surface">
               <View style={styles.optionStack}>
                 {TRAINING_TYPE_OPTIONS.map((option) => {
                   const selected = selectedTraining.includes(option.value);
@@ -134,6 +137,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
+    ...appContentLayout,
     paddingHorizontal: appSpacing.gutter,
   },
   card: {

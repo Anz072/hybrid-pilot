@@ -17,10 +17,11 @@ export const appSpacing = {
 export const appRadius = {
   none: 0,
   xs: 4,
-  sm: 6,
+  sm: 8,
   md: 10,
   lg: 12,
   xl: 16,
+  button: 20,
   pill: 999,
 } as const;
 
@@ -59,4 +60,13 @@ export const appMotion = {
   pressMs: 140,
   stateMs: 180,
   modalMs: 220,
+} as const;
+
+export { appElevation, appCardSurface, appMetricSurface } from "./elevation";
+
+/** Keep forms and reading content comfortable on supported tablets. */
+export const appContentLayout = {
+  width: "100%",
+  maxWidth: 720,
+  alignSelf: "center",
 } as const;

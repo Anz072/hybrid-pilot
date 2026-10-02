@@ -23,6 +23,8 @@ export type ApiProfile = {
 };
 
 export type ApiSettings = {
+  protocolsEnabled: boolean;
+  protocolsIntroSeenAt: string | null;
   foodDiaryStartHour: number;
   foodDiaryEndHour: number;
   dailyCalorieOverrides: Array<number | null> | null;
@@ -47,7 +49,7 @@ export type ApiMe = {
   weightGoal: ApiWeightGoal | null;
 };
 
-export const getMe = (): Promise<ApiMe> => apiRequest<ApiMe>("/v1/me");
+export const getMe = (expectedUserId?: string): Promise<ApiMe> => apiRequest<ApiMe>("/v1/me", { expectedUserId });
 
 export const patchProfile = (
   patch: Partial<Omit<ApiProfile, "id" | "email" | "createdAt" | "updatedAt">>,
@@ -56,8 +58,9 @@ export const patchProfile = (
 
 export const patchSettings = (
   patch: Partial<Omit<ApiSettings, "createdAt" | "updatedAt">>,
+  expectedUserId?: string,
 ): Promise<ApiSettings> =>
-  apiRequest<ApiSettings>("/v1/me/settings", { method: "PATCH", body: patch });
+  apiRequest<ApiSettings>("/v1/me/settings", { method: "PATCH", body: patch, expectedUserId });
 
 export const putWeightGoal = (input: {
   targetWeightKg: number;

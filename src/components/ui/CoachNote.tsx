@@ -1,7 +1,7 @@
 import React from "react";
 import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { appColors } from "../../theme/colors";
-import { appBorders, appSpacing } from "../../theme/tokens";
+import { appRadius, appSpacing } from "../../theme/tokens";
 import type { AppTypographyRole } from "../../theme/typography";
 import { AppText } from "./AppText";
 
@@ -36,9 +36,9 @@ export const CoachNote = ({
 
 const styles = StyleSheet.create({
   container: {
-    borderLeftWidth: appBorders.ruleWidth,
-    borderLeftColor: appColors.actionPrimary,
-    paddingLeft: appSpacing.md,
+    backgroundColor: appColors.actionPrimarySoft,
+    borderRadius: appRadius.lg,
+    padding: appSpacing.md,
     gap: appSpacing.xs,
   },
   message: {

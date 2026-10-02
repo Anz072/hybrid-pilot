@@ -1,0 +1,10 @@
+import * as api from "../API/nouri/bloodworkApi";
+import { readProtocolResource as read,writeProtocolResource as write } from "./protocolsStore";
+export const listBiomarkers = read("biomarkers",api.listBiomarkers);
+export const getBloodworkHistory = read("bloodworkHistory",api.getBloodworkHistory);
+export const listBloodworkPanels = read("bloodworkPanels",api.listBloodworkPanels);
+export const getBloodworkPanel = read("bloodworkPanel",api.getBloodworkPanel);
+export const createBloodworkPanel = write(api.createBloodworkPanel);
+export const editBloodworkPanel = write(api.editBloodworkPanel);
+export const deleteBloodworkPanel = write(api.deleteBloodworkPanel);
+export const setBiomarkerDisplayUnit = write(api.setBiomarkerDisplayUnit);

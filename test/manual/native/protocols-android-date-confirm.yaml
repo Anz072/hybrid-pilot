@@ -1,0 +1,17 @@
+appId: com.dribsnis.app
+name: Confirm the retained Android bloodwork date
+# Run >=35 seconds after protocols-android-date-open.yaml, without touching
+# the picker in between. Supply QA_PICKER_LABEL and QA_ACCEPTED_DATE.
+# This saves the edited synthetic panel; it never deletes data.
+---
+- assertVisible: "${QA_PICKER_LABEL}"
+- takeScreenshot: protocols-date-after-clock-refresh
+- tapOn: "OK"
+- assertVisible: "Collection date, ${QA_ACCEPTED_DATE}"
+- scrollUntilVisible:
+    element: "Save bloodwork"
+    direction: DOWN
+    timeout: 15000
+- tapOn: "Save bloodwork"
+- assertVisible: "Edit bloodwork"
+- assertVisible: "${QA_ACCEPTED_DATE}"

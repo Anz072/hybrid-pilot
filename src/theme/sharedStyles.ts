@@ -4,6 +4,8 @@ import { appColors } from "./colors";
 import { appTypography } from "./typography";
 import {
   appBorders,
+  appCardSurface,
+  appContentLayout,
   appRadius,
   appSpacing,
   appStates,
@@ -18,14 +20,19 @@ export const sharedStyleValues = {
     backgroundColor: appSurfaces.canvas,
   },
   content: {
+    ...appContentLayout,
     paddingHorizontal: appSpacing.gutter,
   },
-  /** An open form section — content sits on the canvas; the section title carries the hierarchy. */
+  /** Raised form sections share the same surface as the primary screens. */
   card: {
-    marginBottom: appSpacing.xl,
+    ...appCardSurface,
+    padding: appSpacing.md,
+    marginBottom: appSpacing.md,
   },
   cardCompact: {
-    marginBottom: appSpacing.xl,
+    ...appCardSurface,
+    padding: appSpacing.md,
+    marginBottom: appSpacing.md,
   },
   centerCard: {
     alignItems: "center",
@@ -57,8 +64,6 @@ export const sharedStyleValues = {
     marginBottom: appSpacing.xs,
   },
   sectionHead: {
-    borderTopWidth: appBorders.ruleWidth,
-    borderTopColor: appBorders.rule,
     paddingTop: appSpacing.sm,
     marginTop: appSpacing.xl,
   },
@@ -95,7 +100,7 @@ export const sharedStyleValues = {
     alignItems: "center",
     gap: appSpacing.xs,
   },
-  /** Editorial fields: soft fills with a transparent resting border (focus/error can color it without a layout jump). */
+  /** Inset fields: soft fills with a transparent resting border (focus/error can color it without a layout jump). */
   input: {
     flex: 1,
     borderWidth: appBorders.width,
@@ -128,8 +133,8 @@ export const sharedStyleValues = {
     color: appColors.textSecondary,
   },
   iconButton: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderRadius: appRadius.pill,
     alignItems: "center",
     justifyContent: "center",
@@ -138,8 +143,8 @@ export const sharedStyleValues = {
     borderColor: appBorders.soft,
   },
   iconButtonPrimary: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderRadius: appRadius.pill,
     alignItems: "center",
     justifyContent: "center",
@@ -199,7 +204,7 @@ export const sharedStyleValues = {
     minHeight: 48,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: appRadius.md,
+    borderRadius: appRadius.button,
     paddingVertical: appSpacing.sm,
     paddingHorizontal: appSpacing.md,
   },

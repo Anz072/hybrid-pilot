@@ -109,6 +109,7 @@ const expectRejects = (promise: Promise<unknown>, pattern?: RegExp) =>
 describe("api failure reporting", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
     globalThis.fetch = originalFetch;
   });
 
@@ -162,6 +163,19 @@ describe("api failure reporting", () => {
   expectEqual(h.warnings.length, 1);
   expectMatch(h.warnings[0], /NETWORK_ERROR status=0/);
 });
+
+  it.each([undefined, "", "   "])("missing API URL (%j) stays a configuration error", async (baseUrl) => {
+    vi.stubEnv("EXPO_PUBLIC_API_BASE_URL", baseUrl);
+    const h = await loadClient();
+
+    await expect(h.mod.apiRequest("/v1/me")).rejects.toThrow(
+      h.mod.NOURI_API_UNCONFIGURED_MESSAGE,
+    );
+    expect(h.state.fetches).toEqual([]);
+    expect(h.state.refreshCalls).toBe(0);
+    expect(h.warnings).toHaveLength(1);
+    expect(h.warnings[0]).not.toContain("NETWORK_ERROR");
+  });
 
   it("no session is reported without touching the network", async () => {
   const h = await loadClient({ session: null });

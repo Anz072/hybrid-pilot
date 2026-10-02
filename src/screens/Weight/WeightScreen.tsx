@@ -69,6 +69,8 @@ import {
   AppCard,
   AppInput,
   AppText,
+  AppSnackbar,
+  type SnackbarNotice,
   EmptyState,
   IconButton,
   InteractiveCard,
@@ -77,6 +79,9 @@ import {
 } from "../../components/ui";
 import {
   appBorders,
+  appCardSurface,
+  appContentLayout,
+  appElevation,
   appRadius,
   appSpacing,
   appStates,
@@ -87,12 +92,6 @@ import { appTypography } from "../../theme/typography";
 const SOFT_MIN_WEIGHT_KG = 20;
 const SOFT_MAX_WEIGHT_KG = 300;
 const FUTURE_GRACE_MINUTES = 5;
-
-type SnackbarState = {
-  message: string;
-  actionLabel?: string;
-  onAction?: () => void;
-};
 
 type InsightCardProps = {
   title: string;
@@ -189,7 +188,7 @@ const WeightScreen = ({ externalRefreshToken = 0 }: WeightScreenProps) => {
   const [editingEntry, setEditingEntry] = React.useState<DBWeightEntry | null>(
     null,
   );
-  const [snackbar, setSnackbar] = React.useState<SnackbarState | null>(null);
+  const [snackbar, setSnackbar] = React.useState<SnackbarNotice | null>(null);
   const [expandedInsightTitle, setExpandedInsightTitle] = React.useState<
     string | null
   >(null);
@@ -285,14 +284,9 @@ const WeightScreen = ({ externalRefreshToken = 0 }: WeightScreenProps) => {
     void hydrate({ silent: true });
   }, [externalRefreshToken, hydrate]);
 
-  React.useEffect(() => {
-    if (!snackbar) {
-      return;
-    }
-
-    const timeout = setTimeout(() => setSnackbar(null), 7000);
-    return () => clearTimeout(timeout);
-  }, [snackbar]);
+  const dismissSnackbar = React.useCallback((notice: SnackbarNotice) => {
+    setSnackbar((current) => current === notice ? null : current);
+  }, []);
 
   const activeEntries = React.useMemo(
     () =>
@@ -572,7 +566,7 @@ const WeightScreen = ({ externalRefreshToken = 0 }: WeightScreenProps) => {
     // The row on screen is optimistic: it is what the save is expected to
     // produce, not a record that exists yet. Saying "saved" here would be a
     // claim about the server that has not been made.
-    setSnackbar({ message: baseEntry ? "Updating…" : "Saving…" });
+    setSnackbar({ message: baseEntry ? "Updating…" : "Saving…", pending: true });
 
     try {
       const saved = await DB.saveWeightEntry({
@@ -594,8 +588,8 @@ const WeightScreen = ({ externalRefreshToken = 0 }: WeightScreenProps) => {
       setSnackbar({
         message:
           sameDayEntries.length > 0
-            ? "Saved - same-day entry replaced"
-            : "Saved",
+            ? "Weight updated"
+            : "Weight saved",
       });
       try {
         await refreshAdaptiveRecommendationForUser({
@@ -635,7 +629,7 @@ const WeightScreen = ({ externalRefreshToken = 0 }: WeightScreenProps) => {
       closeModal();
     }
 
-    showUndoSnackbar("Deleted", async () => {
+    showUndoSnackbar("Weight deleted", async () => {
       try {
         const restored = await DB.saveWeightEntry(
           toSaveWeightEntryInput(entry),
@@ -1128,7 +1122,7 @@ const WeightScreen = ({ externalRefreshToken = 0 }: WeightScreenProps) => {
             tintColor={appColors.slate900}
           />
         }
-        contentContainerStyle={{ paddingBottom: 180 + insets.bottom }}
+        contentContainerStyle={[appContentLayout, { paddingBottom: appSpacing.xl + insets.bottom }]}
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={listHeader}
@@ -1313,7 +1307,7 @@ const WeightScreen = ({ externalRefreshToken = 0 }: WeightScreenProps) => {
               { paddingBottom: insets.bottom + 24 },
             ]}
           >
-            <AppCard style={styles.card} variant="plain">
+            <AppCard style={styles.card} variant="surface">
               <View style={styles.inputRow}>
                 <AppInput
                   label="Target weight"
@@ -1418,22 +1412,7 @@ const WeightScreen = ({ externalRefreshToken = 0 }: WeightScreenProps) => {
         }
       />
 
-      {snackbar ? (
-        <View style={[styles.snackbar, { bottom: insets.bottom + 98 }]}>
-          <AppText style={styles.snackbarText} variant="bodySmall">
-            {snackbar.message}
-          </AppText>
-          {snackbar.actionLabel && snackbar.onAction ? (
-            <AppButton
-              onPress={snackbar.onAction}
-              label={snackbar.actionLabel}
-              size="sm"
-              variant="secondary"
-              style={styles.snackbarAction}
-            />
-          ) : null}
-        </View>
-      ) : null}
+      <AppSnackbar notice={snackbar} onDismiss={dismissSnackbar} />
     </View>
   );
 };
@@ -1465,13 +1444,11 @@ const styles = StyleSheet.create({
     gap: appSpacing.sm,
   },
   heroSection: {
-    marginBottom: appSpacing.lg,
-  },
-  heroOpeningRule: {
-    width: 44,
-    height: appBorders.ruleWidth,
-    backgroundColor: appBorders.rule,
-    marginBottom: appSpacing.sm,
+    ...appCardSurface,
+    ...appElevation.hero,
+    borderRadius: appRadius.xl,
+    padding: appSpacing.md,
+    marginBottom: appSpacing.md,
   },
   heroStatLabel: {
     marginBottom: appSpacing.xxs,
@@ -1658,7 +1635,10 @@ const styles = StyleSheet.create({
     color: appColors.white,
   },
   historyTableHeader: {
-    marginHorizontal: appSpacing.gutter,
+    backgroundColor: appColors.surfaceCard,
+    borderTopLeftRadius: appRadius.lg,
+    borderTopRightRadius: appRadius.lg,
+    paddingTop: appSpacing.sm,    marginHorizontal: appSpacing.gutter,
     marginTop: appSpacing.xs,
     flexDirection: "row",
     alignItems: "center",
@@ -1672,8 +1652,9 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   historyRow: {
+    ...appElevation.none,
     marginHorizontal: appSpacing.gutter,
-    backgroundColor: "transparent",
+    backgroundColor: appColors.surfaceCard,
     borderWidth: 0,
     borderRadius: 0,
     borderBottomWidth: appBorders.width,
@@ -1683,6 +1664,8 @@ const styles = StyleSheet.create({
   },
   historyRowFirst: {},
   historyRowLast: {
+    borderBottomLeftRadius: appRadius.lg,
+    borderBottomRightRadius: appRadius.lg,
     borderBottomWidth: 0,
   },
   historyRowActive: {
@@ -1759,33 +1742,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: appSpacing.gutter,
     paddingTop: appSpacing.xs,
   },
-  snackbar: {
-    position: "absolute",
-    left: appSpacing.gutter,
-    right: appSpacing.gutter,
-    borderRadius: appRadius.md,
-    backgroundColor: appColors.surfaceInverse,
-    paddingHorizontal: appSpacing.md,
-    paddingVertical: appSpacing.sm,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: appSpacing.sm,
-  },
-  snackbarText: {
-    flex: 1,
-    color: appColors.textInverse,
-  },
-  snackbarAction: {
-    minHeight: 44,
-  },
   ledgerSection: {
-    marginBottom: appSpacing.lg,
+    ...appCardSurface,
+    padding: appSpacing.xs,
+    marginBottom: appSpacing.md,
   },
   historySection: {
-    marginBottom: appSpacing.none,
+    ...appCardSurface,
+    marginBottom: appSpacing.xs,
   },
   ledgerSectionHeader: {
+    ...appElevation.none,
     minHeight: 52,
     borderWidth: 0,
     borderRadius: 0,
@@ -1802,6 +1769,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   insightRow: {
+    ...appElevation.none,
     minHeight: 52,
     borderWidth: 0,
     borderRadius: 0,

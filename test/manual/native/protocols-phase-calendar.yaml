@@ -1,0 +1,28 @@
+appId: com.dribsnis.app
+name: Calendar respects the future phase boundary
+# September 10 fixture: 110 mg every two days anchored September 9;
+# changes September 12 to 90 mg every three days with the same anchor.
+# Starts on the course detail after the phase save.
+---
+- scrollUntilVisible:
+    element: "Estimated Levels"
+    direction: UP
+- tapOn: "Estimated Levels"
+- tapOn: "Today, tab, 1 of 4"
+- scrollUntilVisible:
+    element: "Calendar"
+    direction: UP
+- tapOn: "Calendar"
+- tapOn: "Sep 11, 2026, 1 scheduled"
+- assertVisible: "110 mg · IM"
+- assertVisible: "Planned · Sep 11 at 20:00"
+- takeScreenshot: protocols-calendar-before-phase
+- tapOn: "Calendar"
+- tapOn: "Sep 12, 2026, 1 scheduled"
+- assertVisible: "90 mg · IM"
+- assertVisible: "Planned · Sep 12 at 20:00"
+- takeScreenshot: protocols-calendar-new-phase
+- tapOn: "Calendar"
+- tapOn: "Sep 13, 2026, No scheduled activity"
+- assertVisible: "Nothing scheduled this day"
+- takeScreenshot: protocols-calendar-removed-old-slot

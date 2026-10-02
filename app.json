@@ -2,7 +2,7 @@
   "expo": {
     "name": "Nouri",
     "slug": "dribsnis",
-    "version": "1.0.3",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./nouri_app_assets/assets/images/icon.png",
     "scheme": "dribsnis",
@@ -16,7 +16,8 @@
     "ios": {
       "icon": "./nouri_app_assets/assets/images/ios-icon.png",
       "bundleIdentifier": "com.dribsnis.app",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "buildNumber": "2"
     },
     "android": {
       "icon": "./nouri_app_assets/assets/images/android-icon.png",
@@ -28,7 +29,8 @@
       },
       "edgeToEdgeEnabled": true,
       "softwareKeyboardLayoutMode": "resize",
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "versionCode": 2
     },
     "web": {
       "favicon": "./nouri_app_assets/assets/images/favicon.png"
@@ -68,7 +70,8 @@
       ],
       "expo-camera",
       "expo-font",
-      "expo-secure-store"
+      "expo-secure-store",
+      "./plugins/withFontScale.cjs"
     ]
   }
 }

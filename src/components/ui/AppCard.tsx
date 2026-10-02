@@ -10,20 +10,14 @@ import {
 } from "react-native";
 import {
   appBorders,
+  appElevation,
   appRadius,
   appSpacing,
   appStates,
   appSurfaces,
 } from "../../theme/tokens";
 
-/**
- * Bright Editorial card tones. A contained panel is never naked white on the
- * porcelain canvas — `surface` carries a hairline boundary, `subtle` a soft
- * fill, and `spotlight` opens with a short ink rule. Truly open content
- * belongs directly on the canvas, not in a card at all.
- * `standard`/`compact`/`soft`/`hero` remain as call-site aliases for
- * screens that haven't migrated to the new tone names yet.
- */
+/** Raised white surfaces; plain and inset variants remain flat for nested content. */
 type CardVariant =
   | "plain"
   | "surface"
@@ -41,9 +35,6 @@ type AppCardProps = ViewProps & {
   variant?: CardVariant;
 };
 
-const isSpotlight = (variant: CardVariant) =>
-  variant === "spotlight" || variant === "hero";
-
 export const AppCard = ({
   children,
   style,
@@ -51,7 +42,6 @@ export const AppCard = ({
   ...props
 }: AppCardProps) => (
   <View {...props} style={[styles.card, styles[variant], style]}>
-    {isSpotlight(variant) ? <View style={styles.openingRule} /> : null}
     {children}
   </View>
 );
@@ -88,7 +78,6 @@ export const InteractiveCard = ({
       style,
     ]}
   >
-    {isSpotlight(variant) ? <View style={styles.openingRule} /> : null}
     {children}
   </Pressable>
 );
@@ -119,10 +108,11 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: appSurfaces.card,
     borderRadius: appRadius.lg,
-    borderWidth: appBorders.width,
-    borderColor: appBorders.soft,
+    borderWidth: 0,
+    ...appElevation.card,
   },
   plain: {
+    ...appElevation.none,
     padding: 0,
     borderWidth: 0,
     backgroundColor: "transparent",
@@ -135,37 +125,40 @@ const styles = StyleSheet.create({
     padding: appSpacing.md,
   },
   compact: {
+    borderRadius: appRadius.sm,
+    ...appElevation.metric,
     paddingHorizontal: appSpacing.sm,
     paddingVertical: appSpacing.sm,
   },
   subtle: {
+    ...appElevation.none,
     padding: appSpacing.md,
     backgroundColor: appSurfaces.soft,
     borderWidth: 0,
   },
   soft: {
+    ...appElevation.none,
     padding: appSpacing.md,
     backgroundColor: appSurfaces.soft,
     borderWidth: 0,
   },
   spotlight: {
+    borderRadius: appRadius.xl,
+    ...appElevation.hero,
     padding: appSpacing.xl,
     backgroundColor: appSurfaces.raised,
   },
   hero: {
+    borderRadius: appRadius.xl,
+    ...appElevation.hero,
     padding: appSpacing.xl,
     backgroundColor: appSurfaces.raised,
   },
   outlined: {
+    ...appElevation.none,
+    borderWidth: appBorders.width,
     padding: appSpacing.md,
     borderColor: appBorders.strong,
-  },
-  /** Short ink rule that opens a spotlight/hero panel — the editorial anchor. */
-  openingRule: {
-    width: 44,
-    height: appBorders.ruleWidth,
-    backgroundColor: appBorders.rule,
-    marginBottom: appSpacing.sm,
   },
   selected: {
     backgroundColor: appStates.selectedFill,

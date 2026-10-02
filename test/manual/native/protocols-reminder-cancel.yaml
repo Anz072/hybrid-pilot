@@ -1,0 +1,21 @@
+appId: com.dribsnis.app
+name: Unsaved reminder page navigation
+# Starts in Today with no calendar items on the selected day.
+---
+- tapOn: "Add to Protocols"
+- tapOn: "Bloodwork reminder"
+- tapOn:
+    text: "Title"
+    index: 1
+- eraseText
+- inputText: "Unsaved calendar item"
+- hideKeyboard
+- tapOn: "Go back"
+- assertVisible: "Leave reminder?"
+- tapOn: "Keep editing"
+- assertVisible: "Unsaved calendar item"
+- tapOn: "Go back"
+- assertVisible: "Leave reminder?"
+- tapOn: "Leave"
+- assertVisible: "Today, tab, 1 of 4"
+- assertVisible: "Nothing scheduled this day"

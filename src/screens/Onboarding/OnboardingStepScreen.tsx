@@ -9,7 +9,11 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText } from "../../components/ui";
 import { appColors } from "../../theme/colors";
-import { appSpacing, appSurfaces } from "../../theme/tokens";
+import {
+  appContentLayout,
+  appSpacing,
+  appSurfaces,
+} from "../../theme/tokens";
 import OnboardingTopBar from "./OnboardingTopBar";
 
 export const ONBOARDING_TOTAL_STEPS = 10;
@@ -73,6 +77,7 @@ const OnboardingStepScreen = ({
         <View style={[styles.header, centered && styles.headerCentered]}>
           {headerAccessory}
           <AppText
+            accessibilityRole="header"
             align={centered ? "center" : undefined}
             variant={centered ? "screenTitle" : "sectionTitleLarge"}
           >
@@ -110,6 +115,7 @@ const styles = StyleSheet.create({
     backgroundColor: appSurfaces.canvas,
   },
   content: {
+    ...appContentLayout,
     flexGrow: 1,
     paddingHorizontal: appSpacing.gutter,
   },
@@ -130,6 +136,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   footer: {
+    ...appContentLayout,
     paddingHorizontal: appSpacing.gutter,
     paddingTop: appSpacing.sm,
     backgroundColor: appSurfaces.canvas,

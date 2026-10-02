@@ -1,0 +1,10 @@
+appId: com.dribsnis.app
+name: Protocols sign-in, root sections and reminder CRUD
+# Fresh isolated QA account, tracking off, verified local bundle launched via
+# simctl. Requires QA_EMAIL and QA_PASSWORD from its private fixture file.
+# This flow is a subset of the full acceptance walkthrough, not a release gate.
+---
+- runFlow: protocols-login.yaml
+- runFlow: protocols-shell.yaml
+- runFlow: protocols-opt-in.yaml
+- runFlow: protocols-reminder.yaml

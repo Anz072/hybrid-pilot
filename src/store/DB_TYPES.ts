@@ -70,6 +70,8 @@ export type UpsertUserInput = DBUser;
 
 
 export type DBUserSettings = {
+  protocolsEnabled: boolean;
+  protocolsIntroSeenAt: DBIsoDateString | null;
   userExternalId: string;
   foodDiaryStartHour: number;
   foodDiaryEndHour: number;
@@ -82,6 +84,8 @@ export type DBUserSettings = {
 };
 
 export type SaveUserSettingsInput = {
+  protocolsEnabled?: boolean;
+  protocolsIntroSeenAt?: DBIsoDateString | null;
   userExternalId: string;
   foodDiaryStartHour?: number;
   foodDiaryEndHour?: number;

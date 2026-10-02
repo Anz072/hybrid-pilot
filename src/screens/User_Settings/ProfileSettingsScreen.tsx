@@ -32,7 +32,10 @@ import {
   AppText,
   Chip,
 } from "../../components/ui";
-import { appSpacing } from "../../theme/tokens";
+import {
+  appContentLayout,
+  appSpacing,
+} from "../../theme/tokens";
 import SettingsStackHeader from "./SettingsStackHeader";
 import { saveUserProfileChanges } from "./userSettingsActions";
 import { signOutSupabaseSession } from "../../API/supabase/auth";
@@ -284,7 +287,7 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
           />
 
           {!user ? (
-            <AppCard style={styles.card} variant="plain">
+            <AppCard style={styles.card} variant="surface">
               <AppText variant="cardTitle">No active user</AppText>
               <AppText color="secondary" variant="bodySmall">
                 Sign in to your account first before editing profile details.
@@ -292,13 +295,13 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
             </AppCard>
           ) : (
             <>
-              <AppCard style={styles.card} variant="plain">
+              <AppCard style={styles.card} variant="surface">
                 <AppText color="secondary" variant="bodySmall">
                   {user.email ?? "No email"}
                 </AppText>
               </AppCard>
 
-              <AppCard style={styles.card} variant="plain">
+              <AppCard style={styles.card} variant="surface">
                 <AppInput
                   label="Display name"
                   placeholder="Your name"
@@ -455,7 +458,7 @@ const ProfileSettingsScreen = ({ navigation }: Props) => {
                 </AppText>
               </AppCard>
 
-              <AppCard style={styles.card} variant="plain">
+              <AppCard style={styles.card} variant="surface">
                 <AppButton
                   onPress={handleSignOut}
                   disabled={signingOut}
@@ -477,6 +480,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
+    ...appContentLayout,
     paddingHorizontal: appSpacing.gutter,
   },
   card: {

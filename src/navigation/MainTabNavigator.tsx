@@ -80,10 +80,10 @@ export type MainTabParamList = {
   More: NavigatorScreenParams<MoreParamList> | undefined;
 };
 
-const FOCUSED_COLOR = appColors.textPrimary;
-const UNFOCUSED_COLOR = appColors.textMuted;
-const TAB_BAR_BACKGROUND = appColors.surfaceCard;
-const TAB_BAR_BORDER = appColors.borderSoft;
+const FOCUSED_COLOR = appColors.navigationForeground;
+const UNFOCUSED_COLOR = appColors.navigationForeground;
+const TAB_BAR_BACKGROUND = appColors.navigationBackground;
+const TAB_BAR_BORDER = appColors.navigationBackground;
 const SHEET_HEIGHT = Math.min(
   520,
   Math.round(Dimensions.get("window").height * 0.8),
@@ -484,13 +484,16 @@ const MainTabNavigator = () => {
             tabBarActiveTintColor: FOCUSED_COLOR,
             tabBarInactiveTintColor: UNFOCUSED_COLOR,
             tabBarLabelStyle: styles.tabBarLabel,
-            tabBarLabel: ({ color, children }) => (
-              <AppText
-                maxFontSizeMultiplier={1.3}
-                style={[styles.tabBarLabel, { color }]}
-              >
-                {children}
-              </AppText>
+            tabBarLabel: ({ color, children, focused }) => (
+              <View style={styles.tabLabelWrap}>
+                <AppText
+                  maxFontSizeMultiplier={1.3}
+                  style={[styles.tabBarLabel, { color }]}
+                >
+                  {children}
+                </AppText>
+                <View style={[styles.activeTabRule, !focused && styles.inactiveTabRule]} />
+              </View>
             ),
             tabBarItemStyle: styles.tabBarItem,
             tabBarStyle: visibleTabBarStyle,
@@ -504,7 +507,7 @@ const MainTabNavigator = () => {
                 <HouseSimpleIcon
                   size={26}
                   color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
-                  weight={focused ? "bold" : "regular"}
+                  weight={focused ? "fill" : "regular"}
                 />
               ),
             }}
@@ -533,7 +536,7 @@ const MainTabNavigator = () => {
                   <ForkKnifeIcon
                     size={26}
                     color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
-                    weight={focused ? "bold" : "regular"}
+                    weight={focused ? "fill" : "regular"}
                   />
                 ),
               };
@@ -542,27 +545,17 @@ const MainTabNavigator = () => {
           <Tab.Screen
             name="Shortcuts"
             component={ShortcutPlaceholderScreen}
+            listeners={{
+              tabPress: (event) => {
+                event.preventDefault();
+                openShortcuts();
+              },
+            }}
             options={{
-              tabBarLabel: () => null,
-              tabBarButton: () => (
-                <Pressable
-                  accessibilityLabel="Open shortcuts"
-                  accessibilityRole="button"
-                  onPress={openShortcuts}
-                  style={({ pressed }) => [
-                    styles.shortcutTabSlot,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <PlusIcon size={31} color={FOCUSED_COLOR} weight="regular" />
-                  <AppText
-                    maxFontSizeMultiplier={1.3}
-                    style={styles.shortcutTabLabel}
-                    variant="bodySmall"
-                  >
-                    Add
-                  </AppText>
-                </Pressable>
+              title: "Add",
+              tabBarAccessibilityLabel: "Open shortcuts",
+              tabBarIcon: () => (
+                <PlusIcon size={31} color={FOCUSED_COLOR} weight="regular" />
               ),
             }}
           />
@@ -573,7 +566,7 @@ const MainTabNavigator = () => {
                 <ScalesIcon
                   size={26}
                   color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
-                  weight={focused ? "bold" : "regular"}
+                  weight={focused ? "fill" : "regular"}
                 />
               ),
             }}
@@ -596,7 +589,7 @@ const MainTabNavigator = () => {
                 <DotsThreeIcon
                   size={26}
                   color={focused ? FOCUSED_COLOR : UNFOCUSED_COLOR}
-                  weight={focused ? "bold" : "regular"}
+                  weight={focused ? "fill" : "regular"}
                 />
               ),
             }}
@@ -702,19 +695,11 @@ const styles = StyleSheet.create({
     paddingTop: 2,
   },
   tabBarLabel: {
-    ...appTypography.bodySmall,
+    ...appTypography.label,
   },
-  shortcutTabSlot: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 2,
-    gap: 0,
-  },
-  shortcutTabLabel: {
-    color: FOCUSED_COLOR,
-    ...appTypography.bodySmall,
-  },
+  tabLabelWrap: { alignItems: "center", gap: 2 },
+  activeTabRule: { width: 28, height: 2, borderRadius: 2, backgroundColor: FOCUSED_COLOR },
+  inactiveTabRule: { opacity: 0 },
   modalRoot: {
     flex: 1,
     justifyContent: "flex-end",
@@ -724,7 +709,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceOverlay,
   },
   sheet: {
-    backgroundColor: appSurfaces.canvas,
+    backgroundColor: appSurfaces.card,
     borderTopLeftRadius: appRadius.xl,
     borderTopRightRadius: appRadius.xl,
     borderTopWidth: appBorders.width,

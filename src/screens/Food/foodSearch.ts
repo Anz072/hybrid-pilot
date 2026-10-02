@@ -131,7 +131,17 @@ export const fromDbFoodItem = (
   // `isOwn` is passed explicitly rather than riding along in the spread: it is
   // not part of `SaveFoodItemInput` (a client does not get to assert ownership),
   // so relying on it surviving a rest-spread would be a runtime-only guarantee.
-  return toSearchFoodResult(saveInput, id, includeLocalFood ? food : null, isOwn);
+  // External API results have no catalogue id yet; the DB compatibility mapper
+  // represents that as 0. Keep them unsaved here so logging or selecting a
+  // recipe ingredient first creates a real catalogue entry. Negative ids are
+  // valid saved recipes/meals and must keep their identity.
+  const localId = id === 0 ? null : id;
+  return toSearchFoodResult(
+    saveInput,
+    localId,
+    includeLocalFood && localId !== null ? food : null,
+    isOwn,
+  );
 };
 
 export const getSearchDedupeKeys = (

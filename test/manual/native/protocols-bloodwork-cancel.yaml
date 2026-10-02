@@ -1,0 +1,26 @@
+appId: com.dribsnis.app
+name: Unsaved bloodwork result dismissal
+# Starts in a Protocol root section with no bloodwork panels.
+---
+- tapOn: "Add to Protocols"
+- tapOn: "Bloodwork"
+- tapOn: "Add result"
+- tapOn: "Testosterone, total · Hormones"
+- tapOn:
+    text: "Result"
+    index: 1
+- inputText: "34.7"
+- swipe:
+    start: "85%,50%"
+    end: "85%,80%"
+    duration: 800
+- tapOn: "Close"
+- assertVisible: "Discard result changes?"
+- tapOn: "Keep editing"
+- assertVisible: "34.7"
+- tapOn: "Close"
+- assertVisible: "Discard result changes?"
+- tapOn: "Discard"
+- assertVisible: "Add the numeric results from your laboratory report."
+- tapOn: "Go back"
+- assertVisible: "Today, tab, 1 of 4"

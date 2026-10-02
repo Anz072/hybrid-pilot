@@ -24,6 +24,7 @@ import {
   NumericText,
 } from "../../components/ui";
 import {
+  appContentLayout,
   appBorders,
   appRadius,
   appSpacing,
@@ -167,7 +168,7 @@ const CalorieScheduleScreen = ({ navigation }: Props) => {
         />
 
         {!user ? (
-          <AppCard style={styles.card} variant="plain">
+          <AppCard style={styles.card} variant="surface">
             <AppText variant="cardTitle">No active user</AppText>
             <AppText color="secondary" variant="bodySmall">
               Sign in to your account first before editing the calorie schedule.
@@ -218,7 +219,7 @@ const CalorieScheduleScreen = ({ navigation }: Props) => {
                   values={weeklyValues}
                 />
 
-                <AppCard style={styles.card} variant="plain">
+                <AppCard style={styles.card} variant="surface">
                   <View style={styles.headerRow}>
                     <View>
                       <AppText variant="cardTitle">Overrides</AppText>
@@ -329,6 +330,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
+    ...appContentLayout,
     paddingHorizontal: appSpacing.gutter,
   },
   card: {

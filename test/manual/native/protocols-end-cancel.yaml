@@ -1,0 +1,20 @@
+appId: com.dribsnis.app
+name: Protect an unsaved course end date
+# September 10 fixture; starts with the Last day picker open on day 10.
+# Selector-relative wheel tap is verified on the documented iOS simulator.
+---
+- tapOn:
+    text: "10"
+    point: "50%,61%"
+- assertVisible: "Last day, Sep 11, 2026"
+- tapOn: "Done"
+- tapOn: "Close"
+- assertVisible: "Discard end date?"
+- tapOn: "Keep editing"
+- assertVisible: "Last day, Sep 11, 2026"
+- tapOn: "Close"
+- tapOn: "Leave"
+- assertNotVisible: "Last day, Sep 11, 2026"
+- tapOn: "End course"
+- assertVisible: "Last day, Sep 10, 2026"
+- takeScreenshot: protocols-end-ready

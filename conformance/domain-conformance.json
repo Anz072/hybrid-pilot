@@ -561,7 +561,7 @@
         }
       },
       {
-        "name": "sums unrounded then rounds once \u2014 three 0.4 kcal entries total 1, not 0",
+        "name": "sums unrounded then rounds once — three 0.4 kcal entries total 1, not 0",
         "input": {
           "entries": [
             {
@@ -1852,6 +1852,134 @@
           "proteinGPerServing": 1.1,
           "carbsGPerServing": 2.6,
           "fatGPerServing": 0.4
+        }
+      },
+      {
+        "name": "serving count has no implied gram weight",
+        "input": {
+          "ingredients": [
+            {
+              "amountValue": 2,
+              "food": {
+                "nutritionBasis": "serving",
+                "servingSizeValue": null,
+                "servingSizeUnit": null,
+                "calories": 100,
+                "proteinG": 5,
+                "carbsG": 20,
+                "fatG": 2
+              },
+              "amountUnit": "serving"
+            }
+          ],
+          "servings": 1,
+          "preparedFoodWeightG": null
+        },
+        "expected": {
+          "ingredientTotalWeightG": null,
+          "preparedFoodWeightG": null,
+          "effectiveRecipeWeightG": null,
+          "gramsPerServing": null,
+          "caloriesPerServing": 200,
+          "proteinGPerServing": 10,
+          "carbsGPerServing": 40,
+          "fatGPerServing": 4
+        }
+      },
+      {
+        "name": "milliliters have no implied gram weight",
+        "input": {
+          "ingredients": [
+            {
+              "amountValue": 200,
+              "food": {
+                "nutritionBasis": "100ml",
+                "servingSizeValue": null,
+                "servingSizeUnit": null,
+                "calories": 100,
+                "proteinG": 5,
+                "carbsG": 20,
+                "fatG": 2
+              },
+              "amountUnit": "ml"
+            }
+          ],
+          "servings": 1,
+          "preparedFoodWeightG": null
+        },
+        "expected": {
+          "ingredientTotalWeightG": null,
+          "preparedFoodWeightG": null,
+          "effectiveRecipeWeightG": null,
+          "gramsPerServing": null,
+          "caloriesPerServing": 200,
+          "proteinGPerServing": 10,
+          "carbsGPerServing": 40,
+          "fatGPerServing": 4
+        }
+      },
+      {
+        "name": "kilograms convert to grams before scaling",
+        "input": {
+          "ingredients": [
+            {
+              "amountValue": 0.2,
+              "food": {
+                "nutritionBasis": "100g",
+                "servingSizeValue": null,
+                "servingSizeUnit": null,
+                "calories": 100,
+                "proteinG": 5,
+                "carbsG": 20,
+                "fatG": 2
+              },
+              "amountUnit": "kg"
+            }
+          ],
+          "servings": 1,
+          "preparedFoodWeightG": null
+        },
+        "expected": {
+          "ingredientTotalWeightG": 200,
+          "preparedFoodWeightG": null,
+          "effectiveRecipeWeightG": 200,
+          "gramsPerServing": 200,
+          "caloriesPerServing": 200,
+          "proteinGPerServing": 10,
+          "carbsGPerServing": 40,
+          "fatGPerServing": 4
+        }
+      },
+      {
+        "name": "prepared mass is usable when ingredient mass is unknown",
+        "input": {
+          "ingredients": [
+            {
+              "amountValue": 2,
+              "food": {
+                "nutritionBasis": "serving",
+                "servingSizeValue": null,
+                "servingSizeUnit": null,
+                "calories": 100,
+                "proteinG": 5,
+                "carbsG": 20,
+                "fatG": 2
+              },
+              "amountUnit": "serving"
+            }
+          ],
+          "servings": 1,
+          "preparedFoodWeightG": 150
+        },
+        "expected": {
+          "ingredientTotalWeightG": null,
+          "preparedFoodWeightG": 150,
+          "effectiveRecipeWeightG": 150,
+          "gramsPerServing": 150,
+          "caloriesPerServing": 200,
+          "proteinGPerServing": 10,
+          "carbsGPerServing": 40,
+          "fatGPerServing": 4
         }
       }
     ],

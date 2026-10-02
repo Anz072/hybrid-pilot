@@ -33,7 +33,9 @@ import { useAppSelector } from "../../store/hooks";
 import { appColors } from "../../theme/colors";
 import { appTypography } from "../../theme/typography";
 import {
+  appContentLayout,
   appBorders,
+  appCardSurface,
   appRadius,
   appSpacing,
   appStates,
@@ -360,6 +362,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
+    ...appContentLayout,
     paddingHorizontal: appSpacing.gutter,
   },
   centerState: {
@@ -369,6 +372,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   summaryCard: {
+    ...appCardSurface,
     flexDirection: "row",
     gap: appSpacing.sm,
     backgroundColor: appSurfaces.card,
@@ -420,17 +424,17 @@ const styles = StyleSheet.create({
   },
   row: {
     backgroundColor: appSurfaces.card,
-    borderLeftWidth: appBorders.width,
-    borderRightWidth: appBorders.width,
+    borderBottomWidth: appBorders.width,
     borderColor: appBorders.soft,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
   rowFirst: {
-    borderTopWidth: appBorders.width,
+    borderTopLeftRadius: appRadius.lg,
+    borderTopRightRadius: appRadius.lg,
   },
   rowLast: {
-    borderBottomWidth: appBorders.width,
+    borderBottomWidth: 0,
     borderBottomLeftRadius: appRadius.md,
     borderBottomRightRadius: appRadius.md,
     marginBottom: appSpacing.md,

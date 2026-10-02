@@ -1,0 +1,44 @@
+appId: com.dribsnis.app
+name: Android course pagination and retained Levels selection
+# Requires the dedicated local pagination QA account, already opted in, on a
+# Protocol root tab: 30 initial courses, two further Cypionate drafts and one
+# historical Undecanoate course starting June 2, 2026. No mutations are made.
+# Use the current verified Android bundle. Ends with the picker open so its
+# native CheckBox roles/checked states can be inspected separately.
+---
+- tapOn: "Compounds"
+- scrollUntilVisible:
+    element: "Testosterone Enanthate, Active, Sep 9, 2026.*"
+    direction: UP
+    speed: 80
+    timeout: 60000
+- assertVisible: "Testosterone Enanthate, Active, Sep 9, 2026.*"
+- scrollUntilVisible:
+    element: "Load more courses"
+    direction: DOWN
+    speed: 80
+    timeout: 60000
+- tapOn: "Load more courses"
+- scrollUntilVisible:
+    element: "Testosterone Undecanoate, History, Jun 2, 2026.*"
+    direction: DOWN
+    speed: 80
+    timeout: 60000
+- takeScreenshot: protocols-android-final-course-page
+- tapOn: "Testosterone Undecanoate, History, Jun 2, 2026.*"
+- tapOn: "Estimated Levels"
+- tapOn: "Choose compounds · 1 selected"
+- assertVisible: "SELECTED"
+- assertVisible: "Testosterone Undecanoate · Jun 2, 2026"
+- tapOn: "Testosterone Enanthate · Sep 9, 2026, Active"
+- tapOn: "Done"
+- assertVisible: "Choose compounds · 2 selected"
+- tapOn: "1W"
+- tapOn: "Trends"
+- assertVisible: "Metrics"
+- tapOn: "Levels"
+- assertVisible: "Choose compounds · 2 selected"
+- tapOn: "Choose compounds · 2 selected"
+- assertVisible: "SELECTED"
+- assertVisible: "Testosterone Undecanoate · Jun 2, 2026"
+- takeScreenshot: protocols-android-retained-selection

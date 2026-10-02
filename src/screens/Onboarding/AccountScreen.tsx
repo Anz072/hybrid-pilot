@@ -25,7 +25,12 @@ import {
   setOnboardingComplete,
 } from "../../storage/localStore";
 import { appColors } from "../../theme/colors";
-import { appBorders, appSpacing, appSurfaces } from "../../theme/tokens";
+import {
+  appContentLayout,
+  appBorders,
+  appSpacing,
+  appSurfaces,
+} from "../../theme/tokens";
 import {
   generateUuid,
   getZoneOffsetMinutes,
@@ -224,7 +229,7 @@ const AccountScreen = ({ navigation, route }: Props) => {
           </AppText>
         </View>
 
-        <AppCard style={styles.formCard} variant="plain">
+        <AppCard style={styles.formCard} variant="surface">
           <AppInput
             editable={!isSaving}
             label="Name"
@@ -365,6 +370,7 @@ const styles = StyleSheet.create({
     backgroundColor: appSurfaces.canvas,
   },
   content: {
+    ...appContentLayout,
     flexGrow: 1,
     paddingHorizontal: appSpacing.gutter,
   },

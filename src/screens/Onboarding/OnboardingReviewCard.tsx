@@ -19,7 +19,7 @@ const OnboardingReviewCard = ({
   items,
   title = "Review your answers",
 }: OnboardingReviewCardProps) => (
-  <Disclosure title={title}>
+  <Disclosure title={title} contained>
     {items.map((item, index) => (
       <View
         key={`${item.label}-${index}`}

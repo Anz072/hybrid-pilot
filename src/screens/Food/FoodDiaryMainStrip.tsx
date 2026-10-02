@@ -21,12 +21,8 @@ import {
   TrashIcon,
 } from "phosphor-react-native";
 import type { DBUser, DBUserFoodLogEntry } from "../../store/DB_TYPES";
-import type {
-  FoodDiaryFavoriteFood,
-  FoodDiaryMealBucket,
-} from "./foodDiaryTypes";
+import type { FoodDiaryMealBucket } from "./foodDiaryTypes";
 import FoodDiaryHeroCard from "./FoodDiaryHeroCard";
-import FoodDiaryQuickAdds from "./FoodDiaryQuickAdds";
 import {
   calculateLoggedNutrition,
   type FoodNutritionTotals,
@@ -46,6 +42,8 @@ import {
 } from "../../components/ui";
 import {
   appBorders,
+  appCardSurface,
+  appElevation,
   appRadius,
   appSpacing,
   appStates,
@@ -73,9 +71,6 @@ type FoodDiaryMainStripProps = {
   totals?: FoodNutritionTotals;
   user?: DBUser | null;
   mealBuckets: FoodDiaryMealBucket[];
-  selectedMeal: MealSlot;
-  favoriteFoods: FoodDiaryFavoriteFood[];
-  recentFoods: FoodDiaryFavoriteFood[];
   isLoading: boolean;
   isRefreshing: boolean;
   hasLoadedData: boolean;
@@ -83,12 +78,9 @@ type FoodDiaryMainStripProps = {
   isDayComplete: boolean;
   isDayCompleteLoading: boolean;
   onAddFood: (slot: MealSlot) => void;
-  onAddFavorite: (food: FoodDiaryFavoriteFood, slot: MealSlot) => void;
   onDeleteEntry: (entry: DBUserFoodLogEntry) => void;
   onEditEntry: (entry: DBUserFoodLogEntry) => void;
-  onQuickLogFavorite: (food: FoodDiaryFavoriteFood, slot: MealSlot) => void;
   onRetryLoad: () => void;
-  onSelectMeal: (slot: MealSlot) => void;
   onToggleDayComplete: () => void;
   onBeforeMealToggle: () => void;
   revealEntryId: number | null;
@@ -241,8 +233,8 @@ const FoodDiaryMealItem = ({
                   onPress={() => onEditEntry(entry)}
                 >
                   <View style={styles.entryMain}>
-                    <View style={styles.entryTopRow}>
-                      <Text style={styles.entryTitle} numberOfLines={1}>
+                    <View style={[styles.entryTopRow, fontScale > 1.3 && styles.entryTopRowStacked]}>
+                      <Text style={styles.entryTitle} numberOfLines={fontScale > 1.3 ? undefined : 2}>
                         {entry.foodName}
                       </Text>
                       <Text style={styles.entryKcal} numberOfLines={1}>
@@ -294,9 +286,6 @@ const FoodDiaryMainStrip = ({
   totals,
   user,
   mealBuckets,
-  selectedMeal,
-  favoriteFoods,
-  recentFoods,
   isLoading,
   isRefreshing,
   hasLoadedData,
@@ -304,12 +293,9 @@ const FoodDiaryMainStrip = ({
   isDayComplete,
   isDayCompleteLoading,
   onAddFood,
-  onAddFavorite,
   onDeleteEntry,
   onEditEntry,
-  onQuickLogFavorite,
   onRetryLoad,
-  onSelectMeal,
   onToggleDayComplete,
   onBeforeMealToggle,
   revealEntryId,
@@ -505,15 +491,6 @@ const FoodDiaryMainStrip = ({
               />
             ))}
           </View>
-          <FoodDiaryQuickAdds
-            favoriteFoods={favoriteFoods}
-            recentFoods={recentFoods}
-            selectedMeal={selectedMeal}
-            onSelectMeal={onSelectMeal}
-            onBeforeToggle={onBeforeMealToggle}
-            onAddFavorite={onAddFavorite}
-            onQuickLogFavorite={onQuickLogFavorite}
-          />
         </View>
       ) : null}
       {canShowContent ? (
@@ -566,6 +543,7 @@ const styles = StyleSheet.create({
   },
   dateControls: {
     marginTop: appSpacing.xxs,
+    marginBottom: appSpacing.xs,
   },
   weekNavRow: {
     minHeight: 44,
@@ -585,8 +563,8 @@ const styles = StyleSheet.create({
     right: 0,
   },
   navButton: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderRadius: 9999,
     alignItems: "center",
     justifyContent: "center",
@@ -617,6 +595,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   dayPillSelected: {
+    ...appElevation.metric,
     backgroundColor: appColors.actionPrimary,
     borderColor: appColors.actionPrimaryBorder,
   },
@@ -675,7 +654,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     lineHeight: 28,
     fontWeight: "700",
-    fontFamily: "Newsreader_700Bold",
+    fontFamily: "IBMPlexSans_700Bold",
     letterSpacing: -0.2,
     textAlign: "center",
     marginBottom: 0,
@@ -698,8 +677,8 @@ const styles = StyleSheet.create({
     opacity: appStates.disabledOpacity,
   },
   dayStatusIcon: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
@@ -720,12 +699,11 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   mealList: {
-    gap: 0,
+    gap: appSpacing.md,
   },
   mealCard: {
-    borderBottomWidth: appBorders.width,
-    borderBottomColor: appBorders.soft,
-    paddingVertical: appSpacing.xxs,
+    ...appCardSurface,
+    padding: appSpacing.sm,
   },
   mealHeader: {
     flexDirection: "row",
@@ -760,13 +738,14 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   mealKcalBelow: { maxWidth: "100%", textAlign: "left" },
-  mealAddButton: { backgroundColor: "transparent", borderWidth: 0 },
+  mealAddButton: { backgroundColor: appColors.actionPrimarySoft, borderWidth: 0 },
   stack: {
     marginTop: 8,
   },
   entryCard: {
     backgroundColor: "transparent",
-    paddingVertical: 6,
+    minHeight: 48,
+    paddingVertical: appSpacing.xs,
     borderTopWidth: appBorders.width,
     borderTopColor: appBorders.soft,
   },
@@ -781,6 +760,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 8,
   },
+  entryTopRowStacked: { flexDirection: "column", gap: appSpacing.xxs },
   entryTitle: {
     flex: 1,
     minWidth: 0,
@@ -807,13 +787,13 @@ const styles = StyleSheet.create({
   },
   entryText: {
     color: appColors.textSecondary,
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: 12,
+    lineHeight: 16,
   },
   entryDivider: {
     color: appColors.textMuted,
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: 12,
+    lineHeight: 16,
   },
   deleteSwipe: {
     width: 96,

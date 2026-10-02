@@ -1,3 +1,4 @@
+import { appContentLayout } from "../../theme/tokens";
 import { AppButton, Disclosure } from "../../components/ui";
 import React from "react";
 import {
@@ -867,6 +868,7 @@ const CreateCustomFoodScreen = () => {
 const styles = StyleSheet.create({
   screen: sharedStyleValues.screen,
   content: {
+    ...appContentLayout,
     ...sharedStyleValues.content,
     paddingBottom: 36,
   },
@@ -979,6 +981,7 @@ const styles = StyleSheet.create({
     width: "30%",
   },
   footer: {
+    ...appContentLayout,
     ...sharedStyleValues.footer,
     gap: 8,
     marginBottom: 16,

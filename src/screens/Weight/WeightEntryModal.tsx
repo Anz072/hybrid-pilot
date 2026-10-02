@@ -38,7 +38,14 @@ import {
   IconButton,
   InteractiveCard,
 } from "../../components/ui";
-import { appRadius, appSpacing, appSurfaces } from "../../theme/tokens";
+import {
+  appCardSurface,
+  appContentLayout,
+  appElevation,
+  appRadius,
+  appSpacing,
+  appSurfaces,
+} from "../../theme/tokens";
 import { appTypography } from "../../theme/typography";
 
 export type WeightEntryDraft = {
@@ -377,6 +384,7 @@ const styles = StyleSheet.create({
     backgroundColor: appSurfaces.canvas,
   },
   header: {
+    ...appContentLayout,
     paddingHorizontal: appSpacing.gutter,
     paddingBottom: appSpacing.sm,
   },
@@ -384,10 +392,13 @@ const styles = StyleSheet.create({
     marginBottom: appSpacing.xs,
   },
   content: {
+    ...appContentLayout,
     paddingHorizontal: appSpacing.gutter,
     gap: appSpacing.md,
   },
   card: {
+    ...appCardSurface,
+    padding: appSpacing.md,
     gap: appSpacing.sm,
   },
   label: {
@@ -424,9 +435,10 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   dateButton: {
+    ...appElevation.none,
     flex: 1,
     minWidth: 130,
-    minHeight: 44,
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
     gap: appSpacing.xs,

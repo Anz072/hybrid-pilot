@@ -1,0 +1,20 @@
+appId: com.dribsnis.app
+name: Activate the previewed every-two-day course
+# Starts on Your schedule after the course form and past start were reviewed.
+---
+- scrollUntilVisible:
+    element: "Start tracking"
+    direction: DOWN
+- tapOn: "Start tracking"
+- assertVisible: "Edit schedule"
+- scrollUntilVisible:
+    element: "No doses recorded."
+    direction: DOWN
+- assertVisible: "No doses recorded."
+- scrollUntilVisible:
+    element: "Estimated Levels"
+    direction: UP
+- tapOn: "Estimated Levels"
+- assertVisible: "Today, tab, 1 of 4"
+- tapOn: "Today, tab, 1 of 4"
+- takeScreenshot: protocols-activated-today

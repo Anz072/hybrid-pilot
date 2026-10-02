@@ -1,3 +1,4 @@
+import { appContentLayout } from "../../theme/tokens";
 import { AppButton, Disclosure } from "../../components/ui";
 import { getDisplayPreferencesSnapshot } from "../../preferences/displayPreferences";
 import React from "react";
@@ -532,6 +533,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   content: {
+    ...appContentLayout,
     paddingHorizontal: 16,
   },
   centerCard: sharedStyleValues.centerCard,

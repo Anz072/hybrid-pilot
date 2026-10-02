@@ -2,10 +2,8 @@ import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Animated,
   AppState,
   Modal,
-  PanResponder,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -21,7 +19,6 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DB } from "../../store/DB";
 import type {
-  DBFoodItem,
   DBAdaptiveCalorieRecommendation,
   DBDiaryDayStatus,
   DBUserSettings,
@@ -44,17 +41,12 @@ import FoodDiaryMainStrip, {
 } from "./FoodDiaryMainStrip";
 import AdaptiveCaloriesBanner from "./AdaptiveCaloriesBanner";
 import FoodDiaryMoreSection from "./FoodDiaryMoreSection";
-import type {
-  FoodDiaryFavoriteFood,
-  FoodDiaryMealBucket,
-} from "./foodDiaryTypes";
+import type { FoodDiaryMealBucket } from "./foodDiaryTypes";
 import {
   buildFoodLoggedAt,
   formatFoodDateKey,
   formatFoodLoggedTime,
-  getFoodDefaultLogAmount,
   formatFoodShortDate,
-  getFoodResolvedServing,
   getDefaultMealSlotForNow,
   MEAL_SLOTS,
   MEAL_SLOT_DEFAULT_HOUR,
@@ -67,7 +59,8 @@ import {
 } from "./foodUtils";
 import { resolveFoodLogContext, toFoodLogRouteParams } from "./foodLogContext";
 import { appColors } from "../../theme/colors";
-import { appStates } from "../../theme/tokens";
+import { appContentLayout, appSpacing, appStates } from "../../theme/tokens";
+import { AppSnackbar, type SnackbarNotice } from "../../components/ui";
 import {
   refreshAdaptiveRecommendationForUser,
   setDiaryDayCompletionAndRefresh,
@@ -94,17 +87,6 @@ import { subscribeToAppDataChanges } from "../../store/dataChangeEvents";
 import { useDiaryScroll, type DiaryEntryReveal } from "./useDiaryScroll";
 
 type FoodDiaryNav = NativeStackNavigationProp<FoodStackParamList, "Diary">;
-
-const SNACKBAR_AUTO_DISMISS_MS = 4900;
-const SNACKBAR_DISMISS_DISTANCE = 96;
-const SNACKBAR_OFFSCREEN_DISTANCE = 420;
-const SNACKBAR_BOTTOM_GAP = 8;
-
-type SnackbarState = {
-  message: string;
-  actionLabel?: string;
-  onAction?: () => void;
-};
 
 type DiaryActionModalState = {
   action: "copyDay" | "repeatMeal";
@@ -200,10 +182,6 @@ const FoodDiaryScreen = () => {
         calories: 0,
       })),
   );
-  const [favoriteFoods, setFavoriteFoods] = useState<FoodDiaryFavoriteFood[]>(
-    [],
-  );
-  const [recentFoods, setRecentFoods] = useState<FoodDiaryFavoriteFood[]>([]);
   const [settings, setSettings] = useState<DBUserSettings | null>(null);
   const [isInitialDiaryLoading, setIsInitialDiaryLoading] = useState(true);
   const [isDiaryRefreshing, setIsDiaryRefreshing] = useState(false);
@@ -215,7 +193,7 @@ const FoodDiaryScreen = () => {
   const [isCopyingYesterday, setIsCopyingYesterday] = useState(false);
   const [isRepeatingYesterdayMeal, setIsRepeatingYesterdayMeal] =
     useState(false);
-  const [snackbar, setSnackbar] = useState<SnackbarState | null>(null);
+  const [snackbar, setSnackbar] = useState<SnackbarNotice | null>(null);
   const [diaryActionModal, setDiaryActionModal] =
     useState<DiaryActionModalState | null>(null);
   const [adaptiveRecommendation, setAdaptiveRecommendation] =
@@ -223,7 +201,6 @@ const FoodDiaryScreen = () => {
   const [selectedMeal, setSelectedMeal] = useState<MealSlot>(
     () => foodDiaryDateContext?.selectedMeal ?? getDefaultMealSlotForNow(),
   );
-  const snackbarTranslateX = React.useRef(new Animated.Value(0)).current;
   const diaryLoadRequestRef = useRef(0);
   const activeDiaryLoadWeekRef = useRef<string | null>(null);
   const hasLoadedDiaryRef = useRef(false);
@@ -233,9 +210,6 @@ const FoodDiaryScreen = () => {
   const readyDiaryTraceIdRef = useRef<string | null>(null);
   const visitedDiaryDatesRef = useRef(new Set<string>());
   const todayDateKeyRef = useRef(formatFoodDateKey(new Date()));
-  // Synchronous re-entrancy lock: a double-tap on a quick-log chip must not
-  // create two diary entries while the first write is in flight.
-  const quickLoggingKeysRef = useRef(new Set<string>());
 
   const dateKey = useMemo(
     () => formatFoodDateKey(selectedDate),
@@ -477,8 +451,6 @@ const FoodDiaryScreen = () => {
               calories: 0,
             })),
           );
-          setFavoriteFoods([]);
-          setRecentFoods([]);
           const latestRequestedDateKey = requestedDateKeyRef.current;
           setSelectedDate(
             parseFoodDateKey(
@@ -495,23 +467,13 @@ const FoodDiaryScreen = () => {
           return;
         }
 
-        const [
-          favorites,
-          recents,
-          nextSettings,
-          [loadedWeekEntries, weekDayStatuses],
-        ] = await Promise.all([
-          measureDiaryRequest(trace, "favorites", "logical", () =>
-            DB.getFavoriteFoodItems(currentUser.externalId, 10, trace),
-          ),
-          measureDiaryRequest(trace, "recents", "logical", () =>
-            DB.getRecentFoodItems(currentUser.externalId, 12, trace),
-          ),
-          measureDiaryRequest(trace, "settings", "logical", () =>
-            DB.getUserSettings(currentUser.externalId, trace),
-          ),
-          loadWeekData(currentUser.externalId, weekStart, weekEnd, trace),
-        ]);
+        const [nextSettings, [loadedWeekEntries, weekDayStatuses]] =
+          await Promise.all([
+            measureDiaryRequest(trace, "settings", "logical", () =>
+              DB.getUserSettings(currentUser.externalId, trace),
+            ),
+            loadWeekData(currentUser.externalId, weekStart, weekEnd, trace),
+          ]);
 
         if (!isCurrentRequest()) {
           return;
@@ -549,34 +511,6 @@ const FoodDiaryScreen = () => {
                 ? latestRequestedDateKey
                 : targetDateKey,
             ),
-          );
-        });
-
-        const toQuickPick = (
-          food: (typeof favorites)[number],
-        ): FoodDiaryFavoriteFood => {
-          const serving = getFoodResolvedServing(food);
-          return {
-            ...food,
-            servingSize: serving.value,
-            servingUnit: serving.unit,
-            calories: food.calories ?? 0,
-            proteinG: food.proteinG ?? 0,
-            carbsG: food.carbsG ?? 0,
-            fatG: food.fatG ?? 0,
-          };
-        };
-
-        await measureDiaryStep(trace, "transform.quick-picks", () => {
-          const mappedFavorites = favorites.map(toQuickPick);
-          const favoriteIds = new Set(mappedFavorites.map((food) => food.id));
-
-          setFavoriteFoods(mappedFavorites);
-          setRecentFoods(
-            recents
-              .filter((food) => !favoriteIds.has(food.id))
-              .map(toQuickPick)
-              .slice(0, 8),
           );
         });
 
@@ -706,69 +640,9 @@ const FoodDiaryScreen = () => {
     return () => subscription.remove();
   }, [loadData, rollSelectedTodayForward]);
 
-  const dismissSnackbar = useCallback(
-    (direction: 1 | -1 = 1) => {
-      Animated.timing(snackbarTranslateX, {
-        toValue: direction * SNACKBAR_OFFSCREEN_DISTANCE,
-        duration: 180,
-        useNativeDriver: true,
-      }).start(({ finished }) => {
-        if (finished) {
-          snackbarTranslateX.setValue(0);
-          setSnackbar(null);
-        }
-      });
-    },
-    [snackbarTranslateX],
-  );
-
-  const snackbarPanResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_event, gestureState) =>
-          Math.abs(gestureState.dx) > 8 &&
-          Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
-        onPanResponderMove: (_event, gestureState) => {
-          snackbarTranslateX.setValue(gestureState.dx);
-        },
-        onPanResponderRelease: (_event, gestureState) => {
-          const shouldDismiss =
-            Math.abs(gestureState.dx) > SNACKBAR_DISMISS_DISTANCE ||
-            Math.abs(gestureState.vx) > 0.75;
-
-          if (shouldDismiss) {
-            dismissSnackbar(gestureState.dx < 0 ? -1 : 1);
-            return;
-          }
-
-          Animated.spring(snackbarTranslateX, {
-            toValue: 0,
-            useNativeDriver: true,
-          }).start();
-        },
-        onPanResponderTerminate: () => {
-          Animated.spring(snackbarTranslateX, {
-            toValue: 0,
-            useNativeDriver: true,
-          }).start();
-        },
-        onPanResponderTerminationRequest: () => true,
-      }),
-    [dismissSnackbar, snackbarTranslateX],
-  );
-
-  React.useEffect(() => {
-    if (!snackbar) {
-      return;
-    }
-
-    snackbarTranslateX.setValue(0);
-    const timeout = setTimeout(
-      () => dismissSnackbar(),
-      SNACKBAR_AUTO_DISMISS_MS,
-    );
-    return () => clearTimeout(timeout);
-  }, [dismissSnackbar, snackbar, snackbarTranslateX]);
+  const dismissSnackbar = useCallback((notice: SnackbarNotice) => {
+    setSnackbar((current) => current === notice ? null : current);
+  }, []);
 
   const entries = useMemo(
     () => weekEntries.filter((entry) => entry.date === dateKey),
@@ -960,62 +834,6 @@ const FoodDiaryScreen = () => {
       });
     },
     [buildMealFoodLogRouteParams, navigation],
-  );
-
-  const openFavoriteEditorAtMeal = useCallback(
-    (food: DBFoodItem, slot: MealSlot) => {
-      navigation.navigate("ScannedFood", {
-        ...buildMealFoodLogRouteParams(slot),
-        foodId: food.id,
-      });
-    },
-    [buildMealFoodLogRouteParams, navigation],
-  );
-
-  const quickLogFavoriteAtMeal = useCallback(
-    async (food: FoodDiaryFavoriteFood, slot: MealSlot) => {
-      if (!user) {
-        Alert.alert(
-          "No account found",
-          "Create or restore a user before adding food.",
-        );
-        return;
-      }
-
-      const quickLogKey = `${food.id}:${slot}:${dateKey}`;
-      if (quickLoggingKeysRef.current.has(quickLogKey)) {
-        return;
-      }
-      quickLoggingKeysRef.current.add(quickLogKey);
-
-      try {
-        const savedEntry = await DB.addUserFoodLog({
-          userExternalId: user.externalId,
-          foodId: food.id,
-          date: dateKey,
-          loggedAt: buildMealLoggedAt(slot),
-          quantityG: getFoodDefaultLogAmount(food),
-          mealType: MEAL_SLOT_LABELS[slot],
-        });
-        setSnackbar({
-          message: `${food.name} logged to ${MEAL_SLOT_LABELS[slot]}`,
-          actionLabel: "Edit",
-          onAction: () =>
-            navigation.navigate("EditFoodEntry", {
-              entryId: savedEntry.id,
-              date: savedEntry.date,
-            }),
-        });
-      } catch {
-        Alert.alert(
-          "Could not log food",
-          "Please review the food and try again.",
-        );
-      } finally {
-        quickLoggingKeysRef.current.delete(quickLogKey);
-      }
-    },
-    [buildMealLoggedAt, dateKey, navigation, user],
   );
 
   const restoreDeletedEntry = useCallback(async (entry: DBUserFoodLogEntry) => {
@@ -1666,9 +1484,6 @@ const FoodDiaryScreen = () => {
             totals={totals}
             user={user}
             mealBuckets={mealBuckets}
-            selectedMeal={selectedMeal}
-            favoriteFoods={favoriteFoods}
-            recentFoods={recentFoods}
             isLoading={isDiaryLoading}
             isRefreshing={isDiaryRefreshing}
             hasLoadedData={hasLoadedDiaryRef.current}
@@ -1676,16 +1491,9 @@ const FoodDiaryScreen = () => {
             isDayComplete={isSelectedDayComplete}
             isDayCompleteLoading={isDayCompleteLoading}
             onAddFood={openAddFoodAtMeal}
-            onAddFavorite={(food, slot) => {
-              openFavoriteEditorAtMeal(food, slot);
-            }}
             onDeleteEntry={deleteEntry}
             onEditEntry={editEntry}
-            onQuickLogFavorite={(food, slot) => {
-              void quickLogFavoriteAtMeal(food, slot);
-            }}
             onRetryLoad={retryDiaryLoad}
-            onSelectMeal={setSelectedMeal}
             onToggleDayComplete={() => {
               void toggleDayComplete();
             }}
@@ -1796,42 +1604,7 @@ const FoodDiaryScreen = () => {
         </View>
       </Modal>
 
-      {snackbar ? (
-        <Animated.View
-          {...snackbarPanResponder.panHandlers}
-          style={[
-            styles.snackbar,
-            {
-              bottom: SNACKBAR_BOTTOM_GAP,
-              opacity: snackbarTranslateX.interpolate({
-                inputRange: [
-                  -SNACKBAR_DISMISS_DISTANCE,
-                  0,
-                  SNACKBAR_DISMISS_DISTANCE,
-                ],
-                outputRange: [0.6, 1, 0.6],
-                extrapolate: "clamp",
-              }),
-              transform: [{ translateX: snackbarTranslateX }],
-            },
-          ]}
-        >
-          <Text style={styles.snackbarText}>{snackbar.message}</Text>
-          {snackbar.actionLabel && snackbar.onAction ? (
-            <Pressable
-              onPress={snackbar.onAction}
-              style={({ pressed }) => [
-                styles.snackbarAction,
-                pressed && styles.snackbarActionPressed,
-              ]}
-            >
-              <Text style={styles.snackbarActionText}>
-                {snackbar.actionLabel}
-              </Text>
-            </Pressable>
-          ) : null}
-        </Animated.View>
-      ) : null}
+      <AppSnackbar notice={snackbar} onDismiss={dismissSnackbar} />
     </View>
   );
 };
@@ -1842,7 +1615,8 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
-    paddingHorizontal: 16,
+    ...appContentLayout,
+    paddingHorizontal: appSpacing.gutter,
   },
   actionModalBackdrop: {
     flex: 1,
@@ -1911,39 +1685,6 @@ const styles = StyleSheet.create({
   },
   actionModalButtonPressed: {
     opacity: appStates.pressedOpacity,
-  },
-  snackbar: {
-    position: "absolute",
-    left: 20,
-    right: 20,
-    borderRadius: 10,
-    backgroundColor: appColors.slate900,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  snackbarText: {
-    flex: 1,
-    color: appColors.white,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  snackbarAction: {
-    borderRadius: 999,
-    backgroundColor: appColors.surfaceCard,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  snackbarActionPressed: {
-    opacity: 0.88,
-  },
-  snackbarActionText: {
-    color: appColors.slate900,
-    fontSize: 12,
-    fontWeight: "600",
   },
 });
 

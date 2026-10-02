@@ -1,0 +1,46 @@
+appId: com.dribsnis.app
+name: Independent Home date and actual dose entry
+# Starts in Protocols Today after activating one course with a past occurrence
+# in the current week. Pass QA_DOSE_DAY (week-strip label regex) and
+# QA_DIARY_DAY (the unchanged Diary header label) explicitly with -e.
+# Leaves the actual-time picker open for the specified 21:14 selection.
+---
+- tapOn: "Back to Nouri"
+- tapOn:
+    text: "Go back"
+    optional: true
+- tapOn: "Home"
+- scrollUntilVisible:
+    element: "Open Protocols Today"
+    direction: DOWN
+- tapOn: ${QA_DOSE_DAY}
+- assertVisible: "Back to today"
+- scrollUntilVisible:
+    element: "Log Testosterone Enanthate dose"
+    direction: DOWN
+- takeScreenshot: protocols-home-historical
+- tapOn: "Food"
+- assertVisible: ${QA_DIARY_DAY}
+- tapOn: "Home"
+- scrollUntilVisible:
+    element: "Log Testosterone Enanthate dose"
+    direction: DOWN
+- tapOn: "Log Testosterone Enanthate dose"
+- assertVisible: "PLANNED"
+- tapOn:
+    text: "Actual amount"
+    index: 1
+- eraseText
+- inputText: "105"
+- swipe:
+    start: "85%,50%"
+    end: "85%,80%"
+    duration: 800
+- scrollUntilVisible:
+    element: "Taken at, .*"
+    direction: DOWN
+- tapOn: "Taken at, .*"
+- scrollUntilVisible:
+    element: "Done"
+    direction: DOWN
+- takeScreenshot: protocols-actual-time-picker

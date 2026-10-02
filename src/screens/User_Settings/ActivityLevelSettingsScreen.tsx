@@ -26,7 +26,10 @@ import {
   NumericText,
   OptionCard,
 } from "../../components/ui";
-import { appSpacing } from "../../theme/tokens";
+import {
+  appContentLayout,
+  appSpacing,
+} from "../../theme/tokens";
 import CalorieBudgetChart from "./CalorieBudgetChart";
 import SettingsStackHeader from "./SettingsStackHeader";
 import {
@@ -195,7 +198,7 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
         />
 
         {!user ? (
-          <AppCard style={styles.card} variant="plain">
+          <AppCard style={styles.card} variant="surface">
             <AppText variant="cardTitle">No active user</AppText>
             <AppText color="secondary" variant="bodySmall">
               Sign in to your account first before editing your goal settings.
@@ -203,7 +206,7 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
           </AppCard>
         ) : (
           <>
-            <AppCard style={styles.card} variant="plain">
+            <AppCard style={styles.card} variant="surface">
               <View style={styles.summaryRow}>
                 <AppText color="secondary" variant="bodySmall">
                   Estimated daily target
@@ -225,7 +228,7 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
               </View>
             </AppCard>
 
-            <AppCard style={styles.card} variant="plain">
+            <AppCard style={styles.card} variant="surface">
               <View style={styles.sectionHeader}>
                 <TargetIcon
                   size={18}
@@ -271,7 +274,7 @@ const ActivityLevelSettingsScreen = ({ navigation }: Props) => {
               </View>
             </AppCard>
 
-            <AppCard style={styles.card} variant="plain">
+            <AppCard style={styles.card} variant="surface">
               <View style={styles.sectionHeader}>
                 <GaugeIcon size={18} color={appColors.brand700} weight="fill" />
                 <AppText variant="cardTitle">Activity baseline</AppText>
@@ -364,6 +367,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
+    ...appContentLayout,
     paddingHorizontal: appSpacing.gutter,
   },
   card: {

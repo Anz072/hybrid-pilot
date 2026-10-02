@@ -693,7 +693,7 @@ const styles = StyleSheet.create({
     ...sharedStyleValues.heroTitleLarge,
     marginBottom: 4,
   },
-  card: { gap: 8, marginBottom: 16 },
+  card: { ...sharedStyleValues.card, gap: 8 },
   mealBucketSelect: {
     marginBottom: 8,
   },

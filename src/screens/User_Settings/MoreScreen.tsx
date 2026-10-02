@@ -1,4 +1,5 @@
 import React from "react";
+import appConfig from "../../../app.json";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
@@ -12,6 +13,7 @@ import {
   SlidersHorizontalIcon,
   TargetIcon,
   UserCircleIcon,
+  CirclesThreeIcon,
 } from "phosphor-react-native";
 import {
   Alert,
@@ -29,6 +31,7 @@ import {
 } from "../../engine/calorieTargets";
 import { resolveGoalStrategy } from "../../engine/goalStrategy";
 import type { MoreParamList } from "../../navigation/MoreNavigator";
+import type { RootStackParamList } from "../../navigation/AppNavigator";
 import { DB } from "../../store/DB";
 import { useAppSelector } from "../../store/hooks";
 import { isDeveloperAccountEmail } from "../../dev/developerAccount";
@@ -38,6 +41,8 @@ import { appColors } from "../../theme/colors";
 import { appTypography } from "../../theme/typography";
 import {
   appBorders,
+  appCardSurface,
+  appContentLayout,
   appRadius,
   appSpacing,
   appStates,
@@ -88,6 +93,8 @@ const MoreActionRow = ({
   const stackedValue = fontScale > 1.3;
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={[title, value].filter(Boolean).join(", ")}
       onPress={onPress}
       style={({ pressed }) => [
         styles.actionRow,
@@ -243,7 +250,22 @@ const MoreScreen = () => {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.heroTitle}>Settings</Text>
+        <Text style={styles.heroTitle} accessibilityRole="header">Settings</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Profile and account, ${user?.displayName ?? "Your account"}`}
+          onPress={() => navigation.navigate("ProfileSettingsScreen")}
+          style={({ pressed }) => [styles.accountCard, pressed && styles.actionRowPressed]}
+        >
+          <View style={styles.accountIcon}>
+            <UserCircleIcon size={40} color={appColors.actionPrimary} weight="regular" />
+          </View>
+          <View style={styles.actionCopy}>
+            <Text style={styles.accountName}>{user?.displayName || "Your account"}</Text>
+            <Text style={styles.accountLink}>Profile & account</Text>
+          </View>
+          <CaretRightIcon size={20} color={appColors.textMuted} />
+        </Pressable>
 
         {settingsError ? (
           <ErrorState
@@ -266,8 +288,8 @@ const MoreScreen = () => {
           />
         ) : null}
 
-        <Text style={styles.sectionTitle}>Review</Text>
         <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle} accessibilityRole="header">Review</Text>
           <MoreActionRow
             icon={
               <ChartLineUpIcon
@@ -305,25 +327,15 @@ const MoreScreen = () => {
           />
         </View>
 
-        <Text style={styles.sectionTitle}>Account</Text>
         <View style={styles.sectionCard}>
-          <MoreActionRow
-            icon={
-              <UserCircleIcon
-                size={18}
-                color={appColors.textSecondary}
-                weight="regular"
-              />
-            }
-            onPress={() => navigation.navigate("ProfileSettingsScreen")}
-            divider={false}
-            title="Profile & account"
-            value={user?.displayName ?? ""}
-          />
+          <Text style={styles.sectionTitle} accessibilityRole="header">Tracking</Text>
+          <MoreActionRow icon={<CirclesThreeIcon size={18} color={appColors.textSecondary} />} title="Protocol tracking"
+            value={settingsError ? "Unavailable" : settingsLoading ? "Loading…" : settings?.protocolsEnabled ? "On" : "Off"}
+            divider={false} onPress={() => navigation.getParent()?.getParent<NativeStackNavigationProp<RootStackParamList>>()?.navigate("ProtocolSettings")} />
         </View>
 
-        <Text style={styles.sectionTitle}>Targets</Text>
         <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle} accessibilityRole="header">Targets</Text>
           <MoreActionRow
             icon={
               <ForkKnifeIcon
@@ -415,8 +427,8 @@ const MoreScreen = () => {
           />
         </View>
 
-        <Text style={styles.sectionTitle}>Preferences</Text>
         <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle} accessibilityRole="header">Preferences</Text>
           <MoreActionRow
             icon={
               <SlidersHorizontalIcon
@@ -426,9 +438,13 @@ const MoreScreen = () => {
               />
             }
             onPress={() => navigation.navigate("PreferencesScreen")}
+            divider={false}
             title="Units & display"
             value={preferencesLabel}
           />
+        </View>
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle} accessibilityRole="header">Data</Text>
           <MoreActionRow
             icon={
               <ExportIcon
@@ -444,8 +460,8 @@ const MoreScreen = () => {
           />
         </View>
 
-        <Text style={styles.sectionTitle}>Food Library</Text>
         <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle} accessibilityRole="header">Food Library</Text>
           <MoreActionRow
             icon={
               <CookingPotIcon
@@ -505,6 +521,12 @@ const MoreScreen = () => {
             </View>
           </>
         ) : null}
+        <Text
+          style={styles.appVersion}
+          accessibilityLabel={`App version ${appConfig.expo.version}`}
+        >
+          {appConfig.expo.version}
+        </Text>
       </ScrollView>
     </View>
   );
@@ -516,7 +538,14 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
+    ...appContentLayout,
     paddingHorizontal: appSpacing.gutter,
+  },
+  appVersion: {
+    ...appTypography.label,
+    color: appColors.textSecondary,
+    textAlign: "center",
+    marginTop: appSpacing.xxl,
   },
   heroCard: {
     marginBottom: appSpacing.md,
@@ -558,13 +587,35 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...appTypography.metadata,
     color: appColors.textSecondary,
-    marginTop: appSpacing.xl,
     marginBottom: appSpacing.xs,
   },
   stateBlock: {
     marginBottom: appSpacing.md,
   },
-  sectionCard: {},
+  sectionCard: {
+    ...appCardSurface,
+    padding: appSpacing.md,
+    marginBottom: appSpacing.md,
+  },
+  accountCard: {
+    ...appCardSurface,
+    flexDirection: "row",
+    alignItems: "center",
+    padding: appSpacing.md,
+    gap: appSpacing.md,
+    marginTop: appSpacing.md,
+    marginBottom: appSpacing.xl,
+  },
+  accountIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: appRadius.pill,
+    backgroundColor: appColors.actionPrimarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  accountName: { ...appTypography.sectionTitle, color: appColors.textPrimary },
+  accountLink: { ...appTypography.bodySmall, color: appColors.textSecondary, marginTop: appSpacing.xxs },
   actionRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -580,20 +631,19 @@ const styles = StyleSheet.create({
     opacity: appStates.pressedOpacity,
   },
   actionIcon: {
-    width: 40,
-    height: 40,
+    width: 24,
+    height: 24,
     borderRadius: appRadius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: appColors.surfaceField,
+    backgroundColor: "transparent",
   },
   actionCopy: {
     flex: 1,
   },
   actionTitle: {
     color: appColors.textPrimary,
-    fontSize: 15,
-    fontWeight: "600",
+    ...appTypography.bodyStrong,
   },
   actionMeta: {
     alignItems: "flex-end",

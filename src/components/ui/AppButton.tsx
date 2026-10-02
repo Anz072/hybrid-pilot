@@ -12,6 +12,7 @@ import { appColors } from "../../theme/colors";
 import { appTypography } from "../../theme/typography";
 import {
   appBorders,
+  appElevation,
   appRadius,
   appSpacing,
   appStates,
@@ -113,7 +114,8 @@ export const IconButton = ({
 const styles = StyleSheet.create({
   button: {
     minHeight: 48,
-    borderRadius: appRadius.md,
+    minWidth: 48,
+    borderRadius: appRadius.button,
     paddingHorizontal: appSpacing.md,
     paddingVertical: appSpacing.sm,
     alignItems: "center",
@@ -130,9 +132,8 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.actionPrimary,
   },
   secondaryButton: {
-    backgroundColor: appSurfaces.soft,
-    borderWidth: appBorders.width,
-    borderColor: appBorders.soft,
+    backgroundColor: appSurfaces.card,
+    ...appElevation.metric,
   },
   ghostButton: {
     backgroundColor: "transparent",
@@ -143,6 +144,8 @@ const styles = StyleSheet.create({
     borderColor: appColors.dangerBorder,
   },
   label: {
+    flexShrink: 1,
+    textAlign: "center",
     ...appTypography.button,
   },
   iconWrap: {

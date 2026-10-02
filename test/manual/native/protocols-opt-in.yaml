@@ -1,0 +1,8 @@
+appId: com.dribsnis.app
+name: Protocols opt-in and root sections
+# Starts on Protocol settings, with the new isolated account's tracking off.
+---
+- tapOn: "0"
+- assertVisible: "Track your protocol"
+- tapOn: "Not now"
+- runFlow: protocols-root.yaml

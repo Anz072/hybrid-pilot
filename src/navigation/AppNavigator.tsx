@@ -1,6 +1,6 @@
 import WeeklyReviewScreen from "../screens/User_Settings/WeeklyReviewScreen";
 import AdaptiveCaloriesSettingsScreen from "../screens/User_Settings/AdaptiveCaloriesSettingsScreen";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { NavigationContainer } from "@react-navigation/native";
+import { NavigationContainer, type NavigatorScreenParams } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import MainTabNavigator from "./MainTabNavigator";
 import LoginScreen from "../screens/Auth/LoginScreen";
@@ -33,10 +33,16 @@ import type { FoodStackParamList } from "./foodTypes";
 import { appColors } from "../theme/colors";
 import { appNavigationTheme } from "../theme/navigationTheme";
 import { appTypography } from "../theme/typography";
+import ProtocolsNavigator from "./ProtocolsNavigator";
+import ProtocolSettingsScreen from "../screens/Protocols/ProtocolSettingsScreen";
+import type { ProtocolStackParamList } from "./protocolTypes";
+import { getAuthSessionGeneration } from "../API/supabase/sessionScope";
 
 export type RootStackParamList = {
   Onboarding: undefined;
   Main: undefined;
+  Protocols: NavigatorScreenParams<ProtocolStackParamList>;
+  ProtocolSettings: undefined;
   Login: undefined;
   MicrosOverview: undefined;
   WeeklyReviewScreen: undefined;
@@ -59,8 +65,13 @@ const AppNavigator = () => {
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const [bootstrapError, setBootstrapError] = useState<string | null>(null);
+  const bootstrapSequence = useRef(0);
+  const authIdentity = useRef<string | null | undefined>(undefined);
 
   const hydrateAuthenticatedSession = useCallback(async () => {
+    const request = ++bootstrapSequence.current;
+    const sessionGeneration = getAuthSessionGeneration();
+    const current = () => request === bootstrapSequence.current && sessionGeneration === getAuthSessionGeneration();
     setBootstrapError(null);
 
     try {
@@ -72,12 +83,14 @@ const AppNavigator = () => {
       // the path developers exercised every day was the one path that never
       // touched the API. A real session is now the only way in.
       const sessionUser = await getValidatedSupabaseSessionUser();
+      if (!current()) return;
       if (!sessionUser) {
         dispatch(clearCurrentUser());
         return;
       }
 
       const result = await dispatch(hydrateUserFromDb());
+      if (!current()) return;
 
       if (hydrateUserFromDb.rejected.match(result)) {
         setBootstrapError(
@@ -85,6 +98,7 @@ const AppNavigator = () => {
         );
       }
     } catch (error) {
+      if (!current()) return;
       console.error("[AppNavigator] Bootstrap failed", error);
       setBootstrapError(
         error instanceof Error
@@ -92,7 +106,7 @@ const AppNavigator = () => {
           : "Could not finish loading the app.",
       );
     } finally {
-      setIsBootstrapping(false);
+      if (current()) setIsBootstrapping(false);
     }
   }, [dispatch]);
 
@@ -109,16 +123,26 @@ const AppNavigator = () => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        void dispatch(hydrateUserFromDb());
-        return;
+      const nextId = session?.user.id ?? null;
+      // Supabase can announce the same signed-in user on foreground/renewal.
+      // Do not remount a form or restart bootstrap for that identity.
+      if (authIdentity.current === nextId) return;
+      if (authIdentity.current !== nextId) {
+        authIdentity.current = nextId;
+        bootstrapSequence.current += 1;
+        dispatch(clearCurrentUser());
       }
-
-      dispatch(clearCurrentUser());
+      if (nextId) {
+        setIsBootstrapping(true);
+        queueMicrotask(() => { void hydrateAuthenticatedSession(); });
+      } else {
+        setBootstrapError(null);
+        setIsBootstrapping(false);
+      }
     });
 
     return () => subscription.unsubscribe();
-  }, [dispatch]);
+  }, [dispatch, hydrateAuthenticatedSession]);
 
   const isHydrating = isBootstrapping || (!userHydrated && !bootstrapError);
   const isLoggedIn = Boolean(user);
@@ -163,7 +187,7 @@ const AppNavigator = () => {
         }
         key={
           isLoggedIn
-            ? "app"
+            ? `app:${user?.externalId}`
             : hasCompletedOnboarding
               ? "auth-login"
               : "auth-onboarding"
@@ -173,6 +197,8 @@ const AppNavigator = () => {
         {isLoggedIn ? (
           <>
             <Stack.Screen name="Main" component={MainTabNavigator} />
+            <Stack.Screen name="Protocols" component={ProtocolsNavigator} />
+            <Stack.Screen name="ProtocolSettings" component={ProtocolSettingsScreen} />
             <Stack.Screen
               name="WeeklyReviewScreen"
               component={WeeklyReviewScreen}

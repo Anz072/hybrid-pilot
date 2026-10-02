@@ -3,6 +3,7 @@ import {
   refreshSupabaseSession,
   SUPABASE_SESSION_REQUIRED_MESSAGE,
 } from "../supabase/client";
+import { assertAuthSessionGeneration, getAuthSessionGeneration, SessionChangedError } from "../supabase/sessionScope";
 
 // HTTP client for the Nouri backend.
 //
@@ -14,7 +15,7 @@ import {
 const DEFAULT_TIMEOUT_MS = 15_000;
 
 export const NOURI_API_UNCONFIGURED_MESSAGE =
-  "Missing API config. Set EXPO_PUBLIC_API_BASE_URL in the app's .env file.";
+  "Missing API config. Set EXPO_PUBLIC_API_BASE_URL in the build environment and rebuild the app.";
 
 export type NouriApiErrorCode =
   | "AUTH_REQUIRED"
@@ -23,6 +24,7 @@ export type NouriApiErrorCode =
   | "AUTH_PROVIDER_NOT_ALLOWED"
   | "FORBIDDEN"
   | "NOT_FOUND"
+  | "CONFLICT"
   | "VALIDATION_FAILED"
   | "PAYLOAD_TOO_LARGE"
   | "RATE_LIMITED"
@@ -74,6 +76,8 @@ type RequestOptions = {
   body?: unknown;
   query?: Record<string, string | number | undefined>;
   timeoutMs?: number;
+  /** Bind user-initiated work to the account that owns the screen/form. */
+  expectedUserId?: string;
 };
 
 /**
@@ -159,6 +163,9 @@ const performRequest = async <T>(
   options: RequestOptions,
   accessToken: string,
 ): Promise<T> => {
+  // Validate configuration before the network catch so a missing build-time
+  // URL is not misreported as an unreachable server.
+  const url = buildUrl(path, options.query);
   const controller = new AbortController();
   const timeout = setTimeout(
     () => controller.abort(),
@@ -167,7 +174,7 @@ const performRequest = async <T>(
 
   let response: Response;
   try {
-    response = await fetch(buildUrl(path, options.query), {
+    response = await fetch(url, {
       method: options.method ?? "GET",
       signal: controller.signal,
       headers: {
@@ -250,8 +257,20 @@ export const apiRequest = async <T>(
   options: RequestOptions = {},
 ): Promise<T> => {
   const method = options.method ?? "GET";
+  const sessionGeneration = getAuthSessionGeneration();
   const session = await getSupabaseSession();
   const accessToken = session?.access_token;
+
+  const assertOwner = (current: typeof session) => {
+    if (options.expectedUserId === undefined) return;
+    assertAuthSessionGeneration(sessionGeneration);
+    if (current?.user.id !== options.expectedUserId) throw new SessionChangedError();
+  };
+  assertOwner(session);
+  const accept = async (result: T): Promise<T> => {
+    if (options.expectedUserId !== undefined) assertOwner(await getSupabaseSession());
+    return result;
+  };
 
   if (!accessToken) {
     const error = new NouriApiError(
@@ -265,7 +284,7 @@ export const apiRequest = async <T>(
   }
 
   try {
-    return await performRequest<T>(path, options, accessToken);
+    return await accept(await performRequest<T>(path, options, accessToken));
   } catch (error) {
     if (!(error instanceof NouriApiError) || !error.isExpiredToken) {
       reportFailure(method, path, error);
@@ -277,7 +296,15 @@ export const apiRequest = async <T>(
 
     // Single-flighted, so a burst of simultaneous 401s shares one refresh
     // rather than racing to spend the same rotating refresh token.
-    const refreshedToken = await refreshSupabaseSession();
+    if (options.expectedUserId !== undefined) assertOwner(await getSupabaseSession());
+    let refreshedToken = await refreshSupabaseSession();
+    if (options.expectedUserId !== undefined) {
+      const refreshedSession = await getSupabaseSession();
+      assertOwner(refreshedSession);
+      // Use the token belonging to the checked session, never a refresh result
+      // left over from another account's concurrent refresh.
+      if (refreshedToken) refreshedToken = refreshedSession?.access_token ?? null;
+    }
 
     if (!refreshedToken) {
       const authError = new NouriApiError(
@@ -293,7 +320,7 @@ export const apiRequest = async <T>(
     // Exactly one retry. Whatever this throws propagates untouched — but is
     // reported, because by here the refresh has already had its chance.
     try {
-      return await performRequest<T>(path, options, refreshedToken);
+      return await accept(await performRequest<T>(path, options, refreshedToken));
     } catch (retryError) {
       reportFailure(method, path, retryError);
       throw retryError;
@@ -310,4 +337,3 @@ export const getDeviceTimeZone = (): string => {
     return "UTC";
   }
 };
-

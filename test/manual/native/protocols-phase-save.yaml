@@ -1,0 +1,28 @@
+appId: com.dribsnis.app
+name: Save a future phase and preserve historical doses
+# Starts with Change begins set to QA_EFFECTIVE and its native picker open.
+# The unsaved configuration is 90 mg every three days at 20:00.
+---
+- assertVisible: "Change begins, ${QA_EFFECTIVE}"
+- tapOn: "Done"
+- tapOn: "Continue to preview"
+- assertVisible: "Every 3 days"
+- assertVisible: "Change effective ${QA_EFFECTIVE}"
+- assertVisible: "90 mg · IM"
+- takeScreenshot: protocols-future-phase-preview
+- scrollUntilVisible:
+    element: "Save change"
+    direction: DOWN
+- tapOn: "Save change"
+- scrollUntilVisible:
+    element: "Upcoming change · ${QA_EFFECTIVE}"
+    direction: UP
+- assertVisible: "Upcoming change · ${QA_EFFECTIVE}"
+- assertVisible: "Every 3 days"
+- takeScreenshot: protocols-future-phase-detail
+- scrollUntilVisible:
+    element: "Taken · Sep 9 at 21:14"
+    direction: DOWN
+- assertVisible: "105 mg · IM"
+- assertVisible: "Planned · 110 mg · Sep 9 at 20:00"
+- takeScreenshot: protocols-historical-dose-after-phase

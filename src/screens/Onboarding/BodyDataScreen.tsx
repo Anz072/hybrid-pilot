@@ -35,6 +35,7 @@ import type {
 import { appColors } from "../../theme/colors";
 import { appTypography } from "../../theme/typography";
 import {
+  appContentLayout,
   appBorders,
   appRadius,
   appSpacing,
@@ -167,7 +168,7 @@ const BodyDataScreen = ({ navigation, route }: Props) => {
           </AppText>
         </View>
 
-        <AppCard style={styles.formCard} variant="plain">
+        <AppCard style={styles.formCard} variant="surface">
           <View>
             <AppText color="secondary" variant="metadata">
               Birthdate
@@ -269,6 +270,7 @@ const styles = StyleSheet.create({
     backgroundColor: appSurfaces.canvas,
   },
   content: {
+    ...appContentLayout,
     flexGrow: 1,
     paddingHorizontal: appSpacing.gutter,
   },
@@ -324,6 +326,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   footer: {
+    ...appContentLayout,
     paddingHorizontal: appSpacing.gutter,
     paddingTop: appSpacing.sm,
     backgroundColor: appColors.surfaceCard,

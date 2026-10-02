@@ -56,6 +56,8 @@ import {
   ScreenHeader,
 } from "../../components/ui";
 import {
+  appContentLayout,
+  appCardSurface,
   appBorders,
   appRadius,
   appSpacing,
@@ -914,9 +916,12 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
+    ...appContentLayout,
     paddingHorizontal: appSpacing.gutter,
   },
   heroCard: {
+    ...appCardSurface,
+    padding: appSpacing.md,
     marginBottom: appSpacing.md,
   },
   heroTopRow: {

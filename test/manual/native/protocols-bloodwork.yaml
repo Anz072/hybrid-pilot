@@ -1,0 +1,62 @@
+appId: com.dribsnis.app
+name: Bloodwork raw values, converted graph and deletion
+# Starts in a Protocol root section on the isolated QA account. Numeric fixture values below
+# exercise exact unit conversion; they are not suggested results or ranges.
+---
+- tapOn: "Add to Protocols"
+- tapOn: "Bloodwork"
+- assertVisible: "Add bloodwork"
+- tapOn: "Add result"
+- tapOn: "Testosterone, total · Hormones"
+- tapOn:
+    text: "Result"
+    index: 1
+- inputText: "34.7"
+- scrollUntilVisible:
+    element: "Lower bound (optional)"
+    direction: DOWN
+- tapOn:
+    text: "Lower bound (optional)"
+    index: 1
+- inputText: "17.35"
+- scrollUntilVisible:
+    element: "Upper bound (optional)"
+    direction: DOWN
+- tapOn:
+    text: "Upper bound (optional)"
+    index: 1
+- inputText: "52.05"
+- swipe:
+    start: "85%,50%"
+    end: "85%,80%"
+    duration: 800
+- scrollUntilVisible:
+    element: "Add result"
+    direction: DOWN
+- tapOn: "Add result"
+- assertVisible: "34.7 nmol/L"
+- scrollUntilVisible:
+    element: "Save bloodwork"
+    direction: DOWN
+- tapOn: "Save bloodwork"
+- assertVisible: "Edit bloodwork"
+- assertVisible: "34.7 nmol/L"
+- assertVisible: "Reference: 17.35 – 52.05 nmol/L"
+- tapOn: "View marker history"
+- tapOn: "ng/dL"
+- assertVisible: "1000 ng/dL"
+- scrollUntilVisible:
+    element: "Recorded: 34.7 nmol/L"
+    direction: DOWN
+- assertVisible: "Reference: 500 – 1500 ng/dL"
+- takeScreenshot: protocols-bloodwork-converted
+- tapOn: "Open this panel"
+- assertVisible: "34.7 nmol/L"
+- assertVisible: "Reference: 17.35 – 52.05 nmol/L"
+- scrollUntilVisible:
+    element: "Delete bloodwork panel"
+    direction: DOWN
+- tapOn: "Delete bloodwork panel"
+- tapOn: "Delete panel"
+- assertVisible: "Trends, tab, 3 of 4"
+- assertVisible: "No bloodwork added yet"

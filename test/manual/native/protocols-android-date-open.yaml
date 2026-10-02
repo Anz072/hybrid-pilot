@@ -1,0 +1,11 @@
+appId: com.dribsnis.app
+name: Keep an Android bloodwork date selection across clock refresh
+# Start in Edit bloodwork on the isolated synthetic account. Supply:
+# QA_ORIGINAL_DATE (e.g. Sep 21, 2026), QA_SELECTED_DAY (e.g. 22),
+# QA_PICKER_LABEL (e.g. Tue, Sep 22). After this flow, wait at least 35
+# seconds without closing/reopening the picker, then run the confirm flow.
+---
+- tapOn: "Collection date, ${QA_ORIGINAL_DATE}"
+- tapOn: "${QA_SELECTED_DAY}"
+- assertVisible: "${QA_PICKER_LABEL}"
+- takeScreenshot: protocols-date-before-clock-refresh

@@ -1,18 +1,19 @@
 # Mobile testing
 
-**Date:** 2026-08-30 · **Applies to:** `hybrid-pilot` (React Native)
+**Original migration:** 2026-08-30 · **Updated:** 2026-09-10 · **Applies to:** `hybrid-pilot` (React Native)
 
 ---
 
 ## What runs
 
-`npm test` is `tsc --noEmit && vitest run`. **116 tests across 16 files**, plus
-one that reports as skipped — see *Manual checks* below. It needs no simulator,
-no emulator, no native module and no running stack, so it runs on any machine in
-about a second.
+`npm test` is `tsc --noEmit && vitest run`. It reports the current test counts,
+including two opt-in HTTP checks as skipped — see *Manual checks* below. It
+needs no simulator, emulator, native module or running stack. Protocol contract
+tests require the sibling `nouri-api` checkout and its installed dependencies.
 
-Everything under `test/` is either pure logic or static analysis over the
-source. Nothing renders a component or touches a native module, which is why the
+The default tests exercise pure logic, transport/store behavior with controlled
+HTTP boundaries, provider contracts and static analysis. Nothing renders a
+component or touches a native module, which is why the
 environment is plain `node` and there is no React Native preset to keep working.
 
 ---
@@ -81,13 +82,29 @@ client all hold state at module scope, so each test needs a fresh copy.
 
 ## Manual checks
 
-`test/manual/tokenRefreshE2E.test.ts` needs a running local Supabase stack and a
-running `nouri-api`, sets `jwt_expiry = 60`, and waits out a genuine token
-expiry — over a minute. It uses the real client, the real API, a real expired
-token and a real GoTrue refresh; only the session store is stubbed, because the
-app persists sessions in SecureStore.
+From the sibling `nouri-api` checkout, using Node 22 and Docker, run:
 
-It is **skipped, not excluded**:
+```sh
+node --experimental-strip-types scripts/test-mobile-protocols.ts
+```
+
+The runner uses the existing isolated-Supabase helper to create a temporary
+local project on 554xx ports, copies the current migrations, gives only that
+project 60-second tokens, and starts the real API on an available loopback
+port. Its cleanup removes its own project. It neither reads `.env.local` nor
+modifies the normal development stack, linked projects or hosted services.
+
+`test/manual/tokenRefreshE2E.test.ts` waits out a genuine token expiry — over a
+minute — then proves one authenticated retry and one accepted weight write.
+`test/manual/protocolsE2E.test.ts` exercises the actual mobile DB facade, store
+and client through HTTP: settings, catalog/model reads, preview/draft/start,
+late actual logging/replay, preserved plans, Levels/Compare, phase/log changes,
+cross-user denial and deletion. Only session retrieval/persistence is replaced
+because SecureStore is unavailable under Node; Auth, JWT verification, RLS and
+database writes are real. Both tests reject non-loopback targets and require
+the disposable-stack marker. Neither proves native rendering or interaction.
+
+They are **skipped, not excluded**:
 
 ```ts
 describe.skipIf(!process.env.RUN_MANUAL_E2E)("token refresh, end to end", …)
@@ -98,8 +115,26 @@ rejected for two reasons: the exclude also stopped it running *by name*, and a
 check that vanishes from the output is a check nobody remembers exists.
 
 ```
-RUN_MANUAL_E2E=1 npx vitest run test/manual/tokenRefreshE2E.test.ts
+RUN_MANUAL_E2E=1 / RUN_PROTOCOLS_E2E=1
 ```
+
+The runner supplies these flags together with its local URLs and key; setting
+a flag alone is insufficient. Skips in the default suite are not passes.
+
+## Protocol contract and lifecycle coverage
+
+`test/protocolsApi.test.ts` uses the provider's current Zod schemas and generated
+OpenAPI, rather than a second handwritten validation schema. It covers six
+schedule variants, exact decimal transport, planned/actual records, nullable
+history/PK states and all 20 current Protocol resource paths. The mobile's
+transport types remain local; the provider imports exist only in tests.
+
+`test/protocolLifecycle.test.ts` drives `DB.ts` through the thin Protocol store
+and shared authenticated client with controlled HTTP timing. It covers pending
+request coalescing, accepted-write events, stale-read rejection, manual retry
+with the same command ID, conflicts, same-account token renewal, account changes
+before/after writes and A → B → A. Profile hydration also rejects superseded
+requests. No test restores a persistent data cache or offline mutation queue.
 
 ---
 

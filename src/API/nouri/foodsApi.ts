@@ -1,8 +1,10 @@
 import type {
   DBFoodItem,
+  DBFoodNutrientDetails,
   FoodSource,
   NutritionBasis,
 } from "../../store/DB_TYPES";
+import { foodNutrientDetails } from "./foodNutrients";
 import { apiRequest } from "./client";
 
 // Food search transport.
@@ -11,7 +13,7 @@ import { apiRequest } from "./client";
 // recipes/meals, and USDA into one normalized shape. The app no longer knows or
 // cares which upstream answered, and no external API key ships in the bundle.
 
-export type ApiFood = {
+export type ApiFood = Partial<DBFoodNutrientDetails> & {
   id: number | null;
   ref: string;
   name: string;
@@ -45,11 +47,11 @@ export type ApiFoodSearchResponse = {
   degradedProviders: string[];
 };
 
-// Maps the API shape onto the app's DBFoodItem. Nutrient detail columns are not
-// carried by search results, so they stay null — the same as before, where
-// search results were SaveFoodItemInput rather than full rows.
+// Preserve nutrient detail for search, barcode, library and diary reads.
+// Missing fields from an older API remain unknown during a rolling release.
 export const toDbFoodItem = (food: ApiFood): DBFoodItem =>
   ({
+    ...foodNutrientDetails(food),
     id: food.id ?? 0,
     source: food.source,
     sourceId: food.ref.includes(":") ? (food.ref.split(":")[1] ?? null) : null,
@@ -78,7 +80,7 @@ export const toDbFoodItem = (food: ApiFood): DBFoodItem =>
     isOwn: food.isOwn,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-  }) as DBFoodItem;
+  });
 
 export const searchFoods = (
   query: string,

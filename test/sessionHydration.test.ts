@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DBUser } from "../src/store/DB_TYPES";
 import type { UserState } from "../src/store/userSlice";
+import { configureStore } from "@reduxjs/toolkit";
 
 /**
  * What the app believes about "who is signed in" when a load fails.
@@ -94,6 +95,29 @@ describe("session hydration", () => {
       "a failed load must not claim to know that there is no user",
     ).toBe(false);
     expect(state.error).toBe("Could not reach the server.");
+  });
+
+  it("a late profile cannot restore a signed-out account or overwrite a newer hydration", async () => {
+    const mod = await import("../src/store/userSlice");
+    const store = configureStore({ reducer: { user: mod.default } });
+    let resolveOld!: (value: DBUser) => void;
+    getUser.mockImplementationOnce(() => new Promise((resolve) => { resolveOld = resolve; }));
+    const old = store.dispatch(mod.hydrateUserFromDb());
+    store.dispatch(mod.clearCurrentUser());
+    const nextUser = { ...USER, externalId: "u-2" };
+    getUser.mockResolvedValueOnce(nextUser);
+    await store.dispatch(mod.hydrateUserFromDb());
+    resolveOld(USER);
+    await old;
+    expect(store.getState().user.currentUser?.externalId).toBe("u-2");
+
+    let rejectOld!: (error: Error) => void;
+    getUser.mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectOld = reject; }));
+    const failed = store.dispatch(mod.hydrateUserFromDb());
+    store.dispatch(mod.clearCurrentUser());
+    rejectOld(new Error("late outage"));
+    await failed;
+    expect(store.getState().user).toMatchObject({ currentUser: null, hydrated: true, status: "idle", error: null });
   });
 
   it("the navigator's error screen is reachable from that state", () => {

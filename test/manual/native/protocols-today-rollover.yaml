@@ -1,0 +1,11 @@
+appId: com.dribsnis.app
+name: Today follows a foreground date change
+# Precondition: enter Protocols using Home's Open Protocols Today control.
+# Background the dedicated QA app, change only its timezone across a date
+# boundary, then foreground it without reloading. Never tap Today in between.
+# Set QA_NEW_DATE (e.g. Sep 23, 2026) and QA_NEW_ZONE (Pacific/Kiritimati).
+# Restore the original simulator timezone after the run.
+---
+- assertVisible: "${QA_NEW_DATE}"
+- assertVisible: "Times shown in ${QA_NEW_ZONE}"
+- takeScreenshot: protocols-today-after-foreground-date-change

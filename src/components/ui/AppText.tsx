@@ -1,5 +1,5 @@
 import React from "react";
-import { Text, type StyleProp, type TextProps, type TextStyle } from "react-native";
+import { Platform, Text, useWindowDimensions, type StyleProp, type TextProps, type TextStyle } from "react-native";
 import { appColors, type AppColorValue } from "../../theme/colors";
 import { appTypography, type AppTypographyRole } from "../../theme/typography";
 
@@ -32,6 +32,7 @@ export const AppText = ({
   variant = "body",
   ...props
 }: AppTextProps) => {
+  const { fontScale } = useWindowDimensions();
   const resolvedColor = color in textColorByRole
     ? textColorByRole[color as AppTextColor]
     : color;
@@ -39,6 +40,9 @@ export const AppText = ({
   return (
     <Text
       {...props}
+      // RN 0.81 iOS can retain paragraph measurements after a warm Dynamic
+      // Type change. Refresh only the paragraph; keep its screen/form mounted.
+      key={Platform.OS === "ios" ? fontScale : undefined}
       style={[
         appTypography[variant],
         { color: resolvedColor },

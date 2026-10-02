@@ -27,6 +27,7 @@ const harness = {
   currentState: "active",
   sessionValue: undefined as { access_token: string } | null | undefined,
   refreshImpl: undefined as (() => RefreshResult | Promise<RefreshResult>) | undefined,
+  authListener: undefined as ((event: string, session: { user: { id: string } } | null) => void) | undefined,
 };
 
 const reset = () => {
@@ -39,11 +40,16 @@ const reset = () => {
   harness.currentState = "active";
   harness.sessionValue = undefined;
   harness.refreshImpl = undefined;
+  harness.authListener = undefined;
 };
 
 vi.mock("@supabase/supabase-js", () => ({
   createClient: () => ({
     auth: {
+      onAuthStateChange: (callback: NonNullable<typeof harness.authListener>) => {
+        harness.authListener = callback;
+        return { data: { subscription: { unsubscribe() {} } } };
+      },
       startAutoRefresh: async () => {
         harness.autoRefreshStarts += 1;
       },
@@ -116,6 +122,20 @@ describe("supabase session lifecycle", () => {
   it("restores a persisted session through SecureStore", async () => {
     const mod = await loadClient();
     expect((await mod.getSupabaseSession())?.access_token).toBe("stored");
+  });
+
+  it("invalidates account work on sign-out and switching, but not token renewal", async () => {
+    const mod = await loadClient();
+    mod.getSupabaseClient();
+    const scope = await import("../src/API/supabase/sessionScope");
+    harness.authListener?.("INITIAL_SESSION", { user: { id: "alice" } });
+    const initial = scope.getAuthSessionGeneration();
+    harness.authListener?.("TOKEN_REFRESHED", { user: { id: "alice" } });
+    expect(scope.getAuthSessionGeneration()).toBe(initial);
+    harness.authListener?.("SIGNED_OUT", null);
+    harness.authListener?.("SIGNED_IN", { user: { id: "bob" } });
+    harness.authListener?.("SIGNED_IN", { user: { id: "alice" } });
+    expect(() => scope.assertAuthSessionGeneration(initial)).toThrow(/account changed/);
   });
 
   it("resolves to null rather than throwing when there is no session", async () => {

@@ -1,0 +1,15 @@
+appId: com.dribsnis.app
+name: Edit the course end date
+# Starts in a Protocol root section with the example active course.
+---
+- tapOn: "Compounds, tab, 4 of 4"
+- tapOn: "Testosterone Enanthate, Active, Sep 9, 2026.*"
+- scrollUntilVisible:
+    element: "End course"
+    direction: DOWN
+- tapOn: "End course"
+- tapOn: "Last day, .*"
+- scrollUntilVisible:
+    element: "Done"
+    direction: DOWN
+- takeScreenshot: protocols-end-date-picker

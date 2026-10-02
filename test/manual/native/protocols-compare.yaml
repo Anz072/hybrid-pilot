@@ -1,0 +1,63 @@
+appId: com.dribsnis.app
+name: Temporary comparison and range controls
+# Starts in a Protocol root section with the fixture Test E course selected.
+# Capture its API course/log state before and after to verify zero persistent changes.
+---
+- tapOn: "Levels, tab, 2 of 4"
+- scrollUntilVisible:
+    element: "Compare"
+    direction: UP
+- tapOn: "Compare"
+- scrollUntilVisible:
+    element: "Interval in days"
+    direction: DOWN
+- tapOn:
+    text: "Interval in days"
+    index: 1
+- eraseText
+- inputText: "7"
+- swipe:
+    start: "85%,50%"
+    end: "85%,80%"
+    duration: 800
+- scrollUntilVisible:
+    element: "Amount, administration 1"
+    direction: DOWN
+- tapOn:
+    text: "Amount, administration 1"
+    index: 1
+- eraseText
+- inputText: "70"
+- swipe:
+    start: "85%,50%"
+    end: "85%,80%"
+    duration: 800
+- scrollUntilVisible:
+    element: "Compare estimated levels"
+    direction: DOWN
+- tapOn: "Compare estimated levels"
+- assertVisible: "Edit comparison"
+- assertVisible: "1M"
+- takeScreenshot: protocols-compare-initial
+- tapOn: "1W"
+- scrollUntilVisible:
+    element: "2. Compare"
+    direction: DOWN
+- assertVisible: "1. Current"
+- assertVisible: "2. Compare"
+- takeScreenshot: protocols-compare-week
+- scrollUntilVisible:
+    element: "3M"
+    direction: UP
+- tapOn: "3M"
+- scrollUntilVisible:
+    element: "2. Compare"
+    direction: DOWN
+- assertVisible: "1. Current"
+- assertVisible: "2. Compare"
+- takeScreenshot: protocols-compare-quarter
+- scrollUntilVisible:
+    element: "Close Compare"
+    direction: DOWN
+- tapOn: "Close Compare"
+- assertVisible: "Levels, tab, 2 of 4"

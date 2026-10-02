@@ -3,27 +3,29 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { CaretDownIcon, CaretUpIcon } from "phosphor-react-native";
 import { AppText } from "./AppText";
 import { appColors } from "../../theme/colors";
-import { appSpacing } from "../../theme/tokens";
+import { appCardSurface, appSpacing, appStates } from "../../theme/tokens";
 
 /** Secondary information stays available without competing with the current task. */
 export const Disclosure = ({
   title,
   children,
   initiallyOpen = false,
+  contained = false,
 }: {
   title: string;
   children: React.ReactNode;
   initiallyOpen?: boolean;
+  contained?: boolean;
 }) => {
   const [open, setOpen] = React.useState(initiallyOpen);
   const Icon = open ? CaretUpIcon : CaretDownIcon;
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, contained && styles.contained]}>
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
         onPress={() => setOpen(!open)}
-        style={styles.trigger}
+        style={({ pressed }) => [styles.trigger, pressed && styles.pressed]}
       >
         <AppText style={styles.title} variant="bodySmallStrong">
           {title}
@@ -37,6 +39,8 @@ export const Disclosure = ({
 
 const styles = StyleSheet.create({
   wrap: { marginBottom: appSpacing.sm },
+  contained: { ...appCardSurface, padding: appSpacing.md },
+  pressed: { opacity: appStates.pressedOpacity },
   trigger: {
     minHeight: 48,
     flexDirection: "row",

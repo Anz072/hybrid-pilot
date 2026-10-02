@@ -1,3 +1,4 @@
+import { appContentLayout } from "../../theme/tokens";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import React, { useCallback, useMemo, useState } from "react";
 import {
@@ -275,6 +276,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
+    ...appContentLayout,
     paddingHorizontal: 16,
     paddingBottom: 24,
   },

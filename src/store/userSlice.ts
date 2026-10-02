@@ -11,6 +11,7 @@ export type UserState = {
   status: "idle" | "loading" | "failed";
   hydrated: boolean;
   error: string | null;
+  hydrationRequestId: string | null;
 };
 
 const initialState: UserState = {
@@ -18,6 +19,7 @@ const initialState: UserState = {
   status: "idle",
   hydrated: false,
   error: null,
+  hydrationRequestId: null,
 };
 
 export const hydrateUserFromDb = createAsyncThunk(
@@ -33,12 +35,14 @@ const userSlice = createSlice({
   initialState,
   reducers: {
     setCurrentUser: (state, action: PayloadAction<DBUser | null>) => {
+      state.hydrationRequestId = null;
       state.currentUser = action.payload;
       state.hydrated = true;
       state.status = "idle";
       state.error = null;
     },
     clearCurrentUser: (state) => {
+      state.hydrationRequestId = null;
       state.currentUser = null;
       state.hydrated = true;
       state.status = "idle";
@@ -47,16 +51,21 @@ const userSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(hydrateUserFromDb.pending, (state) => {
+      .addCase(hydrateUserFromDb.pending, (state, action) => {
+        state.hydrationRequestId = action.meta.requestId;
         state.status = "loading";
         state.error = null;
       })
       .addCase(hydrateUserFromDb.fulfilled, (state, action) => {
+        if (state.hydrationRequestId !== action.meta.requestId) return;
+        state.hydrationRequestId = null;
         state.status = "idle";
         state.currentUser = action.payload;
         state.hydrated = true;
       })
       .addCase(hydrateUserFromDb.rejected, (state, action) => {
+        if (state.hydrationRequestId !== action.meta.requestId) return;
+        state.hydrationRequestId = null;
         state.status = "failed";
         state.error = action.error.message ?? "Failed to hydrate user";
         // `hydrated` means "we know who the user is, or that there is none".

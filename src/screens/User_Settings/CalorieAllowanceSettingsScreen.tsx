@@ -30,6 +30,7 @@ import {
   NumericText,
 } from "../../components/ui";
 import {
+  appContentLayout,
   appBorders,
   appRadius,
   appSpacing,
@@ -237,7 +238,7 @@ const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
         />
 
         {!user ? (
-          <AppCard style={styles.card} variant="plain">
+          <AppCard style={styles.card} variant="surface">
             <AppText variant="cardTitle">No active user</AppText>
             <AppText color="secondary" variant="bodySmall">
               Sign in to your account first before editing nutrition settings.
@@ -245,7 +246,7 @@ const CalorieAllowanceSettingsScreen = ({ navigation }: Props) => {
           </AppCard>
         ) : (
           <>
-            <AppCard style={styles.card} variant="plain">
+            <AppCard style={styles.card} variant="surface">
               <AppText variant="cardTitle">Daily target</AppText>
               <AppText color="secondary" variant="bodySmall">
                 Changing calories also adjusts your macro targets.
@@ -370,6 +371,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
+    ...appContentLayout,
     paddingHorizontal: appSpacing.gutter,
   },
   card: {

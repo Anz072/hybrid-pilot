@@ -1,0 +1,20 @@
+appId: com.dribsnis.app
+name: Exact first administration in Levels
+# Starts in a Protocol root section with only the example Test E course selected.
+# Its first actual dose is 105 mg yesterday at 21:14, Europe/Vilnius.
+# QA uses the normal authenticated API and current backend, with no app fixture mode.
+---
+- tapOn: "Levels, tab, 2 of 4"
+- scrollUntilVisible:
+    element: "Previous chart point or event"
+    direction: DOWN
+- repeat:
+    times: 100
+    while:
+      notVisible: "Recorded · 105 mg · IM"
+    commands:
+      - tapOn: "Previous chart point or event"
+- assertVisible: "Recorded · 105 mg · IM"
+- assertVisible: ".*21:14 · Europe/Vilnius"
+- assertVisible: "Estimated amount · 0 mg"
+- takeScreenshot: protocols-levels-exact-first-dose

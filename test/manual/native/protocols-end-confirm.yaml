@@ -1,0 +1,41 @@
+appId: com.dribsnis.app
+name: End today and preserve dose history
+# September 10 fixture, with the native End course sheet open on today's date.
+# The plan defines the inclusive last day; status changes at its next local midnight.
+---
+- assertVisible: "Last day, Sep 10, 2026"
+- tapOn:
+    text: "End course"
+    index: 1
+- assertNotVisible: "Last day, Sep 10, 2026"
+- scrollUntilVisible:
+    element: "Every 2 days"
+    direction: UP
+- assertVisible: "Every 2 days"
+- assertVisible: "Starts Sep 9, 2026 · Last day Sep 10, 2026"
+- assertNotVisible: "Upcoming change · Sep 12, 2026"
+- takeScreenshot: protocols-ended-today-detail
+- scrollUntilVisible:
+    element: "Taken · Sep 9 at 21:14"
+    direction: DOWN
+- assertVisible: "105 mg · IM"
+- assertVisible: "Planned · 110 mg · Sep 9 at 20:00"
+- scrollUntilVisible:
+    element: "Estimated Levels"
+    direction: UP
+- tapOn: "Estimated Levels"
+- tapOn: "Today, tab, 1 of 4"
+- tapOn: "Calendar"
+- tapOn: "Sep 11, 2026, No scheduled activity"
+- assertVisible: "Nothing scheduled this day"
+- tapOn: "Calendar"
+- tapOn: "Sep 12, 2026, No scheduled activity"
+- assertVisible: "Nothing scheduled this day"
+- tapOn: "Calendar"
+- tapOn: "Sep 9, 2026, 1 recorded"
+- scrollUntilVisible:
+    element: "Taken · Sep 9 at 21:14"
+    direction: DOWN
+- assertVisible: "105 mg · IM"
+- assertVisible: "Planned · 110 mg · Sep 9 at 20:00"
+- takeScreenshot: protocols-history-after-ending

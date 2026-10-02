@@ -30,7 +30,10 @@ import {
   NumericText,
   OptionCard,
 } from "../../components/ui";
-import { appSpacing } from "../../theme/tokens";
+import {
+  appContentLayout,
+  appSpacing,
+} from "../../theme/tokens";
 import CalorieBudgetChart from "./CalorieBudgetChart";
 import SettingsStackHeader from "./SettingsStackHeader";
 import { formatGoalLabel, formatGoalStrategyLabel } from "./userProfileOptions";
@@ -233,7 +236,7 @@ const GoalStrategySettingsScreen = ({ navigation }: Props) => {
         />
 
         {!user ? (
-          <AppCard style={styles.card} variant="plain">
+          <AppCard style={styles.card} variant="surface">
             <AppText variant="cardTitle">No active user</AppText>
             <AppText color="secondary" variant="bodySmall">
               Sign in to your account first before editing your goal strategy.
@@ -241,7 +244,7 @@ const GoalStrategySettingsScreen = ({ navigation }: Props) => {
           </AppCard>
         ) : (
           <>
-            <AppCard style={styles.card} variant="plain">
+            <AppCard style={styles.card} variant="surface">
               <View style={styles.summaryRow}>
                 <AppText color="secondary" variant="bodySmall">
                   Estimated daily target
@@ -269,7 +272,7 @@ const GoalStrategySettingsScreen = ({ navigation }: Props) => {
               );
 
               return (
-                <AppCard key={section.key} style={styles.card} variant="plain">
+                <AppCard key={section.key} style={styles.card} variant="surface">
                   <View style={styles.sectionHeader}>
                     {section.icon}
                     <AppText variant="cardTitle">{section.title}</AppText>
@@ -320,7 +323,7 @@ const GoalStrategySettingsScreen = ({ navigation }: Props) => {
               );
             })}
 
-            <AppCard style={styles.card} variant="plain">
+            <AppCard style={styles.card} variant="surface">
               <AppButton
                 onPress={() => void handleSave()}
                 disabled={saving}
@@ -372,6 +375,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
+    ...appContentLayout,
     paddingHorizontal: appSpacing.gutter,
   },
   card: {

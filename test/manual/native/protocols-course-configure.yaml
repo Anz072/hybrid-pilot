@@ -1,0 +1,38 @@
+appId: com.dribsnis.app
+name: Configure a 110 mg every-two-day course
+# Starts in a Protocol root section on the isolated QA account.
+# Leaves the Starts date picker open for explicit historical-date selection.
+---
+- tapOn: "Add to Protocols"
+- tapOn: "Compound"
+- tapOn: "Configure Testosterone Enanthate"
+- tapOn: "Every N days"
+- tapOn:
+    text: "Interval in days"
+    index: 1
+- inputText: "2"
+- swipe:
+    start: "85%,50%"
+    end: "85%,80%"
+    duration: 800
+- scrollUntilVisible:
+    element: "Enter amount"
+    direction: DOWN
+- tapOn: "Enter amount"
+- inputText: "110"
+- swipe:
+    start: "85%,50%"
+    end: "85%,80%"
+    duration: 800
+- scrollUntilVisible:
+    element: "Evening · 20:00"
+    direction: DOWN
+- tapOn: "Evening · 20:00"
+- scrollUntilVisible:
+    element: "Starts, .*"
+    direction: DOWN
+- tapOn: "Starts, .*"
+- scrollUntilVisible:
+    element: "Done"
+    direction: DOWN
+- takeScreenshot: protocols-course-date-picker

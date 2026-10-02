@@ -10,6 +10,7 @@ import {
 import { appColors } from "../../theme/colors";
 import {
   appBorders,
+  appElevation,
   appRadius,
   appSpacing,
   appStates,
@@ -74,7 +75,7 @@ type SegmentedControlProps<T extends string> = {
   value: T;
 };
 
-/** Compact editorial tabs — an underline indicates the active segment, with no enclosing capsule. */
+/** Rounded category control with a raised selected segment. */
 export const SegmentedControl = <T extends string>({
   disabled,
   onChange,
@@ -143,22 +144,23 @@ const styles = StyleSheet.create({
   segmented: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: appSpacing.lg,
-    borderBottomWidth: appBorders.width,
-    borderBottomColor: appBorders.soft,
+    padding: appSpacing.xxs,
+    gap: appSpacing.xxs,
+    borderRadius: appRadius.button,
+    backgroundColor: appSurfaces.soft,
   },
   segment: {
+    flexGrow: 1,
     minHeight: 48,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: appSpacing.xxs,
-    paddingBottom: appSpacing.xs,
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
-    marginBottom: -1,
+    paddingHorizontal: appSpacing.sm,
+    paddingVertical: appSpacing.xs,
+    borderRadius: appRadius.xl,
   },
   segmentSelected: {
-    borderBottomColor: appColors.textPrimary,
+    backgroundColor: appSurfaces.card,
+    ...appElevation.metric,
   },
   disabled: {
     opacity: appStates.disabledOpacity,

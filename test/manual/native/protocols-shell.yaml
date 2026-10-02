@@ -1,0 +1,12 @@
+appId: com.dribsnis.app
+name: Protocols local navigation and metric trends
+# Requires the authenticated app from protocols-login.yaml on the isolated QA stack.
+---
+- tapOn:
+    text: "Not Now"
+    optional: true
+- tapOn: "More"
+- scrollUntilVisible:
+    element: "Protocol tracking.*"
+    direction: DOWN
+- tapOn: "Protocol tracking.*"

@@ -1,0 +1,20 @@
+appId: com.dribsnis.app
+name: Explicit whole-feature deletion
+# Starts in Protocols after re-enabling from Protocol settings.
+# Capture complete local API fixtures before and after; never use a real account.
+---
+- tapOn: "Back to Nouri"
+- scrollUntilVisible:
+    element: "Delete all Protocol data"
+    direction: DOWN
+- tapOn: "Delete all Protocol data"
+- assertVisible: "Delete all Protocol data?"
+- tapOn: "Cancel"
+- assertVisible: "Open Protocols"
+- tapOn: "Delete all Protocol data"
+- tapOn: "Delete everything in Protocols"
+- assertVisible: "Protocol data deleted"
+- takeScreenshot: protocols-deletion-accepted
+- tapOn: "OK"
+- assertNotVisible: "Open Protocols"
+- takeScreenshot: protocols-deletion-disabled

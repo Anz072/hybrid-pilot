@@ -23,6 +23,8 @@ import type {
 import { appColors } from "../../theme/colors";
 import { appTypography } from "../../theme/typography";
 import {
+  appContentLayout,
+  appCardSurface,
   appBorders,
   appRadius,
   appSpacing,
@@ -511,11 +513,12 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
+    ...appContentLayout,
     paddingHorizontal: appSpacing.gutter,
   },
   card: {
-    backgroundColor: "transparent",
-    paddingVertical: appSpacing.md,
+    ...appCardSurface,
+    padding: appSpacing.md,
     marginBottom: appSpacing.md,
   },
   loadingCard: {

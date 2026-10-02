@@ -59,6 +59,8 @@ import {
 } from "../../storage/localStore";
 import { appColors } from "../../theme/colors";
 import {
+  appContentLayout,
+  appCardSurface,
   appBorders,
   appRadius,
   appSpacing,
@@ -1490,6 +1492,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.surfaceCanvas,
   },
   content: {
+    ...appContentLayout,
     paddingHorizontal: appSpacing.gutter,
     paddingBottom: 36,
     paddingTop: 2,
@@ -1614,6 +1617,8 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   sectionCard: {
+    ...appCardSurface,
+    padding: appSpacing.md,
     marginBottom: 20,
   },
   sectionStack: {

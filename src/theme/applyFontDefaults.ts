@@ -43,7 +43,7 @@ const normalizeFontWeight = (fontWeight?: FontWeightValue): number => {
 /**
  * IBM Plex Sans is the app-wide default for any Text/TextInput that hasn't
  * opted into a role from `appTypography` (which sets its own fontFamily,
- * e.g. Newsreader for titles and coaching copy).
+ * IBM Plex Sans for headings, labels, and numbers).
  */
 const resolveDefaultFontFamily = (
   fontWeight?: FontWeightValue,

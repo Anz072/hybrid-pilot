@@ -14,7 +14,7 @@ import {
   getFirstUser,
   getUserByExternalId,
   getUserSettings,
-  saveUserSettings,
+  saveUserSettings as saveUserSettingsBase,
   updateAdaptiveCalorieRecommendation,
   upsertUser,
 } from "./userStore";
@@ -52,12 +52,45 @@ import {
   getUserFoodLogEntriesByDate,
   getUserFoodLogEntryById,
   listDiaryDayStatusesBetween,
-  saveDiaryDayStatus,
+  saveDiaryDayStatus as saveDiaryDayStatusBase,
   updateQuickAddFoodLog as updateQuickAddFoodLogBase,
   updateUserFoodLog as updateUserFoodLogBase,
 } from "./diaryStore";
 import { getFoodItemByBarcode, searchFoodItems } from "./foodSearchStore";
 import { notifyAppDataChanged } from "./dataChangeEvents";
+import * as protocols from "./protocolsStore";
+import * as bloodwork from "./bloodworkStore";
+import { assertAuthSessionGeneration, getAuthSessionGeneration } from "../API/supabase/sessionScope";
+
+const protocolMutation = <A extends unknown[], T>(write: (userId: string, ...args: A) => Promise<T>,kind: "protocols" | "bloodwork" = "protocols") =>
+  async (userId: string, ...args: A): Promise<T> => {
+    const session = getAuthSessionGeneration();
+    const result = await write(userId, ...args);
+    assertAuthSessionGeneration(session);
+    notifyAppDataChanged({ kind, userExternalId: userId });
+    return result;
+  };
+
+const saveUserSettings = async (input: Parameters<typeof saveUserSettingsBase>[0]) => {
+  const session = getAuthSessionGeneration();
+  const result = await saveUserSettingsBase(input);
+  assertAuthSessionGeneration(session);
+  if (result) {
+    if (input.protocolsEnabled !== undefined || input.protocolsIntroSeenAt !== undefined) protocols.invalidateProtocolReads();
+    notifyAppDataChanged({ kind: "settings", userExternalId: input.userExternalId });
+  }
+  return result;
+};
+
+const deleteAllProtocolData = async (userId: string) => {
+  const session = getAuthSessionGeneration();
+  const result = await protocols.deleteAllProtocolData(userId);
+  assertAuthSessionGeneration(session);
+  // All feature screens observe settings too; one event also refreshes Home's
+  // visibility after the server atomically resets opt-in and intro state.
+  notifyAppDataChanged({ kind: "settings", userExternalId: userId });
+  return result;
+};
 
 type AddUserFoodLogInput = Parameters<typeof addUserFoodLogBase>[0];
 type AddQuickAddFoodLogInput = Parameters<typeof addQuickAddFoodLogBase>[0];
@@ -76,6 +109,7 @@ const notifyFoodLogChanged = (input?: {
   userExternalId?: string | null;
   foodEntryId?: number;
 }) => {
+  protocols.invalidateProtocolMetricReads();
   notifyAppDataChanged({
     kind: "food_log",
     userExternalId: input?.userExternalId,
@@ -85,6 +119,7 @@ const notifyFoodLogChanged = (input?: {
 };
 
 const notifyWeightChanged = (userExternalId?: string | null) => {
+  protocols.invalidateProtocolMetricReads();
   notifyAppDataChanged({
     kind: "weight",
     userExternalId,
@@ -174,7 +209,55 @@ const clearAllWeightData = async (userExternalId: string) => {
   return result;
 };
 
+const saveDiaryDayStatus = async (input: Parameters<typeof saveDiaryDayStatusBase>[0]) => {
+  const saved = await saveDiaryDayStatusBase(input);
+  notifyFoodLogChanged({ userExternalId: input.userExternalId, date: saved.date });
+  return saved;
+};
+
 export const DB = {
+  getProtocolReminder: protocols.getProtocolReminder,
+  createProtocolReminder: protocolMutation(protocols.createProtocolReminder),
+  editProtocolReminder: protocolMutation(protocols.editProtocolReminder),
+  deleteProtocolReminder: protocolMutation(protocols.deleteProtocolReminder),
+  getBloodworkHistory: bloodwork.getBloodworkHistory,
+  deleteAllProtocolData,
+  getProtocolAnnotations: protocols.getProtocolAnnotations,
+  listBiomarkers: bloodwork.listBiomarkers,
+  listBloodworkPanels: bloodwork.listBloodworkPanels,
+  getBloodworkPanel: bloodwork.getBloodworkPanel,
+  createBloodworkPanel: protocolMutation(bloodwork.createBloodworkPanel,"bloodwork"),
+  editBloodworkPanel: protocolMutation(bloodwork.editBloodworkPanel,"bloodwork"),
+  deleteBloodworkPanel: protocolMutation(bloodwork.deleteBloodworkPanel,"bloodwork"),
+  setBiomarkerDisplayUnit: protocolMutation(bloodwork.setBiomarkerDisplayUnit,"bloodwork"),
+  listProtocolCompounds: protocols.listProtocolCompounds,
+  getProtocolCompound: protocols.getProtocolCompound,
+  previewProtocolSchedule: protocols.previewProtocolSchedule,
+  previewProtocolTime: protocols.previewProtocolTime,
+  listProtocolCourses: protocols.listProtocolCourses,
+  getProtocolCourse: protocols.getProtocolCourse,
+  createProtocolCourse: protocolMutation(protocols.createProtocolCourse),
+  editProtocolDraft: protocolMutation(protocols.editProtocolDraft),
+  startProtocolCourse: protocolMutation(protocols.startProtocolCourse),
+  changeProtocolPhase: protocolMutation(protocols.changeProtocolPhase),
+  endProtocolCourse: protocolMutation(protocols.endProtocolCourse),
+  deleteProtocolCourse: protocolMutation(protocols.deleteProtocolCourse),
+  getProtocolOccurrence: protocols.getProtocolOccurrence,
+  getProtocolLog: protocols.getProtocolLog,
+  logProtocolOccurrence: protocolMutation(protocols.logProtocolOccurrence),
+  createProtocolManualLog: protocolMutation(protocols.createProtocolManualLog),
+  editProtocolLog: protocolMutation(protocols.editProtocolLog),
+  deleteProtocolLog: protocolMutation(protocols.deleteProtocolLog),
+  listProtocolLogs: protocols.listProtocolLogs,
+  getProtocolSites: protocols.getProtocolSites,
+  getProtocolDay: protocols.getProtocolDay,
+  getProtocolNextDoses: protocols.getProtocolNextDoses,
+  getProtocolHome: protocols.getProtocolHome,
+  getProtocolCalendar: protocols.getProtocolCalendar,
+  getProtocolLevels: protocols.getProtocolLevels,
+  getProtocolTrends: protocols.getProtocolTrends,
+  compareProtocolLevels: protocols.compareProtocolLevels,
+  previewProtocolLevels: protocols.previewProtocolLevels,
   addUser: upsertUser,
   getUser: getFirstUser,
   getUserByExternalId,

@@ -6,21 +6,27 @@ import { XIcon } from "phosphor-react-native";
 import { AppText } from "./AppText";
 import { IconButton } from "./AppButton";
 import { appColors } from "../../theme/colors";
-import { appSurfaces } from "../../theme/tokens";
+import { appRadius, appSpacing, appSurfaces } from "../../theme/tokens";
+import KeyboardAwareScrollView from "../KeyboardAwareScrollView";
 
 export const AppSheet = ({
   visible,
   onClose,
   title,
   children,
+  keyboardAware = false,
+  scrollable = true,
 }: {
   visible: boolean;
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  keyboardAware?: boolean;
+  scrollable?: boolean;
 }) => {
   const insets = useSafeAreaInsets();
   const reduceMotion = useReducedMotion();
+  const Scroller = keyboardAware ? KeyboardAwareScrollView : ScrollView;
   return (
     <Modal
       visible={visible}
@@ -30,8 +36,7 @@ export const AppSheet = ({
     >
       <View style={styles.overlay}>
         <Pressable
-          accessibilityLabel="Close"
-          accessibilityRole="button"
+          accessible={false}
           onPress={onClose}
           style={StyleSheet.absoluteFill}
         />
@@ -51,9 +56,9 @@ export const AppSheet = ({
               <XIcon size={20} color={appColors.textPrimary} />
             </IconButton>
           </View>
-          <ScrollView bounces={false} keyboardShouldPersistTaps="handled">
+          {scrollable ? <Scroller bounces={false} keyboardShouldPersistTaps="handled">
             {children}
-          </ScrollView>
+          </Scroller> : children}
         </View>
       </View>
     </Modal>
@@ -68,10 +73,10 @@ const styles = StyleSheet.create({
   },
   sheet: {
     maxHeight: "85%",
-    paddingHorizontal: 16,
-    backgroundColor: appSurfaces.canvas,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    paddingHorizontal: appSpacing.md,
+    backgroundColor: appSurfaces.card,
+    borderTopLeftRadius: appRadius.xl,
+    borderTopRightRadius: appRadius.xl,
   },
   header: { flexDirection: "row", alignItems: "center", paddingVertical: 8 },
   title: { flex: 1 },

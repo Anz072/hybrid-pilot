@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
   brandMark: {
     width: 80,
     height: 80,
-    tintColor: appColors.actionPrimary,
+    tintColor: appColors.accent,
     marginBottom: appSpacing.xs,
   },
   actions: {

@@ -7,14 +7,6 @@ import {
   IBMPlexSans_700Bold,
   useFonts as usePlexSansFonts,
 } from "@expo-google-fonts/ibm-plex-sans";
-import {
-  Newsreader_400Regular,
-  Newsreader_500Medium,
-  Newsreader_500Medium_Italic,
-  Newsreader_600SemiBold,
-  Newsreader_700Bold,
-  useFonts as useNewsreaderFonts,
-} from "@expo-google-fonts/newsreader";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -62,16 +54,8 @@ export default function App() {
     IBMPlexSans_600SemiBold,
     IBMPlexSans_700Bold,
   });
-  const [newsreaderLoaded, newsreaderError] = useNewsreaderFonts({
-    Newsreader_400Regular,
-    Newsreader_500Medium,
-    Newsreader_500Medium_Italic,
-    Newsreader_600SemiBold,
-    Newsreader_700Bold,
-  });
-
-  const fontsLoaded = plexSansLoaded && newsreaderLoaded;
-  const fontError = plexSansError ?? newsreaderError;
+  const fontsLoaded = plexSansLoaded;
+  const fontError = plexSansError;
 
   if ((!fontsLoaded && !fontError) || !preferencesReady) {
     return null;

@@ -1,6 +1,6 @@
 {
   "name": "nouri",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
@@ -13,6 +13,10 @@
     "typecheck": "tsc --noEmit",
     "lint": "npm run typecheck",
     "test": "npm run typecheck && vitest run",
+    "bump:build": "node scripts/bump-version.mjs build",
+    "bump:patch": "node scripts/bump-version.mjs patch",
+    "bump:minor": "node scripts/bump-version.mjs minor",
+    "bump:major": "node scripts/bump-version.mjs major",
     "build:apk": "npx eas-cli build --platform android --profile preview",
     "build:aab": "npx eas-cli build --platform android --profile production",
     "build:ios": "npx eas-cli build --platform ios --profile production",

@@ -78,7 +78,7 @@ const FuelPlanScreen = ({ navigation, route }: Props) => {
         </AppText>
       ) : null}
 
-      <AppCard style={styles.metricsCard} variant="plain">
+      <AppCard style={styles.metricsCard} variant="surface">
         {[
           ["Protein", `${fuelPlan.protein} g`],
           ["Carbs", `${fuelPlan.carbs} g`],

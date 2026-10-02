@@ -1,0 +1,52 @@
+appId: com.dribsnis.app
+name: New course starts with a fresh configuration
+# September 10 fixture; starts in a Protocol root section.
+# Exactly one historical Test E course: 220 mg every seven days, Aug 1–31.
+# The ended fixture is created via normal authenticated API calls.
+---
+- tapOn: "Compounds, tab, 4 of 4"
+- scrollUntilVisible:
+    element: "Testosterone Enanthate, History, Aug 1, 2026.*"
+    direction: DOWN
+- tapOn: "Testosterone Enanthate, History, Aug 1, 2026.*"
+- assertVisible: "Every 7 days"
+- assertVisible: "20:00 · 220 mg"
+- tapOn: "Start new course"
+- scrollUntilVisible:
+    element: "Enter amount"
+    direction: DOWN
+- assertVisible: "Enter amount"
+- assertNotVisible: "Interval in days"
+- takeScreenshot: protocols-new-course-empty-dose
+- tapOn:
+    text: "Amount, administration 1"
+    index: 1
+- inputText: "80"
+- swipe:
+    start: "85%,50%"
+    end: "85%,80%"
+    duration: 800
+- scrollUntilVisible:
+    element: "Evening · 20:00"
+    direction: DOWN
+- tapOn: "Evening · 20:00"
+- scrollUntilVisible:
+    element: "Continue to preview"
+    direction: DOWN
+- tapOn: "Continue to preview"
+- assertVisible: "Daily"
+- assertVisible: "20:00 · 80 mg"
+- assertVisible: "Starts Sep 10, 2026"
+- assertVisible: "No end date"
+- takeScreenshot: protocols-new-course-preview
+- scrollUntilVisible:
+    element: "Start tracking"
+    direction: DOWN
+- tapOn: "Start tracking"
+- assertVisible: "Daily"
+- assertVisible: "20:00 · 80 mg"
+- scrollUntilVisible:
+    element: "No doses recorded."
+    direction: DOWN
+- assertVisible: "No doses recorded."
+- takeScreenshot: protocols-new-course-no-history

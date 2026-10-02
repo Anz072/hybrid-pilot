@@ -1,0 +1,24 @@
+appId: com.dribsnis.app
+name: Protocols local sign-in
+# Precondition: launch the isolated app with the documented simctl command.
+# Maestro 2.10 passes subsequent dictionary arguments without the iOS dash;
+# letting it relaunch here can select the development .env module instead.
+---
+- tapOn:
+    text: "I already have an account"
+    optional: true
+- tapOn: "you@example.com"
+- inputText: ${QA_EMAIL}
+- tapOn:
+    text: "Password"
+    index: 1
+- inputText: ${QA_PASSWORD}
+- hideKeyboard
+- tapOn:
+    text: "Sign in"
+    index: 1
+- tapOn:
+    text: "Not Now"
+    optional: true
+- assertVisible: "Food"
+- assertVisible: "More"

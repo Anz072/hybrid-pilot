@@ -120,7 +120,7 @@ const FoodDiaryHeroCard = ({
       }
       accessibilityState={{ expanded }}
       onPress={toggleExpanded}
-      variant="plain"
+      variant="surface"
       style={styles.hero}
     >
       <View style={styles.calorieRow}>
@@ -165,7 +165,7 @@ const FoodDiaryHeroCard = ({
         </View>
       </View>
       <ProgressRail
-        color={appColors.calories}
+        color={appColors.accent}
         height={6}
         max={target ?? 0}
         style={styles.calorieRail}
@@ -203,11 +203,8 @@ const FoodDiaryHeroCard = ({
 const styles = StyleSheet.create({
   hero: {
     marginTop: appSpacing.xs,
-    marginBottom: appSpacing.xxs,
-    paddingHorizontal: 0,
-    paddingVertical: appSpacing.xxs,
-    backgroundColor: "transparent",
-    borderWidth: 0,
+    marginBottom: appSpacing.md,
+    padding: appSpacing.md,
   },
   calorieRow: {
     flexDirection: "row",

@@ -10,7 +10,7 @@ type SectionHeaderProps = {
   title: string;
 };
 
-/** Opens an open (unboxed) section with an editorial title and optional trailing action. */
+/** Consistent section hierarchy for cards, forms, and content groups. */
 export const SectionHeader = ({
   action,
   style,
@@ -19,7 +19,7 @@ export const SectionHeader = ({
 }: SectionHeaderProps) => (
   <View style={[styles.row, style]}>
     <View style={styles.copy}>
-      <AppText variant="sectionTitle">{title}</AppText>
+      <AppText accessibilityRole="header" variant="sectionTitle">{title}</AppText>
       {subtitle ? (
         <AppText color="secondary" style={styles.subtitle} variant="bodySmall">
           {subtitle}

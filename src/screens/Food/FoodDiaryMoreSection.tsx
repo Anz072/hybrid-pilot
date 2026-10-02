@@ -8,7 +8,12 @@ import {
 } from "react-native";
 import { MEAL_SLOT_LABELS, type MealSlot } from "./foodUtils";
 import { appColors } from "../../theme/colors";
-import { appBorders, appSpacing, appStates } from "../../theme/tokens";
+import {
+  appCardSurface,
+  appBorders,
+  appSpacing,
+  appStates,
+} from "../../theme/tokens";
 import { CalendarCheckIcon } from "phosphor-react-native";
 
 type FoodDiaryMoreSectionProps = {
@@ -95,6 +100,8 @@ const FoodDiaryMoreSection = ({
 
 const styles = StyleSheet.create({
   card: {
+    ...appCardSurface,
+    padding: appSpacing.md,
     marginBottom: appSpacing.md,
   },
   sectionTitle: {
